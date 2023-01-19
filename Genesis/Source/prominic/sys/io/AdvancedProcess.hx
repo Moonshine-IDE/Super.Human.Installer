@@ -145,7 +145,7 @@ class AdvancedProcess implements IDisposable {
         else
             _process.close();
 
-        _process == null;
+        _process = null;
 
     }
 
