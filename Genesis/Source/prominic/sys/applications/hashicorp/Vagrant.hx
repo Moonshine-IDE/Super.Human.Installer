@@ -710,6 +710,7 @@ typedef VagrantMachine = {
 
     ?home:String,
     ?provider:String,
+    ?serverId:Int,
     ?state:VagrantMachineState,
     id:String,
 
