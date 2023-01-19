@@ -101,7 +101,7 @@ class Server {
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
-        sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown };
+        sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
         sc._dominoVagrant = new DominoVagrant( dominoVagrantRoot, sc._serverDir );
 
         return sc;
@@ -781,33 +781,6 @@ class Server {
 
     }
 
-    function _startVagrantUp() {
-
-        this._busy.value = true;
-
-        if ( this._vagrantUpSuccessful.value ) {
-
-            this.status.value = ServerStatus.Start;
-
-        } else {
-
-            this.status.value = ServerStatus.FirstStart;
-
-        }
-
-        Sys.setCwd( _serverDir );
-
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
-
-        Vagrant.getInstance().getUp( this._vagrantMachine.value, _provision, [] )
-            .onStart( _vagrantUpStarted )
-            .onStop( _vagrantUpStopped )
-            .onStdOut( _vagrantUpStandardOutputData )
-            .onStdErr( _vagrantUpStandardErrorData )
-            .execute();
-
-    }
-
     function _actionChanged( prop:Property<ServerAction> ) {
 
         if ( _action.value == null ) return;
@@ -855,59 +828,6 @@ class Server {
         }
 
         return valid;
-
-    }
-
-    function _vagrantUpStarted( executor:AbstractExecutor ) {
-
-        Logger.debug( 'Vagrant up started' );
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstarted' ) );
-
-    }
-
-    function _vagrantUpStopped( executor:AbstractExecutor ) {
-
-        Logger.debug( 'Vagrant up stopped with exitcode: ${executor.exitCode}' );
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ) ) );
-
-        this._busy.value = false;
-
-        if ( executor.exitCode == -1 ) {
-
-            this.status.value = ServerStatus.Ready;
-            this._vagrantMachine.value.state = VagrantMachineState.PowerOff;
-            if ( this._vagrantUpSuccessful.value == null ) this._vagrantUpSuccessful.value = false;
-
-        } else if ( executor.exitCode == 0 ) {
-
-            this.status.value = ServerStatus.Running;
-            this._vagrantMachine.value.state = VagrantMachineState.Running;
-            this._vagrantUpSuccessful.value = true;
-
-        } else {
-
-            this.status.value = ServerStatus.Error;
-            if ( this._vagrantUpSuccessful.value == null ) this._vagrantUpSuccessful.value = false;
-
-        }
-
-        this._hostname.locked = this._organization.locked = ( this._vagrantUpSuccessful.value == true );
-
-        executor.dispose();
-
-    }
-
-    function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
-     
-        if ( console != null ) console.appendText( data );
-        Logger.debug( 'Vagrant up: ${data}' );
-        
-    }
-
-    function _vagrantUpStandardErrorData( executor:AbstractExecutor, data:String ) {
-        
-        if ( console != null ) console.appendText( data, true );
-        Logger.error( 'Vagrant up error: ${data}' );
 
     }
 
@@ -1124,6 +1044,90 @@ class Server {
 
         _diskUsage.value = f;
         #end
+
+    }
+
+    /**
+     * Vagrant up
+     */
+
+     function _startVagrantUp() {
+
+        this._busy.value = true;
+
+        if ( this._vagrantUpSuccessful.value ) {
+
+            this.status.value = ServerStatus.Start;
+
+        } else {
+
+            this.status.value = ServerStatus.FirstStart;
+
+        }
+
+        Sys.setCwd( _serverDir );
+
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
+
+        Vagrant.getInstance().getUp( this._vagrantMachine.value, _provision, [] )
+            .onStart( _vagrantUpStarted )
+            .onStop( _vagrantUpStopped )
+            .onStdOut( _vagrantUpStandardOutputData )
+            .onStdErr( _vagrantUpStandardErrorData )
+            .execute();
+
+    }
+
+    function _vagrantUpStarted( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this._id}: Vagrant up started' );
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstarted' ) );
+
+    }
+
+    function _vagrantUpStopped( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this._id}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ) ) );
+
+        this._busy.value = false;
+
+        if ( executor.exitCode == -1 ) {
+
+            this.status.value = ServerStatus.Ready;
+            this._vagrantMachine.value.state = VagrantMachineState.PowerOff;
+            if ( this._vagrantUpSuccessful.value == null ) this._vagrantUpSuccessful.value = false;
+
+        } else if ( executor.exitCode == 0 ) {
+
+            this.status.value = ServerStatus.Running;
+            this._vagrantMachine.value.state = VagrantMachineState.Running;
+            this._vagrantUpSuccessful.value = true;
+
+        } else {
+
+            this.status.value = ServerStatus.Error;
+            if ( this._vagrantUpSuccessful.value == null ) this._vagrantUpSuccessful.value = false;
+
+        }
+
+        this._hostname.locked = this._organization.locked = ( this._vagrantUpSuccessful.value == true );
+
+        executor.dispose();
+
+    }
+
+    function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
+     
+        if ( console != null ) console.appendText( data );
+        Logger.debug( '${this._id}: Vagrant up: ${data}' );
+        
+    }
+
+    function _vagrantUpStandardErrorData( executor:AbstractExecutor, data:String ) {
+        
+        if ( console != null ) console.appendText( data, true );
+        Logger.error( '${this._id}: Vagrant up error: ${data}' );
 
     }
 
