@@ -30,22 +30,19 @@
 
 package prominic.sys.io;
 
-import openfl.events.NativeProcessExitEvent;
-import openfl.events.ProgressEvent;
 import prominic.core.interfaces.IDisposable;
 import prominic.logging.Logger;
-import prominic.sys.io.AdvancedNativeProcess;
 
 class Executor extends AbstractExecutor implements IDisposable {
 
     static var _lineEnd:String = "\n";
 
+    var _advancedProcess:AdvancedProcess;
     var _args:Array<String>;
     var _command:String;
     var _currentExecutionNumber:Int;
     var _disposed:Bool = false;
     var _env:Map<String, String>;
-    var _nativeProcess:AdvancedNativeProcess;
     var _numTries:Int;
     var _pid:Int;
     var _timeout:Float = 0;
@@ -89,163 +86,48 @@ class Executor extends AbstractExecutor implements IDisposable {
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        _nativeProcess = new AdvancedNativeProcess();
-        _addListeners();
-        _nativeProcess.startCommand2( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args, _workingDirectory );
+        _advancedProcess = new AdvancedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
+        _advancedProcess.onStdErr.add( _advancedProcessOnStdErr );
+        _advancedProcess.onStdOut.add( _advancedProcessOnStdOut );
+        _advancedProcess.onStop.add( _advancedProcessOnStop );
+        _advancedProcess.start();
+        this._pid = _advancedProcess.pid;
         _running = true;
-        this._pid = _nativeProcess.pid;
+
         for ( f in _onStart ) f( this );
+
         Logger.verbose( '${this} execute' );
         return this;
 
     }
 
-    public function executeUntil( validExitCodes:Array<Float>, numTries:Int = 0, ?extraArgs:Array<String> ):Executor {
+    function _advancedProcessOnStdErr( data:String ) {
 
-        if ( _running ) return this;
-
-        _validExitCodes = validExitCodes;
-        _numTries = numTries;
-
-        if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
-        if ( _env != null ) for ( k in _env.keys() ) Sys.putEnv( k, _env.get( k ) );
-
-        _nativeProcess = new AdvancedNativeProcess();
-        _addListeners();
-        _nativeProcess.startCommand( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args, _workingDirectory );
-        _running = true;
-        this._pid = _nativeProcess.pid;
-        for ( f in _onStart ) f( this );
-        Logger.verbose( '${this} execute' );
-        return this;
+        Logger.verbose( '${this} stderr: ${data}' );
+        for ( f in _onStdErr ) f( this, data );
 
     }
 
-    function _addListeners() {
-
-        if ( _nativeProcess != null ) {
-
-            //_nativeProcess.addEventListener( ProgressEvent.STANDARD_OUTPUT_DATA, _nativeProcessStandardOutput );
-            _nativeProcess.addEventListener( ProgressEvent.STANDARD_ERROR_DATA, _nativeProcessStandardError );
-            _nativeProcess.addEventListener( NativeProcessExitEvent.EXIT, _nativeProcessExit );
-            _nativeProcess.stdoutCallback = _nativeProcessStandardOutput2;
-
-        }
-
-    }
-
-    function _deleteListeners() {
-        
-        if ( _nativeProcess != null ) {
-
-            //_nativeProcess.removeEventListener( ProgressEvent.STANDARD_OUTPUT_DATA, _nativeProcessStandardOutput );
-            _nativeProcess.removeEventListener( ProgressEvent.STANDARD_ERROR_DATA, _nativeProcessStandardError );
-            _nativeProcess.removeEventListener( NativeProcessExitEvent.EXIT, _nativeProcessExit );
-            _nativeProcess.stdoutCallback = null;
-
-        }
-
-    }
-
-    function _nativeProcessStandardOutput( e:ProgressEvent ) {
-
-        if ( _nativeProcess.running ) {
-
-            var a = _nativeProcess.standardOutput.readUTFBytes( Std.int( e.bytesLoaded ) );
-            for ( f in _onStdOut ) f( this, a );
-
-        }
-
-    }
-
-    function _nativeProcessStandardOutput2( data:String ) {
+    function _advancedProcessOnStdOut( data:String ) {
 
         for ( f in _onStdOut ) f( this, data );
 
     }
 
-    function _nativeProcessStandardError( e:ProgressEvent ) {
-        
-        var a = _nativeProcess.standardError.readUTFBytes( _nativeProcess.standardError.bytesAvailable );
-        Logger.verbose( '${this} stderr: ${a}' );
+    function _advancedProcessOnStop() {
 
-        for ( f in _onStdErr ) f( this, a );
-
-    }
-
-    function _nativeProcessExit( e:NativeProcessExitEvent ) {
-
-        Logger.verbose( '${this} _nativeProcessExit:${e.exitCode}' );
         _running = false;
-        _exitCode = e.exitCode;
-        var _canExit = false;
-
-        if ( _numTries == 0 ) {
-
-            if ( _validExitCodes != null ) {
-
-                for ( ec in _validExitCodes ) {
-
-                    if ( _exitCode == ec ) {
-
-                        _canExit = true;
-
-                    }
-
-                }
-
-            } else {
-
-                _canExit = true;
-
-            }
-
-        } else {
-
-            _canExit = _currentExecutionNumber > _numTries;
-
-        }
-
-        _deleteListeners();
-
-        if ( _canExit ) {
-
-            if ( _onStop != null ) for ( f in _onStop ) f( this );
-
-        } else {
-
-            _currentExecutionNumber++;
-            _nativeProcess = new AdvancedNativeProcess();
-            _addListeners();
-            _nativeProcess.startCommand( _command, _args, _workingDirectory );
-            _running = true;
-            this._pid = _nativeProcess.pid;
-            Logger.verbose( '${this} execute _currentExecutionNumber:${_currentExecutionNumber} _numTries:${_numTries}' );
-
-        }
-
-    }
-
-    public function send( data:String ) {
-
-        if ( _nativeProcess != null ) {
-
-            try {
-
-                _nativeProcess.standardInput.writeUTF( data );
-
-            } catch ( e ) { }
-
-        }
+        _exitCode = _advancedProcess.exitCode;
+        for ( f in _onStop ) f( this );
 
     }
 
     public function stop( ?forced:Bool ) {
 
-        if ( _nativeProcess != null ) {
+        if ( _advancedProcess != null ) {
 
             Logger.verbose( '${this} stop( forced:${forced} )' );
-            _nativeProcess.exit( forced );
+            _advancedProcess.stop( forced );
 
         }
 
@@ -269,10 +151,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     override public function dispose() {
 
-        //_deleteListeners();
-        //_nativeProcess = null;
-
-        /*
+        //if ( _advancedProcess != null ) _advancedProcess.dispose();
+        //_advancedProcess = null;
         _command = null;
         _args = null;
         _workingDirectory = null;
@@ -280,15 +160,14 @@ class Executor extends AbstractExecutor implements IDisposable {
         _disposed = true;
 
         super.dispose();
-        */
 
     }
 
     public function toString():String {
 
-        if ( _nativeProcess != null ) {
+        if ( _advancedProcess != null ) {
 
-            return 'Executor: ${_command} ${_args} PID: ${_nativeProcess.pid}';
+            return 'Executor: ${_command} ${_args} PID: ${this._pid}';
 
         }
 
