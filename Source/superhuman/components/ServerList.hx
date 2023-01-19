@@ -292,24 +292,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonConfigure.toolTip = "Configure server";
         _buttonGroup.addChild( _buttonConfigure );
 
-        var genText = "";
-        final chars = "    123456789qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM.!?";
-        final lineMaxLength = 150;
-        final numLines = 10000;
-
-        for ( i in 0...numLines ) {
-            var r:Int = Math.floor( Math.random() * lineMaxLength );
-            var z = "";
-            for ( s in 0...r ) {
-                var l:Int = Math.floor( Math.random() * chars.length );
-                var c = chars.charAt( l );
-                z += c;
-            }
-            genText += z + "\n";
-        }
-
-        //_console = new Console( LanguageManager.getInstance().getString( 'serverpage.server.console.serverloaded' ) );
-        _console = new Console( genText );
+        _console = new Console( LanguageManager.getInstance().getString( 'serverpage.server.console.serverloaded' ) );
         _console.addEventListener( Event.CHANGE, _consoleChanged );
         _console.addEventListener( SuperHumanApplicationEvent.CLOSE_CONSOLE, _closeConsole );
         _console.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );

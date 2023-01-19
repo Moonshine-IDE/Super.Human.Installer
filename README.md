@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# Super.Human.Installer
+# Super.Human.Installer 
 
 - [Building the app](#building-the-app)
   - [Prerequisites](#prerequisites)
