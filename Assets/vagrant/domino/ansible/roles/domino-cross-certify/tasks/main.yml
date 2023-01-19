@@ -1,0 +1,75 @@
+---
+-
+  name: "Ensuring Domino is up"
+  service:
+    name: domino
+    state: started
+    enabled: yes
+-
+  name: "Checking if ID to Cross Certify is available at /safe-id-to-cross-certify/{{ safe_notes_id }}"
+  register: cross_certify_check
+  stat: 
+    path: "/safe-id-to-cross-certify/{{ safe_notes_id }}"
+    get_md5: no
+
+- 
+  name: Pause for 45 seconds to let Domino fully start
+  pause:
+    seconds: 45
+
+- 
+  name: "Cross Certifying /safe-id-to-cross-certify/{{ safe_notes_id }}"
+  become_user: "{{ service_user }}"
+  become: true
+  register: cross_certify_commands 
+  when: cross_certify_check.stat.exists == true 
+  shell: "source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh && source {{ service_home_dir }}/.bashrc && source {{ service_home_dir }}/.bash_profile && $JAVA_HOME/bin/java -Dapp.properties.file={{ service_home_dir }}/CrossCertifyNotesID.properties  -jar CrossCertifyNotesID.jar /safe-id-to-cross-certify/{{ safe_notes_id }}"
+  args:
+    executable: /bin/bash
+    chdir: "{{ service_home_dir }}"
+
+- 
+  name: "Waiting until the Cross Certification JAR writes to {{ completed_dir }}/CrossCertifyNotesID.out"
+  when: cross_certify_check.stat.exists == true 
+  wait_for:
+    path: "{{ completed_dir }}/CrossCertifyNotesID.out"
+
+- 
+  name: "Outputting available Help Text"
+  when: cross_certify_check.stat.exists == true
+  debug: 
+    var: cross_certify_commands.stdout_lines
+
+- 
+  name: "Running Check database to populate IDs into ID Vault"
+  become_user: "{{ service_user }}"
+  expect:
+    chdir: "{{ service_home_dir }}"
+    command: /bin/bash -c ". {{ service_home_dir }}/.bash_profile && . {{ service_home_dir }}/.bashrc && . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh && java -jar CheckDatabase.jar {{ settings.hostname }}.{{ settings.domain }}/{{ domino_organization }} names.nsf"
+    responses:
+      'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
+
+-
+  name: "Stopping Domino for Changes to take effect"
+  become: true
+  when: cross_certify_check.stat.exists == true
+  service:
+    name: domino
+    state: stopped
+    enabled: yes
+  register: DominoServiceDetails
+  until: DominoServiceDetails.state == "stopped"
+  retries: 3
+  delay: 5
+
+-
+  name: "Starting Domino for Changes to take effect"
+  when: cross_certify_check.stat.exists == true
+  service:
+    name: domino
+    state: started
+    enabled: yes
+  register: DominoServiceDetails
+  retries: 3
+  delay: 5
+  until: DominoServiceDetails.state == "started"

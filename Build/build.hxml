@@ -1,0 +1,3 @@
+--class-path ../Genesis/Source
+--main genesis.buildtools.Build
+--interp

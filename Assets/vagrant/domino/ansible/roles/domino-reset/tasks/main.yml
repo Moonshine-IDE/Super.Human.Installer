@@ -1,0 +1,44 @@
+---
+- 
+  name: "Checking if Domino has been installed"
+  register: domino_server_installed
+  stat:
+    path: "{{ domino_home_dir }}/notes.ini"
+    get_md5: no
+
+- 
+  name: "Stopping Domino and disabling Domino"
+  when: domino_server_installed.stat.exists == true
+  become: true
+  service:
+    name: domino
+    state: stopped
+    enabled: no
+
+-
+  become: true
+  name: "Begin Cleanup of Source files"
+  when: domino_server_installed.stat.exists == true
+  file:
+    path: "{{ item.path }}"
+    state: "{{ item.state }}"
+  with_items:
+    - { path: "{{ domino_home_dir }}/ids/", state: absent }
+    - { path: "{{ domino_home_dir }}/", state: absent }
+    - { path: "{{ domino_install_basedir }}/", state: absent }
+    - { path: "{{ completed_dir }}/fpinstalled", state: absent }
+    - { path: "{{ completed_dir }}/hfinstalled", state: absent }
+    - { path: "{{ completed_dir }}/verse_install", state: absent }
+    - { path: "{{ completed_dir }}/traveler_install", state: absent }
+    - { path: "{{ completed_dir }}/nomadweb_install", state: absent }
+    - { path: "{{ completed_dir }}/leap_install", state: absent }
+    - { path: "{{ completed_dir }}/htmo_installed", state: absent }
+    - { path: "{{ completed_dir }}/service_configured", state: absent }
+    - { path: "{{ completed_dir }}/domsetupconfigured", state: absent }
+    - { path: "{{ completed_dir }}/kyr-cert-imported", state: absent }
+    - { path: "{{ completed_dir }}/appdevpack_install", state: absent }    
+    - { path: "{{ completed_dir }}/genesis_installed_check", state: absent }
+    - { path: "{{ completed_dir }}/genesis_packages_installed_check", state: absent }
+    - { path: "{{ completed_dir }}/javabuildtools", state: absent }
+    - { path: "{{ completed_dir }}/domino_reset", state: touch }
+ #  - { path: "{{ completed_dir }}/sametime_installed", state: absent }

@@ -1,0 +1,288 @@
+{
+    "mainmenu":{
+        "about":"About",
+        "support":"Support",
+        "settings":"Settings",
+        "servers":"Servers",
+        "help":"How it Works",
+        "updateavailable":"Update is available"
+    },
+    "footer":{
+        "copyright":"Copyright (C) %1, Inc.  2022-%2"
+    },
+    "toast":{
+        "settingssaved":"Application settings saved",
+        "serverconfigsaved":"Server configuration saved",
+        "advancedserverconfigsaved":"Advanced server configuration saved",
+        "serverdestroyed":"Server has been destroyed",
+        "serverstarted":"Server has started",
+        "servererror":"The server has encountered an error. Please review your configuration and try again",
+        "serverdeleted":"Server has been deleted",
+        "servercreated":"New server %1 created",
+        "copiedtoclipboard":"Console output has been copied to clipboard"
+    },
+    "alert":{
+        "destroyserver":{
+            "title":"Are you sure want to destroy this server?",
+            "text":"The virtual machine will be deleted, but the server and its configuration and files will remain intact.",
+            "buttonok":"OK",
+            "buttoncancel":"Cancel"
+        },
+        "deleteserver":{
+            "title":"Are you sure want to delete this server?",
+            "text":"You're about to delete this server. You can remove the server only from the list, while keeping its files on disk, or you can delete the server and its files as well. The original installer files you might have selected during the configuration process will not be deleted.",
+            "buttondelete":"Remove only",
+            "buttondeletefiles":"Delete files",
+            "buttoncancel":"Cancel"
+        },
+        "installerhash":{
+            "title":"Warning",
+            "text":"The selected file does not seem to match a supported %1 installer. Are you sure want to use it?",
+            "buttonyes":"Yes",
+            "buttonno":"No"
+        },
+        "hotfixhash":{
+            "title":"Warning",
+            "text":"The selected file does not seem to match a supported %1 hotfix. Are you sure want to use it?",
+            "buttonyes":"Yes",
+            "buttonno":"No"
+        },
+        "fixpackhash":{
+            "title":"Warning",
+            "text":"The selected file does not seem to match a supported %1 fixpack. Are you sure want to use it?",
+            "buttonyes":"Yes",
+            "buttonno":"No"
+        },
+        "notsupportedcpu":{
+            "title":"Unsupported CPU",
+            "text":"The CPU architecture (%1) of this computer is currently not supported. We're constantly updating the application, please check back later for support for your CPU. Thank you",
+            "buttonok":"OK"
+        }
+    },
+    "console":{
+        "buttonclear":"Clear",
+        "buttonclose":"Close",
+        "buttoncopy":"Copy",
+        "title":"Console: %1"
+    },
+    "aboutpage":{
+        "title":"Welcome to %1",
+        "about":"%1 is a part of Genesis.Directory App Catalog where you can deploy and update your open source applications with 1 line",
+        "genesislink":"Click here to find out more",
+        "opensource":"Open Source",
+        "aboutopensource":"%1 is Open Source Software (OSS). Open source software (OSS) is software that is distributed with its source code, making it available for use, modification, and distribution with its original rights.",
+        "sourcelink":"Click here to visit source code repository"
+    },
+    "supportpage":{
+        "title":"Issues, problems, errors? Send us your log files",
+        "text":"<font color=\"#bbbbbb\">If you run into issues, experience errors using %1, you can email us your log files. Click the button below to locate %1's logs, and attach <font color=\"#ffffff\"><b>current.txt</b></font> and <font color=\"#ffffff\"><b>last.txt</b></font> to the email you'll be sending to <a href=\"mailto:support@prominic.net?subject=Problems using %1\"><font color=\"#4e84ff\"><b>support@prominic.net</b></font></a>. By sending us your log files, you accept %2's <a href=\"https://moonshine-ide.com/privacy-policy/\"><font color=\"#4e84ff\"><b>Privacy Policy</b></font></a></font>",
+        "button":"Open log file folder"
+    },
+    "helppage":{
+        "title":"How %1 Works",
+        "text":"%1 leverages the <a href=\"https://www.virtualbox.org/\"><font color=\"#4e84ff\"><b>VirtualBox</b></font></a> virtual machine manager and the <a href=\"https://www.vagrantup.com/\"><font color=\"#4e84ff\"><b>Vagrant</b></font></a> <a href=\"https://en.wikipedia.org/wiki/DevOps\"><font color=\"#4e84ff\"><b>DevOps</b></font></a> software automation tool to create a Linux based VM on your local computer. There will be one for each <a href=\"https://en.wikipedia.org/wiki/HCL_Domino\"><font color=\"#4e84ff\"><b>Domino</b></font></a> server you create.<br /><br />You should only run 1-2 at a time, depending upon your computer's resources. You can define as many as you like, and in each one you can experiment with different configurations and <a href=\"https://genesis.directory/\"><font color=\"#4e84ff\"><b>Genesis.Directory</b></font></a> add-ons -- or your own development ideas!<br /><br />The specific steps which are followed based upon the user interface presented by the Super.Human.Installer application are written to a configuration file called a <a href=\"https://en.wikipedia.org/wiki/YAML\"><font color=\"#4e84ff\"><b>YAML</b></font></a> file. This YAML file provides instructions to Vagrant such as which version of Domino to install and whether to include additional features like Nomad Web and Node.js development using the AppDev Pack.<br /><br />The actual control files and scripts can be inspected by you by clicking the Open Server Directory button on any of the existing server instances.",
+        "disclaimer":"All trademarks, logos and brand names are the property of their respective owners"
+    },
+    "updatepage":{
+        "title":"A new version of %1 is available",
+        "text":"Version %1 is available to download. Please click the \"Download\" button to download and launch the updated installer",
+        "buttondownload":"Download",
+        "buttoncancel":"Cancel"
+    },
+    "serverconfigpage":{
+        "title":"Configuration (#%1)",
+        "advancedlink":"Advanced",
+        "form":{
+            "hostname":{
+                "text":"Hostname *",
+                "prompt":"e.g. demo",
+                "tooltip":"Minimum 1 character long. Allowed characters: alphanumeric, hyphen (-), and dot (.)"
+            },
+            "orgcert":{
+                "text":"Organizational Certifier *",
+                "prompt":"e.g. STARTcloud",
+                "tooltip":"The name the organization certifier, at least 1 character long, alphanumeric characters and hyphens only (e.g. STARTcloud)"
+            },
+            "computedname":{
+                "text":"Computed name (FQDN)"
+            },
+            "safeid":{
+                "text":"Your existing Notes Safe ID *",
+                "buttonlocate":"Locate",
+                "buttonlocateagain":"Locate Again",
+                "tooltip":"Click to locate your Notes Safe ID",
+                "useprevious":"Use previous (%1)"
+            },
+            "roles":{
+                "text":"Roles & Installation Files *",
+                "button":"Manage",
+                "tooltip":"Click to locate your Notes Safe ID"
+            },
+            "buttons":{
+                "save":"Save",
+                "cancel":"Cancel"
+            },
+            "info":"Fields marked with * are mandatory\nSome settings cannot be edited unless the server has been destroyed first"
+        }
+    },
+    "serveradvancedconfigpage":{
+        "title":"Advanced Configuration (#%1)",
+        "form":{
+            "networkinterface":{
+                "text":"Network Interface *",
+                "default":"Default",
+                "prompt":"None (Click to select)"
+            },
+            "dhcp":{
+                "text":"DHCP Settings",
+                "checkbox":"DHCP Enabled",
+                "tooltip":"If enabled, IP addresses will be automatically assigned by the system"
+            },
+            "networkip":{
+                "text":"Network IP",
+                "prompt":"e.g. 192.168.2.227",
+                "tooltip":"Custom Network IP Address"
+            },
+            "gatewayip":{
+                "text":"Gateway IP",
+                "prompt":"e.g. 192.168.2.1",
+                "tooltip":"Custom Gateway IP Address"
+            },
+            "netmaskip":{
+                "text":"Netmask",
+                "prompt":"e.g. 255.255.255.0",
+                "tooltip":"Custom Netmask IP Address"
+            },
+            "nameserver1":{
+                "text":"NameServer #1",
+                "prompt":"e.g. 1.1.1.1",
+                "tooltip":"Custom IP address of your NameServer"
+            },
+            "nameserver2":{
+                "text":"NameServer #2",
+                "prompt":"e.g. 1.0.0.1",
+                "tooltip":"Custom IP address of your NameServer"
+            },
+            "alertemail":{
+                "text":"Your alert email address",
+                "prompt":"Optional email address",
+                "tooltip":"Please fill in if you'd like to receive email alerts (optional)"
+            },
+            "cpu":{
+                "text":"Allocated CPUs *",
+                "tooltip":"Please select the number of CPU cores that will be allocated for the server"
+            },
+            "ram":{
+                "text":"Allocated Memory (GB) *",
+                "tooltip":"Please select number of allocated memory in GigaBytes. A minimum of 4GB is recommended"
+            },
+            "misc":{
+                "text":"Miscellaneous",
+                "openbrowser":"Open Welcome page if server has started"
+            },
+            "buttons":{
+                "save":"Save",
+                "cancel":"Cancel"
+            },
+            "info":"Fields marked with * are mandatory\nSome settings cannot be edited unless the server has been destroyed first"
+        }
+    },
+    "loadingpage":{
+        "title":"Welcome to %1",
+        "text":"Gathering required information, please wait"
+    },
+    "rolepage":{
+        "buttons":{
+            "close":"Go Back"
+        },
+        "role":{
+            "buttoninstaller":"+ Installer",
+            "buttonhotfix":"+ Hotfix",
+            "buttonfixpack":"+ Fixpack",
+            "noinstaller":"Please enable role to select installer %1",
+            "locateinstaller":"Locate %1 installer file",
+            "locatehotfix":"Locate %1 hotfix file",
+            "locatefixpack":"Locate %1 fixpack file",
+            "removefile":"Remove",
+            "installerfile":"Installer: %1",
+            "hotfixfile":"Hotfix: %1",
+            "fixpackfile":"Fixpack: %1"
+        },
+        "roles":{
+            "domino":{
+                "desc":"Domino Server"
+            },
+            "nomadweb":{
+                "desc":"HCL Nomad Web allows for browser-based access to native Notes Domino applications without the need to install a full Notes Client on your desktop"
+            },
+            "leap":{
+                "desc":"HCL Domino Leap is a new low-code capability that makes it easy to develop powerful, secure, and enterprise-grade workflow-based applications"
+            },
+            "traveler":{
+                "desc":"HCL Traveler provides automatic, two-way, over-the-air syncing between HCL Domino servers and wireless handheld devices"
+            },
+            "verse":{
+                "desc":"HCL Verse is an advanced, person-centric webmail interface.  Define your personal VIPs and never miss important messages again"
+            },
+            "appdevpack":{
+                "desc":"The AppDev Pack primarily adds Node.js support to Domino Server"
+            },
+            "domino-rest-api":{
+                "desc":"The HCL Domino REST APIs (previously known as HCL Project KEEP) provide secure REST APIs with access to HCL Domino servers and databases."
+            }
+        }
+    },
+    "serverpage":{
+        "title":"Welcome to %1",
+        "text":"Create your first Domino Server",
+        "buttoncreate":"Create New Server",
+        "vagrant":{
+            "title":"Warning: Vagrant is not installed or an unsupported version is installed",
+            "text":"Please install at least Vagrant v2.3.4 before using Super.Human.Installer",
+            "buttoninstall":"Install"
+        },
+        "virtualbox":{
+            "title":"Warning: VirtualBox is not installed",
+            "text":"Please install VirtualBox before using Super.Human.Installer",
+            "buttoninstall":"Install"
+        },
+        "server":{
+            "console":{
+                "start":"[SHI]: Starting server...\n",
+                "stop":"[SHI]: Stopping server...\n",
+                "stopfailed":"[SHI]: 'vagrant halt' failed...\n",
+                "safeidselected": "[SHI]: Notes Safe ID selected: %1\n",
+                "provision":"[SHI]: Provisioning server...\n",
+                "vagrantssh":"[SHI]: Opening Vagrant SSH...\n",
+                "refreshvagrantstatus":"[SHI]: Refreshing Vagrant status...\n",
+                "copyvagrantfiles":"[SHI]: Copying Vagrant files to %1 %2...\n",
+                "copyinstallers":"[SHI]: Copying installers to %1...\n",
+                "copyinstaller":"[SHI]: Copying %1 to %2\n",
+                "installerexists":"[SHI]: %1 exists with same size, skipping...\n",
+                "setworkingdirectory":"[SHI]: Setting working directory to %1...\n",
+                "copysafeid":"[SHI]: Copying Notes Safe ID from %1 to %2...\n",
+                "copysafeidfailed":"[SHI ERROR]: Notes Safe ID copy failed. Error details: %1\n",
+                "safeidnonexistent":"[SHI ERROR]: Notes Safe ID doesn't exists at %1",
+                "hostsfilecontent":"[SHI]:\n---- Hosts.yml START ----\n%1\n---- Hosts.yml END ----\n",
+                "savehostsfile":"[SHI]: Hosts file created at %1\n",
+                "savehostsfileerror":"[SHI ERROR]: Hosts file cannot be created at %1. Details: %2\n",
+                "vagrantupstarted":"[SHI]: 'vagrant up' started\n",
+                "vagrantupstart":"[SHI]: Executing 'vagrant up' %1\n",
+                "vagrantupstopped":"[SHI]: 'vagrant up' stopped with exit code: %1\n",
+                "rsync":"[SHI]: Syncing server...\n",
+                "rsyncerror":"[SHI]: 'vagrant rsync' failed...\n",
+                "destroy":"[SHI]: Destroying server...\n",
+                "destroyed":"[SHI]: Server destroyed\n",
+                "destroyerror":"[SHI]: 'vagrant destroy' failed '\n",
+                "provisionerror":"[SHI]: 'vagrant provision' failed '\n",
+                "webaddress":"[SHI]: Retrieving web address from %1...",
+                "webaddressfilenonexistent":"file doesn't exist\n",
+                "webaddressfileerror":"file cannot be opened\n",
+                "webaddressinvalid":"[SHI]: Invalid web address: %1\n",
+                "serverloaded":"[SHI]: Server loaded\n",
+                "virtualboxmachine":"[SHI]: VirtualBox VM: %1\n"
+            },
+            "start":"Start server"
+        }
+    }
+}

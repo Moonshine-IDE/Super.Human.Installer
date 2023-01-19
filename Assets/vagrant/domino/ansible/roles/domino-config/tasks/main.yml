@@ -1,0 +1,177 @@
+---
+-
+  name: "Creating KYR for Domino"
+  shell: "{{ item }}"
+  become_user: "{{ domino_user }}"
+  when: domino_https_enabled == 1
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ domino_home_dir }}"
+    creates: "{{ cert_dir }}/kyr/{{ kyr_cert }}"
+  with_items:
+    - "{{ domino_install_basedir }}/bin/tools/startup {{ domino_install_dir }}/kyrtool create -k {{ cert_dir }}/kyr/{{ kyr_cert }} -p {{ cert_pass }}"
+
+-
+  name: "Adding SSL Certificate and Keys to KYR"
+  shell: "{{ item.entry }}"
+  become_user: "{{ domino_user }}"
+  when: domino_https_enabled == 1 and selfsigned_enabled
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ domino_home_dir }}"
+    creates: "{{ item.touches }}"
+  with_items:
+    - { entry: "{{ domino_install_basedir }}/bin/tools/startup {{ domino_install_dir }}/kyrtool import keys -k {{ cert_dir }}/kyr/{{ kyr_cert }} -i {{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key && touch {{ completed_dir }}/kyr-key-imported", touches: "{{ completed_dir }}/kyr-key-imported" }
+    - { entry: "{{ domino_install_basedir }}/bin/tools/startup {{ domino_install_dir }}/kyrtool import certs -k {{ cert_dir }}/kyr/{{ kyr_cert }} -i {{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt && touch {{ completed_dir }}/kyr-cert-imported", touches: "{{ completed_dir }}/kyr-cert-imported" }
+
+-
+  name: "Adding SSL Certificate and Keys to KYR"
+  shell: "{{ item.entry }}"
+  become_user: "{{ domino_user }}"
+  when: domino_https_enabled == 1 and not selfsigned_enabled
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ domino_home_dir }}"
+    creates: "{{ item.touches }}"
+  with_items:
+    - { entry: "{{ domino_install_basedir }}/bin/tools/startup {{ domino_install_dir }}/kyrtool import keys -k {{ cert_dir }}/kyr/{{ kyr_cert }} -i {{ cert_dir }}/key/default-signed.key && touch {{ completed_dir }}/kyr-key-imported", touches: "{{ completed_dir }}/kyr-key-imported" }
+    - { entry: "{{ domino_install_basedir }}/bin/tools/startup {{ domino_install_dir }}/kyrtool import certs -k {{ cert_dir }}/kyr/{{ kyr_cert }} -i {{ cert_dir }}/crt/default-signed.crt && touch {{ completed_dir }}/kyr-cert-imported", touches: "{{ completed_dir }}/kyr-cert-imported" }
+
+-
+  name: "Creating Installation Directories"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+  with_items:
+    - "/safe-id-to-cross-certify"
+    - "{{ domino_home_dir }}/idvault"
+    - "{{ domino_home_dir }}/ids"
+
+- 
+  name: "Checking if Domino has been touched"
+  register: domino_server_touched
+  stat:
+    path: "{{ completed_dir }}/domsetupconfigured"
+    get_md5: no
+
+-
+  name: "Running CreateNamesDatabase application, Cleanup names.nsf, and Generate a new names.nsf"
+  shell: "{{ item }}"
+  become: true
+  become_user: "{{ service_user }}"
+  args:
+    chdir: ~
+    executable: /bin/bash
+  environment:
+    PASSWORD: "{{ domino_admin_notes_id_password }}"
+  when: java_helpers_install
+  with_items:
+    - "java -jar CreateNamesDatabase.jar"
+    - "yes {{ domino_admin_notes_id_password }} | java -jar CreateNamesDatabase.jar"
+    - "expect CreateNamesDatabase.exp {{ domino_admin_notes_id_password }}"
+    - "rm -f {{ domino_home_dir }}/names.nsf"
+    - "java -jar CreateNamesDatabase.jar"
+
+-
+  name: "Adding the Domino One-Touch Setup.json"
+  when: domino_server_touched.stat.exists == false
+  template:
+    dest: "{{ domino_home_dir }}/setup.json"
+    mode: "a+x"
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+    src: setup.json.j2
+
+-
+  name: "Configuring Domino server via setup.json"
+  when: domino_server_touched.stat.exists == false
+  shell: "{{ item }}"
+  become: true
+  async: 25920
+  poll: 0
+  args:
+    chdir: "{{ domino_home_dir }}"
+    executable: /bin/sh
+    creates:  "{{ completed_dir }}/domsetupconfigured"
+  with_items:
+    - "(su - {{ domino_user }} -c '{{ domino_install_basedir }}/bin/server -autoconf setup.json && touch {{ completed_dir }}/domsetupconfigured  > /dev/null 2>&1 &')"
+
+- 
+  name: Waiting until the file autoconfigure.log is present before continuing
+  when: domino_server_touched.stat.exists == false
+  wait_for:
+    path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
+
+- 
+  name: "Capturing autoconfigure log output"
+  shell: "cat {{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
+  register: autoconf_result
+  when: debug_autoconfigure and domino_server_touched.stat.exists == false
+
+- 
+  name: "Outputting Autoconfigure Log"
+  debug:
+    var: autoconf_result.stdout_lines
+  when: debug_autoconfigure and domino_server_touched.stat.exists == false
+
+- 
+  name: Waiting until the file certstore.nsf is present before continuing
+  when: domino_server_touched.stat.exists == false
+  wait_for:
+    path: "{{ domino_home_dir }}/certstore.nsf"
+
+- 
+  name: Pause for 60 seconds to let Domino fully configure
+  when: domino_server_touched.stat.exists == false
+  pause:
+    seconds: 60
+
+-
+  name: "Cleanly stopping Domino"
+  when: domino_server_touched.stat.exists == false
+  shell: "{{ item }}"
+  become: true
+  args:
+    executable: "/bin/bash"
+  register: domino_stop_status
+  with_items:
+    - 'domino cmd "quit" 20'
+
+- 
+  name: "Outputting Domino Stop Status"
+  when: debug_autoconfigure and domino_server_touched.stat.exists == false
+  debug: 
+    var: domino_stop_status
+
+- 
+  name: Waiting until the completed installation file is present before continuing
+  wait_for:
+    path: "{{ completed_dir }}/domsetupconfigured"
+
+-
+  name: 'Copying userID per "convention" for cross-certification'
+  become: true
+  file:
+    path: "{{ domino_home_dir }}/ids/{{ domino_admin_user_id }}"
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+    mode: '0755'
+
+-
+  name: 'Copying userID per "convention" for cross-certification'
+  become: true
+  copy:
+    src: "{{ domino_home_dir }}/ids/{{ domino_admin_user_id }}"
+    dest: "{{ service_home_dir }}/user.id"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+
+- 
+  name: "Stopping Domino and Enabling at boot"
+  become: true
+  service:
+    name: domino
+    state: stopped
+    enabled: yes

@@ -1,0 +1,58 @@
+---
+- 
+  name: "Ensuring apt cache is updated"
+  apt:
+    cache_valid_time: 3600
+    update_cache: true
+  when: "ansible_os_family == 'Debian'"
+
+- 
+  name: "Upgrading all yum packages"
+  when: "ansible_os_family == 'RedHat'"
+  yum:
+    name: "*"
+    state: latest
+
+- 
+  name: "Upgrading all apt packages"
+  apt:
+    upgrade: dist
+    update_cache: yes
+  when: "ansible_os_family == 'Debian'"
+
+- 
+  name: "Checking if a reboot is needed for Debian and Ubuntu boxes"
+  register: reboot_required_file
+  stat: "path=/var/run/reboot-required get_md5=no"
+  when: "ansible_os_family == 'Debian'"
+
+- 
+  name: "Rebooting the Debian or Ubuntu server"
+  when: reboot_required_file.stat.exists
+  reboot:
+    msg: "Reboot initiated by Ansible due to kernel updates"
+    connect_timeout: 5
+    reboot_timeout: 300
+    pre_reboot_delay: 0
+    post_reboot_delay: 30
+    test_command: uptime
+
+- 
+  name: "Adding Core Dependencies"
+  apt:
+    name:
+      - htop
+    state: present 
+  when: "ansible_os_family == 'Debian'"
+
+- 
+  name: "Adding Additional Dependencies {{ packages }}"
+  apt:
+    name: "{{ packages }}"
+    state: present 
+  when: "ansible_os_family == 'Debian'"
+
+- 
+  name: "Install pexpect for Ansible expect module to function"
+  pip:
+    name: "{{ pip_packages }}"

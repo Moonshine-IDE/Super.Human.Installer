@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<update xmlns="http://ns.riaspace.com/air/framework/update/description/1.1">
+    <!-- Mac update -->
+    <pkg>
+        <version>::APP_VERSION::</version>
+        <url>::MAC_INSTALLER_URL::</url>
+        <description>
+            <![CDATA[
+                * This a Mac update
+                ]]>
+        </description>
+    </pkg>
+    <!-- Win update -->
+    <exe>
+        <version>::APP_VERSION::</version>
+        <url>::WIN_INSTALLER_URL::</url>
+        <description>
+            <![CDATA[
+                * This a Win update
+                ]]>
+        </description>
+    </exe>
+</update>

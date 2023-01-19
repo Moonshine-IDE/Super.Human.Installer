@@ -1,0 +1,5 @@
+---
+verse_archive: HCL_Verse_3.0.0.zip
+verse_base_version: 3.0.0
+verse_debug: true
+verse_url: "verse.{{ settings.hostname }}.{{ settings.domain }}"

@@ -1,0 +1,122 @@
+---
+-
+  name: "Creating installation directories for Leap"
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ installer_dir }}/leap/archives"
+    - "{{ installer_dir }}/leap/Leap"
+
+- 
+  name: "Checking if Leap {{ leap_version }} installer is at {{ installer_dir }}/leap/archives/{{ leap_archive }}"
+  register: domino_server_installer_check
+  stat:
+    path: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
+    get_md5: no
+
+- 
+  name: "Checking if Leap {{ leap_version }} is installed"
+  register: leap_installed_check
+  stat:
+    path: "{{ completed_dir }}/leap_install"
+    get_md5: no
+
+#- 
+#  name: "Downloading Leap {{ leap_version }} from {{ domino_installer_base_url }}"
+#  register: leapresult
+#  until: "leapresult is not failed"
+#  retries: 3
+#  get_url:
+#    url: "{{ domino_installer_base_url }}/Leap/{{ leap_archive }}"
+#    dest: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
+#    username: "{{ domino_installer_url_user }}"
+#    password: "{{ secrets.domino_installer_url_pass }}"
+#  when: domino_server_installer_check.stat.exists == false and leap_installed_check.stat.exists == false
+
+-
+  name: "Extracting Leap {{ leap_version }} from {{ leap_archive }}"
+  when:  leap_installed_check.stat.exists == false
+  unarchive:
+    mode: "a+x"
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+    src: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
+    dest: "{{ installer_dir }}/leap/Leap"
+    creates: "{{ installer_dir }}/leap/Leap/Leap-{{ leap_version }}-for-domino-1201-linux"
+    remote_src: true
+
+- 
+  name: "Stopping Domino for Leap Installation"
+  when: leap_installed_check.stat.exists == false
+  become: true
+  service:
+    name: domino
+    state: stopped
+    enabled: yes
+
+-
+  name: "Configuring Leap and Starting Service"
+  when: leap_installed_check.stat.exists == false
+  shell: "{{ item }}"
+  become: true
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ installer_dir }}/leap/Leap/Leap-{{ leap_version }}/linux"
+  with_items:
+    - ./install silent
+
+- 
+  name: "Registering leap installation Output"
+  when: leap_installed_check.stat.exists == false
+  shell: cat /var/log/volt_install_*.log
+  register: leap_install
+
+- 
+  name: "Outputting Leap installation logs"
+  when: leap_installed_check.stat.exists == false and leap_debug
+  debug: 
+    var: leap_install.stdout_lines
+
+- 
+  name: "Starting Domino"
+  service:
+    name: domino
+    state: started
+    enabled: yes
+
+-
+  name: "Handing Leap/Volt ACL templated JSON to Genesis"
+  when: leap_installed_check.stat.exists == false
+  template:
+    dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/voltacl-org.json"
+    mode: "a+x"
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+    src: "voltacl-org.json.j2"
+
+- 
+  name: Waiting until Genesis returns OK
+  when: leap_installed_check.stat.exists == false
+  wait_for:
+    path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/voltacl-org.json"
+
+- 
+  name: "Checking if ACL applied succesfully"
+  when: leap_installed_check.stat.exists == false  
+  lineinfile:
+    path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/voltacl-org.json"
+    line: "OK"
+    state: present
+  check_mode: yes
+  register: presence
+  failed_when: presence is changed
+
+-
+  name: "Marking leap as installed"
+  when: leap_installed_check.stat.exists == false
+  file:
+    path: "{{ item }}"
+    state: touch
+  with_items:
+    - "{{ completed_dir }}/leap_install"

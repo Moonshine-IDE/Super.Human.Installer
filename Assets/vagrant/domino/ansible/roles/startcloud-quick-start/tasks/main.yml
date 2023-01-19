@@ -1,0 +1,57 @@
+---
+-
+  name: "Creating Installation Directories"
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ python_simple_web_server_path }}/images"
+    - "{{ python_simple_web_server_path }}/ids"
+
+- 
+  name: "Installing uploadserver for Python Web Server"
+  pip:
+    name: "uploadserver"
+
+- 
+  name: "Registering Output of IP Address"
+  shell: "cat /ipaddress.yml"
+  register: netoutput
+
+-
+  name: "Placing Python Simple HTTP Server Service file"
+  become: true
+  template:
+    owner: "{{ item.owner }}"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: 'pythonserve.service.j2', dest: '/etc/systemd/system/pythonserve.service', owner: '{{ service_user }}' }
+    - { src: 'environment.j2', dest: '/etc/pythonserv', owner: '{{ service_user }}' }
+    - { src: 'index.html.j2', dest: '{{ python_simple_web_server_path }}/welcome.html', owner: '{{ service_user }}' }
+    - { src: 'styles.css', dest: '{{ python_simple_web_server_path }}/styles.css', owner: '{{ service_user }}' }
+    - { src: 'cockpit.conf.j2', dest: '/etc/cockpit/cockpit.conf', owner: '{{ service_user }}' }
+
+-
+  name: "Starting Python Simple HTTP server"
+  service:
+    name: pythonserve
+    state: started
+    enabled: yes
+
+- 
+  name: "Checking Python Simple HTTP server is listening on port {{ python_simple_web_server_port }}"
+  wait_for:
+    port: "{{ python_simple_web_server_port }}"
+    delay: 5
+    timeout: 60
+    msg: "Timeout waiting for {{ python_simple_web_server_port }} to respond"
+  register: port_check
+  ignore_errors: yes
+
+-
+  name: "Restarting Cockpit"
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    name: cockpit

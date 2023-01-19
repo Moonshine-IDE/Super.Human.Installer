@@ -1,0 +1,10 @@
+---
+packages:
+  - htop
+  - lynx
+  - lshw
+  - libxml2-utils
+pip_packages:
+  - pexpect
+  - PyMySQL
+  - pymongo==3.12.2

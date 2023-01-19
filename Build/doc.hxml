@@ -1,0 +1,5 @@
+--cwd ..
+-cmd haxelib run openfl build neko -debug -xml -clean
+
+--next
+-cmd haxelib run dox -o Docs -i Export/Development/neko-macos/neko/types.xml -in prominic -in superhuman -in genesis --title "Super.Human.Installer Reference (Haxe/OpenFL)"

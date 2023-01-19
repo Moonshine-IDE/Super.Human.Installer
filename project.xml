@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+	
+	<!-- Base properties defined in GenesisApplication.xml -->
+	<include path="Genesis/GenesisApplication.xml"/>
+	<!-- Override properties, add new ones below -->
+
+	<meta version="0.7.1"/>
+	<meta unless="debug" title="Super.Human.Installer"/>
+	<meta title="Super.Human.Installer Development" if="debug"/>
+
+	<section unless="packageid">
+		<meta unless="debug" package="net.prominic.genesis.superhumaninstaller"/>
+		<meta package="net.prominic.genesis.superhumaninstallerdev" if="debug"/>
+	</section>
+
+	<section if="packageid">
+		<meta package="${packageid}" if="packageid"/>
+	</section>
+
+	<set value="SuperHumanInstaller" unless="debug" name="appfile"/>
+	<set value="SuperHumanInstallerDev" name="appfile" if="debug"/>
+
+	<app path="${exportdir}" main="SuperHumanInstaller" file="${appfile}"/>
+
+	<icon path="Assets/icon.png"/>
+
+	<source path="Source"/>
+	<source path="Scripts"/>
+
+	<assets rename="assets/images" path="Assets/images" include="*"/>
+	<assets rename="assets/text" path="Assets/text" include="*"/>
+	<assets rename="assets/vagrant" path="Assets/vagrant" include="*"/>
+	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>
+	<assets rename="assets/bin" path="Assets/bin/windows" include="*" if="windows"/>
+	<assets rename="assets/bin" path="Assets/bin/linux" include="*" if="linux"/>
+
+	<template path="Templates"/>
+
+	<section if="neko">
+		<app path="${exportdir}/neko-macos" if="mac"/>
+		<app path="${exportdir}/neko-windows" if="windows"/>
+		<app path="${exportdir}/neko-linux" if="linux"/>
+	</section>
+
+	<section if="hl">
+		<error value="Super.Human.Installer is not supported on the selected platform!"/>
+	</section>
+
+	<section unless="windows || mac || linux || neko">
+		<error value="Super.Human.Installer is not supported on the selected platform!"/>
+	</section>
+
+	<!-- For dox -->
+	<haxeflag value="include('prominic')" name="--macro"/>
+	<haxeflag value="include('genesis.application')" name="--macro"/>
+	<haxeflag value="include('superhuman')" name="--macro"/>
+
+</project>

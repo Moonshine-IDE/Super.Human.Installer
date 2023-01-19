@@ -1,0 +1,84 @@
+---
+## Install Guide here: https://help.hcltechsw.com/traveler/11.0.0/Silent_install_Linux.html
+-
+  name: "Creating installation directories for Traveler"
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ installer_dir }}/traveler/archives"
+    - "{{ installer_dir }}/traveler/Traveler"
+
+- 
+  name: "Checking if Traveler {{ traveler_base_version }} is installed"
+  register: traveler_installed_check
+  stat:
+    path: "{{ completed_dir }}/traveler_install"
+    get_md5: no
+
+- 
+  name: "Checking if Traveler {{ traveler_base_version }} installer is at {{ installer_dir }}/traveler/archives/{{ traveler_archive }}"
+  register: traveler_installer_check
+  stat:
+    path: "{{ installer_dir }}/traveler/archives/{{ traveler_archive }}"
+    get_md5: no
+
+#- 
+#  name: "Downloading Traveler {{ traveler_base_version }} from {{ domino_installer_base_url }}"
+#  register: travelerresult
+#  until: "travelerresult is not failed"
+#  retries: 3
+#  get_url:
+#    url: "{{ domino_installer_base_url }}/ND{{ domino_major_version }}/{{ traveler_archive }}"
+#    dest: "{{ installer_dir }}/traveler/archives/{{ traveler_archive }}"
+#    username: "{{ domino_installer_url_user }}"
+#    password: "{{ secrets.domino_installer_url_pass }}"
+#  when: traveler_installer_check.stat.exists == false and traveler_installed_check.stat.exists == false
+
+-
+  name: "Extracting Traveler {{ traveler_base_version }} from {{ traveler_archive }}"
+  when:  traveler_installed_check.stat.exists == false
+  unarchive:
+    mode: "a+x"
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+    src: "{{ installer_dir }}/traveler/archives/{{ traveler_archive }}"
+    dest: "{{ installer_dir }}/traveler/Traveler"
+    creates: "{{ installer_dir }}/traveler/Traveler/Traveler"
+    remote_src: true
+
+- 
+  name: "Stopping Domino for Traveler Installation"
+  when: traveler_installed_check.stat.exists == false
+  become: true
+  service:
+    name: domino
+    state: stopped
+    enabled: yes
+
+- 
+  name: "Adding Traveler silent install response file"
+  when: traveler_installed_check.stat.exists == false
+  template:
+    dest: "{{ installer_dir }}/traveler/Traveler/installer.properties"
+    mode: a+x
+    src: "installer.properties.j2"
+
+-
+  name: "Installing Traveler"
+  when: traveler_installed_check.stat.exists == false
+  shell: "{{ item }}"
+  become: true
+  args:
+    executable: "/bin/bash"
+    chdir: "{{ installer_dir }}/traveler/Traveler"
+  with_items:
+    - "./TravelerSetup -f ./installer.properties -i SILENT -l en && touch {{ completed_dir }}/traveler_install"
+
+- 
+  name: "Starting Domino"
+  when: traveler_installed_check.stat.exists == false
+  service:
+    name: domino
+    state: started
+    enabled: yes

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+
+	<set name="exportdir" value="Export/Production" />
+	<set name="exportdir" value="Export/Development" if="debug" />
+	
+	<meta company="Prominic.NET" />
+
+	<window background="#222222" fps="60" allow-high-dpi="true" />
+
+    <assets path="Assets/images" rename="assets/images" />
+
+	<haxelib name="openfl" />
+	<haxelib name="feathersui" />
+	<haxelib name="actuate" />
+
+	<source path="Source" />
+
+	<section if="html5">
+		<window width="0" height="0" />
+	</section>
+
+	<section if="desktop">
+		<window width="1060" height="760" />
+	</section>
+
+	<template path="Templates" />
+	
+</project>
