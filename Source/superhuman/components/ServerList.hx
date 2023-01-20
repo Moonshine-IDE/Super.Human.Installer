@@ -296,9 +296,14 @@ class ServerItem extends LayoutGroupItemRenderer {
         _console.addEventListener( Event.CHANGE, _consoleChanged );
         _console.addEventListener( SuperHumanApplicationEvent.CLOSE_CONSOLE, _closeConsole );
         _console.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
-        if ( _server != null ) _server.console = _console;
 
-        if ( _server != null ) _updateServer( _server, false );
+        if ( _server != null ) {
+
+            _server.console = _console;
+            _console.propertyId = Std.string( _server.id );
+            _updateServer( _server, false );
+
+        }
 
     }
 
@@ -338,6 +343,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _labelTitle != null ) {
 
             _server.console = _console;
+            _console.propertyId = Std.string( _server.id );
             _updateServer( _server, false );
     
         }

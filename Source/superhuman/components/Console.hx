@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+import sys.thread.Mutex;
+import superhuman.managers.ConsoleBufferManager;
 import feathers.controls.AssetLoader;
 import feathers.controls.Button;
 import feathers.controls.Label;
@@ -45,7 +47,6 @@ import genesis.application.components.HLine;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.Event;
-import openfl.text.TextField;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.interfaces.IConsole;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -59,15 +60,21 @@ class Console extends LayoutGroup implements IConsole {
     var _hasError:Bool;
     var _hasNewMessage:Bool;
     var _i:Int = 0;
+    var _propertyId:String;
     var _textArea:ConsoleTextArea;
     var _titleLabel:Label;
     var _topGroup:LayoutGroup;
+    var _mutex:Mutex;
 
     public var hasError( get, never ):Bool;
     function get_hasError() return _hasError;
 
     public var hasNewMessage( get, never ):Bool;
     function get_hasNewMessage() return _hasNewMessage;
+
+    public var propertyId( get, set ):String;
+    function get_propertyId() return _propertyId;
+    function set_propertyId( value:String ):String { _propertyId = value; return _propertyId; }
 
     var _title:String;
     public var title( get, set ):String;
@@ -85,6 +92,8 @@ class Console extends LayoutGroup implements IConsole {
 
         _textArea = new ConsoleTextArea( text );
         _textArea.editable = false;
+
+        _mutex = new Mutex();
         
     }
 
@@ -127,6 +136,8 @@ class Console extends LayoutGroup implements IConsole {
 
         this.addChild( _textArea );
 
+        this.addEventListener( Event.ENTER_FRAME, _enterFrame );
+
     }
 
     function _clearButtonTriggered( e:TriggerEvent ) {
@@ -155,12 +166,39 @@ class Console extends LayoutGroup implements IConsole {
 
     }
 
+    function _enterFrame( e:Event ) {
+
+        trace( '_enterFrame()' );
+
+        if ( _propertyId != null ) {
+
+            _mutex.acquire();
+
+            var cb = ConsoleBufferManager.buffers.get( _propertyId );
+
+            if ( cb != null && cb.length > 0 ) {
+
+                for ( t in cb ) {
+                    _textArea.appendText( t );
+                    _textArea.validateNow();
+                    _textArea.update();
+                }
+                cb.resize( 0 );
+
+            }
+
+            _mutex.release();
+
+        }
+
+    }
+
     public function appendText( text:String, isError:Bool = false ) {
 
         _hasNewMessage = true;
         if ( !_hasError ) _hasError = isError;
 
-        _textArea.appendText( text, isError );
+        _textArea.appendText( text.toString(), isError );
         this.dispatchEvent( new Event( Event.CHANGE ) );
 
     }
@@ -186,6 +224,7 @@ class ConsoleTextArea extends TextArea {
 
         if ( text != null ) this.text = text;
 
+        this.addEventListener( Event.ENTER_FRAME, _enterFrame );
         this.addEventListener( ScrollEvent.SCROLL, _onScroll );
 
     }
@@ -234,6 +273,10 @@ class ConsoleTextArea extends TextArea {
     public function clear() {
 
         this.text = "";
+
+    }
+
+    function _enterFrame( e:Event ) {
 
     }
 

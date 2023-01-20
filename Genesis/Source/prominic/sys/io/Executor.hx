@@ -87,9 +87,9 @@ class Executor extends AbstractExecutor implements IDisposable {
         _currentExecutionNumber = 1;
 
         _advancedProcess = new AdvancedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
-        _advancedProcess.onStdErr.add( _advancedProcessOnStdErr );
-        _advancedProcess.onStdOut.add( _advancedProcessOnStdOut );
-        _advancedProcess.onStop.add( _advancedProcessOnStop );
+        _advancedProcess.onStdErr = _advancedProcessOnStdErr;
+        _advancedProcess.onStdOut = _advancedProcessOnStdOut;
+        _advancedProcess.onStop = _advancedProcessOnStop;
         _advancedProcess.start();
         this._pid = _advancedProcess.pid;
         _running = true;

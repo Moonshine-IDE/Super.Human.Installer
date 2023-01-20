@@ -30,6 +30,7 @@
 
 package superhuman.server;
 
+import superhuman.managers.ConsoleBufferManager;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.Template;
@@ -104,6 +105,9 @@ class Server {
         sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
         sc._dominoVagrant = new DominoVagrant( dominoVagrantRoot, sc._serverDir );
 
+        sc._consoleBuffer = new ConsoleBuffer();
+        ConsoleBufferManager.buffers.set( Std.string( sc._id ), sc._consoleBuffer );
+
         return sc;
 
     }
@@ -146,6 +150,7 @@ class Server {
     var _action:Property<ServerAction>;
     var _busy:Property<Bool>;
     var _console:IConsole;
+    var _consoleBuffer:ConsoleBuffer;
     var _dhcp4:Property<Bool>;
     var _diskUsage:Property<Float>;
     var _dominoVagrant:DominoVagrant;
@@ -1119,7 +1124,8 @@ class Server {
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
-        if ( console != null ) console.appendText( data );
+        //if ( console != null ) console.appendText( new String( data ) );
+        _consoleBuffer.push( data );
         Logger.debug( '${this._id}: Vagrant up: ${data}' );
         
     }

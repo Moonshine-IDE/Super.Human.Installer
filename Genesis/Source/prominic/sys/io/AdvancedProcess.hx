@@ -30,6 +30,7 @@
 
 package prominic.sys.io;
 
+import haxe.io.Bytes;
 import prominic.core.interfaces.IDisposable;
 import sys.io.Process;
 import sys.thread.EventLoop.EventHandler;
@@ -38,25 +39,33 @@ import sys.thread.Thread;
 
 class AdvancedProcess implements IDisposable {
 
+    static final _INPUT_BUFFER_SIZE:Int = 32768;
+    static final _THREAD_LOOP_INTERVAL:Int = 33;
+    static final _THREAD_SLEEP_INTERVAL:Float = .1;
+
     public var exitCode( get, null ):Null<Int>;
     var _exitCode:Null<Int>;
     function get_exitCode() return _exitCode;
 
-    public var onStart( get, null ):List<()->Void>;
-    var _onStart:List<()->Void>;
+    public var onStart( get, set ):()->Void;
+    var _onStart:()->Void;
     function get_onStart() return _onStart;
+    function set_onStart( value:()->Void ):()->Void { _onStart = value; return _onStart; }
 
-    public var onStdErr( get, null ):List<( String )->Void>;
-    var _onStdErr:List<( String )->Void>;
+    public var onStdErr( get, set ):( String )->Void;
+    var _onStdErr:( String )->Void;
     function get_onStdErr() return _onStdErr;
+    function set_onStdErr( value:( String )->Void ):( String )->Void { _onStdErr = value; return _onStdOut; }
 
-    public var onStdOut( get, null ):List<( String )->Void>;
-    var _onStdOut:List<( String )->Void>;
+    public var onStdOut( get, set ):( String )->Void;
+    var _onStdOut:( String )->Void;
     function get_onStdOut() return _onStdOut;
+    function set_onStdOut( value:( String )->Void ):( String )->Void { _onStdOut = value; return _onStdOut; }
 
-    public var onStop( get, null ):List<()->Void>;
-    var _onStop:List<()->Void>;
+    public var onStop( get, set ):()->Void;
+    var _onStop:()->Void;
     function get_onStop() return _onStop;
+    function set_onStop( value:()->Void ):()->Void { _onStop = value; return _onStop; }
 
     public var pid( get, null ):Null<Int>;
     var _pid:Null<Int>;
@@ -70,7 +79,7 @@ class AdvancedProcess implements IDisposable {
     var _command:String;
     var _disposed:Bool = false;
     var _eventHandler:EventHandler;
-    var _exited:Null<Bool>;
+    var _exited:Bool = false;
     var _mutexChecker:Mutex;
     var _mutexEventHandler:Mutex;
     var _mutexReadStdErr:Mutex;
@@ -79,21 +88,21 @@ class AdvancedProcess implements IDisposable {
     var _pendingStdErr:String;
     var _pendingStdOut:String;
     var _process:Process;
+    var _stdErrFinished:Bool = false;
+    var _stdOutFinished:Bool = false;
+    var _mutexWriteStdOut:Mutex;
 
     public function new( command:String, ?arguments:Array<String> ) {
 
         _command = command;
         _arguments = arguments;
-        _onStart = new List();
-        _onStdErr = new List();
-        _onStdOut = new List();
-        _onStop = new List();
 
         _mutexChecker = new Mutex();
         _mutexEventHandler = new Mutex();
         _mutexReadStdErr = new Mutex();
         _mutexReadStdOut = new Mutex();
         _mutexWaitForExit = new Mutex();
+        _mutexWriteStdOut = new Mutex();
 
         _pendingStdErr = "";
         _pendingStdOut = "";
@@ -102,13 +111,9 @@ class AdvancedProcess implements IDisposable {
 
     public function dispose() {
 
-        _onStart.clear();
         _onStart = null;
-        _onStdErr.clear();
         _onStdErr = null;
-        _onStdOut.clear();
         _onStdOut = null;
-        _onStop.clear();
         _onStop = null;
         _mutexChecker = null;
         _mutexEventHandler = null;
@@ -138,7 +143,7 @@ class AdvancedProcess implements IDisposable {
 
     public function stop( forced:Bool = false ) {
 
-        if ( _exited != null || _process == null ) return;
+        if ( _exited || _process == null ) return;
 
         if ( forced )
             _process.kill()
@@ -153,7 +158,7 @@ class AdvancedProcess implements IDisposable {
 
         var thread = Thread.current();
 
-        _mutexEventHandler.acquire();
+        //_mutexEventHandler.acquire();
 
         _eventHandler = thread.events.repeat( () -> {
 
@@ -161,53 +166,110 @@ class AdvancedProcess implements IDisposable {
             
             if ( _pendingStdOut.length > 0 ) {
 
-                for ( f in _onStdOut ) f( _pendingStdOut );
+                _mutexWriteStdOut.acquire();
+                if ( _onStdOut != null ) _onStdOut( new String( _pendingStdOut ) );
                 _pendingStdOut = "";
+                _mutexWriteStdOut.release();
 
             }
 
             if ( _pendingStdErr.length > 0 ) {
 
-                for ( f in _onStdErr ) f( _pendingStdErr );
+                if ( _onStdErr != null ) _onStdErr( _pendingStdErr );
                 _pendingStdErr = "";
 
             }
 
-            if ( _exited != null ) {
+            if ( _exited && _stdOutFinished && _stdErrFinished ) {
 
                 _running = false;
                 _process.close();
-                for ( f in _onStop ) f();
+                if ( _onStop != null ) _onStop();
                 thread.events.cancel( _eventHandler );
+                _mutexEventHandler.release();
+                _mutexChecker.release();
+                trace( 'thread.events.cancel()' );
 
             }
 
             _mutexChecker.release();
+            trace( '_mutexChecker.release()' );
 
-        }, 33 );
+        }, _THREAD_LOOP_INTERVAL );
 
-        _mutexEventHandler.release();
+        //_mutexEventHandler.release();
+        //trace( '_mutexEventHandler.release()' );
 
     }
 
     function _readStdErr() {
 
+        trace( '#' );
+
+        while( true ) {
+
+            _mutexReadStdErr.acquire();
+
+            try {
+
+                var b = Bytes.alloc( _INPUT_BUFFER_SIZE );
+                var d = _process.stderr.readBytes( b, 0, b.length );
+                _pendingStdErr += b.toString();
+
+            } catch( e ) {
+
+                _stdErrFinished = true;
+                _mutexReadStdErr.release();
+                break;
+
+            }
+
+            Sys.sleep( _THREAD_SLEEP_INTERVAL );
+            
+            _mutexReadStdErr.release();
+
+        }
+
+        _mutexReadStdErr.release();
+
         _mutexReadStdErr.acquire();
-
-        var s = _process.stderr.readAll().toString();
-        _pendingStdErr += s;
-
+        _stdErrFinished = true;
         _mutexReadStdErr.release();
 
     }
 
     function _readStdOut() {
 
+        trace( '@' );
+
+        while( true ) {
+
+            _mutexReadStdOut.acquire();
+
+            try {
+
+                var b = Bytes.alloc( _INPUT_BUFFER_SIZE );
+                var d = _process.stdout.readBytes( b, 0, b.length );
+                _pendingStdOut += b.toString();
+                //trace( '@ ${_pendingStdOut}');
+
+            } catch( e ) {
+
+                _stdOutFinished = true;
+                break;
+
+            }
+
+            Sys.sleep( _THREAD_SLEEP_INTERVAL );
+            
+            _mutexReadStdOut.release();
+
+        }
+
+        _mutexReadStdOut.release();
+
         _mutexReadStdOut.acquire();
-
-        var s = _process.stdout.readAll().toString();
-        _pendingStdOut += s;
-
+        _stdOutFinished = true;
         _mutexReadStdOut.release();
 
     }
