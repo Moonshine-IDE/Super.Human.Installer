@@ -548,13 +548,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _downloadVagrant( e:SuperHumanApplicationEvent ) {
 
-		System.openURL( SuperHumanGlobals.VAGRANT_DOWNLOAD_URL );
+		Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_DOWNLOAD_URL ] );
 
 	}
 
 	function _downloadVirtualBox( e:SuperHumanApplicationEvent ) {
 
-		System.openURL( SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL );
+		Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL ] );
 		
 	}
 
