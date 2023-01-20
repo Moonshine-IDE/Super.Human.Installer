@@ -487,6 +487,10 @@ class Vagrant extends AbstractApp {
 
         _tempGlobalStatusData += data;
 
+    }
+
+    function _globalStatusExecutorStopped( executor:AbstractExecutor ) {
+
         var a = _tempGlobalStatusData.split( SysTools.lineEnd );
 
         for ( v in a ) {
@@ -503,10 +507,6 @@ class Vagrant extends AbstractApp {
 
         if ( _metadata == null ) _metadata = { machineCount: 0 };
         if ( _machines == null ) _machines = [];
-
-    }
-
-    function _globalStatusExecutorStopped( executor:AbstractExecutor ) {
 
         for ( f in _onGlobalStatus ) f();
 
