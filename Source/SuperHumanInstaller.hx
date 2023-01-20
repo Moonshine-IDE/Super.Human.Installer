@@ -442,7 +442,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			for ( s in _servers ) {
 
-				if ( s.path.value == i.home ) s.vagrantMachine.value = i;
+				if ( s.path.value == i.home ) {
+
+					s.vagrantMachine.value = i;
+					s.vagrantMachine.value.serverId = s.id;
+
+				}
 
 			}
 
