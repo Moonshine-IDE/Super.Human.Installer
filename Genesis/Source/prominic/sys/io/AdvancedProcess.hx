@@ -31,259 +31,265 @@
 package prominic.sys.io;
 
 import haxe.io.Bytes;
-import prominic.core.interfaces.IDisposable;
+import haxe.io.Eof;
 import sys.io.Process;
-import sys.thread.EventLoop.EventHandler;
 import sys.thread.Mutex;
 import sys.thread.Thread;
 
-class AdvancedProcess implements IDisposable {
+class AdvancedProcess {
 
-    static final _INPUT_BUFFER_SIZE:Int = 32768;
-    static final _THREAD_LOOP_INTERVAL:Int = 33;
-    static final _THREAD_SLEEP_INTERVAL:Float = .1;
+    static final _eventCheckerInterval = .1;
+    static final _inputBuffer = 32768;
+    static final _inputInterval = .05;
 
-    public var exitCode( get, null ):Null<Int>;
-    var _exitCode:Null<Int>;
-    function get_exitCode() return _exitCode;
-
-    public var onStart( get, set ):()->Void;
-    var _onStart:()->Void;
-    function get_onStart() return _onStart;
-    function set_onStart( value:()->Void ):()->Void { _onStart = value; return _onStart; }
-
-    public var onStdErr( get, set ):( String )->Void;
-    var _onStdErr:( String )->Void;
-    function get_onStdErr() return _onStdErr;
-    function set_onStdErr( value:( String )->Void ):( String )->Void { _onStdErr = value; return _onStdOut; }
-
-    public var onStdOut( get, set ):( String )->Void;
-    var _onStdOut:( String )->Void;
-    function get_onStdOut() return _onStdOut;
-    function set_onStdOut( value:( String )->Void ):( String )->Void { _onStdOut = value; return _onStdOut; }
-
-    public var onStop( get, set ):()->Void;
-    var _onStop:()->Void;
-    function get_onStop() return _onStop;
-    function set_onStop( value:()->Void ):()->Void { _onStop = value; return _onStop; }
-
-    public var pid( get, null ):Null<Int>;
-    var _pid:Null<Int>;
-    function get_pid() return _pid;
-
-    public var running( get, null ):Bool;
-    var _running:Bool = false;
-    function get_running() return _running;
-
-    var _arguments:Array<String>;
-    var _command:String;
-    var _disposed:Bool = false;
-    var _eventHandler:EventHandler;
+    var _args:Array<String>;
+    var _cmd:String;
+    var _eventCheckerThread:Thread;
+    var _exitCode:Int = -1;
     var _exited:Bool = false;
     var _mutexChecker:Mutex;
-    var _mutexEventHandler:Mutex;
-    var _mutexReadStdErr:Mutex;
-    var _mutexReadStdOut:Mutex;
-    var _mutexWaitForExit:Mutex;
-    var _pendingStdErr:String;
-    var _pendingStdOut:String;
+    var _mutexExit:Mutex;
+    var _mutexStdErr:Mutex;
+    var _mutexStdOut:Mutex;
+    var _onStdErr:(String)->Void;
+    var _onStdOut:(String)->Void;
+    var _onStop:()->Void;
+    var _pid:Int;
     var _process:Process;
-    var _stdErrFinished:Bool = false;
-    var _stdOutFinished:Bool = false;
-    var _mutexWriteStdOut:Mutex;
+    var _standardErrorFinished:Bool = false;
+    var _standardOutputFinished:Bool = false;
 
-    public function new( command:String, ?arguments:Array<String> ) {
+    public var exitCode( get, never ):Int;
+    function get_exitCode() return _exitCode;
 
-        _command = command;
-        _arguments = arguments;
+    public var onStop( get, set ):()->Void;
+    function get_onStop() return _onStop;
+    function set_onStop( value:()->Void ) { _onStop = value; return _onStop; }
+
+    public var onStdErr( get, set ):(String)->Void;
+    function get_onStdErr() return _onStdErr;
+    function set_onStdErr( value:(String)->Void ) { _onStdErr = value; return _onStdErr; }
+
+    public var onStdOut( get, set ):(String)->Void;
+    function get_onStdOut() return _onStdOut;
+    function set_onStdOut( value:(String)->Void ) { _onStdOut = value; return _onStdOut; }
+
+    public var pid( get, null ):Int;
+    function get_pid() return _pid;
+
+    public function new( cmd:String, ?args:Array<String> ) {
+
+        _cmd = cmd;
+        _args = args;
 
         _mutexChecker = new Mutex();
-        _mutexEventHandler = new Mutex();
-        _mutexReadStdErr = new Mutex();
-        _mutexReadStdOut = new Mutex();
-        _mutexWaitForExit = new Mutex();
-        _mutexWriteStdOut = new Mutex();
-
-        _pendingStdErr = "";
-        _pendingStdOut = "";
-
-    }
-
-    public function dispose() {
-
-        _onStart = null;
-        _onStdErr = null;
-        _onStdOut = null;
-        _onStop = null;
-        _mutexChecker = null;
-        _mutexEventHandler = null;
-        _mutexReadStdErr = null;
-        _mutexReadStdOut = null;
-        _mutexWaitForExit = null;
-        _eventHandler = null;
-        _process = null;
-        _exitCode = null;
-        _pid = null;
-        _disposed = true;
+        _mutexExit = new Mutex();
+        _mutexStdErr = new Mutex();
+        _mutexStdOut = new Mutex();
 
     }
 
     public function start() {
 
-        _process = new Process( _command, _arguments );
-        _running = true;
+        _process = new Process( _cmd, _args );
         _pid = _process.getPid();
+        trace( _pid );
 
+        _eventCheckerThread = Thread.create( _eventChecker );
         Thread.create( _readStdOut );
         Thread.create( _readStdErr );
         Thread.create( _waitForExit );
-        Thread.runWithEventLoop( _checker );
 
     }
 
     public function stop( forced:Bool = false ) {
 
-        if ( _exited || _process == null ) return;
-
-        if ( forced )
-            _process.kill()
-        else
-            _process.close();
-
-        _process = null;
+        
 
     }
 
-    function _checker() {
+    function _eventChecker() {
 
-        var thread = Thread.current();
+        while ( true ) {
 
-        //_mutexEventHandler.acquire();
+            var eventData:EventData = Thread.readMessage( true );
 
-        _eventHandler = thread.events.repeat( () -> {
+            if ( eventData != null ) {
 
-            _mutexChecker.acquire();
-            
-            if ( _pendingStdOut.length > 0 ) {
+                switch ( eventData.owner ) {
 
-                _mutexWriteStdOut.acquire();
-                if ( _onStdOut != null ) _onStdOut( new String( _pendingStdOut ) );
-                _pendingStdOut = "";
-                _mutexWriteStdOut.release();
+                    case EventOwner.Process:
+
+                        switch ( eventData.command ) {
+
+                            case EventCommand.Exit:
+                                _mutexChecker.acquire();
+                                _exited = true;
+                                _exitCode = eventData.value;
+                                _mutexChecker.release();
+
+                            default:
+
+                        }
+
+                    case EventOwner.StandardError:
+
+                        switch ( eventData.command ) {
+
+                            case EventCommand.Close:
+                                _mutexChecker.acquire();
+                                _standardErrorFinished = true;
+                                _mutexChecker.release();
+
+                            case EventCommand.Message:
+                                if ( _onStdErr != null ) _onStdErr( eventData.data );
+
+                            default:
+
+                        }
+
+                    case EventOwner.StandardOutput:
+
+                        switch ( eventData.command ) {
+
+                            case EventCommand.Close:
+                                _mutexChecker.acquire();
+                                _standardOutputFinished = true;
+                                _mutexChecker.release();
+
+                            case EventCommand.Message:
+                                if ( _onStdOut != null ) _onStdOut( eventData.data );
+
+                            default:
+
+                        }
+
+                    default:
+
+                }
 
             }
 
-            if ( _pendingStdErr.length > 0 ) {
+            if ( _exited && _standardErrorFinished && _standardOutputFinished ) {
 
-                if ( _onStdErr != null ) _onStdErr( _pendingStdErr );
-                _pendingStdErr = "";
-
-            }
-
-            if ( _exited && _stdOutFinished && _stdErrFinished ) {
-
-                _running = false;
-                _process.close();
+                trace( '----------------------------' );
                 if ( _onStop != null ) _onStop();
-                thread.events.cancel( _eventHandler );
-                _mutexEventHandler.release();
-                _mutexChecker.release();
-                trace( 'thread.events.cancel()' );
-
-            }
-
-            _mutexChecker.release();
-            trace( '_mutexChecker.release()' );
-
-        }, _THREAD_LOOP_INTERVAL );
-
-        //_mutexEventHandler.release();
-        //trace( '_mutexEventHandler.release()' );
-
-    }
-
-    function _readStdErr() {
-
-        trace( '#' );
-
-        while( true ) {
-
-            _mutexReadStdErr.acquire();
-
-            try {
-
-                var b = Bytes.alloc( _INPUT_BUFFER_SIZE );
-                var d = _process.stderr.readBytes( b, 0, b.length );
-                _pendingStdErr += b.toString();
-
-            } catch( e ) {
-
-                _stdErrFinished = true;
-                _mutexReadStdErr.release();
                 break;
 
             }
 
-            Sys.sleep( _THREAD_SLEEP_INTERVAL );
-            
-            _mutexReadStdErr.release();
+            Sys.sleep( _eventCheckerInterval );
 
         }
-
-        _mutexReadStdErr.release();
-
-        _mutexReadStdErr.acquire();
-        _stdErrFinished = true;
-        _mutexReadStdErr.release();
 
     }
 
     function _readStdOut() {
 
-        trace( '@' );
-
         while( true ) {
-
-            _mutexReadStdOut.acquire();
 
             try {
 
-                var b = Bytes.alloc( _INPUT_BUFFER_SIZE );
-                var d = _process.stdout.readBytes( b, 0, b.length );
-                _pendingStdOut += b.toString();
-                //trace( '@ ${_pendingStdOut}');
+                var bytes = Bytes.alloc( _inputBuffer );
+                var size = _process.stdout.readBytes( bytes, 0, bytes.length );
+                var data:String = bytes.getString( 0, size );
 
-            } catch( e ) {
+                _mutexStdOut.acquire();
+                var eventData:EventData = { command: EventCommand.Message, owner: EventOwner.StandardOutput, data: data };
+                _eventCheckerThread.sendMessage( eventData );
+                _mutexStdOut.release();
 
-                _stdOutFinished = true;
+            } catch ( e:Eof ) {
+
+                _mutexStdOut.acquire();
+                var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardOutput };
+                _eventCheckerThread.sendMessage( eventData );
+                _mutexStdOut.release();
+
+                break;
+
+            } catch ( e:Dynamic ) {
+
                 break;
 
             }
 
-            Sys.sleep( _THREAD_SLEEP_INTERVAL );
-            
-            _mutexReadStdOut.release();
+            Sys.sleep( _inputInterval );
 
         }
 
-        _mutexReadStdOut.release();
+    }
 
-        _mutexReadStdOut.acquire();
-        _stdOutFinished = true;
-        _mutexReadStdOut.release();
+    function _readStdErr() {
+
+        while( true ) {
+
+            try {
+
+                var bytes = Bytes.alloc( _inputBuffer );
+                var size = _process.stderr.readBytes( bytes, 0, bytes.length );
+                var data:String = bytes.getString( 0, size );
+
+                _mutexStdErr.acquire();
+                var eventData:EventData = { command: EventCommand.Message, owner: EventOwner.StandardError, data: data };
+                _eventCheckerThread.sendMessage( eventData );
+                _mutexStdErr.release();
+
+            } catch ( e:Eof ) {
+
+                _mutexStdErr.acquire();
+                var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardError };
+                _eventCheckerThread.sendMessage( eventData );
+                _mutexStdErr.release();
+
+                break;
+
+            } catch ( e:Dynamic ) {
+
+                break;
+
+            }
+
+            Sys.sleep( _inputInterval );
+
+        }
 
     }
 
     function _waitForExit() {
 
-        _mutexWaitForExit.acquire();
+        var e = _process.exitCode();
 
-        _exitCode = _process.exitCode();
-        _running = false;
-        _exited = true;
-
-        _mutexWaitForExit.release();
+        _mutexExit.acquire();
+        var eventData:EventData = { command: EventCommand.Exit, owner: EventOwner.Process, value: e };
+        _eventCheckerThread.sendMessage( eventData );
+        _mutexExit.release();
 
     }
+    
+}
+
+typedef EventData = {
+
+    command:EventCommand,
+    owner:EventOwner,
+    ?data:String,
+    ?value:Int,
+
+}
+
+enum EventCommand {
+
+    Close;
+    Exit;
+    Message;
+
+}
+
+enum EventOwner {
+
+    Process;
+    StandardError;
+    StandardOutput;
 
 }
