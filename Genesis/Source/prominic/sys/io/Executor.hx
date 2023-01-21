@@ -103,7 +103,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _advancedProcessOnStdErr( data:String ) {
 
-        Logger.verbose( '${this} stderr: ${data}' );
+        Logger.error( '${this} stderr: ${data}' );
         for ( f in _onStdErr ) f( this, data );
 
     }
