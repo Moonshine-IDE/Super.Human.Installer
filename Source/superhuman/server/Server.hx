@@ -519,8 +519,6 @@ class Server {
 
         this.status.value = ServerStatus.Stopping;
 
-        Sys.setCwd( _serverDir );
-
         if ( _vagrantUpSuccessful.value == true ) {
 
             this._busy.value = true;
@@ -528,7 +526,7 @@ class Server {
             Vagrant.getInstance().getHalt( this._vagrantMachine.value )
                 .onStdOut( _vagrantHaltStandardOutputData )
                 .onStdErr( _vagrantHaltStandardErrorData )
-                .execute();
+                .execute( this._serverDir );
 
         } else {
 
@@ -537,7 +535,7 @@ class Server {
             Vagrant.getInstance().getHalt( this._vagrantMachine.value )
                 .onStdOut( _vagrantHaltStandardOutputData )
                 .onStdErr( _vagrantHaltStandardErrorData )
-                .execute();
+                .execute( this._serverDir );
 
         }
 
@@ -1078,8 +1076,6 @@ class Server {
 
         }
 
-        Sys.setCwd( _serverDir );
-
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
 
         Vagrant.getInstance().getUp( this._vagrantMachine.value, _provision, [] )
@@ -1087,7 +1083,7 @@ class Server {
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
             .onStdErr( _vagrantUpStandardErrorData )
-            .execute();
+            .execute( _serverDir );
 
     }
 
@@ -1159,8 +1155,7 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.GetStatus;
 
-        Sys.setCwd( _serverDir );
-        Vagrant.getInstance().getStatus( this._vagrantMachine.value ).execute();
+        Vagrant.getInstance().getStatus( this._vagrantMachine.value ).execute( this._serverDir );
 
     }
 
