@@ -30,8 +30,6 @@
 
 package superhuman.components;
 
-import sys.thread.Mutex;
-import superhuman.managers.ConsoleBufferManager;
 import feathers.controls.AssetLoader;
 import feathers.controls.Button;
 import feathers.controls.Label;
@@ -64,7 +62,6 @@ class Console extends LayoutGroup implements IConsole {
     var _textArea:ConsoleTextArea;
     var _titleLabel:Label;
     var _topGroup:LayoutGroup;
-    var _mutex:Mutex;
 
     public var hasError( get, never ):Bool;
     function get_hasError() return _hasError;
@@ -93,8 +90,6 @@ class Console extends LayoutGroup implements IConsole {
         _textArea = new ConsoleTextArea( text );
         _textArea.editable = false;
 
-        _mutex = new Mutex();
-        
     }
 
     override function initialize() {
@@ -136,8 +131,6 @@ class Console extends LayoutGroup implements IConsole {
 
         this.addChild( _textArea );
 
-        this.addEventListener( Event.ENTER_FRAME, _enterFrame );
-
     }
 
     function _clearButtonTriggered( e:TriggerEvent ) {
@@ -163,33 +156,6 @@ class Console extends LayoutGroup implements IConsole {
         this.dispatchEvent( evt );
 
         this.dispatchEvent( new Event( Event.CHANGE ) );
-
-    }
-
-    function _enterFrame( e:Event ) {
-
-        trace( '_enterFrame()' );
-
-        if ( _propertyId != null ) {
-
-            _mutex.acquire();
-
-            var cb = ConsoleBufferManager.buffers.get( _propertyId );
-
-            if ( cb != null && cb.length > 0 ) {
-
-                for ( t in cb ) {
-                    _textArea.appendText( t );
-                    _textArea.validateNow();
-                    _textArea.update();
-                }
-                cb.resize( 0 );
-
-            }
-
-            _mutex.release();
-
-        }
 
     }
 
@@ -224,7 +190,6 @@ class ConsoleTextArea extends TextArea {
 
         if ( text != null ) this.text = text;
 
-        this.addEventListener( Event.ENTER_FRAME, _enterFrame );
         this.addEventListener( ScrollEvent.SCROLL, _onScroll );
 
     }
@@ -273,10 +238,6 @@ class ConsoleTextArea extends TextArea {
     public function clear() {
 
         this.text = "";
-
-    }
-
-    function _enterFrame( e:Event ) {
 
     }
 
