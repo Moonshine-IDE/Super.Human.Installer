@@ -1132,8 +1132,8 @@ class Server {
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
-        //if ( console != null ) console.appendText( new String( data ) );
-        _consoleBuffer.push( data );
+        if ( console != null ) console.appendText( new String( data ) );
+        //_consoleBuffer.push( data );
         Logger.debug( '${this._id}: Vagrant up: ${data}' );
         
     }
