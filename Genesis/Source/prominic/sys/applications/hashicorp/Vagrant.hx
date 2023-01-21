@@ -491,8 +491,6 @@ class Vagrant extends AbstractApp {
 
     function _globalStatusExecutorStopped( executor:AbstractExecutor ) {
 
-        trace( '# ${_tempGlobalStatusData}');
-
         var a = _tempGlobalStatusData.split( SysTools.lineEnd );
 
         for ( v in a ) {

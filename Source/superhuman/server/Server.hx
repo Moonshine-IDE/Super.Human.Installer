@@ -906,6 +906,8 @@ class Server {
 
     function _onVagrantRSync( machine:VagrantMachine ) {
 
+        if ( machine.serverId != this._id ) return;
+
         Logger.verbose( '_onVagrantRSync ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running;
@@ -914,6 +916,8 @@ class Server {
 
     function _onVagrantHalt( machine:VagrantMachine ) {
 
+        if ( machine.serverId != this._id ) return;
+
         Logger.verbose( '_onVagrantHalt ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Stopped;
@@ -921,6 +925,8 @@ class Server {
     }
 
     function _onVagrantProvision( machine:VagrantMachine ) {
+
+        if ( machine.serverId != this._id ) return;
 
         Logger.verbose( '_onVagrantProvision ${machine}' );
         this._busy.value = false;
@@ -988,6 +994,8 @@ class Server {
     }
 
     function _onVagrantDestroy( machine:VagrantMachine ) {
+
+        if ( machine.serverId != this._id ) return;
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
@@ -1157,6 +1165,8 @@ class Server {
     }
 
     function _onVagrantStatus( machine:VagrantMachine ) {
+
+        if ( machine.serverId != this._id ) return;
 
         this._busy.value = false;
 
