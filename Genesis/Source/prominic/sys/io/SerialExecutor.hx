@@ -96,7 +96,7 @@ class SerialExecutor extends AbstractExecutor {
 
     }
 
-    public function execute( ?extraArgs:Array<String> ) {
+    public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
         for ( e in _executors ) {
 

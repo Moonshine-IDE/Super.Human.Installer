@@ -75,11 +75,14 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    public function execute( ?extraArgs:Array<String> ):Executor {
+    public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ):Executor {
 
         if ( _running ) return this;
 
+        var currentWorkingDirectory = Sys.getCwd();
+
         if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
+        if ( workingDirectory != null ) Sys.setCwd( workingDirectory );
         if ( _env != null ) for ( k in _env.keys() ) Sys.putEnv( k, _env.get( k ) );
 
         _validExitCodes = null;
@@ -97,6 +100,9 @@ class Executor extends AbstractExecutor implements IDisposable {
         for ( f in _onStart ) f( this );
 
         Logger.verbose( '${this} execute' );
+
+        Sys.setCwd( currentWorkingDirectory );
+
         return this;
 
     }

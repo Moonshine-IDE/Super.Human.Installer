@@ -81,7 +81,7 @@ class ParallelExecutor extends AbstractExecutor {
 
     }
 
-    public function execute( ?extraArgs:Array<String> ) {
+    public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
         if ( _executors.length == 0 ) {
 
