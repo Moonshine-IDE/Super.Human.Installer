@@ -111,7 +111,7 @@ abstract class AbstractExecutor {
 
     }
 
-    abstract public function execute( ?extraArgs:Array<String> ):AbstractExecutor;
+    abstract public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ):AbstractExecutor;
     abstract public function stop( ?forced:Bool ):Void;
 
 }

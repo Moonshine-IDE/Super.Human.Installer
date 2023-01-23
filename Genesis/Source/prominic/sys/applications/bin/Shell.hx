@@ -267,7 +267,11 @@ class Shell extends AbstractApp {
      */
     public function open( args:Array<String> ) {
 
+        #if linux
+        Sys.command("/usr/bin/xdg-open", args );
+        #else
         System.openFile( StringTools.trim( args.join( " " ) ) );
+        #end
 
     }
 

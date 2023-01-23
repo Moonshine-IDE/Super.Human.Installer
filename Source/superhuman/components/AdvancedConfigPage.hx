@@ -339,7 +339,9 @@ class AdvancedConfigPage extends Page {
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
         _server.dhcp4.value = _cbDHCP.selected;
 
-        this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION ) );
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION );
+        evt.server = _server;
+        this.dispatchEvent( evt );
 
     }
     

@@ -216,28 +216,28 @@ class ServerItem extends LayoutGroupItemRenderer {
         this.addChild( _buttonGroup );
 
         _buttonStart = new GenesisButton();
-        _buttonStart.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_START );
+        _buttonStart.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_START ) );
         _buttonStart.enabled = true;
         _buttonStart.toolTip = "Start server";
         _buttonStart.addEventListener( TriggerEvent.TRIGGER, _buttonStartTriggered );
         _buttonGroup.addChild( _buttonStart );
 
         _buttonStop = new GenesisButton();
-        _buttonStop.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_STOP );
+        _buttonStop.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_STOP ) );
         _buttonStop.enabled = _buttonStop.visible = _buttonStop.includeInLayout = false;
         _buttonStop.toolTip = "Stop server";
         _buttonStop.addEventListener( TriggerEvent.TRIGGER, _buttonStopTriggered );
         _buttonGroup.addChild( _buttonStop );
 
         _buttonSync = new GenesisButton();
-        _buttonSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_UPLOAD );
+        _buttonSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_UPLOAD ) );
         _buttonSync.enabled = false;
         _buttonSync.toolTip = "Re-sync configuration files";
         _buttonSync.addEventListener( TriggerEvent.TRIGGER, _buttonSyncTriggered );
         _buttonGroup.addChild( _buttonSync );
 
         _buttonProvision = new GenesisButton();
-        _buttonProvision.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_REFRESH );
+        _buttonProvision.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_REFRESH ) );
         _buttonProvision.enabled = false;
         _buttonProvision.toolTip = "Run provisioning on server";
         _buttonProvision.addEventListener( TriggerEvent.TRIGGER, _buttonProvisionTriggered );
@@ -245,19 +245,19 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         _buttonDestroy = new GenesisButton();
         _buttonDestroy.enabled = false;
-        _buttonDestroy.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_DESTROY );
+        _buttonDestroy.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DESTROY ) );
         _buttonDestroy.toolTip = "Destroy server";
         _buttonDestroy.addEventListener( TriggerEvent.TRIGGER, _buttonDestroyTriggered );
         _buttonGroup.addChild( _buttonDestroy );
 
         _buttonConsole = new GenesisButton();
-        _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT );
+        _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OUTPUT ) );
         _buttonConsole.addEventListener( TriggerEvent.TRIGGER, _buttonConsoleTriggered );
         _buttonConsole.toolTip = "Display output";
         _buttonGroup.addChild( _buttonConsole );
 
         _buttonOpenBrowser = new GenesisButton();
-        _buttonOpenBrowser.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_WEB );
+        _buttonOpenBrowser.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WEB ) );
         _buttonOpenBrowser.enabled = false;
         _buttonOpenBrowser.toolTip = "Open Welcome page in browser";
         _buttonOpenBrowser.addEventListener( TriggerEvent.TRIGGER, _buttonOpenBrowserTriggered );
@@ -265,19 +265,19 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         _buttonSSH = new GenesisButton();
         _buttonSSH.enabled = false;
-        _buttonSSH.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_CONSOLE );
+        _buttonSSH.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CONSOLE ) );
         _buttonSSH.toolTip = "Open Vagrant SSH in Terminal";
         _buttonSSH.addEventListener( TriggerEvent.TRIGGER, _buttonSSHTriggered );
         _buttonGroup.addChild( _buttonSSH );
 
         _buttonOpenDir = new GenesisButton();
-        _buttonOpenDir.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_FOLDER );
+        _buttonOpenDir.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_FOLDER ) );
         _buttonOpenDir.toolTip = "Open server directory in default file manager, and in Terminal";
         _buttonOpenDir.addEventListener( TriggerEvent.TRIGGER, _buttonOpenDirTriggered );
         #if debug _buttonGroup.addChild( _buttonOpenDir ); #end
 
         _buttonDelete = new GenesisButton();
-        _buttonDelete.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_DELETE );
+        _buttonDelete.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DELETE ) );
         _buttonDelete.toolTip = "Delete server";
         _buttonDelete.addEventListener( TriggerEvent.TRIGGER, _buttonDeleteTriggered );
         #if debug _buttonGroup.addChild( _buttonDelete ); #end
@@ -287,7 +287,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonGroup.addChild( _spacer );
 
         _buttonConfigure = new GenesisButton();
-        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_SETTINGS );
+        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
         _buttonConfigure.addEventListener( TriggerEvent.TRIGGER, _buttonConfigureTriggered );
         _buttonConfigure.toolTip = "Configure server";
         _buttonGroup.addChild( _buttonConfigure );
@@ -296,9 +296,14 @@ class ServerItem extends LayoutGroupItemRenderer {
         _console.addEventListener( Event.CHANGE, _consoleChanged );
         _console.addEventListener( SuperHumanApplicationEvent.CLOSE_CONSOLE, _closeConsole );
         _console.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
-        if ( _server != null ) _server.console = _console;
 
-        if ( _server != null ) _updateServer( _server, false );
+        if ( _server != null ) {
+
+            _server.console = _console;
+            _console.propertyId = Std.string( _server.id );
+            _updateServer( _server, false );
+
+        }
 
     }
 
@@ -338,6 +343,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _labelTitle != null ) {
 
             _server.console = _console;
+            _console.propertyId = Std.string( _server.id );
             _updateServer( _server, false );
     
         }
@@ -514,7 +520,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
         _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;
-        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_SETTINGS );
+        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
         _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = false;
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
         _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
@@ -558,7 +564,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Unconfigured:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
-                _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_SETTINGS_WARNING );
+                _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS_WARNING ) );
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _statusLabel.text = "Status: Not configured. Please configure your server";
 

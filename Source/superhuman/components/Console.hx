@@ -45,7 +45,6 @@ import genesis.application.components.HLine;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.Event;
-import openfl.text.TextField;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.interfaces.IConsole;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -59,6 +58,7 @@ class Console extends LayoutGroup implements IConsole {
     var _hasError:Bool;
     var _hasNewMessage:Bool;
     var _i:Int = 0;
+    var _propertyId:String;
     var _textArea:ConsoleTextArea;
     var _titleLabel:Label;
     var _topGroup:LayoutGroup;
@@ -68,6 +68,10 @@ class Console extends LayoutGroup implements IConsole {
 
     public var hasNewMessage( get, never ):Bool;
     function get_hasNewMessage() return _hasNewMessage;
+
+    public var propertyId( get, set ):String;
+    function get_propertyId() return _propertyId;
+    function set_propertyId( value:String ):String { _propertyId = value; return _propertyId; }
 
     var _title:String;
     public var title( get, set ):String;
@@ -85,7 +89,7 @@ class Console extends LayoutGroup implements IConsole {
 
         _textArea = new ConsoleTextArea( text );
         _textArea.editable = false;
-        
+
     }
 
     override function initialize() {
@@ -107,17 +111,17 @@ class Console extends LayoutGroup implements IConsole {
         _topGroup.addChild( _titleLabel );
 
         _clearButton = new Button( LanguageManager.getInstance().getString( 'console.buttonclear' ) );
-        _clearButton.icon = new AssetLoader( GenesisApplicationTheme.ICON_CLEAR );
+        _clearButton.icon = new AssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CLEAR ) );
         _clearButton.addEventListener( TriggerEvent.TRIGGER, _clearButtonTriggered );
         _topGroup.addChild( _clearButton );
 
         _copyButton = new Button( LanguageManager.getInstance().getString( 'console.buttoncopy' ) );
-        _copyButton.icon = new AssetLoader( GenesisApplicationTheme.ICON_COPY );
+        _copyButton.icon = new AssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_COPY ) );
         _copyButton.addEventListener( TriggerEvent.TRIGGER, _copyButtonTriggered );
         _topGroup.addChild( _copyButton );
 
         _closeButton = new Button( LanguageManager.getInstance().getString( 'console.buttonclose' ) );
-        _closeButton.icon = new AssetLoader( GenesisApplicationTheme.ICON_CLOSE );
+        _closeButton.icon = new AssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CLOSE ) );
         _closeButton.addEventListener( TriggerEvent.TRIGGER, _closeButtonTriggered );
         _topGroup.addChild( _closeButton );
 
@@ -160,7 +164,7 @@ class Console extends LayoutGroup implements IConsole {
         _hasNewMessage = true;
         if ( !_hasError ) _hasError = isError;
 
-        _textArea.appendText( text, isError );
+        _textArea.appendText( text.toString(), isError );
         this.dispatchEvent( new Event( Event.CHANGE ) );
 
     }

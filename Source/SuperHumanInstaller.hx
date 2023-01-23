@@ -37,6 +37,7 @@ import feathers.style.Theme;
 import genesis.application.GenesisApplication;
 import genesis.application.managers.LanguageManager;
 import genesis.application.managers.ToastManager;
+import genesis.application.theme.GenesisApplicationTheme;
 import haxe.Json;
 import haxe.io.Path;
 import lime.system.System;
@@ -79,9 +80,9 @@ import sys.io.File;
 class SuperHumanInstaller extends GenesisApplication {
 
 	static final _CONFIG_FILE:String = ".shi-config";
-	static final _DOMINO_VAGRANT_PATH:String = "assets/vagrant/domino/";
+	static final _DOMINO_VAGRANT_PATH:String = "assets/vagrant/demo-tasks/0.1.13/scripts/";
 	static final _DOMINO_VAGRANT_VERSION_FILE:String = "version.rb";
-	static final _HOSTS_TEMPLATE_PATH:String = "assets/vagrant/config/Hosts.template.yml";
+	static final _HOSTS_TEMPLATE_PATH:String = "assets/vagrant/demo-tasks/0.1.13/templates/Hosts.template.yml";
 
 	static public final PAGE_CONFIG = "page-config";
 	static public final PAGE_CONFIG_ADVANCED = "page-config-advanced";
@@ -329,7 +330,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
 
-		this._header.logo = SuperHumanInstallerTheme.IMAGE_ICON;
+		this._header.logo = GenesisApplicationTheme.getAssetPath( SuperHumanInstallerTheme.IMAGE_ICON );
 
 		_loadingPage = new LoadingPage();
 		this.addPage( _loadingPage, 0, PAGE_LOADING );
@@ -442,7 +443,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			for ( s in _servers ) {
 
-				if ( s.path.value == i.home ) s.vagrantMachine.value = i;
+				if ( s.path.value == i.home ) {
+
+					s.vagrantMachine.value = i;
+					s.vagrantMachine.value.serverId = s.id;
+
+				}
 
 			}
 
@@ -543,13 +549,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _downloadVagrant( e:SuperHumanApplicationEvent ) {
 
-		System.openURL( SuperHumanGlobals.VAGRANT_DOWNLOAD_URL );
+		Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_DOWNLOAD_URL ] );
 
 	}
 
 	function _downloadVirtualBox( e:SuperHumanApplicationEvent ) {
 
-		System.openURL( SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL );
+		Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL ] );
 		
 	}
 
@@ -665,7 +671,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		File.saveContent( '${_serverDirectory}/${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-		Logger.debug( 'Configuration saved to: ${_serverDirectory}/${_CONFIG_FILE}' );
+		Logger.debug( 'Configuration saved to: ${_serverDirectory}${_CONFIG_FILE}' );
 
 	}
 
@@ -696,6 +702,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
 
+		e.server.saveHostsFile();
 		_saveConfig();
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.advancedserverconfigsaved' ) );
@@ -714,7 +721,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		Logger.info( 'Starting server: ${e.server.id}' );
-		Logger.info( 'Server configuration: ${e.server.getData( false )}' );
+		Logger.info( 'Server configuration: ${e.server.getData()}' );
 		Logger.info( 'VirtualBox VM: ${e.server.virtualMachine.value}' );
 		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.getHostsContent()}\n----- Hosts.yml END -----' );
 

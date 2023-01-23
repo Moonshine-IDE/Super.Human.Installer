@@ -8,7 +8,7 @@
       name: "Get MAC address of bridged adapter"
       become: true
       when: networks[0] is defined
-      shell: lshw -xml -c net | xmllint --xpath "string(//node[@id='network:1']/serial)" -
+      shell: lshw -xml -c net | xmllint --xpath "string(//node[@id='network']/serial|//node[@id='network:1']/serial)" -
       args:
         executable: /bin/bash
       register: macaddress
@@ -41,7 +41,7 @@
       name: "Grabbing External IP address"
       become: true
       when: networks[0] is defined
-      shell: lshw -xml -c net | xmllint --xpath "string(//node[@id='network:1']/configuration/setting[@id='ip']/@value)" -
+      shell: lshw -xml -c net | xmllint --xpath "string(//node[@id='network:1']/configuration/setting[@id='ip']/@value|//node[@id='network']/configuration/setting[@id='ip']/@value)" -
       args:
         executable: /bin/bash
       register: netoutput
