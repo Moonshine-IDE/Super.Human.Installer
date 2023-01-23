@@ -81,7 +81,7 @@ hosts:
         description: "Disable VBoxSF"
       - map: ./ansible/
         to: /vagrant/ansible/
-        type: rsync ## If Windows, then set to blank
+        type: rsync
         args:
           - '--verbose'
           - '--archive'
@@ -90,14 +90,14 @@ hosts:
           - '--copy-links'
       - map: ./installers/
         to: /vagrant/installers/
-        type: rsync ## If Windows, then set to blank
+        type: rsync
         description: "Users will want to put their installer files into these folders"
       - map: ./ssls/
         to: /secure/
-        type: rsync ## If Windows, then set to blank
+        type: rsync
       - map: ./safe-id-to-cross-certify/
         to: /safe-id-to-cross-certify/
-        type: rsync ## If Windows, then set to blank
+        type: rsync
     
     vars:
       ## You can set global role variables here, look in the defaults folders for hints as to variables used by roles
@@ -140,8 +140,8 @@ hosts:
       ::ROLE_TRAVELER_HTMO::
       ::ROLE_VERSE::
       ::ROLE_APPDEVPACK::
-      ::ROLE_RESTAPI::
       - name: domino-vagrant-readme
+      ::ROLE_RESTAPI::
       ::ROLE_STARTCLOUD_QUICK_START::
       ::ROLE_STARTCLOUD_HAPROXY::
       ::ROLE_STARTCLOUD_VAGRANT_README::
