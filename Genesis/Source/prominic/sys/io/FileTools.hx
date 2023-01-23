@@ -101,7 +101,7 @@ class FileTools {
 
         if ( _copyDirectoryThreaded ) _mutex.release();
 
-        _copyDirectoryCallback();
+        if ( _copyDirectoryCallback != null ) _copyDirectoryCallback();
 
     }
 
