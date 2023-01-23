@@ -80,9 +80,9 @@ import sys.io.File;
 class SuperHumanInstaller extends GenesisApplication {
 
 	static final _CONFIG_FILE:String = ".shi-config";
-	static final _DOMINO_VAGRANT_PATH:String = "assets/vagrant/domino/";
+	static final _DOMINO_VAGRANT_PATH:String = "assets/vagrant/demo-tasks/0.1.13/scripts/";
 	static final _DOMINO_VAGRANT_VERSION_FILE:String = "version.rb";
-	static final _HOSTS_TEMPLATE_PATH:String = "assets/vagrant/config/Hosts.template.yml";
+	static final _HOSTS_TEMPLATE_PATH:String = "assets/vagrant/demo-tasks/0.1.13/templates/Hosts.template.yml";
 
 	static public final PAGE_CONFIG = "page-config";
 	static public final PAGE_CONFIG_ADVANCED = "page-config-advanced";
@@ -721,7 +721,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		Logger.info( 'Starting server: ${e.server.id}' );
-		Logger.info( 'Server configuration: ${e.server.getData( false )}' );
+		Logger.info( 'Server configuration: ${e.server.getData()}' );
 		Logger.info( 'VirtualBox VM: ${e.server.virtualMachine.value}' );
 		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.getHostsContent()}\n----- Hosts.yml END -----' );
 

@@ -384,7 +384,7 @@ class Server {
 
     }
 
-    public function getData( includeSafeId:Bool = true ):ServerData {
+    public function getData():ServerData {
 
         var data:ServerData = {
 
@@ -1068,7 +1068,7 @@ class Server {
      * Vagrant up
      */
 
-     function _startVagrantUp() {
+    function _startVagrantUp() {
 
         this._busy.value = true;
 
