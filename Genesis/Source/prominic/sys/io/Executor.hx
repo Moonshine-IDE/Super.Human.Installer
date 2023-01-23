@@ -32,6 +32,7 @@ package prominic.sys.io;
 
 import prominic.core.interfaces.IDisposable;
 import prominic.logging.Logger;
+import sys.thread.Mutex;
 
 class Executor extends AbstractExecutor implements IDisposable {
 
@@ -43,6 +44,7 @@ class Executor extends AbstractExecutor implements IDisposable {
     var _currentExecutionNumber:Int;
     var _disposed:Bool = false;
     var _env:Map<String, String>;
+    var _mutex:Mutex;
     var _numTries:Int;
     var _pid:Int;
     var _timeout:Float = 0;
@@ -70,6 +72,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _workingDirectory = workingDirectory;
         _env = environment;
         _timeout = ( timeout != null ) ? timeout : 0;
+        _mutex = new Mutex();
 
         if ( Sys.systemName() == "Windows" ) _lineEnd = "\r\n";
 
@@ -122,8 +125,10 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _advancedProcessOnStop() {
 
+        _mutex.acquire();
         _running = false;
         _exitCode = _advancedProcess.exitCode;
+        _mutex.release();
         for ( f in _onStop ) f( this );
 
     }
