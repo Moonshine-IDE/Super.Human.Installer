@@ -42,8 +42,9 @@ class AdvancedAssetLoader extends AssetLoader {
 
     }
 
-    override function set_source(value:String):String {
+    override function set_source( value:String ):String {
 
+        if ( this._source == value ) return value;
         var r = super.set_source( value );
         _smoothBitmap();
         return r;
