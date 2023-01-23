@@ -32,18 +32,53 @@ package prominic.sys.io;
 
 import haxe.io.Bytes;
 import haxe.io.Eof;
+import haxe.io.Input;
 import sys.io.Process;
+import sys.thread.Deque;
 import sys.thread.Mutex;
 import sys.thread.Thread;
 
 class AdvancedProcess {
 
     static final _eventCheckerInterval = .1;
-    static final _inputBuffer = 32768;
+    static final _inputBufferLength = 32768;
     static final _inputInterval = .05;
+
+    static function readOutput( output:Input, bufferLength:Int ):String {
+
+        var bytes = Bytes.alloc( bufferLength );
+        var size = output.readBytes( bytes, 0, bytes.length );
+        return bytes.getString( 0, size );
+
+    }
+
+    static function readOutputAll( output:Input ):String {
+
+        var data = output.readAll();
+        return data.toString();
+
+    }
+
+    static function readOutputUntil( output:Input, charCode:Int = 0 ):String {
+
+        var result:String = "";
+
+        while( true ) {
+            try {
+                var data = output.readByte();
+                result += String.fromCharCode( data );
+            } catch ( e ) {
+                break;
+            };
+        }
+
+        return result;
+
+    }
 
     var _args:Array<String>;
     var _cmd:String;
+    var _deque:Deque<EventData>;
     var _eventCheckerThread:Thread;
     var _exitCode:Int = -1;
     var _exited:Bool = false;
@@ -86,19 +121,30 @@ class AdvancedProcess {
         _mutexExit = new Mutex();
         _mutexStdErr = new Mutex();
         _mutexStdOut = new Mutex();
+        _deque = new Deque();
 
     }
 
-    public function start() {
+    public function start( threaded:Bool = true ) {
 
         _process = new Process( _cmd, _args );
         _pid = _process.getPid();
-        trace( _pid );
 
-        _eventCheckerThread = Thread.create( _eventChecker );
-        Thread.create( _readStdOut );
-        Thread.create( _readStdErr );
-        Thread.create( _waitForExit );
+        if ( threaded ) {
+
+            _eventCheckerThread = Thread.create( _eventChecker );
+            Thread.create( _readStdOut );
+            Thread.create( _readStdErr );
+            Thread.create( _waitForExit );
+
+        } else {
+
+            _exitCode = _process.exitCode();
+            if ( _onStdErr != null ) _onStdErr( _process.stderr.readAll().toString() );
+            if ( _onStdOut != null ) _onStdOut( _process.stdout.readAll().toString() );
+            if ( _onStop != null ) _onStop();
+
+        }
 
     }
 
@@ -112,7 +158,8 @@ class AdvancedProcess {
 
         while ( true ) {
 
-            var eventData:EventData = Thread.readMessage( true );
+            //var eventData:EventData = Thread.readMessage( true );
+            var eventData:EventData = _deque.pop( true );
 
             if ( eventData != null ) {
 
@@ -126,6 +173,7 @@ class AdvancedProcess {
                                 _mutexChecker.acquire();
                                 _exited = true;
                                 _exitCode = eventData.value;
+                                _process.close();
                                 _mutexChecker.release();
 
                             default:
@@ -141,7 +189,7 @@ class AdvancedProcess {
                                 _standardErrorFinished = true;
                                 _mutexChecker.release();
 
-                            case EventCommand.Message:
+                            case EventCommand.Data:
                                 if ( _onStdErr != null ) _onStdErr( eventData.data );
 
                             default:
@@ -157,7 +205,7 @@ class AdvancedProcess {
                                 _standardOutputFinished = true;
                                 _mutexChecker.release();
 
-                            case EventCommand.Message:
+                            case EventCommand.Data:
                                 if ( _onStdOut != null ) _onStdOut( eventData.data );
 
                             default:
@@ -170,9 +218,9 @@ class AdvancedProcess {
 
             }
 
-            if ( _exited && _standardErrorFinished && _standardOutputFinished ) {
+            if ( _exited ) {
 
-                trace( '----------------------------' );
+                //trace( '----------------------------' );
                 if ( _onStop != null ) _onStop();
                 break;
 
@@ -188,23 +236,19 @@ class AdvancedProcess {
 
         while( true ) {
 
+            _mutexStdOut.acquire();
+            if ( _exited ) break;
+
             try {
 
-                var bytes = Bytes.alloc( _inputBuffer );
-                var size = _process.stdout.readBytes( bytes, 0, bytes.length );
-                var data:String = bytes.getString( 0, size );
-
                 _mutexStdOut.acquire();
-                var eventData:EventData = { command: EventCommand.Message, owner: EventOwner.StandardOutput, data: data };
-                _eventCheckerThread.sendMessage( eventData );
+                var data = AdvancedProcess.readOutput( _process.stdout, _inputBufferLength );
+                var eventData:EventData = { command: EventCommand.Data, owner: EventOwner.StandardOutput, data: data };
+                //_eventCheckerThread.sendMessage( eventData );
+                _deque.push( eventData );
                 _mutexStdOut.release();
 
             } catch ( e:Eof ) {
-
-                _mutexStdOut.acquire();
-                var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardOutput };
-                _eventCheckerThread.sendMessage( eventData );
-                _mutexStdOut.release();
 
                 break;
 
@@ -214,9 +258,16 @@ class AdvancedProcess {
 
             }
 
+            _mutexStdOut.release();
             Sys.sleep( _inputInterval );
 
         }
+
+        _mutexStdOut.tryAcquire();
+        var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardOutput };
+        //_eventCheckerThread.sendMessage( eventData );
+        _deque.push( eventData );
+        _mutexStdOut.release();
 
     }
 
@@ -224,23 +275,18 @@ class AdvancedProcess {
 
         while( true ) {
 
+            if ( _exited ) break;
+
             try {
 
-                var bytes = Bytes.alloc( _inputBuffer );
-                var size = _process.stderr.readBytes( bytes, 0, bytes.length );
-                var data:String = bytes.getString( 0, size );
-
                 _mutexStdErr.acquire();
-                var eventData:EventData = { command: EventCommand.Message, owner: EventOwner.StandardError, data: data };
-                _eventCheckerThread.sendMessage( eventData );
+                var data = AdvancedProcess.readOutput( _process.stderr, _inputBufferLength );
+                var eventData:EventData = { command: EventCommand.Data, owner: EventOwner.StandardError, data: data };
+                //_eventCheckerThread.sendMessage( eventData );
+                _deque.push( eventData );
                 _mutexStdErr.release();
 
             } catch ( e:Eof ) {
-
-                _mutexStdErr.acquire();
-                var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardError };
-                _eventCheckerThread.sendMessage( eventData );
-                _mutexStdErr.release();
 
                 break;
 
@@ -254,15 +300,24 @@ class AdvancedProcess {
 
         }
 
+        _mutexStdErr.acquire();
+        var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardError };
+        //_eventCheckerThread.sendMessage( eventData );
+        _deque.push( eventData );
+        _mutexStdErr.release();
+
     }
 
     function _waitForExit() {
+
+        Sys.sleep( 1 );
 
         var e = _process.exitCode();
 
         _mutexExit.acquire();
         var eventData:EventData = { command: EventCommand.Exit, owner: EventOwner.Process, value: e };
-        _eventCheckerThread.sendMessage( eventData );
+        //_eventCheckerThread.sendMessage( eventData );
+        _deque.add( eventData );
         _mutexExit.release();
 
     }
@@ -281,8 +336,8 @@ typedef EventData = {
 enum EventCommand {
 
     Close;
+    Data;
     Exit;
-    Message;
 
 }
 
