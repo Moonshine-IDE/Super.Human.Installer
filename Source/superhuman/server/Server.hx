@@ -414,6 +414,12 @@ class Server {
 
     }
 
+    public function initDirectory() {
+
+        _dominoVagrant.copyFiles();
+
+    }
+
     public function isValid():Bool {
 
         var isValid:Bool = false;
