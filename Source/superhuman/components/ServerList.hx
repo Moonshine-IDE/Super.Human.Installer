@@ -475,17 +475,17 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             if ( _console.hasError ) {
 
-                _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OUTPUT_ERROR ) );
+                _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT_ERROR );
 
             } else {
 
-                _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OUTPUT_NEW ) );
+                _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT_NEW );
 
             }
 
         } else {
 
-            _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OUTPUT ) );
+            _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT );
 
         }
 
