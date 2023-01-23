@@ -55,7 +55,7 @@ class LoadingPage extends Page {
 
         super.initialize();
 
-        _image = new AdvancedAssetLoader( SuperHumanInstallerTheme.IMAGE_LOGO );
+        _image = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( SuperHumanInstallerTheme.IMAGE_LOGO ) );
         this.addChild( _image );
 
         _labelLoading = new Label( LanguageManager.getInstance().getString( 'loadingpage.title', SuperHumanInstaller.getInstance().title ) );

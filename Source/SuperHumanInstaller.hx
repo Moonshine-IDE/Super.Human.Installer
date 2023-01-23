@@ -37,6 +37,7 @@ import feathers.style.Theme;
 import genesis.application.GenesisApplication;
 import genesis.application.managers.LanguageManager;
 import genesis.application.managers.ToastManager;
+import genesis.application.theme.GenesisApplicationTheme;
 import haxe.Json;
 import haxe.io.Path;
 import lime.system.System;
@@ -329,7 +330,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
 
-		this._header.logo = SuperHumanInstallerTheme.IMAGE_ICON;
+		this._header.logo = GenesisApplicationTheme.getAssetPath( SuperHumanInstallerTheme.IMAGE_ICON );
 
 		_loadingPage = new LoadingPage();
 		this.addPage( _loadingPage, 0, PAGE_LOADING );

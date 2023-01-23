@@ -71,6 +71,8 @@ import genesis.application.components.MainMenuButton;
 import genesis.application.components.Page;
 import genesis.application.components.ProgressBar;
 import genesis.application.components.Toast;
+import lime.system.System;
+import openfl.Assets;
 import openfl.display.GradientType;
 import openfl.filters.DropShadowFilter;
 import openfl.text.TextFormatAlign;
@@ -80,6 +82,12 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final CORNER_RADIUS:Int = 3;
     public static final GRID:Int = 6;
     public static final DISABLED_ALPHA:Float = .33;
+
+    public static function getAssetPath( id:String ):String {
+        
+        return System.applicationDirectory + Assets.getPath( id );
+
+    }
 
     public static final APPLICATION:String = "application";
     public static final BUTTON_HIGHLIGHT:String = "button-hightlight";
@@ -361,9 +369,9 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setCheckLargeStyles( check:Check ) {
 
         check.textFormat = _themeTypography.Large;
-        check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE : ICON_CHECKBOX_LARGE );
-        check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE_SELECTED : ICON_CHECKBOX_LARGE_SELECTED );
-        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE_DISABLED : ICON_CHECKBOX_LARGE_DISABLED );
+        check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
+        check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
+        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -371,9 +379,9 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setCheckMediumStyles( check:Check ) {
 
         check.textFormat = _themeTypography.Medium;
-        check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE : ICON_CHECKBOX_LARGE );
-        check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE_SELECTED : ICON_CHECKBOX_LARGE_SELECTED );
-        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE_DISABLED : ICON_CHECKBOX_LARGE_DISABLED );
+        check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
+        check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
+        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -496,9 +504,9 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setGenesisFormCheckBoxStyles( cb:GenesisFormCheckBox ) {
 
         cb.textFormat = _themeTypography.Default;
-        cb.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE : ICON_CHECKBOX_LARGE );
-        cb.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE_SELECTED : ICON_CHECKBOX_LARGE_SELECTED );
-        cb.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? ICON_CHECKBOX_LARGE_DISABLED : ICON_CHECKBOX_LARGE_DISABLED );
+        cb.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
+        cb.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
+        cb.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         cb.horizontalAlign = HorizontalAlign.LEFT;
 
     }

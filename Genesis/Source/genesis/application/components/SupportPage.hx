@@ -55,7 +55,7 @@ class SupportPage extends Page {
 
         super.initialize();
 
-        _image = new AdvancedAssetLoader( GenesisApplicationTheme.IMAGE_SUPPORT );
+        _image = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.IMAGE_SUPPORT ) );
         this.addChild( _image );
 
         _label = new Label( LanguageManager.getInstance().getString( 'supportpage.title' ) );
