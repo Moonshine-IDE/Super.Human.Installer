@@ -671,7 +671,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		File.saveContent( '${_serverDirectory}/${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-		Logger.debug( 'Configuration saved to: ${_serverDirectory}/${_CONFIG_FILE}' );
+		Logger.debug( 'Configuration saved to: ${_serverDirectory}${_CONFIG_FILE}' );
 
 	}
 
@@ -702,6 +702,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
 
+		e.server.saveHostsFile();
 		_saveConfig();
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.advancedserverconfigsaved' ) );
