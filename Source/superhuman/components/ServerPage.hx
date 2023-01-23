@@ -200,7 +200,7 @@ class ServerPage extends Page {
 
         _emptyGroup.visible = _emptyGroup.includeInLayout = _servers.length == 0;
         _serverList.visible = _serverList.includeInLayout = _servers.length != 0;
-        _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && _servers.length < _maxServers;
+        _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && ( _maxServers == 0 || _servers.length < _maxServers );
 
         if ( _servers.length == 0 ) {
 

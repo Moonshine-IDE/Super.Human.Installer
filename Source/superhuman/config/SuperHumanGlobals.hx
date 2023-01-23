@@ -38,7 +38,7 @@ class SuperHumanGlobals {
     static public final CHECK_VAGRANT_STATUS_ON_FOCUS:Bool = false;
 
     // Maximum number of allowed servers. Set to 0 for unlimited
-    static public final MAXIMUM_ALLOWED_SERVERS:UInt = 3;
+    static public final MAXIMUM_ALLOWED_SERVERS:UInt = 0;
 
     // Pretty-print JSON files
     static public final PRETTY_PRINT:Bool = true;
