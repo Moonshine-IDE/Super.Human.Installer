@@ -44,7 +44,7 @@ class SuperHumanGlobals {
     static public final PRETTY_PRINT:Bool = true;
 
     // Execute vagrant global-status with --prune switch
-    static public var PRUNE_VAGRANT_MACHINES:Bool = false;
+    static public var PRUNE_VAGRANT_MACHINES:Bool = true;
 
     // Vagrant download url
     static public final VAGRANT_DOWNLOAD_URL:String = "https://developer.hashicorp.com/vagrant/downloads";
