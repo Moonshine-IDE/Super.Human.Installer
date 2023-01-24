@@ -37,6 +37,7 @@ import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import prominic.sys.tools.SysTools;
 import sys.io.File;
+import sys.thread.Mutex;
 
 @:allow( prominic.sys )
 @:allow( prominic.sys.applications )
@@ -83,6 +84,10 @@ class Vagrant extends AbstractApp {
     var _upExecutors:Map<VagrantMachine, Executor>;
     var _vagrantFilename:String;
     var _versionExecutor:Executor;
+
+    var _mutexGlobalStatusStderr:Mutex;
+    var _mutexGlobalStatusStdout:Mutex;
+    var _mutexGlobalStatusStop:Mutex;
 
     public var currentWorkingDir( get, set ):String;
     function get_currentWorkingDir() return _currentWorkingDir;
@@ -175,6 +180,10 @@ class Vagrant extends AbstractApp {
         _rsyncExecutors = [];
         _statusExecutors = [];
         _upExecutors = [];
+
+        _mutexGlobalStatusStderr = new Mutex();
+        _mutexGlobalStatusStdout = new Mutex();
+        _mutexGlobalStatusStop = new Mutex();
 
         _instance = this;
 
@@ -485,11 +494,15 @@ class Vagrant extends AbstractApp {
 
     function _globalStatusExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
 
+        _mutexGlobalStatusStdout.acquire();
         _tempGlobalStatusData += data;
+        _mutexGlobalStatusStdout.release();
 
     }
 
     function _globalStatusExecutorStopped( executor:AbstractExecutor ) {
+
+        _mutexGlobalStatusStop.acquire();
 
         var a = _tempGlobalStatusData.split( SysTools.lineEnd );
 
@@ -509,6 +522,8 @@ class Vagrant extends AbstractApp {
         if ( _machines == null ) _machines = [];
 
         for ( f in _onGlobalStatus ) f();
+
+        _mutexGlobalStatusStop.release();
 
         executor.dispose();
         _globalStatusExecutor = null;
