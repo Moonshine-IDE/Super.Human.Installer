@@ -181,7 +181,7 @@ abstract class GenesisApplication extends Application {
 
         _hasLogin = hasLogin;
         _showLoginPage = hasLogin && showLoginPage;
-        _company = Lib.application.meta.get( "company" );
+        _company = "Prominic.NET";
         _title = Lib.application.meta.get( "name" );
         _version = Lib.application.meta.get( "version" );
         _versionInfo = _version;

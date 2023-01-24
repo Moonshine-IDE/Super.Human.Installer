@@ -4,8 +4,6 @@
 	<set name="exportdir" value="Export/Production" />
 	<set name="exportdir" value="Export/Development" if="debug" />
 	
-	<meta company="Prominic.NET" />
-
 	<window background="#222222" fps="60" allow-high-dpi="true" />
 
     <assets path="Assets/images" rename="assets/images" />
