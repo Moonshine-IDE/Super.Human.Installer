@@ -1,0 +1,44 @@
+<project>
+  <output>
+    <movie fps="0"/>
+    <movie height="0"/>
+    <movie version="1"/>
+    <movie background="#FFFFFF"/>
+    <movie path="project.xml"/>
+    <movie disabled="False"/>
+    <movie input=""/>
+    <movie width="0"/>
+    <movie platform="Lime"/>
+  </output>
+  <classpaths>
+    <class path="Genesis/Source"/>
+    <class path="Source"/>
+  </classpaths>
+  <build>
+    <option flashStrict="False"/>
+    <option mainClass="SuperHumanInstaller"/>
+    <option enabledebug="True"/>
+    <option additional="-debug -Dlogverbose -Dlogcolor"/>
+    <option additional="--macro openfl._internal.macros.ExtraParams.include()&#xA;--macro lime._internal.macros.DefineMacro.run()&#xA;--remap flash:openfl&#xA;--no-output "/>
+    <option noInlineOnDebug="False"/>
+  </build>
+  <haxelib/>
+  <compileTargets>
+    <compile path="Source/SuperHumanInstaller.hx"/>
+  </compileTargets>
+  <hiddenPaths>
+    <hidden path="obj"/>
+  </hiddenPaths>
+  <preBuildCommand>"$(CompilerPath)/haxelib" run lime build "$(OutputFile)" $(TargetBuild) -$(BuildConfig) -Dfdb</preBuildCommand>
+  <postBuildCommand alwaysRun="False"/>
+  <options>
+    <option testMovie="Custom"/>
+    <option showHiddenPaths="False"/>
+    <option testMovieCommand=""/>
+  </options>
+  <moonshineRunCustomization>
+    <option targetPlatform="neko"/>
+    <option webBrowser="Google Chrome"/>
+  </moonshineRunCustomization>
+  <storage/>
+</project>
