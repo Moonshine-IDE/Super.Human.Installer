@@ -3,10 +3,8 @@
 **/Export/*
 **/Ignored/*
 **/Docs/*
-*.code-workspace
-Design/SuperHumanInstaller-Assets-assets/*
 **/Dist/*
+*.code-workspace
 
 # Include files despite the parent folder being ignored
 !**/.vscode/*.local.*
-Assets/vagrant/config/Hosts.template_original.yml
