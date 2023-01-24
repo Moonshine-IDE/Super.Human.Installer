@@ -549,6 +549,9 @@ class Server {
 
     public function refresh() {
 
+        if ( this._vagrantMachine == null || this._vagrantMachine.value == null || this._vagrantMachine.value.id == null )
+            this._vagrantUpSuccessful.value = false;
+
         _propertyChanged( null );
         refreshVagrantStatus();
 
