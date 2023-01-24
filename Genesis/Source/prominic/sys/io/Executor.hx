@@ -44,7 +44,10 @@ class Executor extends AbstractExecutor implements IDisposable {
     var _currentExecutionNumber:Int;
     var _disposed:Bool = false;
     var _env:Map<String, String>;
-    var _mutex:Mutex;
+    var _mutexStderr:Mutex;
+    var _mutexStdout:Mutex;
+    var _mutexStop:Mutex;
+    var _nativeProcess:AdvancedNativeProcess;
     var _numTries:Int;
     var _pid:Int;
     var _timeout:Float = 0;
@@ -72,13 +75,50 @@ class Executor extends AbstractExecutor implements IDisposable {
         _workingDirectory = workingDirectory;
         _env = environment;
         _timeout = ( timeout != null ) ? timeout : 0;
-        _mutex = new Mutex();
+
+        _mutexStderr = new Mutex();
+        _mutexStdout = new Mutex();
+        _mutexStop = new Mutex();
 
         if ( Sys.systemName() == "Windows" ) _lineEnd = "\r\n";
 
     }
 
     public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ):Executor {
+
+        if ( _running ) return this;
+
+        var currentWorkingDirectory = Sys.getCwd();
+
+        if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
+        if ( workingDirectory != null ) Sys.setCwd( workingDirectory );
+        if ( _env != null ) for ( k in _env.keys() ) Sys.putEnv( k, _env.get( k ) );
+
+        _validExitCodes = null;
+        _numTries = 0;
+        _currentExecutionNumber = 1;
+
+        //_nativeProcess = new AdvancedNativeProcess();
+
+        _advancedProcess = new AdvancedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
+        _advancedProcess.onStdErr = _advancedProcessOnStdErr;
+        _advancedProcess.onStdOut = _advancedProcessOnStdOut;
+        _advancedProcess.onStop = _advancedProcessOnStop;
+        _advancedProcess.start();
+        this._pid = _advancedProcess.pid;
+        _running = true;
+
+        for ( f in _onStart ) f( this );
+
+        Logger.verbose( '${this} execute' );
+
+        Sys.setCwd( currentWorkingDirectory );
+
+        return this;
+
+    }
+
+    public function execute2( ?extraArgs:Array<String>, ?workingDirectory:String ):Executor {
 
         if ( _running ) return this;
 
@@ -112,24 +152,28 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _advancedProcessOnStdErr( data:String ) {
 
+        _mutexStderr.acquire();
         Logger.error( '${this} stderr: ${data}' );
         for ( f in _onStdErr ) f( this, data );
+        _mutexStderr.release();
 
     }
 
     function _advancedProcessOnStdOut( data:String ) {
 
+        _mutexStdout.acquire();
         for ( f in _onStdOut ) f( this, data );
+        _mutexStdout.release();
 
     }
 
     function _advancedProcessOnStop() {
 
-        _mutex.acquire();
+        _mutexStop.acquire();
         _running = false;
         _exitCode = _advancedProcess.exitCode;
-        _mutex.release();
         for ( f in _onStop ) f( this );
+        _mutexStop.release();
 
     }
 
