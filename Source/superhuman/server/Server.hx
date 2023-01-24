@@ -30,9 +30,7 @@
 
 package superhuman.server;
 
-import superhuman.managers.ConsoleBufferManager;
 import genesis.application.managers.LanguageManager;
-import haxe.Exception;
 import haxe.Template;
 import haxe.io.Path;
 import lime.system.System;
@@ -48,15 +46,14 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
+import superhuman.managers.ConsoleBufferManager;
 import superhuman.server.roles.ServerRole;
 import sys.FileSystem;
-import sys.io.File;
 
 class Server {
 
     static final _SAFE_ID_FILENAME:String = "safe.ids";
     static final _VAGRANTFILE:String = "Vagrantfile";
-    static final _WEB_ADDRESS_FILE:String = ".vagrant/detectedpublicaddress.txt";
 
     static final _VK_CERTIFIER:EReg = ~/^(?!\W)([a-zA-Z0-9-]+)?([^\W])$/;
     static final _VK_DOMAIN:EReg = ~/^[a-zA-Z0-9]+\.[a-zA-Z0-9.-_]+$/;
@@ -251,6 +248,9 @@ class Server {
     
     public var path( get, never ):Property<String>;
     function get_path() return _path;
+
+    public var provisioned( get, never ):Bool;
+    function get_provisioned() return _dominoVagrant.provisioned;
 
     public var roles( get, never ):Property<Array<ServerRole>>;
     function get_roles() return _roles;
@@ -851,30 +851,17 @@ class Server {
 
     function _getWebAddress():String {
 
-        var s:String = null;
+        var s = _dominoVagrant.webAddress;
 
-        var f:String = _serverDir + "/" + _WEB_ADDRESS_FILE;
+        if ( s == null ) {
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddress', _serverDir + "/" + _WEB_ADDRESS_FILE ) );
+            Logger.verbose( 'detectedpublicaddress.txt has invalid content or non-existent' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
-        if ( !FileSystem.exists( f ) ) {
+        } else {
 
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressfilenonexistent' ), true );
-            return s;
-
-        }
-
-        try {
-
-            var content = File.getContent( f );
-            Logger.verbose( 'detectedpublicaddress.txt content: ${content}' );
-            if ( console != null ) console.appendText( " Content:[" + content + "]\n" );
-            s = content;
-
-        } catch ( e ) {
-
-            Logger.warning( 'Detected public web address cannot be processed at ${f}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressfileerror' ), true );
+            Logger.verbose( 'detectedpublicaddress.txt content: ${s}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }
 

@@ -279,6 +279,7 @@
                 "webaddressfilenonexistent":"file doesn't exist\n",
                 "webaddressfileerror":"file cannot be opened\n",
                 "webaddressinvalid":"[SHI]: Invalid web address: %1\n",
+                "webaddressvalue":"[SHI]: Detected public address: %1\n",
                 "serverloaded":"[SHI]: Server initialized\n",
                 "virtualboxmachine":"[SHI]: VirtualBox VM: %1\n"
             },

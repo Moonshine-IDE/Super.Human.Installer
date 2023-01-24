@@ -43,6 +43,8 @@ import sys.io.File;
 class DominoVagrant {
 
     static final _HOSTS_FILE:String = "Hosts.yml";
+    static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    static final _PUBLIC_ADDRESS_FILE_LOCATION:String = ".vagrant/detectedpublicaddress.txt";
     static final _SAFE_ID_FILE:String = "safe.ids";
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
     static final _VERSION_FILE:String = "version.rb";
@@ -86,11 +88,17 @@ class DominoVagrant {
     public var hostFileExists( get, never ):Bool;
     function get_hostFileExists() return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE );
 
+    public var provisioned( get, never ):Bool;
+    function get_provisioned() return _getWebAddress() != null;
+
     public var safeIdExists( get, never ):Bool;
     function get_safeIdExists() return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
 
     public var version( get, never ):VersionInfo;
     function get_version() return _version;
+
+    public var webAddress( get, never ):String;
+    function get_webAddress() return _getWebAddress();
     
     public function new( sourcePath:String, targetPath:String ) {
 
@@ -235,6 +243,24 @@ class DominoVagrant {
             }
 
         }
+
+    }
+
+    function _getWebAddress():String {
+
+        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + _PUBLIC_ADDRESS_FILE_LOCATION );
+        if ( !e ) return null;
+
+        try {
+
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + _PUBLIC_ADDRESS_FILE_LOCATION );
+            if ( c == null || c.length == 0 ) return null;
+
+            if ( _PATTERN_IP.match( c ) ) return _PATTERN_IP.matched( 0 );
+
+        } catch( e ) {}
+
+        return null;
 
     }
 
