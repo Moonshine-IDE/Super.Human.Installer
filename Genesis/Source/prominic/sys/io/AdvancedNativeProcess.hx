@@ -268,7 +268,7 @@ class AdvancedNativeProcess extends NativeProcess {
                 var done = false;
                 while (!done)
                 {
-                    //Sys.sleep(.5);
+                    Sys.sleep(.5);
                     standardOutputMutex.acquire();
                     standardErrorMutex.acquire();
                     done = stdoutDone && stderrDone;
