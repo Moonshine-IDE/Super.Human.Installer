@@ -44,6 +44,7 @@ class Logger {
 
     static var _baseFileName:String = "log";
     static var _currentLogFilePath:String;
+    static var _initialized:Bool = false;
     static var _logLevel:LogLevel = LogLevel.Info;
     static var _machineReadableOutput:Bool = false;
     static var _numLogFiles:Int;
@@ -51,8 +52,10 @@ class Logger {
     static var _printTime:Bool = false;
     static var _useColoredOutput:Bool = true;
 
-    public static function init( ?logLevel:LogLevel = LogLevel.Info, ?printTime:Bool = false, pathToLogFile:String, ?numLogFiles:Int = 9, ?useColoredOutput:Bool = true, ?machineReadable:Bool = false ):String {
+    public static function init( ?logLevel:LogLevel = LogLevel.Info, printTime:Bool = false, pathToLogFile:String, numLogFiles:Int = 9, useColoredOutput:Bool = true, machineReadable:Bool = false, captureTrace:Bool = false ):String {
         
+        if ( _initialized && _currentLogFilePath != null ) return _currentLogFilePath;
+
         _logLevel = logLevel;
         _printTime = printTime;
         _pathToLogFile = Path.addTrailingSlash( Path.normalize( pathToLogFile ) );
@@ -121,7 +124,8 @@ class Logger {
         }
         #end
 
-        Log.trace = loggerFunction;
+        if ( captureTrace ) Log.trace = loggerFunction;
+        _initialized = true;
 
         return _currentLogFilePath;
 
