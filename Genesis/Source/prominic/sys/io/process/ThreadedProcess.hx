@@ -133,8 +133,6 @@ class ThreadedProcess implements IProcess {
 
             } catch ( e:Eof ) {
 
-                trace( 'EOF' );
-
                 var eventData:EventData = { command: EventCommand.Close, owner: EventOwner.StandardOutput };
                 _receiverThread.sendMessage( Json.stringify( eventData ) );
 
