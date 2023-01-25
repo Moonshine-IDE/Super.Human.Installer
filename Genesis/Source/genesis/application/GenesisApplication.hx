@@ -177,7 +177,7 @@ abstract class GenesisApplication extends Application {
             #if logmr _appConfigUseMachineReadable = true; #end
         #end
 
-        var logFilePath = Logger.init( _appConfigDefaultLogLevel, _appConfigUseTimestamps, System.applicationStorageDirectory + "logs", 9, _appConfigUseColoredOutput, _appConfigUseMachineReadable, #if neko true #else false #end );
+        var logFilePath = Logger.init( _appConfigDefaultLogLevel, _appConfigUseTimestamps, System.applicationStorageDirectory + "logs", 9, _appConfigUseColoredOutput, _appConfigUseMachineReadable, true );
 
         _hasLogin = hasLogin;
         _showLoginPage = hasLogin && showLoginPage;
