@@ -32,13 +32,15 @@ package prominic.sys.io;
 
 import prominic.core.interfaces.IDisposable;
 import prominic.logging.Logger;
+import prominic.sys.io.process.IProcess;
+import prominic.sys.io.process.ThreadedProcess;
 import sys.thread.Mutex;
 
 class Executor extends AbstractExecutor implements IDisposable {
 
     static var _lineEnd:String = "\n";
 
-    var _advancedProcess:AdvancedProcess;
+    var _process:IProcess;
     var _args:Array<String>;
     var _command:String;
     var _currentExecutionNumber:Int;
@@ -47,7 +49,6 @@ class Executor extends AbstractExecutor implements IDisposable {
     var _mutexStderr:Mutex;
     var _mutexStdout:Mutex;
     var _mutexStop:Mutex;
-    var _nativeProcess:AdvancedNativeProcess;
     var _numTries:Int;
     var _pid:Int;
     var _timeout:Float = 0;
@@ -98,14 +99,12 @@ class Executor extends AbstractExecutor implements IDisposable {
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        //_nativeProcess = new AdvancedNativeProcess();
-
-        _advancedProcess = new AdvancedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
-        _advancedProcess.onStdErr = _advancedProcessOnStdErr;
-        _advancedProcess.onStdOut = _advancedProcessOnStdOut;
-        _advancedProcess.onStop = _advancedProcessOnStop;
-        _advancedProcess.start();
-        this._pid = _advancedProcess.pid;
+        _process = new ThreadedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
+        _process.onStdErr = _processOnStdErr;
+        _process.onStdOut = _processOnStdOut;
+        _process.onStop = _processOnStop;
+        _process.start();
+        this._pid = _process.pid;
         _running = true;
 
         for ( f in _onStart ) f( this );
@@ -118,39 +117,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    public function execute2( ?extraArgs:Array<String>, ?workingDirectory:String ):Executor {
-
-        if ( _running ) return this;
-
-        var currentWorkingDirectory = Sys.getCwd();
-
-        if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
-        if ( workingDirectory != null ) Sys.setCwd( workingDirectory );
-        if ( _env != null ) for ( k in _env.keys() ) Sys.putEnv( k, _env.get( k ) );
-
-        _validExitCodes = null;
-        _numTries = 0;
-        _currentExecutionNumber = 1;
-
-        _advancedProcess = new AdvancedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
-        _advancedProcess.onStdErr = _advancedProcessOnStdErr;
-        _advancedProcess.onStdOut = _advancedProcessOnStdOut;
-        _advancedProcess.onStop = _advancedProcessOnStop;
-        _advancedProcess.start();
-        this._pid = _advancedProcess.pid;
-        _running = true;
-
-        for ( f in _onStart ) f( this );
-
-        Logger.verbose( '${this} execute' );
-
-        Sys.setCwd( currentWorkingDirectory );
-
-        return this;
-
-    }
-
-    function _advancedProcessOnStdErr( data:String ) {
+    function _processOnStdErr( data:String ) {
 
         _mutexStderr.acquire();
         Logger.error( '${this} stderr: ${data}' );
@@ -159,7 +126,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    function _advancedProcessOnStdOut( data:String ) {
+    function _processOnStdOut( data:String ) {
 
         _mutexStdout.acquire();
         for ( f in _onStdOut ) f( this, data );
@@ -167,11 +134,11 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    function _advancedProcessOnStop() {
+    function _processOnStop() {
 
         _mutexStop.acquire();
         _running = false;
-        _exitCode = _advancedProcess.exitCode;
+        _exitCode = _process.exitCode;
         for ( f in _onStop ) f( this );
         _mutexStop.release();
 
@@ -179,10 +146,10 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     public function stop( ?forced:Bool ) {
 
-        if ( _advancedProcess != null ) {
+        if ( _process != null ) {
 
             Logger.verbose( '${this} stop( forced:${forced} )' );
-            _advancedProcess.stop( forced );
+            _process.stop( forced );
 
         }
 
@@ -220,7 +187,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     public function toString():String {
 
-        if ( _advancedProcess != null ) {
+        if ( _process != null ) {
 
             return 'Executor: ${_command} ${_args} PID: ${this._pid}';
 
