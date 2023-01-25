@@ -1,6 +1,6 @@
 ---
 hosts:
-  - 
+  -
     settings:
       hostname: ::SERVER_HOSTNAME:: #Default or Provide user option
       domain: ::SERVER_DOMAIN:: #Default or Provide user option
@@ -50,7 +50,7 @@ hosts:
           value: '256'
 
     provisioning:
-      shell:
+      ansible.builtin.shell:
         enabled: false
         scripts:
           - './scripts/aliases.sh'
@@ -81,7 +81,7 @@ hosts:
         description: "Disable VBoxSF"
       - map: ./ansible/
         to: /vagrant/ansible/
-        type: rsync ## If Windows, then set to blank
+        type: rsync ## If Windows, check id_rsa line-endings.
         args:
           - '--verbose'
           - '--archive'
@@ -90,15 +90,15 @@ hosts:
           - '--copy-links'
       - map: ./installers/
         to: /vagrant/installers/
-        type: rsync ## If Windows, then set to blank
+        type: rsync ## If Windows, check id_rsa line-endings.
         description: "Users will want to put their installer files into these folders"
       - map: ./ssls/
         to: /secure/
-        type: rsync ## If Windows, then set to blank
+        type: rsync ## If Windows, check id_rsa line-endings.
       - map: ./safe-id-to-cross-certify/
         to: /safe-id-to-cross-certify/
-        type: rsync ## If Windows, then set to blank
-    
+        type: rsync ## If Windows, check id_rsa line-endings.
+
     vars:
       ## You can set global role variables here, look in the defaults folders for hints as to variables used by roles
       domino_organization: ::SERVER_ORGANIZATION:: #Default or Provide user option
@@ -111,6 +111,7 @@ hosts:
       ## they would set the below value to true so that the vm creates a SSL crt with the valid hostname, so that when the service compares the hostname it is to listen on and
       ## the hostname the certificate is signed for it matches.
       selfsigned_enabled: ::CERT_SELFSIGNED::
+      debug_all: true
 
     roles:
       - name: startcloud-setup
