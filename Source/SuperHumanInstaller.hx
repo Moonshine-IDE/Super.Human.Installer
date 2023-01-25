@@ -974,4 +974,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	override function _visitSourceCode(?e:Dynamic) {
+
+		super._visitSourceCode(e);
+		
+		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
+
+	}
+
 }

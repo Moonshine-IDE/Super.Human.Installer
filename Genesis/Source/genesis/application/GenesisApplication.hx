@@ -334,6 +334,7 @@ abstract class GenesisApplication extends Application {
 
         _aboutPage = new AboutPage();
         _aboutPage.addEventListener( GenesisApplicationEvent.VISIT_GENESIS_DIRECTORY, _visitGenesisDirectory );
+        _aboutPage.addEventListener( GenesisApplicationEvent.VISIT_SOURCE_CODE, _visitSourceCode );
         addPage( _aboutPage, PAGE_ABOUT );
 
         _supportPage = new SupportPage();
@@ -481,6 +482,8 @@ abstract class GenesisApplication extends Application {
         Lib.navigateToURL( new URLRequest( GENESIS_ADDRESS ) );
 
     }
+
+    function _visitSourceCode( ?e:Dynamic ) {}
 
     function _menuSelected( e:GenesisApplicationEvent ) {
 
