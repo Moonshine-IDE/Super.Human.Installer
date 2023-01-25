@@ -1,4 +1,0 @@
----
-python_simple_web_server_port: 8000
-python_simple_web_server_path: "{{ service_home_dir }}"
-downloads_url: "downloads.{{ settings.hostname }}.{{ settings.domain }}"

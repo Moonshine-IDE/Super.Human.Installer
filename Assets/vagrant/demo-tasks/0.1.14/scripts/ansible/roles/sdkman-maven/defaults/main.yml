@@ -1,7 +1,0 @@
----
-maven_version: 3.6.0
-
-sdkman_update_alternatives:
-  - candidate: maven
-    name: mvn
-    link: /usr/bin/mvn

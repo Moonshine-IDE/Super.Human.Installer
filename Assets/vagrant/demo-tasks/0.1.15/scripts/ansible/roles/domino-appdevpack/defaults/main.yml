@@ -1,0 +1,6 @@
+---
+appdevpack_archive: domino-appdev-pack-1.0.15.tgz
+appdevpack_version: 1.0.15
+appdevpack_port: 82
+appdevpack_debug: true
+domino_app_dev_webpack: "appdevwebpack.{{ settings.hostname }}.{{ settings.domain }}"
