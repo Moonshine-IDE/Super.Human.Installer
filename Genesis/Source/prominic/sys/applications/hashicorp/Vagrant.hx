@@ -43,7 +43,8 @@ import sys.thread.Mutex;
 @:allow( prominic.sys.applications )
 class Vagrant extends AbstractApp {
 
-    static final _machineReadPattern = ~/(\d+,\w*,(\w|-)+,(\w|-|\/|\\|\.)*,*(.)+)/gm;
+    //static final _machineReadPattern = ~/(\d+,\w*,(\w|-)+,(\w|-|\/|\\|\.)*,*(.)+)/gm;
+    static final _machineReadPattern = ~/((\d+),(.*),(.+),(.+))/gm;
     static final _machineReadPatternForStatus = ~/(\d+,.*,(\w|-)+,(\w|-|\/|\\|\.)*,*(.)+)/gm;
     static final _versionPattern = ~/(\d+\.\d+\.\d+)/;
     static final _SSH_SCRIPT:String = "ssh.sh";
