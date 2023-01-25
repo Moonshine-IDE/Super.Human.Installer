@@ -109,6 +109,8 @@ class ThreadedProcess implements IProcess {
 
     function _readStdOut() {
 
+        if ( _inputDelay > 0 ) Sys.sleep( _inputDelay );
+
         while( true ) {
 
             try {
@@ -147,6 +149,8 @@ class ThreadedProcess implements IProcess {
     }
 
     function _readStdErr() {
+
+        if ( _inputDelay > 0 ) Sys.sleep( _inputDelay );
 
         while( true ) {
 
