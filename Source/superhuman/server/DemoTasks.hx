@@ -36,21 +36,19 @@ import haxe.io.Path;
 import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
-import superhuman.interfaces.IConsole;
 import sys.FileSystem;
 import sys.io.File;
 
-class DominoVagrant {
+class DemoTasks extends VagrantCoreImpl {
 
-    static final _HOSTS_FILE:String = "Hosts.yml";
     static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    static final _PUBLIC_ADDRESS_FILE_LOCATION:String = ".vagrant/detectedpublicaddress.txt";
     static final _SAFE_ID_FILE:String = "safe.ids";
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
-    static final _VERSION_FILE:String = "version.rb";
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
 
-    static public var HOSTS_TEMPLATE_PATH:String;
+    static public final HOSTS_FILE:String = "Hosts.yml";
+    static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
+    static public final PUBLIC_ADDRESS_FILE:String = ".vagrant/detectedpublicaddress.txt";
 
     static public function getVersionFromFile( path:String ):VersionInfo {
 
@@ -75,60 +73,28 @@ class DominoVagrant {
 
     }
 
-    var _exists:Bool = false;
-    var _sourcePath:String;
-    var _targetPath:String;
-    var _version:VersionInfo;
-
-    public var console:IConsole;
-
-    public var exists( get, never ):Bool;
-    function get_exists() return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + _VERSION_FILE );
-
     public var hostFileExists( get, never ):Bool;
-    function get_hostFileExists() return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE );
+    function get_hostFileExists() return this.fileExists( HOSTS_FILE );
 
     public var provisioned( get, never ):Bool;
     function get_provisioned() return _getWebAddress() != null;
 
     public var safeIdExists( get, never ):Bool;
-    function get_safeIdExists() return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
-
-    public var version( get, never ):VersionInfo;
-    function get_version() return _version;
+    function get_safeIdExists() return this.fileExists( Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
 
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
     
     public function new( sourcePath:String, targetPath:String ) {
 
-        _sourcePath = sourcePath;
-        _targetPath = targetPath;
+        super( superhuman.server.VagrantCoreDefinition.VagrantCoreType.DemoTasks, sourcePath, targetPath );
 
-        _version = DominoVagrant.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _VERSION_FILE );
-        if ( _version == "0.0.0" ) _version = DominoVagrant.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + _VERSION_FILE );
+        _versionFile = "version.rb";
+        _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
-    }
-
-    public function clearTargetDirectory() {
-
-
-
-    }
-
-    public function copyFiles( ?callback:()->Void ) {
-
-        if ( exists ) {
-
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "(not required, skipping)" ) );
-            if ( callback != null ) callback();
-            return;
-
-        }
-
-        Logger.debug( 'Copying server configuration files to ${_targetPath}' );
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "" ) );
-        FileTools.copyDirectory( _sourcePath, _targetPath, FileOverwriteRule.Always, callback );
+        trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version}' );
+        if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantCoreImpl._SCRIPTS_ROOT + _versionFile );
+        trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version} ${Path.addTrailingSlash( _sourcePath ) + VagrantCoreImpl._SCRIPTS_ROOT + _versionFile}' );
 
     }
 
@@ -139,41 +105,7 @@ class DominoVagrant {
 
     }
 
-    public function createTargetDirectory() {
-
-        if ( !FileSystem.exists( _targetPath ) ) FileSystem.createDirectory( _targetPath );
-
-    }
-
-    public function getSourceHostsFileContent():String {
-
-        var r:String = "";
-
-        try {
-
-            r = File.getContent( HOSTS_TEMPLATE_PATH );
-
-        } catch ( e ) {}
-
-        return r;
-
-    }
-
-    public function getTargetHostsFileContent():String {
-
-        var r:String = null;
-
-        try {
-
-            r = File.getContent( Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE );
-
-        } catch ( e ) {}
-
-        return r;
-
-    }
-
-    public function saveHostsFile( content:String ) {
+    function saveHostsFile( content:String ) {
 
         createTargetDirectory();
 
@@ -181,14 +113,14 @@ class DominoVagrant {
 
         try {
 
-            File.saveContent( Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE, content );
-            Logger.debug( 'Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE ) );
+            File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
+            Logger.debug( 'Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
 
         } catch ( e:Exception ) {
 
-            Logger.error( 'Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + _HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
+            Logger.error( 'Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
             return;
 
         }
@@ -228,6 +160,15 @@ class DominoVagrant {
 
     }
 
+    public override function reinitialize( sourcePath:String ) {
+
+        super.reinitialize( sourcePath );
+
+        _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
+        if ( _version == "0.0.0" ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantCoreImpl._SCRIPTS_ROOT + _versionFile );
+
+    }
+
     function _fileCopied( pathPair:PathPair, canCopy:Bool ) {
 
         if ( console != null ) {
@@ -248,12 +189,12 @@ class DominoVagrant {
 
     function _getWebAddress():String {
 
-        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + _PUBLIC_ADDRESS_FILE_LOCATION );
+        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PUBLIC_ADDRESS_FILE );
         if ( !e ) return null;
 
         try {
 
-            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + _PUBLIC_ADDRESS_FILE_LOCATION );
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + PUBLIC_ADDRESS_FILE );
             if ( c == null || c.length == 0 ) return null;
 
             if ( _PATTERN_IP.match( c ) ) return _PATTERN_IP.matched( 0 );

@@ -66,11 +66,11 @@ import superhuman.components.SettingsPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
-import superhuman.server.DominoVagrant;
 import superhuman.server.Server;
 import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
 import superhuman.server.ServerType;
+import superhuman.server.VagrantCoreDefinition;
 import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -80,9 +80,7 @@ import sys.io.File;
 class SuperHumanInstaller extends GenesisApplication {
 
 	static final _CONFIG_FILE:String = ".shi-config";
-	static final _DOMINO_VAGRANT_PATH:String = "assets/vagrant/demo-tasks/0.1.13/scripts/";
 	static final _DOMINO_VAGRANT_VERSION_FILE:String = "version.rb";
-	static final _HOSTS_TEMPLATE_PATH:String = "assets/vagrant/demo-tasks/0.1.13/templates/Hosts.template.yml";
 
 	static public final PAGE_CONFIG = "page-config";
 	static public final PAGE_CONFIG_ADVANCED = "page-config-advanced";
@@ -91,6 +89,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_ROLES = "page-roles";
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
+
+	static public final DEMO_TASKS_PATH:String = "assets/vagrant/demo-tasks/";
 
 	static var _instance:SuperHumanInstaller;
 
@@ -129,7 +129,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
 	var _defaultServerConfigData:ServerData;
-	var _demoTasksVersion:VersionInfo;
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
@@ -139,6 +138,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _servers:ArrayCollection<Server>;
 	var _settingsPage:SettingsPage;
+	var _vagrantCores:ArrayCollection<VagrantCoreDefinition>;
 	var _vagrantFile:String;
 
 	public var config( get, never ):SuperHumanConfig;
@@ -146,6 +146,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	public var defaultRoles( get, never ):Map<String, ServerRole>;
 	function get_defaultRoles() return _defaultRoles;
+
+	public var vagrantCores( get, never ):ArrayCollection<VagrantCoreDefinition>;
+	function get_vagrantCores() return _vagrantCores;
 
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
@@ -161,10 +164,22 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		DominoVagrant.HOSTS_TEMPLATE_PATH = Path.addTrailingSlash( System.applicationDirectory ) + _HOSTS_TEMPLATE_PATH;
-		var v = Path.addTrailingSlash( System.applicationDirectory ) + _DOMINO_VAGRANT_PATH + _DOMINO_VAGRANT_VERSION_FILE;
-		_demoTasksVersion = DominoVagrant.getVersionFromFile( v );
-		Logger.info( 'demo-tasks version: ${_demoTasksVersion}' );
+		_vagrantCores = new ArrayCollection( [
+
+			{
+				name: "Demo-tasks v0.1.14",
+				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.14" ) },
+				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.14"
+			},
+			{
+				name: "Demo-tasks v0.1.13",
+				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.13" ) },
+				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.13"
+			},
+	
+		] );
+	
+		Logger.info( 'Bundled Vagrant cores: ${_vagrantCores}' );
 
 		_serverDirectory = System.applicationStorageDirectory + "servers/";
 		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
@@ -209,6 +224,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			type: ServerType.Domino,
 			user_email: "",
 			vagrant_up_successful: false,
+			core: _vagrantCores.get( 0 ).data,
 
 		};
 
@@ -267,11 +283,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_servers = new ArrayCollection();
 
-		var p = Path.addTrailingSlash( System.applicationDirectory ) + _DOMINO_VAGRANT_PATH;
-
 		for ( s in _config.servers ) {
 
-			var server = Server.create( s, _serverDirectory, p );
+			var server = Server.create( s, _serverDirectory );
 			server.onUpdate.add( onServerPropertyChanged );
 			_servers.add( server );
 
@@ -723,7 +737,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		Logger.info( 'Starting server: ${e.server.id}' );
 		Logger.info( 'Server configuration: ${e.server.getData()}' );
 		Logger.info( 'VirtualBox VM: ${e.server.virtualMachine.value}' );
-		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.getHostsContent()}\n----- Hosts.yml END -----' );
+		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.generateHostsFileContent()}\n----- Hosts.yml END -----' );
 
 		// TODO: Decide how to handle provisioning if required
 		// e.server.start( _config.preferences.provisionserversonstart );
@@ -761,7 +775,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				var build:String = #if neko "Neko" #elseif cpp "Native" #else "Unsupported" #end;
 				var isDebug:String = #if debug "Debug | " #else "" #end;
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
-				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} | demo-tasks: ${_demoTasksVersion}';
+				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
 
 				Logger.debug( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
 				Logger.debug( 'VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
@@ -929,8 +943,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_defaultServerConfigData.server_id = _getRandomServerId();
 
-		var p = Path.addTrailingSlash( System.applicationDirectory ) + _DOMINO_VAGRANT_PATH;
-		var server = Server.create( _defaultServerConfigData, _serverDirectory, p );
+		var server = Server.create( _defaultServerConfigData, _serverDirectory );
 		server.onUpdate.add( onServerPropertyChanged );
 		_servers.add( server );
 
@@ -977,8 +990,20 @@ class SuperHumanInstaller extends GenesisApplication {
 	override function _visitSourceCode(?e:Dynamic) {
 
 		super._visitSourceCode(e);
-		
+
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
+
+	}
+
+	public function getVagrantCoreDefinition( type:VagrantCoreType, version:VersionInfo ):VagrantCoreDefinition {
+
+		for ( vagrantCore in _vagrantCores ) {
+
+			if ( vagrantCore.data.type == type && vagrantCore.data.version == version ) return vagrantCore;
+
+		}
+
+		return null;
 
 	}
 

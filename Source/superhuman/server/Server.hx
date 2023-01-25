@@ -46,7 +46,7 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.managers.ConsoleBufferManager;
+import superhuman.server.VagrantCoreDefinition.VagrantCoreData;
 import superhuman.server.roles.ServerRole;
 import sys.FileSystem;
 
@@ -70,7 +70,7 @@ class Server {
     static final _VK_EMAIL:EReg = ~/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     #end
 
-    static public function create( data:ServerData, rootDir:String, dominoVagrantRoot:String ):Server {
+    static public function create( data:ServerData, rootDir:String ):Server {
 
         var sc = new Server();
 
@@ -100,10 +100,30 @@ class Server {
         sc._path.value = sc._serverDir;
 
         sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
-        sc._dominoVagrant = new DominoVagrant( dominoVagrantRoot, sc._serverDir );
 
-        sc._consoleBuffer = new ConsoleBuffer();
-        ConsoleBufferManager.buffers.set( Std.string( sc._id ), sc._consoleBuffer );
+        var latestDemoTasks = SuperHumanInstaller.getInstance().vagrantCores.get( 0 );
+
+        if ( data.core == null ) {
+
+            sc._vagrantCore = new DemoTasks( latestDemoTasks.root, sc._serverDir );
+
+        } else {
+
+            var vcd = SuperHumanInstaller.getInstance().getVagrantCoreDefinition( data.core.type, data.core.version );
+
+            if ( vcd != null ) {
+
+                sc._vagrantCore = new DemoTasks( vcd.root, sc._serverDir );
+
+            } else {
+
+                // The server already exists BUT the vagrant core version is not supported
+                // so we create the core with target path only
+                sc._vagrantCore = new DemoTasks( null, sc._serverDir );
+
+            }
+
+        }
 
         return sc;
 
@@ -147,10 +167,8 @@ class Server {
     var _action:Property<ServerAction>;
     var _busy:Property<Bool>;
     var _console:IConsole;
-    var _consoleBuffer:ConsoleBuffer;
     var _dhcp4:Property<Bool>;
     var _diskUsage:Property<Float>;
-    var _dominoVagrant:DominoVagrant;
     var _hostname:ValidatingProperty;
     var _hostsTemplate:String;
     var _id:Int;
@@ -175,6 +193,7 @@ class Server {
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
+    var _vagrantCore:DemoTasks;
     var _vagrantMachine:Property<VagrantMachine>;
     var _vagrantUpSuccessful:Property<Null<Bool>>;
     var _virtualMachine:Property<VirtualMachine>;
@@ -184,16 +203,13 @@ class Server {
 
     public var console( get, set ):IConsole;
     function get_console() return _console;
-    function set_console( value:IConsole ):IConsole { _console = value; _dominoVagrant.console = value; return _console; }
+    function set_console( value:IConsole ):IConsole { _console = value; _vagrantCore.console = value; return _console; }
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
 
     public var diskUsage( get, never ):Property<Float>;
     function get_diskUsage() return _diskUsage;
-
-    public var dominoVagrant( get, never ):DominoVagrant;
-    function get_dominoVagrant() return _dominoVagrant;
 
     public var fqdn( get, never ):String;
     function get_fqdn():String {
@@ -250,7 +266,7 @@ class Server {
     function get_path() return _path;
 
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _dominoVagrant.provisioned;
+    function get_provisioned() return _vagrantCore.provisioned;
 
     public var roles( get, never ):Property<Array<ServerRole>>;
     function get_roles() return _roles;
@@ -274,6 +290,9 @@ class Server {
 
     public var userSafeId( get, never ):Property<String>;
     function get_userSafeId() return _userSafeId;
+
+    public var vagrantCore( get, never ):DemoTasks;
+    function get_vagrantCore() return _vagrantCore;
 
     public var vagrantMachine( get, never ):Property<VagrantMachine>;
     function get_vagrantMachine() return _vagrantMachine;
@@ -407,6 +426,7 @@ class Server {
             type: this._type,
             vagrant_up_successful: this._vagrantUpSuccessful.value,
             dhcp4: this._dhcp4.value,
+            core: this._vagrantCore.data,
 
         };
 
@@ -416,7 +436,7 @@ class Server {
 
     public function initDirectory() {
 
-        _dominoVagrant.copyFiles();
+        _vagrantCore.copyFiles();
 
     }
 
@@ -557,6 +577,19 @@ class Server {
 
     }
 
+    public function updateVagrantCore( data:VagrantCoreData ):Bool {
+
+        if ( this._vagrantCore.version == data.version ) return false;
+
+        var vcd = SuperHumanInstaller.getInstance().getVagrantCoreDefinition( data.type, data.version );
+        var newRoot:String = vcd.root;
+        this._vagrantCore.reinitialize( newRoot );
+        _propertyChanged( this._vagrantCore );
+
+        return true;
+
+    }
+
     function _checkStatus() {
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
@@ -614,7 +647,7 @@ class Server {
 
     function _prepareFiles() {
 
-        _dominoVagrant.copyFiles( _prepareFilesComplete );
+        _vagrantCore.copyFiles( _prepareFilesComplete );
 
     }
 
@@ -662,7 +695,7 @@ class Server {
 
         Logger.verbose( 'Installer and Fixpack path pairs: ${paths}' );
 
-        _dominoVagrant.copyInstallers( paths, _batchCopyComplete );
+        _vagrantCore.copyInstallers( paths, _batchCopyComplete );
 
     }
 
@@ -674,9 +707,10 @@ class Server {
 
         _saveSafeId();
 
-        if ( !_dominoVagrant.hostFileExists ) _dominoVagrant.saveHostsFile( getHostsContent() );
+        if ( !_vagrantCore.hostFileExists ) _vagrantCore.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
+
         if ( console != null ) {
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _dominoVagrant.getTargetHostsFileContent() ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _vagrantCore.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualMachine.value ) ) );
         }
 
@@ -686,7 +720,7 @@ class Server {
 
     function _saveSafeId() {
 
-        var r = _dominoVagrant.saveSafeId( _userSafeId.value );
+        var r = _vagrantCore.saveSafeId( _userSafeId.value );
         if ( !r ) this._busy.value = false;
 
     }
@@ -697,9 +731,9 @@ class Server {
 
     }
 
-    public function getHostsContent():String {
+    public function generateHostsFileContent():String {
 
-        _hostsTemplate = _dominoVagrant.getSourceHostsFileContent();
+        _hostsTemplate = _vagrantCore.getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
 
         var replace = {
 
@@ -787,9 +821,9 @@ class Server {
 
         Sys.setCwd( System.applicationDirectory );
 
-		var output = getHostsContent();
+		var output = generateHostsFileContent();
 
-        _dominoVagrant.saveHostsFile( output );
+        _vagrantCore.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
 
     }
 
@@ -813,7 +847,7 @@ class Server {
 
     public function safeIdCopied():Bool {
 
-        return _dominoVagrant.safeIdExists;
+        return _vagrantCore.safeIdExists;
 
     }
 
@@ -851,7 +885,7 @@ class Server {
 
     function _getWebAddress():String {
 
-        var s = _dominoVagrant.webAddress;
+        var s = _vagrantCore.webAddress;
 
         if ( s == null ) {
 
@@ -964,6 +998,8 @@ class Server {
 
         this._busy.value = true;
         this._status.value = ServerStatus.Destroying;
+
+        _vagrantCore.deleteFileInTargetDirectory( DemoTasks.PUBLIC_ADDRESS_FILE );
 
         Vagrant.getInstance().getDestroy( true, this._vagrantMachine.value )
             .onStdOut( _vagrantDestroyStandardOutputData )
@@ -1125,7 +1161,6 @@ class Server {
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
         if ( console != null ) console.appendText( new String( data ) );
-        //_consoleBuffer.push( data );
         Logger.debug( '${this._id}: Vagrant up: ${data}' );
         
     }

@@ -30,39 +30,26 @@
 
 package superhuman.server;
 
+import prominic.core.primitives.VersionInfo;
+import superhuman.interfaces.IConsole;
 import superhuman.server.VagrantCoreDefinition.VagrantCoreData;
-import superhuman.server.roles.ServerRole;
 
-typedef ServerData = {
+interface IVagrantCore {
     
-    type:String,
-    
-    user_email:String,
-    ?user_safeid:Null<String>,
+    public var console:IConsole;
+    public var data( get, never ):VagrantCoreData;
+    public var exists( get, never ):Bool;
+    public var version( get, never ):VersionInfo;
 
-    ?server_organization:String,
-    server_id:Int,
-    server_hostname:String,
-
-    ?dhcp4:Bool,
-    ?dhcp6:Bool,
-    ?network_bridge:String,
-    network_dns_nameserver_1:String,
-    network_dns_nameserver_2:String,
-    network_address:String,
-    network_netmask:String,
-    network_gateway:String,
-
-    env_open_browser:Bool,
-    env_setup_wait:Int,
-
-    resources_cpu:Int,
-    resources_ram:Float,
-
-    roles:Array<ServerRole>,
-
-    ?vagrant_up_successful:Bool,
-
-    ?core:VagrantCoreData,
+    public function clearTargetDirectory():Void;
+    public function copyFiles( ?callback:()->Void ):Void;
+    public function createTargetDirectory():Void;
+    public function deleteFileInTargetDirectory( path:String ):Bool;
+    public function fileExists( path:String ):Bool;
+    public function getFileContentFromSourceScriptsDirectory( path:String ):String;
+    public function getFileContentFromSourceTemplateDirectory( path:String ):String;
+    public function getFileContentFromTargetDirectory( path:String ):String;
+    public function reinitialize( sourcePath:String ):Void;
+    public function saveContentToFileInTargetDirectory( path:String, content:String ):Bool;
 
 }

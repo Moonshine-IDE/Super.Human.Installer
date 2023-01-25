@@ -30,39 +30,27 @@
 
 package superhuman.server;
 
-import superhuman.server.VagrantCoreDefinition.VagrantCoreData;
-import superhuman.server.roles.ServerRole;
+import prominic.core.primitives.VersionInfo;
 
-typedef ServerData = {
-    
-    type:String,
-    
-    user_email:String,
-    ?user_safeid:Null<String>,
+typedef VagrantCoreDefinition = {
 
-    ?server_organization:String,
-    server_id:Int,
-    server_hostname:String,
+    data: VagrantCoreData,
+    name: String,
+    root: String,
+    ?supported: Bool,
 
-    ?dhcp4:Bool,
-    ?dhcp6:Bool,
-    ?network_bridge:String,
-    network_dns_nameserver_1:String,
-    network_dns_nameserver_2:String,
-    network_address:String,
-    network_netmask:String,
-    network_gateway:String,
+}
 
-    env_open_browser:Bool,
-    env_setup_wait:Int,
+typedef VagrantCoreData = {
 
-    resources_cpu:Int,
-    resources_ram:Float,
+    type:VagrantCoreType,
+    ?version:VersionInfo,
 
-    roles:Array<ServerRole>,
+}
 
-    ?vagrant_up_successful:Bool,
+enum abstract VagrantCoreType( String ) from String to String {
 
-    ?core:VagrantCoreData,
+    var Default = "default";
+    var DemoTasks = "demo-tasks";
 
 }

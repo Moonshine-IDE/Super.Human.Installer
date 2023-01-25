@@ -516,7 +516,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _labelTitle.text = '#${_server.id}: ${_server.fqdn}';
         _labelRoles.text = 'Roles: ${_getServerRoleNames()}';
         var cpu:String = ( _server.numCPUs.value == 1 ) ? "CPU" : "CPUs";
-        _labelInfo.text = 'Core: demo-tasks v${_server.dominoVagrant.version}  •  System: ${_server.numCPUs.value} ${cpu}, ${_server.memory.value}GB RAM';
+        _labelInfo.text = 'Core: demo-tasks v${_server.vagrantCore.version}  •  System: ${_server.numCPUs.value} ${cpu}, ${_server.memory.value}GB RAM';
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
         _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;

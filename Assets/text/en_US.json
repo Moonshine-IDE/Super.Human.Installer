@@ -118,6 +118,9 @@
                 "button":"Manage",
                 "tooltip":"Click to locate your Notes Safe ID"
             },
+            "demotasks":{
+                "text":"Select Core Component"
+            },
             "buttons":{
                 "save":"Save",
                 "cancel":"Cancel"

@@ -40,6 +40,7 @@ import feathers.layout.VerticalAlign;
 import genesis.application.components.AdvancedAssetLoader;
 import genesis.application.components.GenesisForm;
 import genesis.application.components.GenesisFormButton;
+import genesis.application.components.GenesisFormPupUpListView;
 import genesis.application.components.GenesisFormTextInput;
 import genesis.application.components.HLine;
 import genesis.application.components.Page;
@@ -50,6 +51,7 @@ import openfl.events.Event;
 import openfl.events.MouseEvent;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
+import superhuman.server.VagrantCoreDefinition;
 import sys.FileSystem;
 
 class ConfigPage extends Page {
@@ -63,6 +65,7 @@ class ConfigPage extends Page {
     var _buttonRoles:GenesisFormButton;
     var _buttonSafeId:GenesisFormButton;
     var _buttonSave:GenesisFormButton;
+    var _dropdownCoreComponentVersion:GenesisFormPupUpListView;
     var _form:GenesisForm;
     var _inputHostname:GenesisFormTextInput;
     var _inputOrganization:GenesisFormTextInput;
@@ -71,6 +74,7 @@ class ConfigPage extends Page {
     var _labelMandatory:Label;
     var _labelPreviousSafeId:Label;
     var _rowComputedName:GenesisFormRow;
+    var _rowCoreComponentVersion:GenesisFormRow;
     var _rowHostname:GenesisFormRow;
     var _rowOrganization:GenesisFormRow;
     var _rowPreviousSafeId:GenesisFormRow;
@@ -114,6 +118,24 @@ class ConfigPage extends Page {
 
         _form = new GenesisForm();
         this.addChild( _form );
+
+        _rowCoreComponentVersion = new GenesisFormRow();
+        _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.demotasks.text' );
+        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( SuperHumanInstaller.getInstance().vagrantCores );
+        _dropdownCoreComponentVersion.itemToText = ( item:VagrantCoreDefinition ) -> {
+            return item.name;
+        };
+        _dropdownCoreComponentVersion.selectedIndex = 0;
+        for ( i in 0...SuperHumanInstaller.getInstance().vagrantCores.length ) {
+            var d:VagrantCoreDefinition = SuperHumanInstaller.getInstance().vagrantCores.get( i );
+            if ( d.data.version == _server.vagrantCore.version ) {
+                _dropdownCoreComponentVersion.selectedIndex = i;
+                break;
+            }
+        }
+        _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
+        _rowCoreComponentVersion.content.addChild( _dropdownCoreComponentVersion );
+        _form.addChild( _rowCoreComponentVersion );
 
         _rowHostname = new GenesisFormRow();
         _rowHostname.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.text' );
@@ -256,6 +278,25 @@ class ConfigPage extends Page {
             _buttonRoles.enabled = !_server.roles.locked;
             _buttonSave.enabled = !_server.hostname.locked;
 
+            if ( _dropdownCoreComponentVersion.selectedIndex == -1 || forced ) {
+
+                for ( i in 0..._dropdownCoreComponentVersion.dataProvider.length ) {
+
+                    var d:VagrantCoreDefinition = _dropdownCoreComponentVersion.dataProvider.get( i );
+
+                    if ( d.data.version == _server.vagrantCore.version ) {
+
+                        _dropdownCoreComponentVersion.selectedIndex = i;
+                        break;
+
+                    }
+
+                }
+
+            }
+
+            _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
+
         }
 
     }
@@ -326,6 +367,8 @@ class ConfigPage extends Page {
 
         _server.hostname.value = StringTools.trim( _inputHostname.text );
         _server.organization.value = StringTools.trim( _inputOrganization.text );
+        var dvv:VagrantCoreDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        _server.updateVagrantCore( dvv.data );
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
