@@ -160,13 +160,13 @@ class Executor extends AbstractExecutor implements IDisposable {
         
         #if windows
         // Not implemented yet
-        _advancedProcess.stop( true );
+        _process.stop( true );
         #elseif mac
         var e = Sys.command( "kill", [ "-" + Std.string( Std.int( signal ) ), Std.string( this._pid ) ] );
         Logger.verbose( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
         #elseif linux
         // Not implemented yet
-        _advancedProcess.stop( true );
+        _process.stop( true );
         #end
 
     }
