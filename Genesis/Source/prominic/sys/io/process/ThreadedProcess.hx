@@ -193,6 +193,8 @@ class ThreadedProcess implements IProcess {
 
         var e = _process.exitCode();
 
+        Sys.sleep( _waitExitInterval );
+
         var eventData:EventData = { command: EventCommand.Exit, owner: EventOwner.Process, value: e };
         _receiverThread.sendMessage( Json.stringify( eventData ) );
 
