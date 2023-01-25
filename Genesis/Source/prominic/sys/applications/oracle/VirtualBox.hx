@@ -509,15 +509,15 @@ class VirtualBox extends AbstractApp {
                     currentMachine.VMState = _patternVMState.matched( 1 );
 
                 if ( _patternCFGFile.match( l ) ) {
-                    currentMachine.CfgFile = _patternCFGFile.matched( 1 );
+                    currentMachine.CfgFile = Path.normalize( _patternCFGFile.matched( 1 ) );
                     currentMachine.root = Path.directory( currentMachine.CfgFile );
                 }
 
                 if ( _patternSnapFldr.match( l ) )
-                    currentMachine.SnapFldr = _patternSnapFldr.matched( 1 );
+                    currentMachine.SnapFldr = Path.normalize( _patternSnapFldr.matched( 1 ) );
 
                 if ( _patternLogFldr.match( l ) )
-                    currentMachine.LogFldr = _patternLogFldr.matched( 1 );
+                    currentMachine.LogFldr = Path.normalize( _patternLogFldr.matched( 1 ) );
 
                 if ( _patternDescription.match( l ) )
                     currentMachine.description = _patternDescription.matched( 1 );
