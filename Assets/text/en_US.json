@@ -239,6 +239,9 @@
         "title":"Welcome to %1",
         "text":"Create your first Domino Server",
         "buttoncreate":"Create New Server",
+        "buttoncreatenew":"Create New",
+        "header":"Servers: %1",
+        "filter":"Start typing to filter servers",
         "vagrant":{
             "title":"Warning: Vagrant is not installed or an unsupported version is installed",
             "text":"Please install at least Vagrant v2.3.4 before using Super.Human.Installer",

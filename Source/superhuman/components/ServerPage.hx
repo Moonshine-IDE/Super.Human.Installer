@@ -33,16 +33,22 @@ package superhuman.components;
 import feathers.controls.Button;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
+import feathers.controls.TextInput;
 import feathers.data.ArrayCollection;
 import feathers.events.FlatCollectionEvent;
 import feathers.events.TriggerEvent;
 import feathers.layout.HorizontalAlign;
+import feathers.layout.HorizontalLayout;
+import feathers.layout.HorizontalLayoutData;
+import feathers.layout.VerticalAlign;
 import feathers.layout.VerticalLayout;
 import feathers.layout.VerticalLayoutData;
 import genesis.application.components.AdvancedAssetLoader;
+import genesis.application.components.HLine;
 import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
+import openfl.events.Event;
 import prominic.core.primitives.VersionInfo;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
@@ -56,7 +62,14 @@ class ServerPage extends Page {
     var _emptyGroupLayout:VerticalLayout;
     var _emptyLabel1:Label;
     var _emptyLabel2:Label;
+    var _headerButton:Button;
+    var _headerGroup:LayoutGroup;
+    var _headerGroupLayout:HorizontalLayout;
+    var _headerInput:TextInput;
+    var _headerLabel:Label;
+    var _headerLine:HLine;
     var _image:AdvancedAssetLoader;
+    var _localServers:ArrayCollection<Server>;
     var _maxServers:Int;
     var _serverList:ServerList;
     var _servers:ArrayCollection<Server>;
@@ -97,10 +110,13 @@ class ServerPage extends Page {
         super();
 
         _servers = servers;
+        _localServers = new ArrayCollection();
+        _localServers.addAll( servers );
         _servers.addEventListener( FlatCollectionEvent.ADD_ITEM, _serverListChanged );
         _servers.addEventListener( FlatCollectionEvent.REMOVE_ALL, _serverListChanged );
         _servers.addEventListener( FlatCollectionEvent.RESET, _serverListChanged );
         _servers.addEventListener( FlatCollectionEvent.REMOVE_ITEM, _serverListChanged );
+        _localServers.filterFunction = _serverFilterFunction;
 
         _maxServers = maxServers;
 
@@ -131,7 +147,37 @@ class ServerPage extends Page {
         _emptyLabel2.includeInLayout = _emptyLabel2.visible = _vagrantInstalled && _virtualBoxInstalled;
         _emptyGroup.addChild( _emptyLabel2 );
 
-        _serverList = new ServerList( _servers );
+        _headerGroupLayout = new HorizontalLayout();
+        _headerGroupLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
+        _headerGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
+        _headerGroupLayout.gap = GenesisApplicationTheme.GRID * 2;
+
+        _headerGroup = new LayoutGroup();
+        _headerGroup.layout = _headerGroupLayout;
+        _headerGroup.layoutData = new VerticalLayoutData( 100 );
+        this.addChild( _headerGroup );
+
+        _headerLabel = new Label( LanguageManager.getInstance().getString( 'serverpage.header', Std.string( _servers.length ) ) );
+        _headerLabel.variant = GenesisApplicationTheme.LABEL_LARGE;
+        _headerGroup.addChild( _headerLabel );
+
+        _headerInput = new TextInput( "", LanguageManager.getInstance().getString( 'serverpage.filter' ) );
+        _headerInput.layoutData = new HorizontalLayoutData( 100 );
+        _headerInput.addEventListener( Event.CHANGE, _headerInputChanged );
+        _headerGroup.addChild( _headerInput );
+
+        _headerButton = new Button( LanguageManager.getInstance().getString( 'serverpage.buttoncreatenew' ) );
+        _headerButton.addEventListener( TriggerEvent.TRIGGER, _createServerButtonTriggered );
+        _headerGroup.addChild( _headerButton );
+
+        _headerLine = new HLine();
+        _headerLine.layoutData = new VerticalLayoutData( 100 );
+        this.addChild( _headerLine );
+
+        _headerGroup.visible = _headerGroup.includeInLayout = _vagrantInstalled && _virtualBoxInstalled && _servers.length != 0 && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
+        _headerLine.visible = _headerLine.includeInLayout = _vagrantInstalled && _virtualBoxInstalled && _servers.length != 0 && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
+
+        _serverList = new ServerList( _localServers );
         _serverList.addEventListener( SuperHumanApplicationEvent.CLOSE_CONSOLE, _closeConsole );
         _serverList.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _forwardEvent );
@@ -153,7 +199,7 @@ class ServerPage extends Page {
 
         _createServerButton = new Button( LanguageManager.getInstance().getString( 'serverpage.buttoncreate' ) );
         _createServerButton.addEventListener( TriggerEvent.TRIGGER, _createServerButtonTriggered );
-        _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && ( _maxServers == 0 || _servers.length < _maxServers ) && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
+        _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && _servers.length == 0 && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
         this.addChild( _createServerButton );
 
         _warningBoxVagrant = new WarningBox();
@@ -188,6 +234,12 @@ class ServerPage extends Page {
 
     }
 
+    function _headerInputChanged( e:Event ) {
+
+        _localServers.refresh();
+
+    }
+
 	function _openConsole( e:SuperHumanApplicationEvent ) {
 		
 		_overlay.visible = true;
@@ -196,17 +248,33 @@ class ServerPage extends Page {
 
 	}
 
+    function _serverFilterFunction( server:Server ):Bool {
+
+        if ( _headerInput == null ) return true;
+
+        var t = StringTools.trim( _headerInput.text ).toLowerCase();
+        if ( t.length == 0 ) return true;
+
+        return (
+                StringTools.contains( Std.string( server.id ), t ) ||
+                /*StringTools.contains( server.fqdn.toLowerCase(), t ) ||*/
+                StringTools.contains( server.domainName.toLowerCase(), t ) ||
+                StringTools.contains( server.hostname.value.toLowerCase(), t )
+            );
+
+    }
+
     function _serverListChanged( e:FlatCollectionEvent ) {
 
+        _localServers.removeAll();
+        _localServers.addAll( _servers );
+
+        _headerLabel.text = LanguageManager.getInstance().getString( 'serverpage.header', Std.string( _servers.length ) );
         _emptyGroup.visible = _emptyGroup.includeInLayout = _servers.length == 0;
         _serverList.visible = _serverList.includeInLayout = _servers.length != 0;
-        _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && ( _maxServers == 0 || _servers.length < _maxServers );
-
-        if ( _servers.length == 0 ) {
-
-        } else {
-
-        }
+        _headerGroup.visible = _headerGroup.includeInLayout = _vagrantInstalled && _virtualBoxInstalled && _servers.length != 0;
+        _headerLine.visible = _headerLine.includeInLayout = _vagrantInstalled && _virtualBoxInstalled && _servers.length != 0;
+        _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && _servers.length == 0;
 
     }
 

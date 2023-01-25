@@ -167,9 +167,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		_vagrantCores = new ArrayCollection( [
 
 			{
-				name: "Demo-tasks v0.1.14",
-				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.14" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.14"
+				name: "Demo-tasks v0.1.15",
+				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.15" ) },
+				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.15"
 			},
 			{
 				name: "Demo-tasks v0.1.13",

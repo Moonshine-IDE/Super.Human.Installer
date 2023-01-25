@@ -140,7 +140,7 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 
         var layout = new VerticalLayout();
         layout.gap = GenesisApplicationTheme.GRID * 2;
-        layout.verticalAlign = VerticalAlign.MIDDLE;
+        layout.verticalAlign = VerticalAlign.TOP;
         list.layout = layout;
         list.layoutData = new VerticalLayoutData( 100, 100 );
         list.autoHideScrollBars = false;
