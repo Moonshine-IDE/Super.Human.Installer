@@ -1,0 +1,8 @@
+---
+leap_archive: Leap-1.0.5.zip
+leap_domino_major_version: 12
+leap_domino_minor_version: 01
+leap_version: 1.0.5
+leap_port: 82
+leap_debug: False
+leap_url: "leap.{{ settings.hostname }}.{{ settings.domain }}"

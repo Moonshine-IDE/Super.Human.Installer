@@ -1,0 +1,93 @@
+---
+# tasks for installing SDKMAN
+
+- name: Set SDKMAN user/group vars
+  set_fact:
+    service_user: '{{ service_user | default(ansible_user_id) }}'
+    service_group: '{{ service_group | default(ansible_user_gid) }}'
+
+- name: Include system vars
+  include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - '{{ ansible_distribution }}.yml'
+        - '{{ ansible_os_family }}.yml'
+        - default.yml
+      paths:
+        - vars
+
+- name: Install system packages
+  package:
+    name: '{{ system_packages }}'
+    use: '{{ ansible_pkg_mgr }}'
+    state: present
+  become: yes
+  tags:
+    - sdkman_privilege
+
+- name: Determine SDKMAN user HOME directory
+  shell: |
+    set -o pipefail
+    {% if ansible_os_family == 'Darwin' %}
+    dscacheutil -q user -a name {{service_user }} | grep 'dir:' | sed 's/dir: //'
+    {% else %}
+    getent passwd {{service_user }} | cut -d: -f6
+    {% endif %}
+  args:
+    executable: /bin/bash
+  register: service_user_home_dir
+  changed_when: false
+
+- name: Set SDKMAN_DIR environment variable
+  set_fact:
+    sdkman_dir: '{{ sdkman_dir | default(service_user_home_dir.stdout + "/.sdkman") }}'
+
+
+# Alpine Linux requires GLIBC
+- block:
+    - name: Install GLIBC for Alpine Linux
+      include_tasks: install_glibc_alpine.yml
+  become: yes
+  when: ansible_os_family == 'Alpine'
+  tags:
+    - sdkman_privilege
+
+- name: Check for SDKMAN installation
+  stat:
+    path: '{{ sdkman_dir }}/bin/sdkman-init.sh'
+  register: sdkman_init
+
+# Install SDKMAN if not uninstalled
+- block:
+    - name: Download SDKMAN
+      become: true
+      get_url:
+        url: https://get.sdkman.io
+        dest: '{{ sdkman_tmp_dir }}/sdkman_script'
+        owner: '{{service_user }}'
+        group: '{{ service_group }}'
+        validate_certs: '{{ sdkman_validate_ssl }}'
+
+    - name: Run SDKMAN script
+      environment:
+        SDKMAN_DIR: '{{ sdkman_dir }}'
+      command: /bin/bash {{ sdkman_tmp_dir }}/sdkman_script
+      args:
+        creates: '{{ sdkman_dir }}/bin/sdkman-init.sh'
+      notify: Cleanup SDKMAN script
+
+  when: not sdkman_init.stat.exists
+  become: '{{ service_user != ansible_user_id }}'
+  become_user: '{{service_user }}'
+
+- name: Fix permissions on SDKMAN_DIR
+  file:
+    path: '{{ sdkman_dir }}'
+    state: directory
+    owner: '{{service_user }}'
+    group: '{{ service_group }}'
+    recurse: true
+  become: yes
+  tags:
+    - sdkman_privilege

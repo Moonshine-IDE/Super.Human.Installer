@@ -1,0 +1,45 @@
+---
+- 
+  name: "Creating the group {{ service_group }}"
+  group:
+    name: "{{ service_group }}"
+    state: present
+    
+- 
+  name: "Adding user {{ service_user }} to group {{ service_group }} and sudo"
+  user:
+    name: "{{ service_user }}"
+    shell: /bin/bash
+    groups: "{{ service_group  }},sudo"
+    home: "{{ service_home_dir }}"
+
+- 
+  name: "Add {{ service_user }} to sudoers"
+  lineinfile:
+    path: "/etc/sudoers.d/{{ service_user }}"
+    line: "{{ service_user }} ALL=(ALL:ALL) NOPASSWD:ALL"
+    create: yes
+
+- 
+  name: "Adding soft nofile limits to {{ service_user }} in limits.conf"
+  pam_limits:
+    domain: "{{ service_user }}"
+    limit_type: soft
+    limit_item: nofile
+    value: "{{ service_user_soft_limit }}"
+
+- 
+  name: "Adding hard nofile limits to {{ service_user }} in limits.conf"
+  pam_limits:
+    domain: "{{ service_user }}"
+    limit_type: hard
+    limit_item: nofile
+    value: "{{ service_user_hard_limit }}"
+-
+  name: "Creating Installation Directories"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ service_user }}"
+  with_items:
+    - "{{ service_home_dir }}/.ansible/tmp"

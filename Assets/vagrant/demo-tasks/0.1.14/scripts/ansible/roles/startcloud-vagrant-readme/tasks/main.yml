@@ -1,0 +1,22 @@
+---
+- 
+  name: "Registering Output of available Commands"
+  shell: "cat /ipaddress.yml"
+  register: netoutput
+
+-
+  name: "Generating Help File"
+  become: true
+  template:
+    dest: /tmp/QuickSTARTcloud.txt
+    src: QuickSTARTcloud.txt.j2
+
+- 
+  name: "Registering Output of available Commands"
+  shell: cat /tmp/QuickSTARTcloud.txt
+  register: QuickSTARTcloud_commands
+
+- 
+  name: "Outputting available Help Text"
+  debug: 
+    var: QuickSTARTcloud_commands.stdout_lines

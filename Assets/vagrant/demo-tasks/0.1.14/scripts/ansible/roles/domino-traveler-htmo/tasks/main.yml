@@ -1,0 +1,68 @@
+---
+- 
+  name: "Checking if HTMO is enabled"
+  register: htmo_installed_check
+  stat:
+    path: "{{ completed_dir }}/htmo_installed"
+    get_md5: no
+
+-
+  name: "Handing HTMO templated JSON to Genesis"
+  when: htmo_installed_check.stat.exists == false
+  template:
+    dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/htmo-traveler-access.json"
+    mode: "a+x"
+    owner: "{{ domino_user }}"
+    group: "{{ domino_group }}"
+    src: "htmo-traveler-access.json.j2"
+
+- 
+  name: Waiting until Genesis returns OK
+  when: htmo_installed_check.stat.exists == false
+  wait_for:
+    path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/htmo-traveler-access.json"
+
+- 
+  name: "Checking if ACL applied succesfully"
+  when: htmo_installed_check.stat.exists == false  
+  lineinfile:
+    path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/htmo-traveler-access.json"
+    line: "OK"
+    state: present
+  check_mode: yes
+  register: presence
+  failed_when: presence is changed
+
+-
+  name: "Stopping Domino for Changes to take effect"
+  when: htmo_installed_check.stat.exists == false
+  become: true
+  service:
+    name: domino
+    state: stopped
+    enabled: yes
+  register: DominoServiceDetails
+  until: DominoServiceDetails.state == "stopped"
+  retries: 3
+  delay: 5
+
+-
+  name: "Starting Domino for Changes to take effect"
+  when: htmo_installed_check.stat.exists == false 
+  service:
+    name: domino
+    state: started
+    enabled: yes
+  register: DominoServiceDetails
+  retries: 3
+  delay: 5
+  until: DominoServiceDetails.state == "started"
+
+-
+  name: "Marking HTMO as installed"
+  when: htmo_installed_check.stat.exists == false  
+  file:
+    path: "{{ item }}"
+    state: touch
+  with_items:
+    - "{{ completed_dir }}/htmo_installed"

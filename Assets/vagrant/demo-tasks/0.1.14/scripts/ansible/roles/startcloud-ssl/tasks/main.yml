@@ -1,0 +1,117 @@
+---
+-
+  name: "Create Directories for SSLs"
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0777'
+  with_items:
+    - "{{ cert_dir }}"
+    - "{{ cert_dir }}/key"
+    - "{{ cert_dir }}/crt"
+    - "{{ cert_dir }}/csr"
+    - "{{ cert_dir }}/pfx"
+    - "{{ cert_dir }}/kyr"
+    - "{{ cert_dir }}/jks"
+    - "{{ cert_dir }}/combined"
+    - "{{ cert_dir }}/ca"
+
+- 
+  name: "Checking if SSL default certs exists"
+  when: not selfsigned_enabled
+  wait_for:
+    path: "{{ item }}"
+  with_items:
+    - "{{ cert_dir }}/key/default-signed.key"
+    - "{{ cert_dir }}/crt/default-signed.crt"
+    - "{{ cert_dir }}/ca/default-signed.ca"
+
+- 
+  name: "Generating self signed SSL Key"
+  when: selfsigned_enabled
+  openssl_privatekey:
+    path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+    owner: "{{ service_user }}"
+    mode: '0777'
+
+- 
+  name: "Generating self signed CSR Request"
+  when: selfsigned_enabled
+  openssl_csr:
+    path: "{{ cert_dir }}/csr/{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+    privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+    country_name: "{{ countrycode }}"
+    organization_name: "{{ domino_organization }}"
+    common_name: "{{ settings.hostname }}.{{ settings.domain }}"
+    subject_alt_name:
+      - "DNS:{{ settings.hostname }}.{{ settings.domain }}"
+      - "DNS:nomadweb.{{ settings.hostname }}.{{ settings.domain }}"
+      - "DNS:domino.{{ settings.hostname }}.{{ settings.domain }}"
+      - "DNS:traveler.{{ settings.hostname }}.{{ settings.domain }}"
+      - "DNS:verse.{{ settings.hostname }}.{{ settings.domain }}"
+    owner: "{{ service_user }}"
+    mode: '0777'
+
+- 
+  name: "Generating self signed Certificate"
+  when: selfsigned_enabled
+  openssl_certificate:
+    provider: selfsigned
+    path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+    privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+    csr_path: "{{ cert_dir }}/csr/{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+    owner: "{{ service_user }}"
+    mode: '0777'
+
+- 
+  name: "Generating PKCS12 file"
+  when: selfsigned_enabled
+  openssl_pkcs12:
+    action: export
+    path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfk"
+    certificate_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+    privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+    state: present
+    friendly_name: 'pkcs12_file'
+    owner: "{{ service_user }}"
+    mode: '0777'
+
+- 
+  name: "Generating PKCS12 file"
+  when: not selfsigned_enabled
+  openssl_pkcs12:
+    action: export
+    path: "{{ cert_dir }}/pfk/default-signed.pfk"
+    certificate_path: "{{ cert_dir }}/crt/default-signed.crt"
+    privatekey_path: "{{ cert_dir }}/key/default-signed.key"
+    other_certificates_parse_all: true
+    other_certificates:
+      - "{{ cert_dir }}/ca/default-signed.ca"
+    state: present
+    friendly_name: 'pkcs12_file'
+    owner: "{{ service_user }}"
+    mode: '0777'
+
+- 
+  name: "Parsing PKCS12 file to concatenated PEM"
+  when: selfsigned_enabled
+  openssl_pkcs12:
+    action: parse
+    src: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfk"
+    path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pem"
+    state: present
+    owner: "{{ service_user }}"
+    mode: '0777'
+
+- 
+  name: "Parsing PKCS12 file to concatenated PEM"
+  when: not selfsigned_enabled
+  openssl_pkcs12:
+    action: parse
+    src: "{{ cert_dir }}/pfk/default-signed.pfk"
+    path: "{{ cert_dir }}/combined/default-signed.pem"
+    state: present
+    owner: "{{ service_user }}"
+    mode: '0777'
