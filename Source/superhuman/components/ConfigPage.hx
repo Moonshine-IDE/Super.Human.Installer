@@ -120,7 +120,7 @@ class ConfigPage extends Page {
         this.addChild( _form );
 
         _rowCoreComponentVersion = new GenesisFormRow();
-        _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.demotasks.text' );
+        _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
         _dropdownCoreComponentVersion = new GenesisFormPupUpListView( SuperHumanInstaller.getInstance().vagrantCores );
         _dropdownCoreComponentVersion.itemToText = ( item:VagrantCoreDefinition ) -> {
             return item.name;
