@@ -1,0 +1,49 @@
+name: MacOS Dev
+  
+on:
+  - workflow_dispatch
+  - workflow_call
+  
+jobs:
+  build:
+    name: Build
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install dependencies
+        run: | 
+          haxelib install hxcpp
+          haxelib install openfl
+          haxelib run openfl setup
+          haxelib install feathersui
+          
+      - name: Restore cache bin
+        id: cache-bin-restore
+        if: vars.USE_BIN_CACHE == 'true'
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            Export/Development/macos/
+            .cache
+          key: ${{ runner.os }}-cache-bin
+
+      - name: Build project
+        run: |
+          haxelib run openfl build project.xml mac -DHXCPP_COMPILE_CACHE=cache -debug -Dlogverbose -Dlogcolor
+          
+      - name: Save cache bin
+        id: cache-bin-save
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            Export/Development/macos/
+            .cache
+          key: ${{ runner.os }}-cache-bin
