@@ -47,3 +47,14 @@ jobs:
             Export/Development/windows/
             .cache
           key: ${{ runner.os }}-cache-bin
+
+      - name: Create NSIS installer
+        run: |
+          makensis -DPRODUCT_VERSION=0.0.0 Templates/installer/windows-installer-dev.nsi
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v2
+        with:
+          name: Super.Human.Installer.Dev-Setup
+          path: |
+            Templates/installer/Super.Human.Installer.Dev-Setup.exe
