@@ -31,7 +31,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: |
-            Export/Development/windows/bin
+            Export/Development/windows/
             .cache
           key: ${{ runner.os }}-cache-bin
 
@@ -44,6 +44,6 @@ jobs:
         uses: actions/cache/save@v3
         with:
           path: |
-            Export/Development/windows/bin
+            Export/Development/windows/
             .cache
           key: ${{ runner.os }}-cache-bin
