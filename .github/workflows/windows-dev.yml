@@ -49,11 +49,11 @@ jobs:
           key: ${{ runner.os }}-cache-bin
 
       - name: Show github ref
-        run: echo ${{ github.ref }}
+        run: echo ${{ github.ref_name }}
 
       - name: Create NSIS installer
         run: |
-          makensis /DPRODUCT_VERSION=0.0.0 Templates/installer/windows-installer-dev.nsi
+          makensis /DPRODUCT_VERSION=${{ github.ref_name }} Templates/installer/windows-installer-dev.nsi
 
       - name: Upload installer
         uses: actions/upload-artifact@v2
