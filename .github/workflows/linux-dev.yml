@@ -37,7 +37,7 @@ jobs:
 
       - name: Build project
         run: |
-          openfl build project.xml linux -DHXCPP_COMPILE_CACHE=cache -debug -Dlogverbose -Dlogcolor
+          haxelib run openfl build project.xml linux -DHXCPP_COMPILE_CACHE=cache -debug -Dlogverbose -Dlogcolor
           
       - name: Save cache bin
         id: cache-bin-save
