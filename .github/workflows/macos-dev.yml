@@ -48,6 +48,12 @@ jobs:
             .cache
           key: ${{ runner.os }}-cache-bin
 
-      - name: Debug output
+      - name: Create package
         run: |
-          ls -R Export/Development/macos/
+          productbuild --component Export/Development/macos/bin/SuperHumanInstallerDev.app /Applications ./SuperHumanInstallerDev.pkg 
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with: 
+          name: SuperHumanInstallerDev-Pkg
+          path: ./SuperHumanInstallerDev.pkg        
