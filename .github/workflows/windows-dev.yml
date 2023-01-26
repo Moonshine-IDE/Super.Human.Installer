@@ -50,7 +50,7 @@ jobs:
 
       - name: Create NSIS installer
         run: |
-          makensis -DPRODUCT_VERSION=0.0.0 Templates/installer/windows-installer-dev.nsi
+          makensis /DPRODUCT_VERSION=0.0.0 Templates/installer/windows-installer-dev.nsi
 
       - name: Upload installer
         uses: actions/upload-artifact@v2
