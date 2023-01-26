@@ -47,3 +47,7 @@ jobs:
             Export/Development/macos/
             .cache
           key: ${{ runner.os }}-cache-bin
+
+      - name: Debug output
+        run: |
+          ls -R Export/Development/macos/
