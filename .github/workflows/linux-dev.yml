@@ -31,7 +31,7 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: |
-            bin/linux
+            Export/Development/linux/bin
             .cache
           key: ${{ runner.os }}-cache-bin
 
@@ -44,6 +44,6 @@ jobs:
         uses: actions/cache/save@v3
         with:
           path: |
-            bin/linux
+            Export/Development/linux/bin
             .cache
           key: ${{ runner.os }}-cache-bin
