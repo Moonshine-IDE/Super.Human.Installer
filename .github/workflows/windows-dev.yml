@@ -48,6 +48,9 @@ jobs:
             .cache
           key: ${{ runner.os }}-cache-bin
 
+      - name: Show github ref
+        run: echo ${{ github.ref }}
+
       - name: Create NSIS installer
         run: |
           makensis /DPRODUCT_VERSION=0.0.0 Templates/installer/windows-installer-dev.nsi
