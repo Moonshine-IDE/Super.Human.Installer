@@ -1,0 +1,49 @@
+name: Linux Dev
+  
+on:
+  - workflow_dispatch
+  - workflow_call
+  
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install dependencies
+        run: | 
+          haxelib install hxcpp
+          haxelib install openfl
+          haxelib run openfl setup
+          haxelib install feathersui
+          
+      - name: Restore cache bin
+        id: cache-bin-restore
+        if: vars.USE_BIN_CACHE == 'true'
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            bin/linux
+            .cache
+          key: ${{ runner.os }}-cache-bin
+
+      - name: Build project
+        run: |
+          openfl build project.xml linux -DHXCPP_COMPILE_CACHE=cache -debug -Dlogverbose -Dlogcolor
+          
+      - name: Save cache bin
+        id: cache-bin-save
+        uses: actions/cache/save@v3
+        with:
+          path: |
+            bin/linux
+            .cache
+          key: ${{ runner.os }}-cache-bin
