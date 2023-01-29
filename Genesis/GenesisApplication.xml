@@ -11,6 +11,8 @@
 	<haxelib name="openfl" />
 	<haxelib name="feathersui" />
 	<haxelib name="actuate" />
+	
+	<haxedef name="no-deprecation-warnings" />
 
 	<source path="Source" />
 
