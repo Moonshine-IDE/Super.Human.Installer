@@ -352,12 +352,14 @@ abstract class GenesisApplication extends Application {
         
         ToastManager.getInstance().container = _toastGroup;
 
+        #if enableupdater
         _updater.addEventListener( GenesisApplicationUpdaterEvent.UPDATE_FOUND, _updateFound );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.EXIT_APP, _exitApp );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_START, _downloadStart );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_CANCELLED, _downloadCancelled );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_FAILED, _downloadCancelled );
         _updater.checkUpdates( UPDATER_ADDRESS );
+        #end
 
     }
 
