@@ -30,16 +30,12 @@
 
 package prominic.sys.io.process;
 
-interface IProcess {
+class BufferedProcess extends AbstractProcess {
     
-    public var exitCode( get, never ):Int;
-    public var onStdErr( get, set ):( String ) -> Void;
-    public var onStdOut( get, set ):( String ) -> Void;
-    public var onStop( get, set ):() -> Void;
-    public var pid( get, never ):Int;
-    public var running( get, never ):Bool;
+    public function new( cmd:String, ?args:Array<String>, ?workingDirectory:String, ?performanceSettings:ProcessPerformanceSettings ) {
 
-    public function start():Void;
-    public function stop( forced:Bool = false ):Void;
+        super( cmd, args, workingDirectory, performanceSettings );
+
+    }
 
 }

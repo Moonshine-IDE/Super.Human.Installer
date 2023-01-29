@@ -28,29 +28,57 @@
  *  it in the license file.
  */
 
-package prominic.sys.io.process;
+package prominic.sys.io.process.data;
 
-typedef EventData = {
+import haxe.Json;
 
-    ?command:EventCommand,
-    ?owner:EventOwner,
+abstract Message( String ) {
+    
+    private inline function new( value:String ) {
+        
+        this = value;
+
+    }
+
+    @:from
+    static public inline function fromMessageObject( value:MessageObject ) {
+
+        return new Message( Json.stringify( value ) );
+
+    }
+
+    @:to
+    public inline function toMessageObject():MessageObject {
+
+        return cast Json.parse( this );
+
+    }
+
+}
+
+typedef MessageObject = {
+
+    ?command:MessageCommand,
     ?data:String,
+    ?pid:Int,
+    ?sender:MessageSender,
     ?value:Int,
 
 }
 
-enum abstract EventCommand(Int) {
+enum abstract MessageCommand( Int ) {
 
-    var Close = 0;
-    var Data = 1;
-    var Exit = 2;
+    final Close = 0;
+    final Data = 1;
+    final Exit = 2;
+    final Start = 3;
 
 }
 
-enum abstract EventOwner(Int) {
+enum abstract MessageSender( Int ) {
 
-    var Process = 0;
-    var StandardError = 1;
-    var StandardOutput = 2;
+    final Process = 0;
+    final StandardError = 1;
+    final StandardOutput = 2;
 
 }

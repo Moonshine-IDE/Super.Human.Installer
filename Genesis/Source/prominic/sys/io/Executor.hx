@@ -32,15 +32,14 @@ package prominic.sys.io;
 
 import prominic.core.interfaces.IDisposable;
 import prominic.logging.Logger;
-import prominic.sys.io.process.IProcess;
-import prominic.sys.io.process.ThreadedProcess;
+import prominic.sys.io.process.AbstractProcess;
+import prominic.sys.io.process.CallbackProcess;
 import sys.thread.Mutex;
 
 class Executor extends AbstractExecutor implements IDisposable {
 
     static var _lineEnd:String = "\n";
 
-    var _process:IProcess;
     var _args:Array<String>;
     var _command:String;
     var _currentExecutionNumber:Int;
@@ -51,6 +50,7 @@ class Executor extends AbstractExecutor implements IDisposable {
     var _mutexStop:Mutex;
     var _numTries:Int;
     var _pid:Int;
+    var _process:CallbackProcess;
     var _timeout:Float = 0;
     var _validExitCodes:Array<Float>;
     var _workingDirectory:String;
@@ -99,7 +99,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        _process = new ThreadedProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
+        _process = new CallbackProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
         _process.onStdErr = _processOnStdErr;
         _process.onStdOut = _processOnStdOut;
         _process.onStop = _processOnStop;
@@ -117,24 +117,26 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    function _processOnStdErr( data:String ) {
+    function _processOnStdErr( ?process:AbstractProcess ) {
 
         _mutexStderr.acquire();
-        Logger.error( '${this} stderr: ${data}' );
-        for ( f in _onStdErr ) f( this, data );
+        var s = process.stderrBuffer.get();
+        Logger.error( '${this} stderr: ${s}' );
+        for ( f in _onStdErr ) f( this, s );
         _mutexStderr.release();
 
     }
 
-    function _processOnStdOut( data:String ) {
+    function _processOnStdOut( ?process:AbstractProcess ) {
 
         _mutexStdout.acquire();
-        for ( f in _onStdOut ) f( this, data );
+        var s = process.stdoutBuffer.get();
+        for ( f in _onStdOut ) f( this, s );
         _mutexStdout.release();
 
     }
 
-    function _processOnStop() {
+    function _processOnStop( ?process:AbstractProcess ) {
 
         _mutexStop.acquire();
         _running = false;
