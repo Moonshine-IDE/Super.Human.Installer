@@ -74,9 +74,9 @@ class Build {
         }
 
         #if debug
-        var _debug = '-debug -Dlogverbose -Dlogcolor';
+        var _debug = '-debug -Dlogverbose -Dlogcolor -Denableupdater';
         #else
-        var _debug = '';
+        var _debug = '-Denableupdater';
         #end
 
         Sys.command( 'haxelib run openfl build ${PROJECT_FILE} ${_platform} -clean ${_debug}' );
