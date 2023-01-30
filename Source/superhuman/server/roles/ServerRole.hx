@@ -1,5 +1,3 @@
-package superhuman.server.roles;
-
 /*
  *  Copyright (C) 2016-present Prominic.NET, Inc.
  *
@@ -29,6 +27,8 @@ package superhuman.server.roles;
  *  exception statement from all source files in the program, then also delete
  *  it in the license file.
  */
+
+package superhuman.server.roles;
 
 import superhuman.server.roles.ServerRoleFiles;
 
