@@ -4,15 +4,15 @@ on: workflow_dispatch
 jobs:
   build-linux:
     name: Build on Linux
-    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/linux-dev.yml@main
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/linux-dev.yml@master
     
   build-windows:
     name: Build on Windows
-    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/windows-dev.yml@main
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/windows-dev.yml@master
     
   build-macos:
     name: Build on MacOS
-    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-dev.yml@main
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-dev.yml@master
     
   release:
     name: Release
