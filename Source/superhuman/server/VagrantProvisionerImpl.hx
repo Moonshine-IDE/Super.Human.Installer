@@ -36,7 +36,7 @@ import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.IVagrantCore.IVagrantProvisioner;
+import superhuman.server.IVagrantProvisioner;
 import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
 import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerType;
 import sys.FileSystem;
