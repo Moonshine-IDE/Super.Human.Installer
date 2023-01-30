@@ -34,10 +34,28 @@ import openfl.display.DisplayObject;
 import openfl.events.Event;
 import openfl.events.EventDispatcher;
 
+/**
+ * A CallbackProcess implementation that calls callback functions
+ * on specific events of the spawned process. For stream output and event handling,
+ * either an internal loop will be created and attached to the current thread,
+ * or an openfl.display.DisplayObject's EnterFrame event will be used
+ */
 class EnterFrameCallbackProcess extends CallbackProcess {
 
     var _enterFrameEventDispatcher:EventDispatcher;
 
+    /**
+     * A CallbackProcess implementation that calls callback functions
+     * on specific events of the spawned process. For stream output and event handling,
+     * either an internal loop will be created and attached to the current thread,
+     * or an openfl.display.DisplayObject's EnterFrame event will be used
+     * @param cmd The command to execute, the process will be spawned with this command
+     * @param args Optional command line arguments for the given process
+     * @param workingDirectory The optional working directory of the process
+     * @param performanceSettings See ProcessPerformanceSettings.hx for details
+     * @param enterFrameEventDispatcher If defined, this DisplayObject's EnterFrame event
+     * will be used to process stream data and fire appropriate events
+     */
     public function new( cmd:String, ?args:Array<String>, ?workingDirectory:String, ?performanceSettings:ProcessPerformanceSettings, ?enterFrameEventDispatcher:DisplayObject ) {
 
         super( cmd, args, workingDirectory, performanceSettings );
@@ -46,6 +64,9 @@ class EnterFrameCallbackProcess extends CallbackProcess {
 
     }
 
+    /**
+     * Starts the process and sets up the relevant threads or event listeners for stream processing.
+     */
     override function start() {
 
         if ( _enterFrameEventDispatcher != null ) {

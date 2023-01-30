@@ -32,6 +32,16 @@ package prominic.sys.io.process;
 
 class BufferedProcess extends AbstractProcess {
     
+    /**
+     * The base class of Prominic.NET's process handlers.
+     * Different implementations are available in this package, use
+     * BufferedProcess only if you'll take care of handling events
+     * and processing stream buffers.
+     * @param cmd The command to execute, the process will be spawned with this command
+     * @param args Optional command line arguments for the given process
+     * @param workingDirectory The optional working directory of the process
+     * @param performanceSettings See ProcessPerformanceSettings.hx for details
+     */
     public function new( cmd:String, ?args:Array<String>, ?workingDirectory:String, ?performanceSettings:ProcessPerformanceSettings ) {
 
         super( cmd, args, workingDirectory, performanceSettings );

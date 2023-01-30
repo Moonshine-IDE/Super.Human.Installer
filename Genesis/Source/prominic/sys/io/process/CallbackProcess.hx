@@ -34,6 +34,11 @@ import sys.thread.EventLoop.EventHandler;
 import sys.thread.Mutex;
 import sys.thread.Thread;
 
+/**
+ * An AbstractProcess implementation that calls callback functions
+ * on specific events of the spawned process. For stream output and event handling,
+ * an internal loop will be created and attached to the current thread
+ */
 class CallbackProcess extends BufferedProcess {
     
     final _callbackMutex:Mutex = new Mutex();
@@ -46,24 +51,45 @@ class CallbackProcess extends BufferedProcess {
     var _onStdOut:(?AbstractProcess)->Void;
     var _onStop:(?AbstractProcess)->Void;
 
+    /**
+     * Callback when there's data in stderr buffer
+     */
     public var onStdErr( get, set ):(?AbstractProcess)->Void;
     function get_onStdErr() return _onStdOut;
     function set_onStdErr( value ) { _onStdErr = value; return _onStdErr; }
     
+    /**
+     * Callback when there's data in stdout buffer
+     */
     public var onStdOut( get, set ):(?AbstractProcess)->Void;
     function get_onStdOut() return _onStdOut;
     function set_onStdOut( value ) { _onStdOut = value; return _onStdOut; }
     
+    /**
+     * Callback when the process exits
+     */
     public var onStop( get, set ):(?AbstractProcess)->Void;
     function get_onStop() return _onStop;
     function set_onStop( value ) { _onStop = value; return _onStop; }
 
+    /**
+     * An AbstractProcess implementation that calls callback functions
+     * on specific events of the spawned process. For stream output and event handling,
+     * an internal loop will be created and attached to the current thread
+     * @param cmd The command to execute, the process will be spawned with this command
+     * @param args Optional command line arguments for the given process
+     * @param workingDirectory The optional working directory of the process
+     * @param performanceSettings See ProcessPerformanceSettings.hx for details
+     */
     public function new( cmd:String, ?args:Array<String>, ?workingDirectory:String, ?performanceSettings:ProcessPerformanceSettings ) {
 
         super( cmd, args, workingDirectory, performanceSettings );
 
     }
 
+    /**
+     * Starts the process and sets up the relevant threads for stream processing.
+     */
     override function start() {
 
         super.start();

@@ -37,6 +37,9 @@ import sys.io.Process;
 import sys.thread.Mutex;
 import sys.thread.Thread;
 
+/**
+ * The base class of Prominic.NET's native process handlers.
+ */
 abstract class AbstractProcess {
 
     static final _defaultPerformaceSettings:ProcessPerformanceSettings = {
@@ -69,21 +72,43 @@ abstract class AbstractProcess {
     var _stdoutFinished:Bool = false;
     var _workingDirectory:String;
 
+    /**
+     * The exit code of the spawned process.
+     * It's -1 until the process extis.
+     */
     public var exitCode( get, never ):Int;
     function get_exitCode() return _exitCode;
 
+    /**
+     * The PID of the spawned process.
+     * Its value is 0 until the process starts.
+     */
     public var pid( get, never ):Int;
     function get_pid() return _pid;
 
+    /**
+     * Returns whether the process is running (spawned) or not
+     */
     public var running( get, never ):Bool;
     function get_running() return _running;
 
+    /**
+     * The buffer that contains the data read from
+     * standard error stream
+     */
     public var stderrBuffer( get, never ):StringBuffer;
     function get_stderrBuffer() return _stderrBuffer;
 
+    /**
+     * The buffer that contains the data read from
+     * standard output stream
+     */
     public var stdoutBuffer( get, never ):StringBuffer;
     function get_stdoutBuffer() return _stdoutBuffer;
 
+    /**
+     * The working directory of the process
+     */
     public var workingDirectory( get, never ):String;
     function get_workingDirectory() return _workingDirectory;
     
@@ -109,6 +134,9 @@ abstract class AbstractProcess {
 
     }
 
+    /**
+     * Clears both the stderr and stdout buffers
+     */
     public function clearBuffers() {
 
         _stderrBuffer.clear();
@@ -116,12 +144,19 @@ abstract class AbstractProcess {
 
     }
 
+    /**
+     * Kills the process with the system's available kill command.
+     * Kill signal: 9 (KILL)
+     */
     public function kill() {
         
         ProcessTools.kill( this._pid );
 
     }
 
+    /**
+     * Starts the process and sets up the relevant threads for stream processing.
+     */
     public function start() {
 
         // The process is either running or already exited
@@ -160,6 +195,10 @@ abstract class AbstractProcess {
 
     }
 
+    /**
+     * Stops the running process.
+     * @param forced If true, it tries to kill the process, if false, it closes the process handlers.
+     */
     public function stop( forced:Bool = false ) {
 
         if ( !_running || _exited ) return;
