@@ -18,7 +18,7 @@ jobs:
         uses: mavrosxristoforos/get-xml-info@1.1.1
         with:
           xml-file: 'project.xml'
-          xpath: '/project/meta[@version]'
+          xpath: '/project/meta/@version'
           
       - name: Echo
-        run: echo version is $steps.getversion.outputs.info
+        run: echo version is ${{ steps.getversion.outputs.info }}
