@@ -13,6 +13,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Read version
+        id: readversion
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta/@version'
+
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1
         with:
@@ -48,12 +55,9 @@ jobs:
             .cache
           key: ${{ runner.os }}-cache-bin
 
-      - name: Show github ref
-        run: echo ${{ github.ref_name }}
-
       - name: Create NSIS installer
         run: |
-          makensis /DPRODUCT_VERSION=${{ github.ref_name }} Templates/installer/windows-installer-dev.nsi
+          makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
 
       - name: Upload installer
         uses: actions/upload-artifact@v2
