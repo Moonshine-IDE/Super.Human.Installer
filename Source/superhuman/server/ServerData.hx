@@ -30,7 +30,7 @@
 
 package superhuman.server;
 
-import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
+import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerData;
 import superhuman.server.roles.ServerRole;
 
 typedef ServerData = {

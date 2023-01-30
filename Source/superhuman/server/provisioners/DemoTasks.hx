@@ -28,7 +28,7 @@
  *  it in the license file.
  */
 
-package superhuman.server;
+package superhuman.server.provisioners;
 
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
@@ -87,7 +87,7 @@ class DemoTasks extends VagrantProvisionerImpl {
     
     public function new( sourcePath:String, targetPath:String ) {
 
-        super( superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerType.DemoTasks, sourcePath, targetPath );
+        super( superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerType.DemoTasks, sourcePath, targetPath );
 
         _versionFile = "version.rb";
         _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );

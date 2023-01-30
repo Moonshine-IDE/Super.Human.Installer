@@ -28,29 +28,28 @@
  *  it in the license file.
  */
 
-package superhuman.server;
+package superhuman.server.provisioners;
 
 import prominic.core.primitives.VersionInfo;
+import superhuman.interfaces.IConsole;
+import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerData;
 
-typedef VagrantProvisionerDefinition = {
+interface IVagrantProvisioner {
+    
+    public var console:IConsole;
+    public var data( get, never ):VagrantProvisionerData;
+    public var exists( get, never ):Bool;
+    public var version( get, never ):VersionInfo;
 
-    data: VagrantProvisionerData,
-    name: String,
-    root: String,
-    ?supported: Bool,
-
-}
-
-typedef VagrantProvisionerData = {
-
-    type:VagrantProvisionerType,
-    ?version:VersionInfo,
-
-}
-
-enum abstract VagrantProvisionerType( String ) from String to String {
-
-    var Default = "default";
-    var DemoTasks = "demo-tasks";
+    public function clearTargetDirectory():Void;
+    public function copyFiles( ?callback:()->Void ):Void;
+    public function createTargetDirectory():Void;
+    public function deleteFileInTargetDirectory( path:String ):Bool;
+    public function fileExists( path:String ):Bool;
+    public function getFileContentFromSourceScriptsDirectory( path:String ):String;
+    public function getFileContentFromSourceTemplateDirectory( path:String ):String;
+    public function getFileContentFromTargetDirectory( path:String ):String;
+    public function reinitialize( sourcePath:String ):Void;
+    public function saveContentToFileInTargetDirectory( path:String, content:String ):Bool;
 
 }

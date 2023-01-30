@@ -51,7 +51,7 @@ import openfl.events.Event;
 import openfl.events.MouseEvent;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
-import superhuman.server.VagrantProvisionerDefinition;
+import superhuman.server.provisioners.VagrantProvisionerDefinition;
 import sys.FileSystem;
 
 class ConfigPage extends Page {

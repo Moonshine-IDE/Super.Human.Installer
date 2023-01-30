@@ -70,7 +70,7 @@ import superhuman.server.Server;
 import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
 import superhuman.server.ServerType;
-import superhuman.server.VagrantProvisionerDefinition;
+import superhuman.server.provisioners.VagrantProvisionerDefinition;
 import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;

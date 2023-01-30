@@ -46,7 +46,8 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
+import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerData;
 import superhuman.server.roles.ServerRole;
 import sys.FileSystem;
 

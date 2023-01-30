@@ -28,7 +28,7 @@
  *  it in the license file.
  */
 
-package superhuman.server;
+package superhuman.server.provisioners;
 
 import genesis.application.managers.LanguageManager;
 import haxe.io.Path;
@@ -36,9 +36,9 @@ import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.IVagrantProvisioner;
-import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
-import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerType;
+import superhuman.server.provisioners.IVagrantProvisioner;
+import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerData;
+import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
