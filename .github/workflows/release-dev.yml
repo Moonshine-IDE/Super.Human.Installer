@@ -37,6 +37,6 @@ jobs:
           name: Release
           draft: true
           files: |
-            SuperHumanInstallerDev-Pkg
-            Super.Human.Installer.Dev-Setup
-          if-no-files-found: error
+            SuperHumanInstallerDev-Pkg.pkg
+            Super.Human.Installer.Dev-Setup.exe
+          fail_on_unmatched_files: true
