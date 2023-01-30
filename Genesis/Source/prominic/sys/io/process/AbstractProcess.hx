@@ -32,6 +32,7 @@ package prominic.sys.io.process;
 
 import haxe.io.Eof;
 import prominic.sys.io.process.data.Message;
+import prominic.sys.io.process.data.StringBuffer;
 import sys.io.Process;
 import sys.thread.Mutex;
 import sys.thread.Thread;
@@ -62,9 +63,9 @@ abstract class AbstractProcess {
     var _process:Process;
     var _receiverThread:Thread;
     var _running:Bool = false;
-    var _stderrBuffer:String;
+    var _stderrBuffer:StringBuffer;
     var _stderrFinished:Bool = false;
-    var _stdoutBuffer:String;
+    var _stdoutBuffer:StringBuffer;
     var _stdoutFinished:Bool = false;
     var _workingDirectory:String;
 
@@ -77,10 +78,10 @@ abstract class AbstractProcess {
     public var running( get, never ):Bool;
     function get_running() return _running;
 
-    public var stderrBuffer( get, never ):String;
+    public var stderrBuffer( get, never ):StringBuffer;
     function get_stderrBuffer() return _stderrBuffer;
 
-    public var stdoutBuffer( get, never ):String;
+    public var stdoutBuffer( get, never ):StringBuffer;
     function get_stdoutBuffer() return _stdoutBuffer;
 
     public var workingDirectory( get, never ):String;
@@ -103,41 +104,21 @@ abstract class AbstractProcess {
         _className = a[ a.length - 1 ];
 
         _bufferMutex = new Mutex();
-        _stderrBuffer = "";
-        _stdoutBuffer = "";
+        _stderrBuffer = new StringBuffer();
+        _stdoutBuffer = new StringBuffer();
 
     }
 
     public function clearBuffers() {
 
-        _stderrBuffer = "";
-        _stdoutBuffer = "";
+        _stderrBuffer.clear();
+        _stdoutBuffer.clear();
 
     }
 
     public function kill() {
         
         ProcessTools.kill( this._pid );
-
-    }
-
-    public function retrieveStderrData():String {
-
-        _mutex.acquire();
-        var s = _stderrBuffer;
-        _stderrBuffer = "";
-        _mutex.release();
-        return s;
-
-    }
-
-    public function retrieveStdoutData():String {
-
-        _mutex.acquire();
-        var s = _stdoutBuffer;
-        _stdoutBuffer = "";
-        _mutex.release();
-        return s;
 
     }
 
@@ -382,7 +363,7 @@ abstract class AbstractProcess {
         
                             case MessageCommand.Data:
                                 _mutex.acquire();
-                                if ( object.data != null && object.data.length > 0 ) _stdoutBuffer += object.data;
+                                if ( object.data != null && object.data.length > 0 ) _stdoutBuffer.add( object.data );
                                 _mutex.release();
         
                             case MessageCommand.Close:
@@ -400,7 +381,7 @@ abstract class AbstractProcess {
         
                             case MessageCommand.Data:
                                 _mutex.acquire();
-                                if ( object.data != null && object.data.length > 0 ) _stderrBuffer += object.data;
+                                if ( object.data != null && object.data.length > 0 ) _stderrBuffer.add( object.data );
                                 _mutex.release();
         
                             case MessageCommand.Close:

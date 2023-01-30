@@ -28,59 +28,55 @@
  *  it in the license file.
  */
 
-package prominic.sys.io.process;
+package prominic.sys.io.process.data;
 
-import openfl.display.DisplayObject;
-import openfl.events.Event;
-import openfl.events.EventDispatcher;
+import sys.thread.Mutex;
 
-class EnterFrameCallbackProcess extends CallbackProcess {
+class StringBuffer {
 
-    var _enterFrameEventDispatcher:EventDispatcher;
+    var _mutex:Mutex;
+    var _value:String;
 
-    public function new( cmd:String, ?args:Array<String>, ?workingDirectory:String, ?performanceSettings:ProcessPerformanceSettings, ?enterFrameEventDispatcher:DisplayObject ) {
-
-        super( cmd, args, workingDirectory, performanceSettings );
-
-        _enterFrameEventDispatcher = enterFrameEventDispatcher;
-
-    }
-
-    override function start() {
-
-        if ( _enterFrameEventDispatcher != null ) {
-
-            _enterFrameEventDispatcher.addEventListener( Event.ENTER_FRAME, _eventLoop );
-            _cancelEventLoop = true;
-
-        }
-
-        super.start();
-
-    }
-
-    function _eventLoop( ?e:Dynamic ) {
-
-        _frameLoop();
-
-    }
-
-    override function _frameLoop() {
-
-        super._frameLoop();
-
-        if ( _exited ) {
-
-            if ( _enterFrameEventDispatcher != null ) {
-
-                _enterFrameMutex.acquire();
-                _enterFrameEventDispatcher.removeEventListener( Event.ENTER_FRAME, _eventLoop );
-                _enterFrameMutex.release();
-
-            }
-
-        }
-
-    }
+    public var length( get, never ):Int;
+    function get_length() return _value.length;
     
+    public function new( ?value:String ) {
+
+        _value = ( value != null ) ? value : "";
+        _mutex = new Mutex();
+
+    }
+
+    public function add( value:String ) {
+
+        _mutex.acquire();
+        _value += value;
+        _mutex.release();
+
+    }
+
+    public function clear() {
+
+        _mutex.acquire();
+        _value = "";
+        _mutex.release();
+
+    }
+
+    public function get( pos:Int, ?len:Int ):String {
+        
+        _mutex.acquire();
+        var s = _value.substr( pos, len );
+        _value = StringTools.replace( _value, s, "" );
+        _mutex.release();
+        return s;
+
+    }
+
+    public function getAll():String {
+        
+        return this.get( 0 );
+
+    }
+
 }

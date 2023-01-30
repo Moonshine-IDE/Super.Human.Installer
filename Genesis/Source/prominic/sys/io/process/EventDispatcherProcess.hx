@@ -41,6 +41,8 @@ import sys.thread.Thread;
 
 class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher {
 
+    final _fps:Int = 30;
+
     var _enterFrameEventDispatcher:EventDispatcher;
     var _eventDispatcherMutex:Mutex;
     var _eventHandler:EventHandler;
@@ -69,7 +71,7 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
         } else {
 
-            _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / 60 ) * 1000 ) );
+            _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _fps ) * 1000 ) );
 
         }
 
@@ -144,7 +146,7 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
             } else {
 
-                Thread.current().events.cancel( _eventHandler );
+                if ( _eventHandler != null ) Thread.current().events.cancel( _eventHandler );
 
             }
 

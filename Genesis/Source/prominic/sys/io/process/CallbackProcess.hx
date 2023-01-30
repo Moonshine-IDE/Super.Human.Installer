@@ -40,6 +40,7 @@ class CallbackProcess extends BufferedProcess {
     final _enterFrameMutex:Mutex = new Mutex();
     final _fps:Int = 30;
     
+    var _cancelEventLoop:Bool = false;
     var _eventHandler:EventHandler;
     var _onStdErr:(?AbstractProcess)->Void;
     var _onStdOut:(?AbstractProcess)->Void;
@@ -67,31 +68,25 @@ class CallbackProcess extends BufferedProcess {
 
         super.start();
 
-        _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _fps ) * 1000 ) );
+        if ( !_cancelEventLoop ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _fps ) * 1000 ) );
 
     }
 
     function _frameLoop() {
 
-        if ( _onStdOut != null && this._stdoutBuffer.length > 0 ) {
+        if ( _onStdOut != null && this._stdoutBuffer.length > 0 ) _onStdOut( this );
 
-            _onStdOut( this );
-
-        }
-
-        if ( _onStdErr != null && this._stderrBuffer.length > 0 ) {
-
-            _onStdErr( this );
-
-        }
+        if ( _onStdErr != null && this._stderrBuffer.length > 0 ) _onStdErr( this );
 
         if ( _exited ) {
 
-            Thread.current().events.cancel( _eventHandler );
+            _cancelEventLoop = true;
 
             if ( _onStop != null ) _onStop( this );
 
         }
+
+        if ( _cancelEventLoop && _eventHandler != null ) Thread.current().events.cancel( _eventHandler );
 
     }
 

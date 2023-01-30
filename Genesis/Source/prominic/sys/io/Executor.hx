@@ -120,7 +120,7 @@ class Executor extends AbstractExecutor implements IDisposable {
     function _processOnStdErr( ?process:AbstractProcess ) {
 
         _mutexStderr.acquire();
-        var s = process.stderrBuffer.get();
+        var s = process.stderrBuffer.getAll();
         Logger.error( '${this} stderr: ${s}' );
         for ( f in _onStdErr ) f( this, s );
         _mutexStderr.release();
@@ -130,7 +130,7 @@ class Executor extends AbstractExecutor implements IDisposable {
     function _processOnStdOut( ?process:AbstractProcess ) {
 
         _mutexStdout.acquire();
-        var s = process.stdoutBuffer.get();
+        var s = process.stdoutBuffer.getAll();
         for ( f in _onStdOut ) f( this, s );
         _mutexStdout.release();
 
