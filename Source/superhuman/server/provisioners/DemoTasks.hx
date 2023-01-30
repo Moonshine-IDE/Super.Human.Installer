@@ -36,10 +36,49 @@ import haxe.io.Path;
 import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
+import superhuman.managers.ProvisionerManager;
+import superhuman.managers.ServerManager;
 import sys.FileSystem;
 import sys.io.File;
 
 class DemoTasks extends VagrantProvisionerImpl {
+
+    static public function getDefaultServerData():ServerData {
+
+        return {
+
+			env_open_browser: true,
+			env_setup_wait: 300,
+
+			//network_address: "192.168.2.227",
+			//network_dns_nameserver_1: "1.1.1.1",
+			//network_dns_nameserver_2: "1.0.0.1",
+			//network_gateway: "192.168.2.1",
+			//network_netmask: "255.255.255.0",
+
+			dhcp4: true,
+			network_address: "",
+			network_dns_nameserver_1: "1.1.1.1",
+			network_dns_nameserver_2: "1.0.0.1",
+			network_gateway: "",
+			network_netmask: "",
+
+			network_bridge: "",
+			resources_cpu: 2,
+			resources_ram: 4.0,
+			roles: [ for ( r in SuperHumanInstaller.getInstance().serverRolesCollection ) r.role ],
+			server_hostname: "",
+			server_id: ServerManager.getRandomServerId(),
+			server_organization: "",
+			type: ServerType.Domino,
+			user_email: "",
+			vagrant_up_successful: false,
+            provisioner: ProvisionerManager.getDefaultProvisioners()[ 0 ].data,
+			/*provisioner: _vagrantProvisioners.get( 0 ).data,*/
+
+		};
+
+    }
 
     static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     static final _SAFE_ID_FILE:String = "safe.ids";
@@ -92,9 +131,7 @@ class DemoTasks extends VagrantProvisionerImpl {
         _versionFile = "version.rb";
         _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
-        trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version}' );
         if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile );
-        trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version} ${Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile}' );
 
     }
 

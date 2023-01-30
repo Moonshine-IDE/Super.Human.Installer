@@ -28,35 +28,10 @@
  *  it in the license file.
  */
 
-package superhuman.server.provisioners;
+package superhuman.server.provisioners.roles;
 
-import prominic.core.primitives.VersionInfo;
+typedef ProvisionerRole = {
 
-typedef VagrantProvisionerDefinition = {
-
-    data: VagrantProvisionerData,
-    name: String,
-    root: String,
-    ?supported: Bool,
-
-}
-
-/**
- * This is the saved and loaded data
- */
-typedef VagrantProvisionerData = {
-
-    ?basedon:VagrantProvisionerType,
-    ?roles:Array<Dynamic>,
-    ?version:VersionInfo,
-    type:VagrantProvisionerType,
-
-}
-
-enum abstract VagrantProvisionerType( String ) from String to String {
-
-    var Custom = "custom";
-    var Default = "default";
-    var DemoTasks = "demo-tasks";
-
+    
+    
 }

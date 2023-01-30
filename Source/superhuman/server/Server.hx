@@ -578,7 +578,7 @@ class Server {
 
     }
 
-    public function updateVagrantCore( data:VagrantProvisionerData ):Bool {
+    public function updateVagrantProvisioner( data:VagrantProvisionerData ):Bool {
 
         if ( this._vagrantProvisioner.version == data.version ) return false;
 

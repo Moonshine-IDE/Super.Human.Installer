@@ -39,7 +39,6 @@ import genesis.application.managers.LanguageManager;
 import genesis.application.managers.ToastManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import haxe.Json;
-import haxe.io.Path;
 import lime.system.System;
 import openfl.Lib;
 import openfl.events.Event;
@@ -66,10 +65,11 @@ import superhuman.components.SettingsPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.managers.ProvisionerManager;
+import superhuman.managers.ServerManager;
 import superhuman.server.Server;
 import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
-import superhuman.server.ServerType;
 import superhuman.server.provisioners.VagrantProvisionerDefinition;
 import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
@@ -166,25 +166,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		_vagrantProvisioners = new ArrayCollection( [
-
-			{
-				name: "Demo-tasks v0.1.17",
-				data: { type: VagrantProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.17" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.17"
-			},
-			{
-				name: "Demo-tasks v0.1.15",
-				data: { type: VagrantProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.15" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.15"
-			},
-	
-		] );
+		_vagrantProvisioners = new ArrayCollection( ProvisionerManager.defaultProvisioners );
 	
 		Logger.info( 'Bundled Vagrant cores: ${_vagrantProvisioners}' );
 
 		_serverDirectory = System.applicationStorageDirectory + "servers/";
 		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
+		ServerManager.serverDirectory = _serverDirectory;
 
 		_serverRolesCollection = [
 
@@ -197,38 +185,6 @@ class SuperHumanInstaller extends GenesisApplication {
 			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), _validHashes.get( "domino-rest-api" ).get( "installers" ), "(Domino_REST_API_V1_Installer.tar.gz)" ),
 
 		];
-
-		_defaultServerConfigData = {
-
-			env_open_browser: true,
-			env_setup_wait: 300,
-
-			//network_address: "192.168.2.227",
-			//network_dns_nameserver_1: "1.1.1.1",
-			//network_dns_nameserver_2: "1.0.0.1",
-			//network_gateway: "192.168.2.1",
-			//network_netmask: "255.255.255.0",
-
-			dhcp4: true,
-			network_address: "",
-			network_dns_nameserver_1: "1.1.1.1",
-			network_dns_nameserver_2: "1.0.0.1",
-			network_gateway: "",
-			network_netmask: "",
-
-			network_bridge: "",
-			resources_cpu: 2,
-			resources_ram: 4.0,
-			roles: [ for ( r in _serverRolesCollection ) r.role ],
-			server_hostname: "",
-			server_id: _getRandomServerId(),
-			server_organization: "",
-			type: ServerType.Domino,
-			user_email: "",
-			vagrant_up_successful: false,
-			provisioner: _vagrantProvisioners.get( 0 ).data,
-
-		};
 
 		if ( FileSystem.exists( '${_serverDirectory}/${_CONFIG_FILE}' ) ) {
 
@@ -943,9 +899,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
 
-		var newServerData:ServerData = _defaultServerConfigData.copyObject();
-
-		newServerData.server_id = _getRandomServerId();
+		var newServerData:ServerData = ServerManager.getDefaultServerData( VagrantProvisionerType.DemoTasks );
 
 		var server = Server.create( newServerData, _serverDirectory );
 		server.onUpdate.add( onServerPropertyChanged );
@@ -956,17 +910,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		_saveConfig();
 
 		_showConfigureServer( server );
-
-	}
-
-	function _getRandomServerId():Int {
-
-		// Range: 1025 - 9999
-		var r = Math.floor( Math.random() * 8974 ) + 1025;
-
-		if ( FileSystem.exists( '${_serverDirectory}${r}' ) ) return _getRandomServerId();
-
-		return r;
 
 	}
 

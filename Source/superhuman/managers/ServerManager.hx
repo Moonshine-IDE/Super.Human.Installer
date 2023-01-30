@@ -28,35 +28,33 @@
  *  it in the license file.
  */
 
-package superhuman.server.provisioners;
+package superhuman.managers;
 
-import prominic.core.primitives.VersionInfo;
+import superhuman.server.ServerData;
+import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerType;
+import sys.FileSystem;
 
-typedef VagrantProvisionerDefinition = {
+class ServerManager {
 
-    data: VagrantProvisionerData,
-    name: String,
-    root: String,
-    ?supported: Bool,
+    static public var serverDirectory:String;
+    
+    static public function getDefaultServerData( type:VagrantProvisionerType ):ServerData {
+        
+        if ( type == VagrantProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData();
 
-}
+        return null;
 
-/**
- * This is the saved and loaded data
- */
-typedef VagrantProvisionerData = {
+    }
 
-    ?basedon:VagrantProvisionerType,
-    ?roles:Array<Dynamic>,
-    ?version:VersionInfo,
-    type:VagrantProvisionerType,
+    static public function getRandomServerId():Int {
 
-}
+		// Range: 1025 - 9999
+		var r = Math.floor( Math.random() * 8974 ) + 1025;
 
-enum abstract VagrantProvisionerType( String ) from String to String {
+		if ( FileSystem.exists( '${serverDirectory}${r}' ) ) return getRandomServerId();
 
-    var Custom = "custom";
-    var Default = "default";
-    var DemoTasks = "demo-tasks";
+		return r;
+
+	}
 
 }

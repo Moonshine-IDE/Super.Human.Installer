@@ -368,7 +368,7 @@ class ConfigPage extends Page {
         _server.hostname.value = StringTools.trim( _inputHostname.text );
         _server.organization.value = StringTools.trim( _inputOrganization.text );
         var dvv:VagrantProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-        _server.updateVagrantCore( dvv.data );
+        _server.updateVagrantProvisioner( dvv.data );
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
