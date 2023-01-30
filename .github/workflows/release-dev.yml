@@ -4,15 +4,15 @@ on: workflow_dispatch
 jobs:
   build-linux:
     name: Build on Linux
-    uses: Aszusz/HelloWorldHaxeGui/.github/workflows/linux.yml@main
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/linux-dev.yml@main
     
   build-windows:
     name: Build on Windows
-    uses: Aszusz/HelloWorldHaxeGui/.github/workflows/windows.yml@main
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/windows-dev.yml@main
     
   build-macos:
     name: Build on MacOS
-    uses: Aszusz/HelloWorldHaxeGui/.github/workflows/macos.yml@main
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-dev.yml@main
     
   release:
     name: Release
