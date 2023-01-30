@@ -31,6 +31,9 @@ jobs:
         with:
           name: Super.Human.Installer.Dev-Setup
 
+      - name: Display structure of downloaded files
+        run: ls -R
+
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
