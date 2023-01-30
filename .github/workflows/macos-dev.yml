@@ -18,6 +18,13 @@ jobs:
       - name: Checkout LFS objects
         run: git lfs checkout
 
+      - name: Read version
+        id: readversion
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta/@version'
+
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1
         with:
@@ -55,7 +62,13 @@ jobs:
 
       - name: Create package
         run: |
-          productbuild --component Export/Development/macos/bin/SuperHumanInstallerDev.app /Applications ./SuperHumanInstallerDev.pkg 
+          productbuild \
+            --version ${{ steps.readversion.outputs.info }} \
+            --product Templates/installer/SuperHumanInstaller.template.plist \
+            --identifier net.prominic.genesis.superhumaninstallerdev \
+            --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
+            /Applications \
+            ./SuperHumanInstallerDev.pkg 
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
