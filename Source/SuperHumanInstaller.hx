@@ -70,7 +70,8 @@ import superhuman.managers.ServerManager;
 import superhuman.server.Server;
 import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
-import superhuman.server.provisioners.VagrantProvisionerDefinition;
+import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
+import superhuman.server.provisioners.ProvisionerDefinition;
 import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -134,6 +135,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
+	var _provisionerCollection:ArrayCollection<ProvisionerDefinition>;
 	var _rolePage:RolePage;
 	var _serverDirectory:String;
 	var _serverPage:ServerPage;
@@ -141,7 +143,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _servers:ArrayCollection<Server>;
 	var _settingsPage:SettingsPage;
 	var _vagrantFile:String;
-	var _vagrantProvisioners:ArrayCollection<VagrantProvisionerDefinition>;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
@@ -149,8 +150,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var defaultRoles( get, never ):Map<String, ServerRole>;
 	function get_defaultRoles() return _defaultRoles;
 
-	public var vagrantProvisioners( get, never ):ArrayCollection<VagrantProvisionerDefinition>;
-	function get_vagrantProvisioners() return _vagrantProvisioners;
+	public var provisionerCollection( get, never ):ArrayCollection<ProvisionerDefinition>;
+	function get_provisionerCollection() return _provisionerCollection;
 
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
@@ -166,9 +167,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		_vagrantProvisioners = new ArrayCollection( ProvisionerManager.defaultProvisioners );
+		_provisionerCollection = new ArrayCollection( ProvisionerManager.defaultProvisioners );
 	
-		Logger.info( 'Bundled Vagrant cores: ${_vagrantProvisioners}' );
+		Logger.info( 'Bundled Vagrant cores: ${_provisionerCollection}' );
 
 		_serverDirectory = System.applicationStorageDirectory + "servers/";
 		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
@@ -899,7 +900,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
 
-		var newServerData:ServerData = ServerManager.getDefaultServerData( VagrantProvisionerType.DemoTasks );
+		var newServerData:ServerData = ServerManager.getDefaultServerData( ProvisionerType.DemoTasks );
 
 		var server = Server.create( newServerData, _serverDirectory );
 		server.onUpdate.add( onServerPropertyChanged );
@@ -942,11 +943,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	public function getVagrantProvisionerDefinition( type:VagrantProvisionerType, version:VersionInfo ):VagrantProvisionerDefinition {
+	public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):ProvisionerDefinition {
 
-		for ( vagrantCore in _vagrantProvisioners ) {
+		for ( provisioner in _provisionerCollection ) {
 
-			if ( vagrantCore.data.type == type && vagrantCore.data.version == version ) return vagrantCore;
+			if ( provisioner.data.type == type && provisioner.data.version == version ) return provisioner;
 
 		}
 

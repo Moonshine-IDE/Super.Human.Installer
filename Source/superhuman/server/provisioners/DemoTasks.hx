@@ -41,7 +41,7 @@ import superhuman.managers.ServerManager;
 import sys.FileSystem;
 import sys.io.File;
 
-class DemoTasks extends VagrantProvisionerImpl {
+class DemoTasks extends ProvisionerImpl {
 
     static public function getDefaultServerData():ServerData {
 
@@ -126,12 +126,12 @@ class DemoTasks extends VagrantProvisionerImpl {
     
     public function new( sourcePath:String, targetPath:String ) {
 
-        super( superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerType.DemoTasks, sourcePath, targetPath );
+        super( superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType.DemoTasks, sourcePath, targetPath );
 
         _versionFile = "version.rb";
         _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
-        if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
 
     }
 
@@ -202,7 +202,7 @@ class DemoTasks extends VagrantProvisionerImpl {
         super.reinitialize( sourcePath );
 
         _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-        if ( _version == "0.0.0" ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        if ( _version == "0.0.0" ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
 
     }
 

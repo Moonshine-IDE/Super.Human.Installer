@@ -51,7 +51,7 @@ import openfl.events.Event;
 import openfl.events.MouseEvent;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
-import superhuman.server.provisioners.VagrantProvisionerDefinition;
+import superhuman.server.provisioners.ProvisionerDefinition;
 import sys.FileSystem;
 
 class ConfigPage extends Page {
@@ -121,14 +121,14 @@ class ConfigPage extends Page {
 
         _rowCoreComponentVersion = new GenesisFormRow();
         _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
-        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( SuperHumanInstaller.getInstance().vagrantProvisioners );
-        _dropdownCoreComponentVersion.itemToText = ( item:VagrantProvisionerDefinition ) -> {
+        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( SuperHumanInstaller.getInstance().provisionerCollection );
+        _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
         _dropdownCoreComponentVersion.selectedIndex = 0;
-        for ( i in 0...SuperHumanInstaller.getInstance().vagrantProvisioners.length ) {
-            var d:VagrantProvisionerDefinition = SuperHumanInstaller.getInstance().vagrantProvisioners.get( i );
-            if ( d.data.version == _server.vagrantProvisioner.version ) {
+        for ( i in 0...SuperHumanInstaller.getInstance().provisionerCollection.length ) {
+            var d:ProvisionerDefinition = SuperHumanInstaller.getInstance().provisionerCollection.get( i );
+            if ( d.data.version == _server.provisioner.version ) {
                 _dropdownCoreComponentVersion.selectedIndex = i;
                 break;
             }
@@ -282,9 +282,9 @@ class ConfigPage extends Page {
 
                 for ( i in 0..._dropdownCoreComponentVersion.dataProvider.length ) {
 
-                    var d:VagrantProvisionerDefinition = _dropdownCoreComponentVersion.dataProvider.get( i );
+                    var d:ProvisionerDefinition = _dropdownCoreComponentVersion.dataProvider.get( i );
 
-                    if ( d.data.version == _server.vagrantProvisioner.version ) {
+                    if ( d.data.version == _server.provisioner.version ) {
 
                         _dropdownCoreComponentVersion.selectedIndex = i;
                         break;
@@ -367,8 +367,8 @@ class ConfigPage extends Page {
 
         _server.hostname.value = StringTools.trim( _inputHostname.text );
         _server.organization.value = StringTools.trim( _inputOrganization.text );
-        var dvv:VagrantProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-        _server.updateVagrantProvisioner( dvv.data );
+        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        _server.updateProvisioner( dvv.data );
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         

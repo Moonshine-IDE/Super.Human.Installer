@@ -31,25 +31,32 @@
 package superhuman.server.provisioners;
 
 import prominic.core.primitives.VersionInfo;
-import superhuman.interfaces.IConsole;
-import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerData;
 
-interface IVagrantProvisioner {
-    
-    public var console:IConsole;
-    public var data( get, never ):VagrantProvisionerData;
-    public var exists( get, never ):Bool;
-    public var version( get, never ):VersionInfo;
+typedef ProvisionerDefinition = {
 
-    public function clearTargetDirectory():Void;
-    public function copyFiles( ?callback:()->Void ):Void;
-    public function createTargetDirectory():Void;
-    public function deleteFileInTargetDirectory( path:String ):Bool;
-    public function fileExists( path:String ):Bool;
-    public function getFileContentFromSourceScriptsDirectory( path:String ):String;
-    public function getFileContentFromSourceTemplateDirectory( path:String ):String;
-    public function getFileContentFromTargetDirectory( path:String ):String;
-    public function reinitialize( sourcePath:String ):Void;
-    public function saveContentToFileInTargetDirectory( path:String, content:String ):Bool;
+    data: ProvisionerData,
+    name: String,
+    root: String,
+    ?supported: Bool,
+
+}
+
+/**
+ * This is the saved and loaded data
+ */
+typedef ProvisionerData = {
+
+    ?basedon:ProvisionerType,
+    ?roles:Array<Dynamic>,
+    ?version:VersionInfo,
+    type:ProvisionerType,
+
+}
+
+enum abstract ProvisionerType( String ) from String to String {
+
+    var Custom = "custom";
+    var Default = "default";
+    var DemoTasks = "demo-tasks";
 
 }

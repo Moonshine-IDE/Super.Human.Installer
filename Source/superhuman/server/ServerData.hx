@@ -30,7 +30,7 @@
 
 package superhuman.server;
 
-import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerData;
+import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
 import superhuman.server.roles.ServerRole;
 
 typedef ServerData = {
@@ -63,6 +63,6 @@ typedef ServerData = {
 
     ?vagrant_up_successful:Bool,
 
-    ?provisioner:VagrantProvisionerData,
+    ?provisioner:ProvisionerData,
 
 }

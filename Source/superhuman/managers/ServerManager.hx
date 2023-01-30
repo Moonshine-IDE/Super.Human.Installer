@@ -31,16 +31,16 @@
 package superhuman.managers;
 
 import superhuman.server.ServerData;
-import superhuman.server.provisioners.VagrantProvisionerDefinition.VagrantProvisionerType;
+import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 import sys.FileSystem;
 
 class ServerManager {
 
     static public var serverDirectory:String;
     
-    static public function getDefaultServerData( type:VagrantProvisionerType ):ServerData {
+    static public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
-        if ( type == VagrantProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData();
+        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData();
 
         return null;
 
