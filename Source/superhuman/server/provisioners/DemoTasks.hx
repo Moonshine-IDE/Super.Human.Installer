@@ -30,7 +30,6 @@
 
 package superhuman.server.provisioners;
 
-import superhuman.server.roles.ServerRole;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.io.Path;
@@ -39,6 +38,7 @@ import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
+import superhuman.server.roles.ServerRole;
 import sys.FileSystem;
 import sys.io.File;
 
