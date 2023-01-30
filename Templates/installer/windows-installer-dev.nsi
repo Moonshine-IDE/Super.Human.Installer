@@ -19,6 +19,7 @@ RequestExecutionLevel user
 !define MUI_UNICON "${NSISDIR}\Contrib\Graphics\Icons\modern-uninstall.ico"
 
 ; Welcome page
+!define MUI_WELCOMEPAGE_TITLE_3LINES
 !insertmacro MUI_PAGE_WELCOME
 ; License page
 !insertmacro MUI_PAGE_LICENSE "..\..\LICENSE.MD"
@@ -27,6 +28,7 @@ RequestExecutionLevel user
 ; Instfiles page
 !insertmacro MUI_PAGE_INSTFILES
 ; Finish page
+!define MUI_FINISHPAGE_TITLE_3LINES
 !define MUI_FINISHPAGE_RUN "$INSTDIR\SuperHumanInstallerDev.exe"
 !insertmacro MUI_PAGE_FINISH
 
