@@ -3,7 +3,7 @@ name: Windows Dev
 on:
   push:
     branches:
-      - build-dev
+      - buil-dev
   
 jobs:
   build:
