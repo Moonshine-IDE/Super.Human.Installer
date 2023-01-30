@@ -51,9 +51,6 @@ jobs:
         run: |
           haxelib run openfl build project.xml windows -DHXCPP_COMPILE_CACHE=cache -debug -Dlogverbose -Dlogcolor
           
-      - name: List bin
-        run: ls -R
-          
       - name: Save cache bin
         id: cache-bin-save
         uses: actions/cache/save@v3
@@ -63,20 +60,13 @@ jobs:
             .cache
           key: ${{ runner.os }}-cache-bin
 
-      - name: Upload bin
+      - name: Create NSIS installer
+        run: |
+          makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
+
+      - name: Upload installer
         uses: actions/upload-artifact@v2
         with:
-          name: shi-windows-bin
+          name: Super.Human.Installer.Dev-Setup
           path: |
-            Export/Development/windows/bin/
-
-#       - name: Create NSIS installer
-#         run: |
-#           makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
-
-#       - name: Upload installer
-#         uses: actions/upload-artifact@v2
-#         with:
-#           name: Super.Human.Installer.Dev-Setup
-#           path: |
-#             Templates/installer/Super.Human.Installer.Dev-Setup.exe
+            Templates/installer/Super.Human.Installer.Dev-Setup.exe
