@@ -75,7 +75,7 @@ class EnterFrameCallbackProcess extends BufferedProcess {
 
         if ( _enterFrameEventDispatcher != null ) {
 
-            _enterFrameEventDispatcher.addEventListener( Event.ENTER_FRAME, cast _frameLoop );
+            _enterFrameEventDispatcher.addEventListener( Event.ENTER_FRAME, _eventLoop );
 
         } else {
 
@@ -85,7 +85,13 @@ class EnterFrameCallbackProcess extends BufferedProcess {
 
     }
 
-    function _frameLoop() {
+    function _eventLoop( ?e:Dynamic ) {
+
+        _frameLoop();
+
+    }
+
+    inline function _frameLoop() {
 
         if ( _onStdOut != null && this._stdoutBuffer.length > 0 ) {
 
@@ -103,8 +109,9 @@ class EnterFrameCallbackProcess extends BufferedProcess {
 
             if ( _enterFrameEventDispatcher != null ) {
 
-                _enterFrameEventDispatcher.removeEventListener( Event.ENTER_FRAME, cast _frameLoop );
-                _enterFrameEventDispatcher = null;
+                _enterFrameMutex.acquire();
+                _enterFrameEventDispatcher.removeEventListener( Event.ENTER_FRAME, _eventLoop );
+                _enterFrameMutex.release();
 
             } else {
 

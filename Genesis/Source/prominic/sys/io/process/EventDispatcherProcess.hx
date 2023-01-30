@@ -65,7 +65,7 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
         if ( _enterFrameEventDispatcher != null ) {
 
-            _enterFrameEventDispatcher.addEventListener( Event.ENTER_FRAME, cast _frameLoop );
+            _enterFrameEventDispatcher.addEventListener( Event.ENTER_FRAME, _eventLoop );
 
         } else {
 
@@ -105,7 +105,13 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
     }
 
-    function _frameLoop() {
+    function _eventLoop( ?e:Dynamic ) {
+
+        _frameLoop();
+
+    }
+
+    inline function _frameLoop() {
 
         if ( this._stdoutBuffer.length > 0 ) {
 
@@ -133,7 +139,7 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
             if ( _enterFrameEventDispatcher != null ) {
 
-                _enterFrameEventDispatcher.removeEventListener( Event.ENTER_FRAME, cast _frameLoop );
+                _enterFrameEventDispatcher.removeEventListener( Event.ENTER_FRAME, _eventLoop );
                 _enterFrameEventDispatcher = null;
 
             } else {

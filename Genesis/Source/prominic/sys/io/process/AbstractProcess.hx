@@ -32,7 +32,6 @@ package prominic.sys.io.process;
 
 import haxe.io.Eof;
 import prominic.sys.io.process.data.Message;
-import prominic.sys.io.process.data.OutputBuffer;
 import sys.io.Process;
 import sys.thread.Mutex;
 import sys.thread.Thread;
@@ -63,9 +62,9 @@ abstract class AbstractProcess {
     var _process:Process;
     var _receiverThread:Thread;
     var _running:Bool = false;
-    var _stderrBuffer:OutputBuffer;
+    var _stderrBuffer:String;
     var _stderrFinished:Bool = false;
-    var _stdoutBuffer:OutputBuffer;
+    var _stdoutBuffer:String;
     var _stdoutFinished:Bool = false;
     var _workingDirectory:String;
 
@@ -78,17 +77,11 @@ abstract class AbstractProcess {
     public var running( get, never ):Bool;
     function get_running() return _running;
 
-    public var stderrBuffer( get, never ):OutputBuffer;
+    public var stderrBuffer( get, never ):String;
     function get_stderrBuffer() return _stderrBuffer;
 
-    public var stdoutBuffer( get, never ):OutputBuffer;
+    public var stdoutBuffer( get, never ):String;
     function get_stdoutBuffer() return _stdoutBuffer;
-
-    public var stderrBufferLength( get, never ):Int;
-    function get_stderrBufferLength() return _stderrBuffer.length;
-
-    public var stdoutBufferLength( get, never ):Int;
-    function get_stdoutBufferLength() return _stdoutBuffer.length;
 
     public var workingDirectory( get, never ):String;
     function get_workingDirectory() return _workingDirectory;
@@ -110,15 +103,15 @@ abstract class AbstractProcess {
         _className = a[ a.length - 1 ];
 
         _bufferMutex = new Mutex();
-        _stderrBuffer = new OutputBuffer();
-        _stdoutBuffer = new OutputBuffer();
+        _stderrBuffer = "";
+        _stdoutBuffer = "";
 
     }
 
     public function clearBuffers() {
 
-        _stderrBuffer.clear();
-        _stdoutBuffer.clear();
+        _stderrBuffer = "";
+        _stdoutBuffer = "";
 
     }
 
@@ -131,7 +124,8 @@ abstract class AbstractProcess {
     public function retrieveStderrData():String {
 
         _mutex.acquire();
-        var s = _stderrBuffer.get();
+        var s = _stderrBuffer;
+        _stderrBuffer = "";
         _mutex.release();
         return s;
 
@@ -140,7 +134,8 @@ abstract class AbstractProcess {
     public function retrieveStdoutData():String {
 
         _mutex.acquire();
-        var s = _stdoutBuffer.get();
+        var s = _stdoutBuffer;
+        _stdoutBuffer = "";
         _mutex.release();
         return s;
 
@@ -387,7 +382,7 @@ abstract class AbstractProcess {
         
                             case MessageCommand.Data:
                                 _mutex.acquire();
-                                if ( object.data != null && object.data.length > 0 ) _stdoutBuffer.add( object.data );
+                                if ( object.data != null && object.data.length > 0 ) _stdoutBuffer += object.data;
                                 _mutex.release();
         
                             case MessageCommand.Close:
@@ -405,7 +400,7 @@ abstract class AbstractProcess {
         
                             case MessageCommand.Data:
                                 _mutex.acquire();
-                                if ( object.data != null && object.data.length > 0 ) _stderrBuffer.add( object.data );
+                                if ( object.data != null && object.data.length > 0 ) _stderrBuffer += object.data;
                                 _mutex.release();
         
                             case MessageCommand.Close:
