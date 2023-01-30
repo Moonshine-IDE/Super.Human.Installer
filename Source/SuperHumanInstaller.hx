@@ -70,7 +70,6 @@ import superhuman.managers.ServerManager;
 import superhuman.server.Server;
 import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 import superhuman.server.provisioners.ProvisionerDefinition;
 import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
@@ -900,7 +899,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
 
-		var newServerData:ServerData = ServerManager.getDefaultServerData( ProvisionerType.DemoTasks );
+		var newServerData:ServerData = ServerManager.getDefaultServerData( e.provisionerType );
 
 		var server = Server.create( newServerData, _serverDirectory );
 		server.onUpdate.add( onServerPropertyChanged );

@@ -33,6 +33,7 @@ package superhuman.events;
 import genesis.application.events.GenesisApplicationEvent;
 import superhuman.components.Console;
 import superhuman.server.Server;
+import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 
 class SuperHumanApplicationEvent extends GenesisApplicationEvent {
 
@@ -66,6 +67,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var console:Console;
     public var data:String;
     public var server:Server;
+    public var provisionerType:ProvisionerType;
     
     public function new( type:String ) {
 
