@@ -70,7 +70,7 @@ import superhuman.server.Server;
 import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
 import superhuman.server.ServerType;
-import superhuman.server.VagrantCoreDefinition;
+import superhuman.server.VagrantProvisionerDefinition;
 import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -138,8 +138,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _servers:ArrayCollection<Server>;
 	var _settingsPage:SettingsPage;
-	var _vagrantCores:ArrayCollection<VagrantCoreDefinition>;
 	var _vagrantFile:String;
+	var _vagrantProvisioners:ArrayCollection<VagrantProvisionerDefinition>;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
@@ -147,8 +147,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var defaultRoles( get, never ):Map<String, ServerRole>;
 	function get_defaultRoles() return _defaultRoles;
 
-	public var vagrantCores( get, never ):ArrayCollection<VagrantCoreDefinition>;
-	function get_vagrantCores() return _vagrantCores;
+	public var vagrantProvisioners( get, never ):ArrayCollection<VagrantProvisionerDefinition>;
+	function get_vagrantProvisioners() return _vagrantProvisioners;
 
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
@@ -164,22 +164,22 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		_vagrantCores = new ArrayCollection( [
+		_vagrantProvisioners = new ArrayCollection( [
 
 			{
-				name: "Demo-tasks v0.1.15",
-				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.15" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.15"
+				name: "Demo-tasks v0.1.17",
+				data: { type: VagrantProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.17" ) },
+				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.17"
 			},
 			{
-				name: "Demo-tasks v0.1.13",
-				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.13" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.13"
+				name: "Demo-tasks v0.1.15",
+				data: { type: VagrantProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.15" ) },
+				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.15"
 			},
 	
 		] );
 	
-		Logger.info( 'Bundled Vagrant cores: ${_vagrantCores}' );
+		Logger.info( 'Bundled Vagrant cores: ${_vagrantProvisioners}' );
 
 		_serverDirectory = System.applicationStorageDirectory + "servers/";
 		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
@@ -224,7 +224,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			type: ServerType.Domino,
 			user_email: "",
 			vagrant_up_successful: false,
-			core: _vagrantCores.get( 0 ).data,
+			core: _vagrantProvisioners.get( 0 ).data,
 
 		};
 
@@ -995,9 +995,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	public function getVagrantCoreDefinition( type:VagrantCoreType, version:VersionInfo ):VagrantCoreDefinition {
+	public function getVagrantProvisionerDefinition( type:VagrantProvisionerType, version:VersionInfo ):VagrantProvisionerDefinition {
 
-		for ( vagrantCore in _vagrantCores ) {
+		for ( vagrantCore in _vagrantProvisioners ) {
 
 			if ( vagrantCore.data.type == type && vagrantCore.data.version == version ) return vagrantCore;
 

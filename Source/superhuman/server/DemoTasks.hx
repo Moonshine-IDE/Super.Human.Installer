@@ -39,7 +39,7 @@ import prominic.sys.io.FileTools;
 import sys.FileSystem;
 import sys.io.File;
 
-class DemoTasks extends VagrantCoreImpl {
+class DemoTasks extends VagrantProvisionerImpl {
 
     static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     static final _SAFE_ID_FILE:String = "safe.ids";
@@ -87,14 +87,14 @@ class DemoTasks extends VagrantCoreImpl {
     
     public function new( sourcePath:String, targetPath:String ) {
 
-        super( superhuman.server.VagrantCoreDefinition.VagrantCoreType.DemoTasks, sourcePath, targetPath );
+        super( superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerType.DemoTasks, sourcePath, targetPath );
 
         _versionFile = "version.rb";
         _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
         trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version}' );
-        if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantCoreImpl._SCRIPTS_ROOT + _versionFile );
-        trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version} ${Path.addTrailingSlash( _sourcePath ) + VagrantCoreImpl._SCRIPTS_ROOT + _versionFile}' );
+        if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        trace( '>>>>>>>>>>>>>>>>>>>>>>>>> ${_version} ${Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile}' );
 
     }
 
@@ -165,7 +165,7 @@ class DemoTasks extends VagrantCoreImpl {
         super.reinitialize( sourcePath );
 
         _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-        if ( _version == "0.0.0" ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantCoreImpl._SCRIPTS_ROOT + _versionFile );
+        if ( _version == "0.0.0" ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + VagrantProvisionerImpl._SCRIPTS_ROOT + _versionFile );
 
     }
 

@@ -32,12 +32,12 @@ package superhuman.server;
 
 import prominic.core.primitives.VersionInfo;
 import superhuman.interfaces.IConsole;
-import superhuman.server.VagrantCoreDefinition.VagrantCoreData;
+import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
 
-interface IVagrantCore {
+interface IVagrantProvisioner {
     
     public var console:IConsole;
-    public var data( get, never ):VagrantCoreData;
+    public var data( get, never ):VagrantProvisionerData;
     public var exists( get, never ):Bool;
     public var version( get, never ):VersionInfo;
 

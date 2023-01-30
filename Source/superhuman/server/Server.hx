@@ -30,6 +30,7 @@
 
 package superhuman.server;
 
+import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
 import genesis.application.managers.LanguageManager;
 import haxe.Template;
 import haxe.io.Path;
@@ -46,7 +47,6 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.VagrantCoreDefinition.VagrantCoreData;
 import superhuman.server.roles.ServerRole;
 import sys.FileSystem;
 
@@ -101,25 +101,25 @@ class Server {
 
         sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
 
-        var latestDemoTasks = SuperHumanInstaller.getInstance().vagrantCores.get( 0 );
+        var latestDemoTasks = SuperHumanInstaller.getInstance().vagrantProvisioners.get( 0 );
 
         if ( data.core == null ) {
 
-            sc._vagrantCore = new DemoTasks( latestDemoTasks.root, sc._serverDir );
+            sc._vagrantProvisioner = new DemoTasks( latestDemoTasks.root, sc._serverDir );
 
         } else {
 
-            var vcd = SuperHumanInstaller.getInstance().getVagrantCoreDefinition( data.core.type, data.core.version );
+            var vcd = SuperHumanInstaller.getInstance().getVagrantProvisionerDefinition( data.core.type, data.core.version );
 
             if ( vcd != null ) {
 
-                sc._vagrantCore = new DemoTasks( vcd.root, sc._serverDir );
+                sc._vagrantProvisioner = new DemoTasks( vcd.root, sc._serverDir );
 
             } else {
 
                 // The server already exists BUT the vagrant core version is not supported
                 // so we create the core with target path only
-                sc._vagrantCore = new DemoTasks( null, sc._serverDir );
+                sc._vagrantProvisioner = new DemoTasks( null, sc._serverDir );
 
             }
 
@@ -193,7 +193,7 @@ class Server {
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
-    var _vagrantCore:DemoTasks;
+    var _vagrantProvisioner:DemoTasks;
     var _vagrantMachine:Property<VagrantMachine>;
     var _vagrantUpSuccessful:Property<Null<Bool>>;
     var _virtualMachine:Property<VirtualMachine>;
@@ -203,7 +203,7 @@ class Server {
 
     public var console( get, set ):IConsole;
     function get_console() return _console;
-    function set_console( value:IConsole ):IConsole { _console = value; _vagrantCore.console = value; return _console; }
+    function set_console( value:IConsole ):IConsole { _console = value; _vagrantProvisioner.console = value; return _console; }
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
@@ -266,7 +266,7 @@ class Server {
     function get_path() return _path;
 
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _vagrantCore.provisioned;
+    function get_provisioned() return _vagrantProvisioner.provisioned;
 
     public var roles( get, never ):Property<Array<ServerRole>>;
     function get_roles() return _roles;
@@ -291,11 +291,11 @@ class Server {
     public var userSafeId( get, never ):Property<String>;
     function get_userSafeId() return _userSafeId;
 
-    public var vagrantCore( get, never ):DemoTasks;
-    function get_vagrantCore() return _vagrantCore;
-
     public var vagrantMachine( get, never ):Property<VagrantMachine>;
     function get_vagrantMachine() return _vagrantMachine;
+
+    public var vagrantProvisioner( get, never ):DemoTasks;
+    function get_vagrantProvisioner() return _vagrantProvisioner;
 
     public var virtualBoxId( get, never ):String;
     function get_virtualBoxId() {
@@ -426,7 +426,7 @@ class Server {
             type: this._type,
             vagrant_up_successful: this._vagrantUpSuccessful.value,
             dhcp4: this._dhcp4.value,
-            core: this._vagrantCore.data,
+            core: this._vagrantProvisioner.data,
 
         };
 
@@ -436,7 +436,7 @@ class Server {
 
     public function initDirectory() {
 
-        _vagrantCore.copyFiles();
+        _vagrantProvisioner.copyFiles();
 
     }
 
@@ -577,14 +577,14 @@ class Server {
 
     }
 
-    public function updateVagrantCore( data:VagrantCoreData ):Bool {
+    public function updateVagrantCore( data:VagrantProvisionerData ):Bool {
 
-        if ( this._vagrantCore.version == data.version ) return false;
+        if ( this._vagrantProvisioner.version == data.version ) return false;
 
-        var vcd = SuperHumanInstaller.getInstance().getVagrantCoreDefinition( data.type, data.version );
+        var vcd = SuperHumanInstaller.getInstance().getVagrantProvisionerDefinition( data.type, data.version );
         var newRoot:String = vcd.root;
-        this._vagrantCore.reinitialize( newRoot );
-        _propertyChanged( this._vagrantCore );
+        this._vagrantProvisioner.reinitialize( newRoot );
+        _propertyChanged( this._vagrantProvisioner );
 
         return true;
 
@@ -647,7 +647,7 @@ class Server {
 
     function _prepareFiles() {
 
-        _vagrantCore.copyFiles( _prepareFilesComplete );
+        _vagrantProvisioner.copyFiles( _prepareFilesComplete );
 
     }
 
@@ -695,7 +695,7 @@ class Server {
 
         Logger.verbose( 'Installer and Fixpack path pairs: ${paths}' );
 
-        _vagrantCore.copyInstallers( paths, _batchCopyComplete );
+        _vagrantProvisioner.copyInstallers( paths, _batchCopyComplete );
 
     }
 
@@ -707,10 +707,10 @@ class Server {
 
         _saveSafeId();
 
-        if ( !_vagrantCore.hostFileExists ) _vagrantCore.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
+        if ( !_vagrantProvisioner.hostFileExists ) _vagrantProvisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
 
         if ( console != null ) {
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _vagrantCore.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _vagrantProvisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualMachine.value ) ) );
         }
 
@@ -720,7 +720,7 @@ class Server {
 
     function _saveSafeId() {
 
-        var r = _vagrantCore.saveSafeId( _userSafeId.value );
+        var r = _vagrantProvisioner.saveSafeId( _userSafeId.value );
         if ( !r ) this._busy.value = false;
 
     }
@@ -733,7 +733,7 @@ class Server {
 
     public function generateHostsFileContent():String {
 
-        _hostsTemplate = _vagrantCore.getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
+        _hostsTemplate = _vagrantProvisioner.getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
 
         var replace = {
 
@@ -823,7 +823,7 @@ class Server {
 
 		var output = generateHostsFileContent();
 
-        _vagrantCore.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
+        _vagrantProvisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
 
     }
 
@@ -847,7 +847,7 @@ class Server {
 
     public function safeIdCopied():Bool {
 
-        return _vagrantCore.safeIdExists;
+        return _vagrantProvisioner.safeIdExists;
 
     }
 
@@ -885,7 +885,7 @@ class Server {
 
     function _getWebAddress():String {
 
-        var s = _vagrantCore.webAddress;
+        var s = _vagrantProvisioner.webAddress;
 
         if ( s == null ) {
 
@@ -999,7 +999,7 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.Destroying;
 
-        _vagrantCore.deleteFileInTargetDirectory( DemoTasks.PUBLIC_ADDRESS_FILE );
+        _vagrantProvisioner.deleteFileInTargetDirectory( DemoTasks.PUBLIC_ADDRESS_FILE );
 
         Vagrant.getInstance().getDestroy( true, this._vagrantMachine.value )
             .onStdOut( _vagrantDestroyStandardOutputData )
