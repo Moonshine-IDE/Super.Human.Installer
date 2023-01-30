@@ -1,0 +1,24 @@
+name: Read version
+  
+on:
+  - workflow_dispatch
+  - workflow_call
+  
+jobs:
+  build:
+    name: Read version
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        
+      - name: Read version
+        id: getversion
+        uses: mavrosxristoforos/get-xml-info@1.0
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta'
+          
+      - name: Echo
+        run: echo ${{ steps.getversion.outputs.info }}
