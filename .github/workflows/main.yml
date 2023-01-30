@@ -21,4 +21,4 @@ jobs:
           xpath: '/project/meta[@version]'
           
       - name: Echo
-        run: echo ${{ steps.getversion.outputs.info }}
+        run: echo version is $steps.getversion.outputs.info
