@@ -3,7 +3,7 @@
 RequestExecutionLevel user
 
 ; HM NIS Edit Wizard helper defines
-!define PRODUCT_NAME "Super.Human.Installer.Dev"
+!define PRODUCT_NAME "SuperHumanInstallerDev"
 !define PRODUCT_PUBLISHER "Prominic.NET"
 !define PRODUCT_WEB_SITE "https://www.prominic.net/"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\SuperHumanInstallerDev.exe"
@@ -41,8 +41,8 @@ RequestExecutionLevel user
 ; MUI end ------
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Super.Human.Installer.Dev-Setup.exe"
-InstallDir "$LOCALAPPDATA\Super.Human.Installer.Dev"
+OutFile "SuperHumanInstallerDev-Setup.exe"
+InstallDir "$LOCALAPPDATA\SuperHumanInstallerDev"
 InstallDirRegKey HKCU "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
@@ -51,15 +51,15 @@ Section "MainSection" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
   File /r "..\..\Export\Development\windows\bin\*.*"
-  CreateDirectory "$SMPROGRAMS\Super.Human.Installer.Dev"
-  CreateShortCut "$SMPROGRAMS\Super.Human.Installer.Dev\Super.Human.Installer.Dev.lnk" "$INSTDIR\SuperHumanInstallerDev.exe"
-  CreateShortCut "$DESKTOP\Super.Human.Installer.Dev.lnk" "$INSTDIR\SuperHumanInstallerDev.exe"
+  CreateDirectory "$SMPROGRAMS\SuperHumanInstallerDev"
+  CreateShortCut "$SMPROGRAMS\SuperHumanInstallerDev\SuperHumanInstallerDev.lnk" "$INSTDIR\SuperHumanInstallerDev.exe"
+  CreateShortCut "$DESKTOP\SuperHumanInstallerDev.lnk" "$INSTDIR\SuperHumanInstallerDev.exe"
 SectionEnd
 
 Section -AdditionalIcons
   WriteIniStr "$INSTDIR\${PRODUCT_NAME}.url" "InternetShortcut" "URL" "${PRODUCT_WEB_SITE}"
-  CreateShortCut "$SMPROGRAMS\Super.Human.Installer.Dev\Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url"
-  CreateShortCut "$SMPROGRAMS\Super.Human.Installer.Dev\Uninstall.lnk" "$INSTDIR\uninst.exe"
+  CreateShortCut "$SMPROGRAMS\SuperHumanInstallerDev\Website.lnk" "$INSTDIR\${PRODUCT_NAME}.url"
+  CreateShortCut "$SMPROGRAMS\SuperHumanInstallerDev\Uninstall.lnk" "$INSTDIR\uninst.exe"
 SectionEnd
 
 Section -Post
@@ -87,12 +87,12 @@ FunctionEnd
 Section Uninstall
   RMDir /r "$INSTDIR"
 
-  Delete "$SMPROGRAMS\Super.Human.Installer.Dev\Uninstall.lnk"
-  Delete "$SMPROGRAMS\Super.Human.Installer.Dev\Website.lnk"
-  Delete "$DESKTOP\Super.Human.Installer.Dev.lnk"
-  Delete "$SMPROGRAMS\Super.Human.Installer.Dev\Super.Human.Installer.Dev.lnk"
+  Delete "$SMPROGRAMS\SuperHumanInstallerDev\Uninstall.lnk"
+  Delete "$SMPROGRAMS\SuperHumanInstallerDev\Website.lnk"
+  Delete "$DESKTOP\SuperHumanInstallerDev.lnk"
+  Delete "$SMPROGRAMS\SuperHumanInstallerDev\SuperHumanInstallerDev.lnk"
 
-  RMDir "$SMPROGRAMS\Super.Human.Installer.Dev"
+  RMDir "$SMPROGRAMS\SuperHumanInstallerDev"
 
   DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
   DeleteRegKey HKCU "${PRODUCT_DIR_REGKEY}"

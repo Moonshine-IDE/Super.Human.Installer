@@ -67,5 +67,5 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v3
         with:
-          name: Super.Human.Installer.Dev-Setup
-          path: Templates/installer/Super.Human.Installer.Dev-Setup.exe
+          name: SuperHumanInstallerDev-Setup
+          path: Templates/installer/SuperHumanInstallerDev-Setup.exe

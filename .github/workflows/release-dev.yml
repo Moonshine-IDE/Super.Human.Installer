@@ -29,7 +29,7 @@ jobs:
       - name: Download windows installer
         uses: actions/download-artifact@v3
         with:
-          name: Super.Human.Installer.Dev-Setup
+          name: SuperHumanInstallerDev-Setup
 
       - name: Display structure of downloaded files
         run: ls -R
@@ -41,5 +41,5 @@ jobs:
           draft: true
           files: |
             SuperHumanInstallerDev.pkg
-            Super.Human.Installer.Dev-Setup.exe            
+            SuperHumanInstallerDev-Setup.exe            
           fail_on_unmatched_files: true
