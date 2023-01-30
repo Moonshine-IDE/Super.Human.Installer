@@ -15,7 +15,7 @@ jobs:
         
       - name: Read version
         id: getversion
-        uses: mavrosxristoforos/get-xml-info@1.0
+        uses: mavrosxristoforos/get-xml-info@1.1.1
         with:
           xml-file: 'project.xml'
           xpath: '/project/meta[@version]'
