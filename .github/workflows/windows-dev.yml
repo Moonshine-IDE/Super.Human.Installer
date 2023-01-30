@@ -68,5 +68,4 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: Super.Human.Installer.Dev-Setup
-          path: |
-            Templates/installer/Super.Human.Installer.Dev-Setup.exe
+          path: Templates/installer/Super.Human.Installer.Dev-Setup.exe
