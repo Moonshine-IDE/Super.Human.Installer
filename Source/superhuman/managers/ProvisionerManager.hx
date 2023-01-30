@@ -39,21 +39,6 @@ class ProvisionerManager {
 
     static final PROVISIONER_DEMO_TASKS_LOCAL_PATH:String = "assets/vagrant/demo-tasks/";
     
-    static public final defaultProvisioners:Array<ProvisionerDefinition> = [
-
-        {
-            name: "Demo-tasks v0.1.17",
-            data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.17" ) },
-            root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_DEMO_TASKS_LOCAL_PATH + "0.1.17"
-        },
-        {
-            name: "Demo-tasks v0.1.15",
-            data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.15" ) },
-            root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_DEMO_TASKS_LOCAL_PATH + "0.1.15"
-        },
-
-    ];
-
     static public function getDefaultProvisioners():Array<ProvisionerDefinition> {
         
         return [

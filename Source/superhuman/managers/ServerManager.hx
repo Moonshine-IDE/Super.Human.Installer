@@ -32,7 +32,6 @@ package superhuman.managers;
 
 import superhuman.server.ServerData;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
-import sys.FileSystem;
 
 class ServerManager {
 
@@ -40,21 +39,10 @@ class ServerManager {
     
     static public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
-        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData();
+        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( serverDirectory ) );
 
         return null;
 
     }
-
-    static public function getRandomServerId():Int {
-
-		// Range: 1025 - 9999
-		var r = Math.floor( Math.random() * 8974 ) + 1025;
-
-		if ( FileSystem.exists( '${serverDirectory}${r}' ) ) return getRandomServerId();
-
-		return r;
-
-	}
 
 }

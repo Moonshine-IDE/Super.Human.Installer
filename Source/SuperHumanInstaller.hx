@@ -102,18 +102,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	final _defaultRoles:Map<String, ServerRole> = [
-
-		"domino" => { value: "domino", enabled: true, files: { hotfixes: [], fixpacks: [] }, isdefault: true },
-		"appdevpack" => { value: "appdevpack", enabled: false, files: {} },
-		"nomadweb" => { value: "nomadweb", enabled: false, files: {} },
-		"leap" => { value: "leap", enabled: false, files: {} },
-		"traveler" => { value: "traveler", enabled: false, files: {} },
-		"verse" => { value: "verse", enabled: false, files: {} },
-		"domino-rest-api" => { value: "domino-rest-api", enabled: false, files: {} },
-
-	];
-
 	final _validHashes:Map<String, Map<String, Array<String>>> = [
 		
 		"domino" => [ "installers" => [ "4153dfbb571b1284ac424824aa0e25e4" ], "hotfixes" => [], "fixpacks" => [] ],
@@ -130,6 +118,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _appCheckerOverlay:LayoutGroup;
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
+	var _defaultRoles:Map<String, ServerRole>;
 	var _defaultServerConfigData:ServerData;
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
@@ -166,13 +155,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		_provisionerCollection = new ArrayCollection( ProvisionerManager.defaultProvisioners );
+		_provisionerCollection = new ArrayCollection( ProvisionerManager.getDefaultProvisioners() );
 	
 		Logger.info( 'Bundled Vagrant cores: ${_provisionerCollection}' );
 
 		_serverDirectory = System.applicationStorageDirectory + "servers/";
 		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
 		ServerManager.serverDirectory = _serverDirectory;
+
+		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
 
 		_serverRolesCollection = [
 

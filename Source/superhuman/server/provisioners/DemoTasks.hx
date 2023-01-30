@@ -30,6 +30,7 @@
 
 package superhuman.server.provisioners;
 
+import superhuman.server.roles.ServerRole;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.io.Path;
@@ -37,13 +38,41 @@ import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
-import superhuman.managers.ServerManager;
+import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
+using prominic.tools.ObjectTools;
+
 class DemoTasks extends ProvisionerImpl {
 
-    static public function getDefaultServerData():ServerData {
+    static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    static final _SAFE_ID_FILE:String = "safe.ids";
+    static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
+    static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
+
+    static public final HOSTS_FILE:String = "Hosts.yml";
+    static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
+    static public final PROVISIONER_TYPE:ProvisionerType = ProvisionerType.DemoTasks;
+    static public final PUBLIC_ADDRESS_FILE:String = ".vagrant/detectedpublicaddress.txt";
+
+    static public function getDefaultProvisionerRoles():Map<String, ServerRole> {
+
+        return [
+
+            "domino" => { value: "domino", enabled: true, files: { hotfixes: [], fixpacks: [] }, isdefault: true },
+            "appdevpack" => { value: "appdevpack", enabled: false, files: {} },
+            "nomadweb" => { value: "nomadweb", enabled: false, files: {} },
+            "leap" => { value: "leap", enabled: false, files: {} },
+            "traveler" => { value: "traveler", enabled: false, files: {} },
+            "verse" => { value: "verse", enabled: false, files: {} },
+            "domino-rest-api" => { value: "domino-rest-api", enabled: false, files: {} },
+
+        ];
+
+    }
+
+    static public function getDefaultServerData( id:Int ):ServerData {
 
         return {
 
@@ -66,28 +95,30 @@ class DemoTasks extends ProvisionerImpl {
 			network_bridge: "",
 			resources_cpu: 2,
 			resources_ram: 4.0,
-			roles: [ for ( r in SuperHumanInstaller.getInstance().serverRolesCollection ) r.role ],
+			/*roles: [ for ( r in SuperHumanInstaller.getInstance().serverRolesCollection ) r.role.copyObject() ],*/
+			roles: [ for ( r in getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
 			server_hostname: "",
-			server_id: ServerManager.getRandomServerId(),
+			server_id: id,
 			server_organization: "",
 			type: ServerType.Domino,
 			user_email: "",
 			vagrant_up_successful: false,
             provisioner: ProvisionerManager.getDefaultProvisioners()[ 0 ].data,
-			/*provisioner: _vagrantProvisioners.get( 0 ).data,*/
 
 		};
 
     }
 
-    static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    static final _SAFE_ID_FILE:String = "safe.ids";
-    static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
-    static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
+    static public function getRandomServerId( serverDirectory:String ):Int {
 
-    static public final HOSTS_FILE:String = "Hosts.yml";
-    static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
-    static public final PUBLIC_ADDRESS_FILE:String = ".vagrant/detectedpublicaddress.txt";
+		// Range: 1025 - 9999
+		var r = Math.floor( Math.random() * 8974 ) + 1025;
+
+		if ( FileSystem.exists( '${serverDirectory}${PROVISIONER_TYPE}/${r}' ) ) return getRandomServerId( serverDirectory );
+
+		return r;
+
+	}
 
     static public function getVersionFromFile( path:String ):VersionInfo {
 
@@ -129,9 +160,9 @@ class DemoTasks extends ProvisionerImpl {
         super( superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType.DemoTasks, sourcePath, targetPath );
 
         _versionFile = "version.rb";
-        _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
+        _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
-        if ( _version == "0.0.0" && _sourcePath != null ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
 
     }
 
@@ -201,8 +232,8 @@ class DemoTasks extends ProvisionerImpl {
 
         super.reinitialize( sourcePath );
 
-        _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-        if ( _version == "0.0.0" ) _version = DemoTasks.getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
+        if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
 
     }
 
