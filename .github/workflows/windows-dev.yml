@@ -65,7 +65,7 @@ jobs:
           makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
 
       - name: Upload installer
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Super.Human.Installer.Dev-Setup
           path: Templates/installer/Super.Human.Installer.Dev-Setup.exe
