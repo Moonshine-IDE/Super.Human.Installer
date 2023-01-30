@@ -55,6 +55,13 @@ jobs:
             .cache
           key: ${{ runner.os }}-cache-bin
 
+      - name: Upload bin
+        uses: actions/upload-artifact@v2
+        with:
+          name: shi-windows-bin
+          path: |
+            Export/Development/windows/bin/
+
       - name: Create NSIS installer
         run: |
           makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
