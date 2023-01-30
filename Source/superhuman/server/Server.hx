@@ -103,13 +103,13 @@ class Server {
 
         var latestDemoTasks = SuperHumanInstaller.getInstance().vagrantProvisioners.get( 0 );
 
-        if ( data.core == null ) {
+        if ( data.provisioner == null ) {
 
             sc._vagrantProvisioner = new DemoTasks( latestDemoTasks.root, sc._serverDir );
 
         } else {
 
-            var vcd = SuperHumanInstaller.getInstance().getVagrantProvisionerDefinition( data.core.type, data.core.version );
+            var vcd = SuperHumanInstaller.getInstance().getVagrantProvisionerDefinition( data.provisioner.type, data.provisioner.version );
 
             if ( vcd != null ) {
 
@@ -426,7 +426,7 @@ class Server {
             type: this._type,
             vagrant_up_successful: this._vagrantUpSuccessful.value,
             dhcp4: this._dhcp4.value,
-            core: this._vagrantProvisioner.data,
+            provisioner: this._vagrantProvisioner.data,
 
         };
 

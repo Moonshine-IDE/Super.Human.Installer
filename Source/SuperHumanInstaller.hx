@@ -77,6 +77,8 @@ import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
 import sys.io.File;
 
+using prominic.tools.ObjectTools;
+
 class SuperHumanInstaller extends GenesisApplication {
 
 	static final _CONFIG_FILE:String = ".shi-config";
@@ -224,7 +226,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			type: ServerType.Domino,
 			user_email: "",
 			vagrant_up_successful: false,
-			core: _vagrantProvisioners.get( 0 ).data,
+			provisioner: _vagrantProvisioners.get( 0 ).data,
 
 		};
 
@@ -941,9 +943,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
 
-		_defaultServerConfigData.server_id = _getRandomServerId();
+		var newServerData:ServerData = _defaultServerConfigData.copyObject();
 
-		var server = Server.create( _defaultServerConfigData, _serverDirectory );
+		newServerData.server_id = _getRandomServerId();
+
+		var server = Server.create( newServerData, _serverDirectory );
 		server.onUpdate.add( onServerPropertyChanged );
 		_servers.add( server );
 

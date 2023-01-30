@@ -28,41 +28,24 @@
  *  it in the license file.
  */
 
-package superhuman.server;
+package prominic.tools;
 
-import superhuman.server.VagrantProvisionerDefinition.VagrantProvisionerData;
-import superhuman.server.roles.ServerRole;
-
-typedef ServerData = {
+class ObjectTools {
     
-    type:String,
-    
-    user_email:String,
-    ?user_safeid:Null<String>,
+    static public function copyObject<T>( input:T ):T {
 
-    ?server_organization:String,
-    server_id:Int,
-    server_hostname:String,
+        var result = {};
 
-    ?dhcp4:Bool,
-    ?dhcp6:Bool,
-    ?network_bridge:String,
-    network_dns_nameserver_1:String,
-    network_dns_nameserver_2:String,
-    network_address:String,
-    network_netmask:String,
-    network_gateway:String,
+        var fields = Reflect.fields( input );
 
-    env_open_browser:Bool,
-    env_setup_wait:Int,
+        for ( f in fields ) {
 
-    resources_cpu:Int,
-    resources_ram:Float,
+            Reflect.setField( result, f, Reflect.field( input, f ) );
 
-    roles:Array<ServerRole>,
+        }
 
-    ?vagrant_up_successful:Bool,
+        return cast result;
 
-    ?provisioner:VagrantProvisionerData,
+    }
 
 }
