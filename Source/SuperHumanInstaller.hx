@@ -122,7 +122,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
 	var _rolePage:RolePage;
-	var _serverDirectory:String;
 	var _serverPage:ServerPage;
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _servers:ArrayCollection<Server>;
@@ -224,7 +223,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		for ( s in _config.servers ) {
 
-			var server = Server.create( s, _serverDirectory );
+			var server = Server.create( s, ServerManager.serverRootDirectory );
 			server.onUpdate.add( onServerPropertyChanged );
 			_servers.add( server );
 
@@ -624,7 +623,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-		Logger.debug( 'Configuration saved to: ${_serverDirectory}${_CONFIG_FILE}' );
+		Logger.debug( 'Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 
 	}
 
@@ -882,7 +881,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		var newServerData:ServerData = ServerManager.getDefaultServerData( e.provisionerType );
 
-		var server = Server.create( newServerData, _serverDirectory );
+		var server = Server.create( newServerData, ServerManager.serverRootDirectory );
 		server.onUpdate.add( onServerPropertyChanged );
 		_servers.add( server );
 
