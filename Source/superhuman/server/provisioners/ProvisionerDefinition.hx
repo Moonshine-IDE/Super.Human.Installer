@@ -30,7 +30,6 @@
 
 package superhuman.server.provisioners;
 
-import prominic.core.primitives.VersionInfo;
 import superhuman.server.data.ProvisionerData;
 
 typedef ProvisionerDefinition = {
