@@ -24,7 +24,7 @@ jobs:
       - name: Download macOS installer
         uses: actions/download-artifact@v3
         with:
-          name: SuperHumanInstallerDev-Pkg
+          name: SuperHumanInstallerDev-Setup
 
       - name: Download windows installer
         uses: actions/download-artifact@v3
