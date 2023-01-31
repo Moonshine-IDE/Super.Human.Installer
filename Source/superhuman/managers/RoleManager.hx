@@ -30,7 +30,7 @@
 
 package superhuman.managers;
 
-class ProvisionerRoleManager {
+class RoleManager {
     
     
 
