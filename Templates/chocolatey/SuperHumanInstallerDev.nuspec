@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>superhumaninstallerdev</id>
+	<version>0.0.0</version>
+    <title>superhumaninstallerdev (Install)</title>
+	<authors>Prominic.NET</authors>
+	<description>Awesome tool</description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
