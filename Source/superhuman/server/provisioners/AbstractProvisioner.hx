@@ -36,8 +36,9 @@ import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
+import superhuman.server.data.ProvisionerData;
+import superhuman.server.data.ProvisionerData;
+import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 

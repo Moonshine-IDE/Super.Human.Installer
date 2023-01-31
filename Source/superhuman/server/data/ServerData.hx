@@ -30,8 +30,8 @@
 
 package superhuman.server.data;
 
+import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
 
 typedef ServerData = {
     

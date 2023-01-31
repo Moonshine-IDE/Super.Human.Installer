@@ -39,7 +39,7 @@ import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
+import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -158,7 +158,7 @@ class DemoTasks extends AbstractProvisioner {
     
     public function new( sourcePath:String, targetPath:String ) {
 
-        super( superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType.DemoTasks, sourcePath, targetPath );
+        super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath );
 
         _versionFile = "version.rb";
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );

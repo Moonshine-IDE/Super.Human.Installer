@@ -33,7 +33,7 @@ package superhuman.events;
 import genesis.application.events.GenesisApplicationEvent;
 import superhuman.components.Console;
 import superhuman.server.Server;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
+import superhuman.server.provisioners.ProvisionerType;
 
 class SuperHumanApplicationEvent extends GenesisApplicationEvent {
 

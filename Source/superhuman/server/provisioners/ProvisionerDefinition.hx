@@ -31,6 +31,7 @@
 package superhuman.server.provisioners;
 
 import prominic.core.primitives.VersionInfo;
+import superhuman.server.data.ProvisionerData;
 
 typedef ProvisionerDefinition = {
 
@@ -38,25 +39,5 @@ typedef ProvisionerDefinition = {
     name: String,
     root: String,
     ?supported: Bool,
-
-}
-
-/**
- * This is the saved and loaded data
- */
-typedef ProvisionerData = {
-
-    ?basedon:ProvisionerType,
-    ?roles:Array<Dynamic>,
-    ?version:VersionInfo,
-    type:ProvisionerType,
-
-}
-
-enum abstract ProvisionerType( String ) from String to String {
-
-    var Custom = "custom";
-    var Default = "default";
-    var DemoTasks = "demo-tasks";
 
 }

@@ -72,6 +72,7 @@ import superhuman.server.ServerStatus;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.ProvisionerDefinition;
+import superhuman.server.provisioners.ProvisionerType;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;

@@ -28,21 +28,8 @@
  *  it in the license file.
  */
 
-package superhuman.managers;
+package superhuman.server.provisioners.roles;
 
-import superhuman.server.data.ServerData;
-import superhuman.server.provisioners.ProvisionerType;
-
-class ServerManager {
-
-    static public var serverDirectory:String;
+abstract class AbstractRole {
     
-    static public function getDefaultServerData( type:ProvisionerType ):ServerData {
-        
-        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( serverDirectory ) );
-
-        return null;
-
-    }
-
 }

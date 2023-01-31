@@ -28,21 +28,16 @@
  *  it in the license file.
  */
 
-package superhuman.managers;
+package superhuman.server.data;
 
-import superhuman.server.data.ServerData;
+import prominic.core.primitives.VersionInfo;
 import superhuman.server.provisioners.ProvisionerType;
 
-class ServerManager {
+typedef ProvisionerData = {
 
-    static public var serverDirectory:String;
-    
-    static public function getDefaultServerData( type:ProvisionerType ):ServerData {
-        
-        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( serverDirectory ) );
-
-        return null;
-
-    }
+    ?basedon:ProvisionerType,
+    ?roles:Array<Dynamic>,
+    ?version:VersionInfo,
+    type:ProvisionerType,
 
 }

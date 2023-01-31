@@ -34,6 +34,7 @@ import haxe.io.Path;
 import lime.system.System;
 import prominic.core.primitives.VersionInfo;
 import superhuman.server.provisioners.ProvisionerDefinition;
+import superhuman.server.provisioners.ProvisionerType;
 
 class ProvisionerManager {
 

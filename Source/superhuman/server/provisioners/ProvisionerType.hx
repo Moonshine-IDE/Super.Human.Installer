@@ -28,10 +28,12 @@
  *  it in the license file.
  */
 
-package superhuman.server.provisioners.roles;
+package superhuman.server.provisioners;
 
-typedef ProvisionerRole = {
+enum abstract ProvisionerType( String ) from String to String {
 
-    
-    
+    var Custom = "custom";
+    var Default = "default";
+    var DemoTasks = "demo-tasks";
+
 }

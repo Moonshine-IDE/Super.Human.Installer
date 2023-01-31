@@ -53,7 +53,7 @@ import prominic.core.primitives.VersionInfo;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
+import superhuman.server.provisioners.ProvisionerType;
 import superhuman.theme.SuperHumanInstallerTheme;
 
 class ServerPage extends Page {

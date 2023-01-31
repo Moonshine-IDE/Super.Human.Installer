@@ -30,7 +30,6 @@
 
 package superhuman.server;
 
-import superhuman.server.data.RoleData;
 import genesis.application.managers.LanguageManager;
 import haxe.Template;
 import haxe.io.Path;
@@ -47,9 +46,10 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
+import superhuman.server.data.ProvisionerData;
+import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.DemoTasks;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
 import sys.FileSystem;
 
 class Server {
