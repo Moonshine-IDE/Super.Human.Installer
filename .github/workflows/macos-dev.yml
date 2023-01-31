@@ -68,10 +68,10 @@ jobs:
             --identifier net.prominic.genesis.superhumaninstallerdev \
             --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
             /Applications \
-            ./SuperHumanInstallerDev.pkg 
+            ./SuperHumanInstallerDev-Setup.pkg 
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with: 
-          name: SuperHumanInstallerDev-Pkg
-          path: ./SuperHumanInstallerDev.pkg        
+          name: SuperHumanInstallerDev-Setup
+          path: ./SuperHumanInstallerDev-Setup.pkg        

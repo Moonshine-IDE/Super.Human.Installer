@@ -40,6 +40,6 @@ jobs:
           name: Release
           draft: true
           files: |
-            SuperHumanInstallerDev.pkg
+            SuperHumanInstallerDev-Setup.pkg
             SuperHumanInstallerDev-Setup.exe            
           fail_on_unmatched_files: true
