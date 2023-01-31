@@ -77,9 +77,9 @@ jobs:
 
       - name: Create chocko package
         run: |
-          choco pack \
-            --version ${{ steps.readversion.outputs.info }} \
-            --out Dist/chocolatey/ \
+          choco pack `
+            --version ${{ steps.readversion.outputs.info }} `
+            --out Dist/chocolatey/ `
             Templates/chocolatey/SuperHumanInstallerDev.nuspec
 
       - name: Upload choco package
