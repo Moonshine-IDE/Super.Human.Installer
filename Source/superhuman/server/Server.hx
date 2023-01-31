@@ -119,8 +119,8 @@ class Server {
 
             } else {
 
-                // The server already exists BUT the vagrant core version is not supported
-                // so we create the core with target path only
+                // The server already exists BUT the provisioner version is not supported
+                // so we create the provisioner with target path only
                 sc._provisioner = new DemoTasks( null, sc._serverDir );
 
             }
