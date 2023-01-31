@@ -764,7 +764,9 @@ class Server {
             NETWORK_NETMASK: ( _dhcp4.value ) ? "255.255.255.0" : _networkNetmask.value,
             NETWORK_GATEWAY: ( _dhcp4.value ) ? "" : _networkGateway.value,
 
-            ENV_OPEN_BROWSER: _openBrowser.value,
+            // Forcing false instead of
+            // ENV_OPEN_BROWSER: _openBrowser.value,
+            ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: _setupWait.value,
 
             RESOURCES_CPU: _numCPUs.value,
