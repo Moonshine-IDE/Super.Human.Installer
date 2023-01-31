@@ -602,7 +602,7 @@ class Server {
     function _checkStatus() {
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
-        this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = 
+        this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
             ( this._provisioner != null && this._provisioner.provisioned == true );
 
         if ( !isValid() ) {
