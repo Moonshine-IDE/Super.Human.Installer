@@ -96,7 +96,6 @@ class DemoTasks extends AbstractProvisioner {
 			network_bridge: "",
 			resources_cpu: 2,
 			resources_ram: 4.0,
-			/*roles: [ for ( r in SuperHumanInstaller.getInstance().serverRolesCollection ) r.role.copyObject() ],*/
 			roles: [ for ( r in getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
 			server_hostname: "",
 			server_id: id,

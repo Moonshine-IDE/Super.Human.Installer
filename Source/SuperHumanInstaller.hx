@@ -151,9 +151,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info( 'Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
-		_serverDirectory = System.applicationStorageDirectory + "servers/";
-		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
-		ServerManager.serverDirectory = _serverDirectory;
+		ServerManager.serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
 		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
 

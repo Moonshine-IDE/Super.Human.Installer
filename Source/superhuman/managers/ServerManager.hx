@@ -32,16 +32,32 @@ package superhuman.managers;
 
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.ProvisionerType;
+import sys.FileSystem;
 
 class ServerManager {
 
-    static public var serverDirectory:String;
+    static var _serverRootDirectory:String;
+
+    static public var serverRootDirectory( get, set ):String;
+    static function get_serverRootDirectory() return _serverRootDirectory;
+    static function set_serverRootDirectory( value ) {
+        if ( value == _serverRootDirectory ) return _serverRootDirectory;
+        _serverRootDirectory = value;
+        if ( !FileSystem.exists( _serverRootDirectory ) ) FileSystem.createDirectory( _serverRootDirectory );
+        return _serverRootDirectory;
+    }
     
     static public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
-        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( serverDirectory ) );
+        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory ) );
 
         return null;
+
+    }
+
+    static public function getServerDirectory( type:ProvisionerType, id:Int ):String {
+
+        return '${_serverRootDirectory}${type}/${id}';
 
     }
 
