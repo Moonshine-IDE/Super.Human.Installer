@@ -79,11 +79,14 @@ jobs:
         run: |
           choco pack `
             --version ${{ steps.readversion.outputs.info }} `
-            --out Dist/chocolatey/ `
+            --out Templates/chocolatey/ `
             Templates/chocolatey/SuperHumanInstallerDev.nuspec
 
       - name: Upload choco package
         uses: actions/upload-artifact@v3
         with:
           name: SuperHumanInstallerDev-Choco
-          path: Dist/chocolatey/SuperHumanInstallerDev.${{ steps.readversion.outputs.info }}.nupkg
+          path: Templates/chocolatey/SuperHumanInstallerDev.${{ steps.readversion.outputs.info }}.nupkg
+
+      - name: List dir
+        run: ls -R Templates/chocolatey
