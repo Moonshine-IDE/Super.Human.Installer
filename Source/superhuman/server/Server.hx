@@ -829,7 +829,8 @@ class Server {
             
             if ( r.match( output ) ) {
 
-                output = r.replace( output, "networks:\n\n    vbox:" );
+                //output = r.replace( output, "networks:\n\n    vbox:" );
+                output = r.replace( output, "vbox:" );
 
             }
 
