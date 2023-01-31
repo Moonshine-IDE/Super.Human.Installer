@@ -37,7 +37,7 @@ import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
-import superhuman.server.data.ProvisionerRoleData;
+import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 import sys.FileSystem;
@@ -57,7 +57,7 @@ class DemoTasks extends AbstractProvisioner {
     static public final PROVISIONER_TYPE:ProvisionerType = ProvisionerType.DemoTasks;
     static public final PUBLIC_ADDRESS_FILE:String = ".vagrant/detectedpublicaddress.txt";
 
-    static public function getDefaultProvisionerRoles():Map<String, ProvisionerRoleData> {
+    static public function getDefaultProvisionerRoles():Map<String, RoleData> {
 
         return [
 

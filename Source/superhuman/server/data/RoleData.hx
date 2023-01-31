@@ -32,7 +32,7 @@ package superhuman.server.data;
 
 import superhuman.server.roles.ServerRoleFiles;
 
-typedef ProvisionerRoleData = {
+typedef RoleData = {
 
     ?isdefault:Bool,
     enabled:Bool,

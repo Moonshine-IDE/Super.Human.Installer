@@ -30,7 +30,7 @@
 
 package superhuman.server.roles;
 
-import superhuman.server.data.ProvisionerRoleData;
+import superhuman.server.data.RoleData;
 
 class ServerRoleImpl {
 
@@ -40,7 +40,7 @@ class ServerRoleImpl {
     var _hotfixHashes:Array<String>;
     var _installerHashes:Array<String>;
     var _name:String;
-    var _role:ProvisionerRoleData;
+    var _role:RoleData;
 
     public var description( get, never ):String;
     function get_description() return _description;
@@ -51,14 +51,14 @@ class ServerRoleImpl {
     public var name( get, never ):String;
     function get_name() return _name;
     
-    public var role( get, set ):ProvisionerRoleData;
+    public var role( get, set ):RoleData;
     function get_role() return _role;
-    function set_role( value:ProvisionerRoleData ):ProvisionerRoleData {
+    function set_role( value ) {
         _role = value;
         return value;
     }
     
-    public function new( name:String, description:String, role:ProvisionerRoleData, ?installerHashes:Array<String>, ?hotfixHashes:Array<String>, ?fixpackHashes:Array<String>, ?fileHint:String ) {
+    public function new( name:String, description:String, role:RoleData, ?installerHashes:Array<String>, ?hotfixHashes:Array<String>, ?fixpackHashes:Array<String>, ?fileHint:String ) {
 
         _name = name;
         _description = description;

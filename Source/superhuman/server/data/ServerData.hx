@@ -30,7 +30,7 @@
 
 package superhuman.server.data;
 
-import superhuman.server.data.ProvisionerRoleData;
+import superhuman.server.data.RoleData;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
 
 typedef ServerData = {
@@ -59,7 +59,7 @@ typedef ServerData = {
     resources_cpu:Int,
     resources_ram:Float,
 
-    roles:Array<ProvisionerRoleData>,
+    roles:Array<RoleData>,
 
     ?vagrant_up_successful:Bool,
 

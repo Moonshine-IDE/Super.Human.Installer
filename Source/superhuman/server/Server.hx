@@ -30,7 +30,7 @@
 
 package superhuman.server;
 
-import superhuman.server.data.ProvisionerRoleData;
+import superhuman.server.data.RoleData;
 import genesis.application.managers.LanguageManager;
 import haxe.Template;
 import haxe.io.Path;
@@ -189,7 +189,7 @@ class Server {
     var _provision:Bool;
     var _provisioner:DemoTasks;
     var _refreshingVirtualBoxVMInfo:Bool = false;
-    var _roles:Property<Array<ProvisionerRoleData>>;
+    var _roles:Property<Array<RoleData>>;
     var _serverDir:String;
     var _setupWait:Property<Int>;
     var _status:Property<ServerStatus>;
@@ -273,7 +273,7 @@ class Server {
     public var provisioner( get, never ):DemoTasks;
     function get_provisioner() return _provisioner;
 
-    public var roles( get, never ):Property<Array<ProvisionerRoleData>>;
+    public var roles( get, never ):Property<Array<RoleData>>;
     function get_roles() return _roles;
 
     public var serverDir( get, never ):String;
