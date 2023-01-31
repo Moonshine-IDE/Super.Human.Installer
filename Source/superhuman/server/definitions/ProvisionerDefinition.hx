@@ -28,7 +28,7 @@
  *  it in the license file.
  */
 
-package superhuman.server.provisioners;
+package superhuman.server.definitions;
 
 import superhuman.server.data.ProvisionerData;
 

@@ -44,7 +44,6 @@ import openfl.Lib;
 import openfl.events.Event;
 import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
-import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
@@ -71,8 +70,6 @@ import superhuman.server.Server;
 import superhuman.server.ServerStatus;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
-import superhuman.server.provisioners.ProvisionerDefinition;
-import superhuman.server.provisioners.ProvisionerType;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
@@ -124,7 +121,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
-	var _provisionerCollection:ArrayCollection<ProvisionerDefinition>;
 	var _rolePage:RolePage;
 	var _serverDirectory:String;
 	var _serverPage:ServerPage;
@@ -138,9 +134,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	public var defaultRoles( get, never ):Map<String, RoleData>;
 	function get_defaultRoles() return _defaultRoles;
-
-	public var provisionerCollection( get, never ):ArrayCollection<ProvisionerDefinition>;
-	function get_provisionerCollection() return _provisionerCollection;
 
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
@@ -156,9 +149,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		_provisionerCollection = new ArrayCollection( ProvisionerManager.getDefaultProvisioners() );
-	
-		Logger.info( 'Bundled Vagrant cores: ${_provisionerCollection}' );
+		Logger.info( 'Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
 		_serverDirectory = System.applicationStorageDirectory + "servers/";
 		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
@@ -931,18 +922,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._visitSourceCode(e);
 
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
-
-	}
-
-	public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):ProvisionerDefinition {
-
-		for ( provisioner in _provisionerCollection ) {
-
-			if ( provisioner.data.type == type && provisioner.data.version == version ) return provisioner;
-
-		}
-
-		return null;
 
 	}
 

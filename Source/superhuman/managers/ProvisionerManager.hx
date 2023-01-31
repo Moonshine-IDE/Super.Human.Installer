@@ -30,17 +30,18 @@
 
 package superhuman.managers;
 
+import feathers.data.ArrayCollection;
 import haxe.io.Path;
 import lime.system.System;
 import prominic.core.primitives.VersionInfo;
-import superhuman.server.provisioners.ProvisionerDefinition;
+import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
 
 class ProvisionerManager {
 
     static final PROVISIONER_DEMO_TASKS_LOCAL_PATH:String = "assets/provisioners/demo-tasks/";
     
-    static public function getDefaultProvisioners():Array<ProvisionerDefinition> {
+    static public function getBundledProvisioners():Array<ProvisionerDefinition> {
         
         return [
 
@@ -56,6 +57,30 @@ class ProvisionerManager {
             },
 
         ];
+
+    }
+
+    static public function getBundledProvisionerCollection( ?type:ProvisionerType ):ArrayCollection<ProvisionerDefinition> {
+
+        var a = getBundledProvisioners();
+
+        if ( type == null ) return new ArrayCollection( a );
+
+        var c = new ArrayCollection<ProvisionerDefinition>();
+        for ( p in a ) if ( p.data.type == type ) c.add( p );
+        return c;
+
+    }
+
+    static public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):ProvisionerDefinition {
+
+        for ( provisioner in getBundledProvisionerCollection() ) {
+
+			if ( provisioner.data.type == type && provisioner.data.version == version ) return provisioner;
+
+		}
+
+		return null;
 
     }
 

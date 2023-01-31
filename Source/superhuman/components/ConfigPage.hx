@@ -50,8 +50,10 @@ import haxe.io.Path;
 import openfl.events.Event;
 import openfl.events.MouseEvent;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.managers.ProvisionerManager;
 import superhuman.server.Server;
-import superhuman.server.provisioners.ProvisionerDefinition;
+import superhuman.server.definitions.ProvisionerDefinition;
+import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 
 class ConfigPage extends Page {
@@ -121,13 +123,13 @@ class ConfigPage extends Page {
 
         _rowCoreComponentVersion = new GenesisFormRow();
         _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
-        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( SuperHumanInstaller.getInstance().provisionerCollection );
+        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection() );
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
         _dropdownCoreComponentVersion.selectedIndex = 0;
-        for ( i in 0...SuperHumanInstaller.getInstance().provisionerCollection.length ) {
-            var d:ProvisionerDefinition = SuperHumanInstaller.getInstance().provisionerCollection.get( i );
+        for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).length ) {
+            var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).get( i );
             if ( d.data.version == _server.provisioner.version ) {
                 _dropdownCoreComponentVersion.selectedIndex = i;
                 break;

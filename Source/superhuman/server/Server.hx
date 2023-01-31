@@ -46,6 +46,7 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
+import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
@@ -97,13 +98,13 @@ class Server {
         sc._hostname.locked = sc._organization.locked = ( sc._vagrantUpSuccessful.value == true );
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
 
-        sc._serverDir = Path.normalize( rootDir + "/" + sc._id );
+        sc._serverDir = Path.normalize( rootDir + "/demo-tasks/" + sc._id );
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
         sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
 
-        var latestDemoTasks = SuperHumanInstaller.getInstance().provisionerCollection.get( 0 );
+        var latestDemoTasks = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
         if ( data.provisioner == null ) {
 
@@ -111,11 +112,11 @@ class Server {
 
         } else {
 
-            var vcd = SuperHumanInstaller.getInstance().getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
+            var provisioner = ProvisionerManager.getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
 
-            if ( vcd != null ) {
+            if ( provisioner != null ) {
 
-                sc._provisioner = new DemoTasks( vcd.root, sc._serverDir );
+                sc._provisioner = new DemoTasks( provisioner.root, sc._serverDir );
 
             } else {
 
@@ -583,7 +584,7 @@ class Server {
 
         if ( this._provisioner.version == data.version ) return false;
 
-        var vcd = SuperHumanInstaller.getInstance().getProvisionerDefinition( data.type, data.version );
+        var vcd = ProvisionerManager.getProvisionerDefinition( data.type, data.version );
         var newRoot:String = vcd.root;
         this._provisioner.reinitialize( newRoot );
         _propertyChanged( this._provisioner );

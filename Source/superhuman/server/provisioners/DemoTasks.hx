@@ -104,7 +104,7 @@ class DemoTasks extends AbstractProvisioner {
 			type: ServerType.Domino,
 			user_email: "",
 			vagrant_up_successful: false,
-            provisioner: ProvisionerManager.getDefaultProvisioners()[ 0 ].data,
+            provisioner: ProvisionerManager.getBundledProvisioners()[ 0 ].data,
 
 		};
 
