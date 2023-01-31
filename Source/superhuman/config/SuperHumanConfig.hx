@@ -32,7 +32,7 @@ package superhuman.config;
 
 import superhuman.config.SuperHumanPreferences;
 import superhuman.config.SuperHumanUserConfig;
-import superhuman.server.ServerData;
+import superhuman.server.data.ServerData;
 
 typedef SuperHumanConfig = {
 

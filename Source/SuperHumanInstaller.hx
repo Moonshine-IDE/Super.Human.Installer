@@ -39,13 +39,11 @@ import genesis.application.managers.LanguageManager;
 import genesis.application.managers.ToastManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import haxe.Json;
-import haxe.io.Path;
 import lime.system.System;
 import openfl.Lib;
 import openfl.events.Event;
 import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
-import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
@@ -66,16 +64,18 @@ import superhuman.components.SettingsPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.managers.ProvisionerManager;
+import superhuman.managers.ServerManager;
 import superhuman.server.Server;
-import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
-import superhuman.server.ServerType;
-import superhuman.server.VagrantCoreDefinition;
-import superhuman.server.roles.ServerRole;
+import superhuman.server.data.RoleData;
+import superhuman.server.data.ServerData;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
 import sys.io.File;
+
+using prominic.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
 
@@ -100,18 +100,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	final _defaultRoles:Map<String, ServerRole> = [
-
-		"domino" => { value: "domino", enabled: true, files: { hotfixes: [], fixpacks: [] }, isdefault: true },
-		"appdevpack" => { value: "appdevpack", enabled: false, files: {} },
-		"nomadweb" => { value: "nomadweb", enabled: false, files: {} },
-		"leap" => { value: "leap", enabled: false, files: {} },
-		"traveler" => { value: "traveler", enabled: false, files: {} },
-		"verse" => { value: "verse", enabled: false, files: {} },
-		"domino-rest-api" => { value: "domino-rest-api", enabled: false, files: {} },
-
-	];
-
 	final _validHashes:Map<String, Map<String, Array<String>>> = [
 		
 		"domino" => [ "installers" => [ "4153dfbb571b1284ac424824aa0e25e4" ], "hotfixes" => [], "fixpacks" => [] ],
@@ -128,27 +116,23 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _appCheckerOverlay:LayoutGroup;
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
+	var _defaultRoles:Map<String, RoleData>;
 	var _defaultServerConfigData:ServerData;
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
 	var _rolePage:RolePage;
-	var _serverDirectory:String;
 	var _serverPage:ServerPage;
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _servers:ArrayCollection<Server>;
 	var _settingsPage:SettingsPage;
-	var _vagrantCores:ArrayCollection<VagrantCoreDefinition>;
 	var _vagrantFile:String;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
 
-	public var defaultRoles( get, never ):Map<String, ServerRole>;
+	public var defaultRoles( get, never ):Map<String, RoleData>;
 	function get_defaultRoles() return _defaultRoles;
-
-	public var vagrantCores( get, never ):ArrayCollection<VagrantCoreDefinition>;
-	function get_vagrantCores() return _vagrantCores;
 
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
@@ -164,25 +148,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		_vagrantCores = new ArrayCollection( [
+		Logger.info( 'Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
-			{
-				name: "Demo-tasks v0.1.15",
-				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.15" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.15"
-			},
-			{
-				name: "Demo-tasks v0.1.13",
-				data: { type: VagrantCoreType.DemoTasks, version: VersionInfo.fromString( "0.1.13" ) },
-				root: Path.addTrailingSlash( System.applicationDirectory ) + DEMO_TASKS_PATH + "0.1.13"
-			},
-	
-		] );
-	
-		Logger.info( 'Bundled Vagrant cores: ${_vagrantCores}' );
+		ServerManager.serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
-		_serverDirectory = System.applicationStorageDirectory + "servers/";
-		if ( !FileSystem.exists( _serverDirectory ) ) FileSystem.createDirectory( _serverDirectory );
+		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
 
 		_serverRolesCollection = [
 
@@ -196,43 +166,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		];
 
-		_defaultServerConfigData = {
-
-			env_open_browser: true,
-			env_setup_wait: 300,
-
-			//network_address: "192.168.2.227",
-			//network_dns_nameserver_1: "1.1.1.1",
-			//network_dns_nameserver_2: "1.0.0.1",
-			//network_gateway: "192.168.2.1",
-			//network_netmask: "255.255.255.0",
-
-			dhcp4: true,
-			network_address: "",
-			network_dns_nameserver_1: "1.1.1.1",
-			network_dns_nameserver_2: "1.0.0.1",
-			network_gateway: "",
-			network_netmask: "",
-
-			network_bridge: "",
-			resources_cpu: 2,
-			resources_ram: 4.0,
-			roles: [ for ( r in _serverRolesCollection ) r.role ],
-			server_hostname: "",
-			server_id: _getRandomServerId(),
-			server_organization: "",
-			type: ServerType.Domino,
-			user_email: "",
-			vagrant_up_successful: false,
-			core: _vagrantCores.get( 0 ).data,
-
-		};
-
-		if ( FileSystem.exists( '${_serverDirectory}/${_CONFIG_FILE}' ) ) {
+		if ( FileSystem.exists( '${System.applicationStorageDirectory}${_CONFIG_FILE}' ) ) {
 
 			try {
 
-				var content = File.getContent( '${_serverDirectory}/${_CONFIG_FILE}' );
+				var content = File.getContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 				_config = Json.parse( content );
 
 			} catch ( e ) {
@@ -277,7 +215,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			}
 
-			File.saveContent( '${_serverDirectory}/${_CONFIG_FILE}', Json.stringify( _config ) );
+			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config ) );
 
 		}
 
@@ -285,7 +223,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		for ( s in _config.servers ) {
 
-			var server = Server.create( s, _serverDirectory );
+			var server = Server.create( s, ServerManager.serverRootDirectory );
 			server.onUpdate.add( onServerPropertyChanged );
 			_servers.add( server );
 
@@ -684,8 +622,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		File.saveContent( '${_serverDirectory}/${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-		Logger.debug( 'Configuration saved to: ${_serverDirectory}${_CONFIG_FILE}' );
+		File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
+		Logger.debug( 'Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 
 	}
 
@@ -941,9 +879,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
 
-		_defaultServerConfigData.server_id = _getRandomServerId();
+		var newServerData:ServerData = ServerManager.getDefaultServerData( e.provisionerType );
 
-		var server = Server.create( _defaultServerConfigData, _serverDirectory );
+		var server = Server.create( newServerData, ServerManager.serverRootDirectory );
 		server.onUpdate.add( onServerPropertyChanged );
 		_servers.add( server );
 
@@ -952,17 +890,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		_saveConfig();
 
 		_showConfigureServer( server );
-
-	}
-
-	function _getRandomServerId():Int {
-
-		// Range: 1025 - 9999
-		var r = Math.floor( Math.random() * 8974 ) + 1025;
-
-		if ( FileSystem.exists( '${_serverDirectory}${r}' ) ) return _getRandomServerId();
-
-		return r;
 
 	}
 
@@ -992,18 +919,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._visitSourceCode(e);
 
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
-
-	}
-
-	public function getVagrantCoreDefinition( type:VagrantCoreType, version:VersionInfo ):VagrantCoreDefinition {
-
-		for ( vagrantCore in _vagrantCores ) {
-
-			if ( vagrantCore.data.type == type && vagrantCore.data.version == version ) return vagrantCore;
-
-		}
-
-		return null;
 
 	}
 

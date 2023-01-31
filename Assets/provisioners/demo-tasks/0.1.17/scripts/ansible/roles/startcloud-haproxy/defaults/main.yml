@@ -1,0 +1,4 @@
+---
+haproxy_http_port: 80
+haproxy_https_port: 443
+haproxy_stats_port: 444

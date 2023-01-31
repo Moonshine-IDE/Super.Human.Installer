@@ -46,8 +46,11 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.VagrantCoreDefinition.VagrantCoreData;
-import superhuman.server.roles.ServerRole;
+import superhuman.managers.ProvisionerManager;
+import superhuman.server.data.ProvisionerData;
+import superhuman.server.data.RoleData;
+import superhuman.server.data.ServerData;
+import superhuman.server.provisioners.DemoTasks;
 import sys.FileSystem;
 
 class Server {
@@ -74,8 +77,36 @@ class Server {
 
         var sc = new Server();
 
-        sc._hostname.value = data.server_hostname;
         sc._id = data.server_id;
+        sc._serverDir = Path.normalize( rootDir + "/demo-tasks/" + sc._id );
+        FileSystem.createDirectory( sc._serverDir );
+        sc._path.value = sc._serverDir;
+
+        var latestDemoTasks = ProvisionerManager.getBundledProvisioners()[ 0 ];
+
+        if ( data.provisioner == null ) {
+
+            sc._provisioner = new DemoTasks( latestDemoTasks.root, sc._serverDir );
+
+        } else {
+
+            var provisioner = ProvisionerManager.getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
+
+            if ( provisioner != null ) {
+
+                sc._provisioner = new DemoTasks( provisioner.root, sc._serverDir );
+
+            } else {
+
+                // The server already exists BUT the provisioner version is not supported
+                // so we create the provisioner with target path only
+                sc._provisioner = new DemoTasks( null, sc._serverDir );
+
+            }
+
+        }
+
+        sc._hostname.value = data.server_hostname;
         sc._memory.value = data.resources_ram;
         sc._nameServer1.value = data.network_dns_nameserver_1;
         sc._nameServer2.value = data.network_dns_nameserver_2;
@@ -91,40 +122,11 @@ class Server {
         sc._userEmail.value = data.user_email;
         sc._userSafeId.value = data.user_safeid;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
-        sc._vagrantUpSuccessful.value = ( data.vagrant_up_successful != null ) ? data.vagrant_up_successful : false;
-        sc._hostname.locked = sc._organization.locked = ( sc._vagrantUpSuccessful.value == true );
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
-
-        sc._serverDir = Path.normalize( rootDir + "/" + sc._id );
-        FileSystem.createDirectory( sc._serverDir );
-        sc._path.value = sc._serverDir;
 
         sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
 
-        var latestDemoTasks = SuperHumanInstaller.getInstance().vagrantCores.get( 0 );
-
-        if ( data.core == null ) {
-
-            sc._vagrantCore = new DemoTasks( latestDemoTasks.root, sc._serverDir );
-
-        } else {
-
-            var vcd = SuperHumanInstaller.getInstance().getVagrantCoreDefinition( data.core.type, data.core.version );
-
-            if ( vcd != null ) {
-
-                sc._vagrantCore = new DemoTasks( vcd.root, sc._serverDir );
-
-            } else {
-
-                // The server already exists BUT the vagrant core version is not supported
-                // so we create the core with target path only
-                sc._vagrantCore = new DemoTasks( null, sc._serverDir );
-
-            }
-
-        }
-
+        sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
         return sc;
 
     }
@@ -185,17 +187,16 @@ class Server {
     var _organization:ValidatingProperty;
     var _path:Property<String>;
     var _provision:Bool;
+    var _provisioner:DemoTasks;
     var _refreshingVirtualBoxVMInfo:Bool = false;
-    var _roles:Property<Array<ServerRole>>;
+    var _roles:Property<Array<RoleData>>;
     var _serverDir:String;
     var _setupWait:Property<Int>;
     var _status:Property<ServerStatus>;
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
-    var _vagrantCore:DemoTasks;
     var _vagrantMachine:Property<VagrantMachine>;
-    var _vagrantUpSuccessful:Property<Null<Bool>>;
     var _virtualMachine:Property<VirtualMachine>;
     
     public var busy( get, never ):Bool;
@@ -203,7 +204,7 @@ class Server {
 
     public var console( get, set ):IConsole;
     function get_console() return _console;
-    function set_console( value:IConsole ):IConsole { _console = value; _vagrantCore.console = value; return _console; }
+    function set_console( value:IConsole ):IConsole { _console = value; _provisioner.console = value; return _console; }
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
@@ -266,9 +267,12 @@ class Server {
     function get_path() return _path;
 
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _vagrantCore.provisioned;
+    function get_provisioned() return _provisioner.provisioned;
 
-    public var roles( get, never ):Property<Array<ServerRole>>;
+    public var provisioner( get, never ):DemoTasks;
+    function get_provisioner() return _provisioner;
+
+    public var roles( get, never ):Property<Array<RoleData>>;
     function get_roles() return _roles;
 
     public var serverDir( get, never ):String;
@@ -290,9 +294,6 @@ class Server {
 
     public var userSafeId( get, never ):Property<String>;
     function get_userSafeId() return _userSafeId;
-
-    public var vagrantCore( get, never ):DemoTasks;
-    function get_vagrantCore() return _vagrantCore;
 
     public var vagrantMachine( get, never ):Property<VagrantMachine>;
     function get_vagrantMachine() return _vagrantMachine;
@@ -382,9 +383,6 @@ class Server {
         _vagrantMachine = new Property( { id:null, state:VagrantMachineState.Unknown } );
         _vagrantMachine.onChange.add( _propertyChanged );
 
-        _vagrantUpSuccessful = new Property( false );
-        _vagrantUpSuccessful.onChange.add( _propertyChanged );
-
         _virtualMachine = new Property( {} );
         _virtualMachine.onChange.add( _propertyChanged );
 
@@ -424,9 +422,8 @@ class Server {
             user_safeid: ( this._userSafeId != null && this._userSafeId.value != null ) ? this._userSafeId.value : null,
             roles: this._roles.value,
             type: this._type,
-            vagrant_up_successful: this._vagrantUpSuccessful.value,
             dhcp4: this._dhcp4.value,
-            core: this._vagrantCore.data,
+            provisioner: this._provisioner.data,
 
         };
 
@@ -436,7 +433,7 @@ class Server {
 
     public function initDirectory() {
 
-        _vagrantCore.copyFiles();
+        _provisioner.copyFiles();
 
     }
 
@@ -531,9 +528,11 @@ class Server {
         if ( console != null ) {
 
             console.clear();
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.start' ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.start' ) );
 
         }
+
+        _provisioner.deleteWebAddressFile();
 
         _prepareFiles();
 
@@ -545,7 +544,7 @@ class Server {
 
         this.status.value = ServerStatus.Stopping;
 
-        if ( _vagrantUpSuccessful.value == true ) {
+        if ( _provisioner.provisioned == true ) {
 
             this._busy.value = true;
 
@@ -569,22 +568,23 @@ class Server {
 
     public function refresh() {
 
-        if ( this._vagrantMachine == null || this._vagrantMachine.value == null || this._vagrantMachine.value.id == null )
-            this._vagrantUpSuccessful.value = false;
+        // TODO: Set provisioned to false if virtualmachine doesn't exist!
+        //if ( this._vagrantMachine == null || this._vagrantMachine.value == null || this._vagrantMachine.value.id == null )
+            _provisioner.deleteWebAddressFile();
 
         _propertyChanged( null );
         refreshVagrantStatus();
 
     }
 
-    public function updateVagrantCore( data:VagrantCoreData ):Bool {
+    public function updateProvisioner( data:ProvisionerData ):Bool {
 
-        if ( this._vagrantCore.version == data.version ) return false;
+        if ( this._provisioner.version == data.version ) return false;
 
-        var vcd = SuperHumanInstaller.getInstance().getVagrantCoreDefinition( data.type, data.version );
+        var vcd = ProvisionerManager.getProvisionerDefinition( data.type, data.version );
         var newRoot:String = vcd.root;
-        this._vagrantCore.reinitialize( newRoot );
-        _propertyChanged( this._vagrantCore );
+        this._provisioner.reinitialize( newRoot );
+        _propertyChanged( this._provisioner );
 
         return true;
 
@@ -594,7 +594,7 @@ class Server {
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
         this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = 
-            ( this._vagrantUpSuccessful.value == true );
+            ( this._provisioner != null && this._provisioner.provisioned == true );
 
         if ( !isValid() ) {
 
@@ -613,7 +613,7 @@ class Server {
         if ( this._status.value == ServerStatus.Destroying ) return;
         if ( this._status.value == ServerStatus.Ready ) return;
 
-        if ( this._vagrantUpSuccessful.value == true ) {
+        if ( _provisioner.provisioned == true ) {
 
             if ( this._vagrantMachine.value != null ) {
 
@@ -627,7 +627,7 @@ class Server {
 
                     case VagrantMachineState.Aborted:
                         this._status.value = ServerStatus.Unconfigured;
-                        this._vagrantUpSuccessful.value = false;
+                        _provisioner.deleteWebAddressFile();
 
                     default:
 
@@ -647,7 +647,7 @@ class Server {
 
     function _prepareFiles() {
 
-        _vagrantCore.copyFiles( _prepareFilesComplete );
+        _provisioner.copyFiles( _prepareFilesComplete );
 
     }
 
@@ -695,7 +695,7 @@ class Server {
 
         Logger.verbose( 'Installer and Fixpack path pairs: ${paths}' );
 
-        _vagrantCore.copyInstallers( paths, _batchCopyComplete );
+        _provisioner.copyInstallers( paths, _batchCopyComplete );
 
     }
 
@@ -707,10 +707,10 @@ class Server {
 
         _saveSafeId();
 
-        if ( !_vagrantCore.hostFileExists ) _vagrantCore.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
+        if ( !_provisioner.hostFileExists ) _provisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
 
         if ( console != null ) {
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _vagrantCore.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualMachine.value ) ) );
         }
 
@@ -720,7 +720,7 @@ class Server {
 
     function _saveSafeId() {
 
-        var r = _vagrantCore.saveSafeId( _userSafeId.value );
+        var r = _provisioner.saveSafeId( _userSafeId.value );
         if ( !r ) this._busy.value = false;
 
     }
@@ -733,7 +733,7 @@ class Server {
 
     public function generateHostsFileContent():String {
 
-        _hostsTemplate = _vagrantCore.getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
+        _hostsTemplate = _provisioner.getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
 
         var replace = {
 
@@ -823,7 +823,7 @@ class Server {
 
 		var output = generateHostsFileContent();
 
-        _vagrantCore.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
+        _provisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
 
     }
 
@@ -831,15 +831,17 @@ class Server {
 
         if ( _action.value == null ) return;
 
-        this._status.value = ServerStatusManager.getStatus( _action.value, this._vagrantMachine.value, isValid(), this._vagrantUpSuccessful.value );
+        this._status.value = ServerStatusManager.getStatus( _action.value, this._vagrantMachine.value, isValid(), this._provisioner.provisioned );
 
     }
 
     function _propertyChanged<T>( property:T ) {
 
-        var save:Bool = property == cast _vagrantUpSuccessful;
+        //TODO
+        //var save:Bool = property == cast _vagrantUpSuccessful;
 
-        for ( f in _onUpdate ) f( this, save );
+        //for ( f in _onUpdate ) f( this, save );
+        for ( f in _onUpdate ) f( this, false );
 
         _checkStatus();
 
@@ -847,7 +849,7 @@ class Server {
 
     public function safeIdCopied():Bool {
 
-        return _vagrantCore.safeIdExists;
+        return _provisioner.safeIdExists;
 
     }
 
@@ -885,7 +887,7 @@ class Server {
 
     function _getWebAddress():String {
 
-        var s = _vagrantCore.webAddress;
+        var s = _provisioner.webAddress;
 
         if ( s == null ) {
 
@@ -999,7 +1001,7 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.Destroying;
 
-        _vagrantCore.deleteFileInTargetDirectory( DemoTasks.PUBLIC_ADDRESS_FILE );
+        _provisioner.deleteWebAddressFile();
 
         Vagrant.getInstance().getDestroy( true, this._vagrantMachine.value )
             .onStdOut( _vagrantDestroyStandardOutputData )
@@ -1032,44 +1034,9 @@ class Server {
         Logger.verbose( '_onVagrantDestroy ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
-        this._vagrantUpSuccessful.value = false;
+        this._provisioner.deleteWebAddressFile();
         this._vagrantMachine.value.id = null;
         this._vagrantMachine.value.state = VagrantMachineState.NotCreated;
-
-    }
-
-    /**
-     * Resets the entire server configuration. Available only in development (debug) build
-     * @param data Sets the server's values to according to data
-     * @param rootDir The root directory of the servers where this instance will be created
-     */
-    public function reset( data:ServerData, rootDir:String ) {
-
-        //#if debug
-
-        FileTools.deleteDirectory( this._serverDir );
-        FileSystem.createDirectory( this._serverDir );
-
-        this._hostname.value = data.server_hostname;
-        this._memory.value = data.resources_ram;
-        this._nameServer1.value = data.network_dns_nameserver_1;
-        this._nameServer2.value = data.network_dns_nameserver_2;
-        this._networkAddress.value = data.network_address;
-        this._networkBridge.value = data.network_bridge;
-        this._networkGateway.value = data.network_gateway;
-        this._networkNetmask.value = data.network_netmask;
-        this._numCPUs.value = data.resources_cpu;
-        this._openBrowser.value = data.env_open_browser;
-        this._organization.value = data.server_organization;
-        this._roles.value = data.roles;
-        this._setupWait.value = data.env_setup_wait;
-        this._userEmail.value = data.user_email;
-        this._userSafeId.value = data.user_safeid;
-        this._type = data.type;
-        this._vagrantUpSuccessful.value = data.vagrant_up_successful;
-        this._vagrantMachine.value = { home: this._serverDir, provider: "", id: "", state: VagrantMachineState.PowerOff };
-
-        //#end
 
     }
 
@@ -1098,7 +1065,7 @@ class Server {
 
         this._busy.value = true;
 
-        if ( this._vagrantUpSuccessful.value ) {
+        if ( this._provisioner.provisioned ) {
 
             this.status.value = ServerStatus.Start;
 
@@ -1137,22 +1104,19 @@ class Server {
 
             this.status.value = ServerStatus.Ready;
             this._vagrantMachine.value.state = VagrantMachineState.PowerOff;
-            if ( this._vagrantUpSuccessful.value == null ) this._vagrantUpSuccessful.value = false;
 
         } else if ( executor.exitCode == 0 ) {
 
             this.status.value = ServerStatus.Running;
             this._vagrantMachine.value.state = VagrantMachineState.Running;
-            this._vagrantUpSuccessful.value = true;
 
         } else {
 
             this.status.value = ServerStatus.Error;
-            if ( this._vagrantUpSuccessful.value == null ) this._vagrantUpSuccessful.value = false;
 
         }
 
-        this._hostname.locked = this._organization.locked = ( this._vagrantUpSuccessful.value == true );
+        this._hostname.locked = this._organization.locked = ( this._provisioner.provisioned == true );
 
         executor.dispose();
 
@@ -1203,7 +1167,7 @@ class Server {
         switch ( machine.state ) {
 
             case VagrantMachineState.NotCreated | VagrantMachineState.Unknown | VagrantMachineState.Aborted:
-                this._vagrantUpSuccessful.value = false;
+                this._provisioner.deleteWebAddressFile();
                 this._status.value = ServerStatus.Ready;
 
             case VagrantMachineState.Running:
