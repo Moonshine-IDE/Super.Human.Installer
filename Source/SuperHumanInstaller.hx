@@ -68,10 +68,10 @@ import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
 import superhuman.managers.ServerManager;
 import superhuman.server.Server;
-import superhuman.server.ServerData;
 import superhuman.server.ServerStatus;
+import superhuman.server.data.ProvisionerRoleData;
+import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.ProvisionerDefinition;
-import superhuman.server.roles.ServerRole;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
@@ -118,7 +118,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _appCheckerOverlay:LayoutGroup;
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
-	var _defaultRoles:Map<String, ServerRole>;
+	var _defaultRoles:Map<String, ProvisionerRoleData>;
 	var _defaultServerConfigData:ServerData;
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
@@ -135,7 +135,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
 
-	public var defaultRoles( get, never ):Map<String, ServerRole>;
+	public var defaultRoles( get, never ):Map<String, ProvisionerRoleData>;
 	function get_defaultRoles() return _defaultRoles;
 
 	public var provisionerCollection( get, never ):ArrayCollection<ProvisionerDefinition>;

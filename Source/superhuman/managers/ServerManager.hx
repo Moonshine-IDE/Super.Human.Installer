@@ -30,7 +30,7 @@
 
 package superhuman.managers;
 
-import superhuman.server.ServerData;
+import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 
 class ServerManager {

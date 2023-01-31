@@ -28,28 +28,15 @@
  *  it in the license file.
  */
 
-package superhuman.server.provisioners;
+package superhuman.server.data;
 
-import prominic.core.primitives.VersionInfo;
-import superhuman.interfaces.IConsole;
-import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
+import superhuman.server.roles.ServerRoleFiles;
 
-interface IProvisioner {
-    
-    public var console:IConsole;
-    public var data( get, never ):ProvisionerData;
-    public var exists( get, never ):Bool;
-    public var version( get, never ):VersionInfo;
+typedef ProvisionerRoleData = {
 
-    public function clearTargetDirectory():Void;
-    public function copyFiles( ?callback:()->Void ):Void;
-    public function createTargetDirectory():Void;
-    public function deleteFileInTargetDirectory( path:String ):Bool;
-    public function fileExists( path:String ):Bool;
-    public function getFileContentFromSourceScriptsDirectory( path:String ):String;
-    public function getFileContentFromSourceTemplateDirectory( path:String ):String;
-    public function getFileContentFromTargetDirectory( path:String ):String;
-    public function reinitialize( sourcePath:String ):Void;
-    public function saveContentToFileInTargetDirectory( path:String, content:String ):Bool;
+    ?isdefault:Bool,
+    enabled:Bool,
+    files:ServerRoleFiles,
+    value:String,
 
 }

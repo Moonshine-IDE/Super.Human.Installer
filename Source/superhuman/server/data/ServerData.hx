@@ -28,15 +28,41 @@
  *  it in the license file.
  */
 
-package superhuman.server.roles;
+package superhuman.server.data;
 
-import superhuman.server.roles.ServerRoleFiles;
+import superhuman.server.data.ProvisionerRoleData;
+import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
 
-typedef ServerRole = {
+typedef ServerData = {
+    
+    type:String,
+    
+    user_email:String,
+    ?user_safeid:Null<String>,
 
-    ?isdefault:Bool,
-    enabled:Bool,
-    files:ServerRoleFiles,
-    value:String,
+    ?server_organization:String,
+    server_id:Int,
+    server_hostname:String,
+
+    ?dhcp4:Bool,
+    ?dhcp6:Bool,
+    ?network_bridge:String,
+    network_dns_nameserver_1:String,
+    network_dns_nameserver_2:String,
+    network_address:String,
+    network_netmask:String,
+    network_gateway:String,
+
+    env_open_browser:Bool,
+    env_setup_wait:Int,
+
+    resources_cpu:Int,
+    resources_ram:Float,
+
+    roles:Array<ProvisionerRoleData>,
+
+    ?vagrant_up_successful:Bool,
+
+    ?provisioner:ProvisionerData,
 
 }

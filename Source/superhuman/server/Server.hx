@@ -30,6 +30,7 @@
 
 package superhuman.server;
 
+import superhuman.server.data.ProvisionerRoleData;
 import genesis.application.managers.LanguageManager;
 import haxe.Template;
 import haxe.io.Path;
@@ -46,9 +47,9 @@ import prominic.sys.applications.oracle.VirtualMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
+import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.DemoTasks;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
-import superhuman.server.roles.ServerRole;
 import sys.FileSystem;
 
 class Server {
@@ -188,7 +189,7 @@ class Server {
     var _provision:Bool;
     var _provisioner:DemoTasks;
     var _refreshingVirtualBoxVMInfo:Bool = false;
-    var _roles:Property<Array<ServerRole>>;
+    var _roles:Property<Array<ProvisionerRoleData>>;
     var _serverDir:String;
     var _setupWait:Property<Int>;
     var _status:Property<ServerStatus>;
@@ -272,7 +273,7 @@ class Server {
     public var provisioner( get, never ):DemoTasks;
     function get_provisioner() return _provisioner;
 
-    public var roles( get, never ):Property<Array<ServerRole>>;
+    public var roles( get, never ):Property<Array<ProvisionerRoleData>>;
     function get_roles() return _roles;
 
     public var serverDir( get, never ):String;
