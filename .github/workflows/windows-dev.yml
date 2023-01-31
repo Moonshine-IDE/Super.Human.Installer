@@ -72,7 +72,6 @@ jobs:
 
       - name: Copy files to choco
         run: |
-          mkdir Templates/chocolatey/tools
           cp Templates/installer/SuperHumanInstallerDev-Setup.exe Templates/chocolatey/tools/
           cp LICENSE.MD Templates/chocolatey/
 
