@@ -123,10 +123,10 @@ class Server {
         sc._userSafeId.value = data.user_safeid;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
-
         sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
-
+        sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
+        sc._created = true;
         return sc;
 
     }
@@ -169,7 +169,9 @@ class Server {
     var _action:Property<ServerAction>;
     var _busy:Property<Bool>;
     var _console:IConsole;
+    var _created:Bool = false;
     var _dhcp4:Property<Bool>;
+    var _disableBridgeAdapter:Property<Bool>;
     var _diskUsage:Property<Float>;
     var _hostname:ValidatingProperty;
     var _hostsTemplate:String;
@@ -208,6 +210,9 @@ class Server {
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
+
+    public var disableBridgeAdapter( get, never ):Property<Bool>;
+    function get_disableBridgeAdapter() return _disableBridgeAdapter;
 
     public var diskUsage( get, never ):Property<Float>;
     function get_diskUsage() return _diskUsage;
@@ -322,6 +327,9 @@ class Server {
         _dhcp4 = new Property( true );
         _dhcp4.onChange.add( _propertyChanged );
 
+        _disableBridgeAdapter = new Property( true );
+        _disableBridgeAdapter.onChange.add( _propertyChanged );
+
         _diskUsage = new Property( 0.0 );
         _diskUsage.onChange.add( _propertyChanged );
 
@@ -363,22 +371,22 @@ class Server {
         _path = new Property( "" );
         _path.onChange.add( _propertyChanged );
 
+        _roles = new Property( [] );
+        _roles.onChange.add( _propertyChanged );
+
         _setupWait = new Property( 300 );
         _setupWait.onChange.add( _propertyChanged );
 
         _status = new Property( ServerStatus.Unconfigured );
         _status.onChange.add( _propertyChanged );
 
+        _type = ServerType.Domino;
+
         _userEmail = new ValidatingProperty( "", _VK_EMAIL, true );
         _userEmail.onChange.add( _propertyChanged );
 
         _userSafeId = new Property();
         _userSafeId.onChange.add( _propertyChanged );
-
-        _roles = new Property( [] );
-        _roles.onChange.add( _propertyChanged );
-
-        _type = ServerType.Domino;
 
         _vagrantMachine = new Property( { id:null, state:VagrantMachineState.Unknown } );
         _vagrantMachine.onChange.add( _propertyChanged );
@@ -424,6 +432,7 @@ class Server {
             type: this._type,
             dhcp4: this._dhcp4.value,
             provisioner: this._provisioner.data,
+            disable_bridge_adapter: this._disableBridgeAdapter.value,
 
         };
 
@@ -837,11 +846,13 @@ class Server {
 
     function _propertyChanged<T>( property:T ) {
 
+        if ( !_created ) return;
+
         //TODO
         //var save:Bool = property == cast _vagrantUpSuccessful;
 
         //for ( f in _onUpdate ) f( this, save );
-        for ( f in _onUpdate ) f( this, false );
+        for ( f in _onUpdate ) f( this, true );
 
         _checkStatus();
 

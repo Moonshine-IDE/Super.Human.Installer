@@ -62,6 +62,7 @@ class AdvancedConfigPage extends Page {
     var _buttonGroupLayout:HorizontalLayout;
     var _buttonSave:GenesisFormButton;
     var _cbDHCP:GenesisFormCheckBox;
+    var _cbDisableBridgeAdapter:GenesisFormCheckBox;
     var _cbOpenBrowser:GenesisFormCheckBox;
     var _dropdownNetworkInterface:GenesisFormPupUpListView;
     var _form:GenesisForm;
@@ -76,6 +77,7 @@ class AdvancedConfigPage extends Page {
     var _rowAlertEmail:GenesisFormRow;
     var _rowCPUs:GenesisFormRow;
     var _rowDHCP:GenesisFormRow;
+    var _rowDisableBridgeAdapter:GenesisFormRow;
     var _rowGatewayIP:GenesisFormRow;
     var _rowMisc:GenesisFormRow;
     var _rowNameServer2:GenesisFormRow;
@@ -119,6 +121,12 @@ class AdvancedConfigPage extends Page {
 
         _form = new GenesisForm();
         this.addChild( _form );
+
+        _rowDisableBridgeAdapter = new GenesisFormRow();
+        _rowDisableBridgeAdapter.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.disablebridgeadapter.text' );
+        _cbDisableBridgeAdapter = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.disablebridgeadapter.checkbox' ), _server.disableBridgeAdapter.value );
+        _rowDisableBridgeAdapter.content.addChild( _cbDisableBridgeAdapter );
+        _form.addChild( _rowDisableBridgeAdapter );
 
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.text' );
