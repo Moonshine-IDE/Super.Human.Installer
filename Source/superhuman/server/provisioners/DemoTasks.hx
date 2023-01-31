@@ -33,6 +33,7 @@ package superhuman.server.provisioners;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.io.Path;
+import lime.system.System;
 import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
@@ -179,6 +180,21 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    public function openWelcomePage() {
+
+        System.openURL( _getWebAddress() );
+
+    }
+
+    public override function reinitialize( sourcePath:String ) {
+
+        super.reinitialize( sourcePath );
+
+        _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
+        if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
+
+    }
+
     public function saveSafeId( safeIdPath:String ):Bool {
 
         createTargetDirectory();
@@ -209,15 +225,6 @@ class DemoTasks extends AbstractProvisioner {
         }
 
         return false;
-
-    }
-
-    public override function reinitialize( sourcePath:String ) {
-
-        super.reinitialize( sourcePath );
-
-        _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-        if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
 
     }
 

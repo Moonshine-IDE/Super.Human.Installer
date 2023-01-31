@@ -541,8 +541,6 @@ class Server {
 
         }
 
-        _provisioner.deleteWebAddressFile();
-
         _prepareFiles();
 
     }
@@ -1103,6 +1101,8 @@ class Server {
 
         }
 
+        _provisioner.deleteWebAddressFile();
+
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
 
         Vagrant.getInstance().getUp( this._vagrantMachine.value, _provision, [] )
@@ -1137,6 +1137,8 @@ class Server {
 
             this.status.value = ServerStatus.Running;
             this._vagrantMachine.value.state = VagrantMachineState.Running;
+
+            if ( this._provisioner.provisioned && this._openBrowser.value ) this._provisioner.openWelcomePage();
 
         } else {
 
