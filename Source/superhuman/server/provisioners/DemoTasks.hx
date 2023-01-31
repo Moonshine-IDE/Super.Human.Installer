@@ -47,15 +47,16 @@ using prominic.tools.ObjectTools;
 
 class DemoTasks extends AbstractProvisioner {
 
-    static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    static final _IP_ADDRESS_PATTERN:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     static final _SAFE_ID_FILE:String = "safe.ids";
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
+    static final _WEB_ADDRESS_PATTERN:EReg = ~/^(?:https:\/\/)(.*)(?::\d{3})(?:\/.*)$/gm;
 
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
     static public final PROVISIONER_TYPE:ProvisionerType = ProvisionerType.DemoTasks;
-    static public final PUBLIC_ADDRESS_FILE:String = ".vagrant/detectedpublicaddress.txt";
+    static public final WEB_ADDRESS_FILE:String = ".vagrant/done.txt";
 
     static public function getDefaultProvisionerRoles():Map<String, RoleData> {
 
@@ -102,7 +103,6 @@ class DemoTasks extends AbstractProvisioner {
 			server_organization: "",
 			type: ServerType.Domino,
 			user_email: "",
-			vagrant_up_successful: false,
             provisioner: ProvisionerManager.getBundledProvisioners()[ 0 ].data,
 
 		};
@@ -173,25 +173,9 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
-    function saveHostsFile( content:String ) {
+    public function deleteWebAddressFile() {
 
-        createTargetDirectory();
-
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', content ) );
-
-        try {
-
-            File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
-            Logger.debug( 'Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
-
-        } catch ( e:Exception ) {
-
-            Logger.error( 'Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
-            return;
-
-        }
+        this.deleteFileInTargetDirectory( WEB_ADDRESS_FILE );
 
     }
 
@@ -257,19 +241,41 @@ class DemoTasks extends AbstractProvisioner {
 
     function _getWebAddress():String {
 
-        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PUBLIC_ADDRESS_FILE );
+        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
         if ( !e ) return null;
 
         try {
 
-            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + PUBLIC_ADDRESS_FILE );
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
             if ( c == null || c.length == 0 ) return null;
 
-            if ( _PATTERN_IP.match( c ) ) return _PATTERN_IP.matched( 0 );
+            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return _WEB_ADDRESS_PATTERN.matched( 0 );
 
         } catch( e ) {}
 
         return null;
+
+    }
+
+    function _saveHostsFile( content:String ) {
+
+        createTargetDirectory();
+
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', content ) );
+
+        try {
+
+            File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
+            Logger.debug( 'Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
+
+        } catch ( e:Exception ) {
+
+            Logger.error( 'Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
+            return;
+
+        }
 
     }
 

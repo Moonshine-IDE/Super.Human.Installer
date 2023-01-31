@@ -61,8 +61,6 @@ typedef ServerData = {
 
     roles:Array<RoleData>,
 
-    ?vagrant_up_successful:Bool,
-
     ?provisioner:ProvisionerData,
 
 }
