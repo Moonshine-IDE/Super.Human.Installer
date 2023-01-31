@@ -5,7 +5,7 @@
 	<include path="Genesis/GenesisApplication.xml"/>
 	<!-- Override properties, add new ones below -->
 
-	<meta version="0.8.0"/>
+	<meta version="0.8.6"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
 	<meta title="Super.Human.Installer Development" if="debug"/>
 
@@ -30,7 +30,7 @@
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
-	<assets rename="assets/vagrant" path="Assets/vagrant" include="*"/>
+	<assets rename="assets/provisioners" path="Assets/provisioners" include="*"/>
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>
 	<assets rename="assets/bin" path="Assets/bin/windows" include="*" if="windows"/>
 	<assets rename="assets/bin" path="Assets/bin/linux" include="*" if="linux"/>

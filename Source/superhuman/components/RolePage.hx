@@ -56,7 +56,7 @@ import openfl.events.Event;
 import prominic.sys.io.FileTools;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
-import superhuman.server.roles.ServerRole;
+import superhuman.server.data.RoleData;
 import superhuman.server.roles.ServerRoleImpl;
 
 class RolePage extends Page {
@@ -174,7 +174,7 @@ class RolePickerItem extends LayoutGroup {
     var _selectInstallerLabel:Label;
     var _server:Server;
 
-    public var role( get, never ):ServerRole;
+    public var role( get, never ):RoleData;
     function get_role() return _roleImpl.role;
 
     public function new( roleImpl:ServerRoleImpl, server:Server ) {

@@ -1,0 +1,9 @@
+port="{{ python_simple_web_server_port }}"
+theme="--theme"
+thememode="dark"
+servercert="--server-certificate"
+{% if selfsigned_enabled %}
+servercertfile="{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pem"
+{% else %}
+servercertfile="{{ cert_dir }}/combined/default-signed.pem"
+{% endif %}

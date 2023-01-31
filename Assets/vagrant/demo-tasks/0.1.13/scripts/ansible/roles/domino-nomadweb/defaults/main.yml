@@ -1,6 +1,0 @@
----
-nomadweb_archive: nomad-server-1.0.6-for-domino-1202-linux.tgz
-nomadweb_version: 1.0.6
-nomadweb_port: 9443
-nomadweb_debug: false
-nomadweb_url: "nomadweb.{{ settings.hostname }}.{{ settings.domain }}"

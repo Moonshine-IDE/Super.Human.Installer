@@ -8,3 +8,4 @@
 
 # Include files despite the parent folder being ignored
 !**/.vscode/*.local.*
+.shi-config
