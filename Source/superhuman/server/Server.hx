@@ -822,6 +822,19 @@ class Server {
         var template = new Template( _hostsTemplate );
 		var output = template.execute( replace );
 
+        if ( this._disableBridgeAdapter.value ) {
+
+            // Remove the contents of networks yaml tag
+            var r:EReg = ~/(?:networks:)((.|\n)*)(?:vbox:)/;
+            
+            if ( r.match( output ) ) {
+
+                output = r.replace( output, "networks:\n\n    vbox:" );
+
+            }
+
+        }
+
         return output;
 
     }
@@ -833,6 +846,7 @@ class Server {
 		var output = generateHostsFileContent();
 
         _provisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
+        Logger.verbose( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', output ) );
 
     }
 
