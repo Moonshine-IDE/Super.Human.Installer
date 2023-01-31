@@ -36,13 +36,12 @@ import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
-import superhuman.server.provisioners.IProvisioner;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerData;
 import superhuman.server.provisioners.ProvisionerDefinition.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
-class ProvisionerImpl implements IProvisioner {
+class AbstractProvisioner {
 
     static final _SCRIPTS_ROOT:String = "scripts/";
     static final _TEMPLATES_ROOT:String = "templates/";

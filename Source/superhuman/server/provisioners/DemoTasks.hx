@@ -44,7 +44,7 @@ import sys.io.File;
 
 using prominic.tools.ObjectTools;
 
-class DemoTasks extends ProvisionerImpl {
+class DemoTasks extends AbstractProvisioner {
 
     static final _PATTERN_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     static final _SAFE_ID_FILE:String = "safe.ids";
@@ -162,7 +162,7 @@ class DemoTasks extends ProvisionerImpl {
         _versionFile = "version.rb";
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
-        if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
 
     }
 
@@ -233,7 +233,7 @@ class DemoTasks extends ProvisionerImpl {
         super.reinitialize( sourcePath );
 
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-        if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + ProvisionerImpl._SCRIPTS_ROOT + _versionFile );
+        if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
 
     }
 
