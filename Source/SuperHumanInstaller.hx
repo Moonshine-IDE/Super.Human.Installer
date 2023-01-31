@@ -178,11 +178,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		];
 
-		if ( FileSystem.exists( '${_serverDirectory}/${_CONFIG_FILE}' ) ) {
+		if ( FileSystem.exists( '${System.applicationStorageDirectory}${_CONFIG_FILE}' ) ) {
 
 			try {
 
-				var content = File.getContent( '${_serverDirectory}/${_CONFIG_FILE}' );
+				var content = File.getContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 				_config = Json.parse( content );
 
 			} catch ( e ) {
@@ -227,7 +227,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			}
 
-			File.saveContent( '${_serverDirectory}/${_CONFIG_FILE}', Json.stringify( _config ) );
+			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config ) );
 
 		}
 
@@ -634,7 +634,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		File.saveContent( '${_serverDirectory}/${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
+		File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
 		Logger.debug( 'Configuration saved to: ${_serverDirectory}${_CONFIG_FILE}' );
 
 	}

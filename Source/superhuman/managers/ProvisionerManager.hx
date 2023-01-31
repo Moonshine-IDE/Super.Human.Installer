@@ -38,7 +38,7 @@ import superhuman.server.provisioners.ProvisionerType;
 
 class ProvisionerManager {
 
-    static final PROVISIONER_DEMO_TASKS_LOCAL_PATH:String = "assets/vagrant/demo-tasks/";
+    static final PROVISIONER_DEMO_TASKS_LOCAL_PATH:String = "assets/provisioners/demo-tasks/";
     
     static public function getDefaultProvisioners():Array<ProvisionerDefinition> {
         
