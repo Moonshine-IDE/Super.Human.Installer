@@ -131,6 +131,10 @@
     "serveradvancedconfigpage":{
         "title":"Advanced Configuration (#%1)",
         "form":{
+            "disablebridgeadapter":{
+                "text":"Bridge Adapter",
+                "checkbox":"Disabled"
+            },
             "networkinterface":{
                 "text":"Network Interface *",
                 "default":"Default",

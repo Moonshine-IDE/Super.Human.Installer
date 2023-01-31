@@ -52,6 +52,7 @@ typedef ServerData = {
     network_address:String,
     network_netmask:String,
     network_gateway:String,
+    ?disable_bridge_adapter:Bool,
 
     env_open_browser:Bool,
     env_setup_wait:Int,
