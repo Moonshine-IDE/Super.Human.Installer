@@ -131,10 +131,6 @@
     "serveradvancedconfigpage":{
         "title":"Advanced Configuration (#%1)",
         "form":{
-            "disablebridgeadapter":{
-                "text":"Bridge Adapter",
-                "checkbox":"Disabled"
-            },
             "networkinterface":{
                 "text":"Network Interface *",
                 "default":"Default",
@@ -186,6 +182,10 @@
             "misc":{
                 "text":"Miscellaneous",
                 "openbrowser":"Open Welcome page if server has started"
+            },
+            "expert":{
+                "text":"Expert",
+                "disablebridgeadapter":"Disable Bridge Adapter"
             },
             "buttons":{
                 "save":"Save",
@@ -259,7 +259,8 @@
         "systeminfo":{
             "vagrant":"Vagrant Machines: %1",
             "virtualbox": "VirtualBox Machines: %1",
-            "openvirtualbox": "(Open VirtualBox Manager)"
+            "openvirtualbox": "Open VirtualBox Manager",
+            "refresh": "Refresh"
         },
         "server":{
             "console":{

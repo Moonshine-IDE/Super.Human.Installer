@@ -232,6 +232,7 @@ class ServerPage extends Page {
 
         _systemInfoBox = new SystemInfoBox();
         _systemInfoBox.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _forwardEvent );
+        _systemInfoBox.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _forwardEvent );
         _systemInfoBox.visible = _systemInfoBox.includeInLayout = _vagrantInstalled && _virtualBoxInstalled && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
         if ( _vagrantMachines != null ) _systemInfoBox.vagrantMachines = _vagrantMachines;
         if ( _virtualBoxMachines != null ) _systemInfoBox.virtualBoxMachines = _virtualBoxMachines;

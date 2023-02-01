@@ -57,6 +57,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_VAGRANT_SSH:String = "openVagrantSSH";
     public static final OPEN_VIRTUALBOX_GUI:String = "openVirtualBoxGUI";
     public static final PROVISION_SERVER:String = "provisionServer";
+    public static final REFRESH_SYSTEM_INFO:String = "refreshSystemInfo";
     public static final RESET_SERVER:String = "resetServer";
     public static final SAVE_ADVANCED_SERVER_CONFIGURATION:String = "saveAdvancedServerConfiguration";
     public static final SAVE_APP_CONFIGURATION:String = "saveAppConfiguration";
