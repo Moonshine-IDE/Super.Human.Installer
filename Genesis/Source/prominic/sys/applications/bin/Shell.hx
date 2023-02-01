@@ -31,7 +31,6 @@
 package prominic.sys.applications.bin;
 
 import haxe.io.Path;
-import lime.system.System;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import sys.FileSystem;
@@ -274,6 +273,12 @@ class Shell extends AbstractApp {
         #else
         System.openFile( StringTools.trim( args.join( " " ) ) );
         #end
+
+    }
+
+    public function exec( path:String ) {
+
+        Sys.command( 'exec ${path} &' );
 
     }
 
