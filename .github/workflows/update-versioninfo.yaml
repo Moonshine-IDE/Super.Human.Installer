@@ -8,7 +8,7 @@ env:
   tag: 1.2.3-dev
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -28,30 +28,23 @@ jobs:
         uses: actions/configure-pages@v3
         
       - name: Setup Directory
-        run: mkdir public
-
-      # - name: Download old versioninfo
-      #   uses: wei/wget@v1.1.1
-      #   with:
-      #     args: -O public/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
+        run: mkdir site
 
       - name: Grant permissions
         run: |
-          wget -O public/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
-          chattr -sia public
-          chmod -R 777 public
+          wget -O site/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
 
       - name: Set JSON Field
         uses: jossef/action-set-json-field@v2.1
         with:
-          file: public/versioninfo.json
+          file: site/versioninfo.json
           field: ${{ env.environment }}.tag
           value: ${{ env.tag }}
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
-          path: 'public'
+          path: 'site'
           
       - name: Deploy to GitHub Pages
         id: deployment
