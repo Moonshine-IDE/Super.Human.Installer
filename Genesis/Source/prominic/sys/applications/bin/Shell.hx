@@ -30,6 +30,9 @@
 
 package prominic.sys.applications.bin;
 
+#if windows
+import lime.system.System;
+#end
 import haxe.io.Path;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
