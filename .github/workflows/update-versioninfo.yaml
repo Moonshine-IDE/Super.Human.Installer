@@ -39,11 +39,11 @@ jobs:
           field: ${{ env.environment }}
           value: |
             {
-              "tag": ${{ env.tag }},
+              "tag": "new-tag",
               "sha": "sha",
               "date": "date",
               "linux_url": "link",
-              "windows_url": "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Setup.exe",
+              "windows_url": "new-link",
               "choco_url": "link",
               "macos_url": "link"
             }
