@@ -122,15 +122,6 @@ class AdvancedConfigPage extends Page {
         _form = new GenesisForm();
         this.addChild( _form );
 
-        _rowDisableBridgeAdapter = new GenesisFormRow();
-        _rowDisableBridgeAdapter.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.disablebridgeadapter.text' );
-        _cbDisableBridgeAdapter = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.disablebridgeadapter.checkbox' ), _server.disableBridgeAdapter.value );
-        _cbDisableBridgeAdapter.addEventListener( Event.CHANGE, _cbDHCP_Or_cbDisableBridgeAdapterChanged );
-        _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
-        _cbDisableBridgeAdapter.enabled = !_server.disableBridgeAdapter.locked;
-        _rowDisableBridgeAdapter.content.addChild( _cbDisableBridgeAdapter );
-        _form.addChild( _rowDisableBridgeAdapter );
-
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.text' );
         _dropdownNetworkInterface = new GenesisFormPupUpListView( VirtualBox.getInstance().bridgedInterfacesCollection );
@@ -241,6 +232,15 @@ class AdvancedConfigPage extends Page {
         _cbOpenBrowser = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.misc.openbrowser' ), _server.openBrowser.value );
         _rowMisc.content.addChild( _cbOpenBrowser );
         _form.addChild( _rowMisc );
+
+        _rowDisableBridgeAdapter = new GenesisFormRow();
+        _rowDisableBridgeAdapter.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.expert.text' );
+        _cbDisableBridgeAdapter = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.expert.disablebridgeadapter' ), _server.disableBridgeAdapter.value );
+        _cbDisableBridgeAdapter.addEventListener( Event.CHANGE, _cbDHCP_Or_cbDisableBridgeAdapterChanged );
+        _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
+        _cbDisableBridgeAdapter.enabled = !_server.disableBridgeAdapter.locked;
+        _rowDisableBridgeAdapter.content.addChild( _cbDisableBridgeAdapter );
+        _form.addChild( _rowDisableBridgeAdapter );
 
         var line = new HLine();
         line.width = _w;
