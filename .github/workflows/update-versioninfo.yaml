@@ -8,7 +8,7 @@ env:
   tag: 1.2.3-dev
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -35,7 +35,7 @@ jobs:
         with:
           args: -O site/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
 
-      - name: Gratne permissions
+      - name: Grant permissions
         run: chmod -R 777 site
 
       - name: Set JSON Field
