@@ -32,21 +32,19 @@ jobs:
           mkdir site
           wget -O site/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
 
-      - name: Set JSON Field
+      - name: Update tag
         uses: jossef/action-set-json-field@v2.1
         with:
           file: site/versioninfo.json
-          field: ${{ env.environment }}
-          value: |
-            {
-              "tag": "new-tag",
-              "sha": "sha",
-              "date": "date",
-              "linux_url": "link",
-              "windows_url": "new-link",
-              "choco_url": "link",
-              "macos_url": "link"
-            }
+          field: ${{ env.environment }}.tag
+          value: ${{ env.tag }}
+
+      - name: Update windows_url
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: site/versioninfo.json
+          field: ${{ env.environment }}.windows_url
+          value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Setup.exe"
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
