@@ -613,7 +613,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		Shell.getInstance().open( [ 'https://${a}:443/welcome.html' ] );
+		Shell.getInstance().open( [ '${a}' ] );
 
 	}
 
