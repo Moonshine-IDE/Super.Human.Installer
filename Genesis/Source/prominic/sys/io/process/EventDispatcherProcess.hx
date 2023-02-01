@@ -56,7 +56,8 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
      * A BufferedProcess implementation that dispatches ProcessEvents on specific events of
      * the spawned process. For stream output and event handling, either an internal
      * loop will be created and attached to the current thread, or an
-     * openfl.display.DisplayObject's EnterFrame event will be used
+     * openfl.display.DisplayObject's EnterFrame event will be used. If the current
+     * thread does not have an event loop, events will not get dispatched.
      * @param cmd The command to execute, the process will be spawned with this command
      * @param args Optional command line arguments for the given process
      * @param workingDirectory The optional working directory of the process
@@ -87,7 +88,7 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
         } else {
 
-            _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _performanceSettings.eventsPerSecond ) * 1000 ) );
+            if ( Thread.current().events != null ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _performanceSettings.eventsPerSecond ) * 1000 ) );
 
         }
 
