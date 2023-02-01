@@ -32,7 +32,6 @@ package superhuman.components;
 
 import feathers.controls.Alert;
 import feathers.controls.Button;
-import feathers.controls.Check;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -44,6 +43,7 @@ import feathers.layout.VerticalLayout;
 import feathers.layout.VerticalLayoutData;
 import feathers.skins.RectangleSkin;
 import genesis.application.components.AdvancedAssetLoader;
+import genesis.application.components.AdvancedCheckBox;
 import genesis.application.components.HLine;
 import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
@@ -160,7 +160,7 @@ class RolePage extends Page {
 
 class RolePickerItem extends LayoutGroup {
 
-    var _check:Check;
+    var _check:AdvancedCheckBox;
     var _fixpackButton:Button;
     var _helpImage:AdvancedAssetLoader;
     var _hotfixButton:Button;
@@ -205,7 +205,7 @@ class RolePickerItem extends LayoutGroup {
         _labelGroupLayout.gap = 4;
         this.addChild( _labelGroup );
 
-        _check = new Check( _roleImpl.name, _roleImpl.role.enabled );
+        _check = new AdvancedCheckBox( _roleImpl.name, _roleImpl.role.enabled );
         _check.enabled = !_roleImpl.role.isdefault;
         _check.addEventListener( Event.CHANGE, _checkSelected );
         _check.variant = GenesisApplicationTheme.CHECK_MEDIUM;

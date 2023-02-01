@@ -371,7 +371,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         check.textFormat = _themeTypography.Large;
         check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
         check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
-        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -381,7 +380,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         check.textFormat = _themeTypography.Medium;
         check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
         check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
-        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -506,7 +504,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         cb.textFormat = _themeTypography.Default;
         cb.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
         cb.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
-        cb.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         cb.horizontalAlign = HorizontalAlign.LEFT;
 
     }

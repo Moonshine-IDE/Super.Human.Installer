@@ -30,28 +30,15 @@
 
 package genesis.application.components;
 
-import prominic.core.interfaces.IValidator;
 import feathers.controls.Check;
 
-@:styleContext
-class GenesisFormCheckBox extends Check implements IValidator {
+class AdvancedCheckBox extends Check {
 
-    var _mandatory:Bool;
-    
-    public function new( ?text:String, selected:Bool = false, mandatory:Bool = false ) {
-
+    public function new( ?text:String, selected:Bool = false ) {
+        
         super( text, selected );
 
-        this._mandatory = mandatory;
         this.disabledAlpha = .5;
-
-    }
-
-    public function isValid():Bool {
-
-        if ( _mandatory ) return this.selected;
-        
-        return true;
 
     }
 
@@ -59,8 +46,10 @@ class GenesisFormCheckBox extends Check implements IValidator {
 
         super.update();
 
+        super.update();
+
         this.alpha = ( this.enabled ) ? 1 : this.disabledAlpha;
 
     }
-
+    
 }
