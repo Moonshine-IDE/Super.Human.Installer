@@ -30,13 +30,14 @@ jobs:
       - name: Setup Directory
         run: mkdir public
 
-      - name: Download old versioninfo
-        uses: wei/wget@v1.1.1
-        with:
-          args: -O public/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
+      # - name: Download old versioninfo
+      #   uses: wei/wget@v1.1.1
+      #   with:
+      #     args: -O public/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
 
       - name: Grant permissions
         run: |
+          wget -O public/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
           chattr -sia public
           chmod -R 777 public
 
