@@ -3,6 +3,10 @@ name: Update versioninfo
 on:
   workflow_dispatch:
 
+env:
+  environment: development
+  tag: 1.2.3-dev
+
 permissions:
   contents: read
   pages: write
@@ -19,9 +23,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-
-      # - name: Checkout
-      #   uses: actions/checkout@v3
         
       - name: Setup Pages
         uses: actions/configure-pages@v3
@@ -33,6 +34,13 @@ jobs:
         uses: wei/wget@v1.1.1
         with:
           args: -O site/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
+
+      - name: Set JSON Field
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: site/versioninfo.json
+          field: ${{ env.environment }}.tag
+          value: ${{ env.tag }}
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
