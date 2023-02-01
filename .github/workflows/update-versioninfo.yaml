@@ -23,6 +23,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.0.2
         
       - name: Setup Pages
         uses: actions/configure-pages@v3
@@ -51,7 +54,7 @@ jobs:
         with:
           file: site/versioninfo.json
           field: ${{ env.environment }}.date
-          value: ${{ github.created_at }}
+          value: ${{ steps.current-time.outputs.readableTime }}
 
       - name: Update windows_url
         uses: jossef/action-set-json-field@v2.1
