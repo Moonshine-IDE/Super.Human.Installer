@@ -940,6 +940,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
 
+		Logger.verbose( 'Refreshing System Info...' );
+
 		ParallelExecutor.create().add( Right( [
 			Vagrant.getInstance().getGlobalStatus(),
 			VirtualBox.getInstance().getListVMs()
@@ -948,6 +950,10 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
+
+		Logger.verbose( 'System Info refreshed' );
+		Logger.verbose( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
+		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualMachines}' );
 
 		if ( _serverPage != null ) {
 
