@@ -955,6 +955,30 @@ class SuperHumanInstaller extends GenesisApplication {
 		Logger.verbose( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
 		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualMachines}' );
 
+		for ( i in VirtualBox.getInstance().virtualMachines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.virtualBoxId == i.name ) s.virtualMachine.value = i;
+
+			}
+
+		}
+
+		for ( i in Vagrant.getInstance().machines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.path.value == i.home ) {
+
+					s.updateVagrantMachine( i );
+
+				}
+
+			}
+
+		}
+
 		if ( _serverPage != null ) {
 
 			_serverPage.vagrantMachines = Vagrant.getInstance().machines;

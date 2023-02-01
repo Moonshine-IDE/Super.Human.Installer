@@ -1184,6 +1184,12 @@ class Server {
 
     }
 
+    public function updateVagrantMachine( machine:VagrantMachine ) {
+
+        _onVagrantStatus( machine );
+
+    }
+
     function _onVagrantStatus( machine:VagrantMachine ) {
 
         if ( machine.serverId != this._id ) return;
