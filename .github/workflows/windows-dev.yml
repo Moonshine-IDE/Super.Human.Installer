@@ -87,6 +87,3 @@ jobs:
         with:
           name: SuperHumanInstallerDev-Choco
           path: Templates/chocolatey/SuperHumanInstallerDev.${{ steps.readversion.outputs.info }}.nupkg
-
-      - name: List dir
-        run: ls -R Templates/chocolatey
