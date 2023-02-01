@@ -167,7 +167,7 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 
     function _setSystemInfoBoxStyles( box:SystemInfoBox ) {
 
-        box.layoutData = new VerticalLayoutData( 100 );
+        //box.layoutData = new VerticalLayoutData( 100 );
 
         var r = new RectangleSkin( FillStyle.SolidColor( _themeColors.Box ) );
         r.alpha = .3;
@@ -178,6 +178,7 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         layout.horizontalAlign = HorizontalAlign.CENTER;
         layout.verticalAlign = VerticalAlign.MIDDLE;
         layout.setPadding( GenesisApplicationTheme.GRID * 1 );
+        layout.paddingLeft = layout.paddingRight = GenesisApplicationTheme.GRID * 2;
         layout.gap = GenesisApplicationTheme.GRID * 2;
         box.layout = layout;
 

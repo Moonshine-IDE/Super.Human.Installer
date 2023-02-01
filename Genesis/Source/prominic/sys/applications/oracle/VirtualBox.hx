@@ -48,7 +48,7 @@ class VirtualBox extends AbstractApp {
     static final _patternIPAddress = new EReg( "(^IPAddress:\\h+)", "" );
     static final _patternIPV6Address = new EReg( "(^IPV6Address:\\h+)", "" );
     static final _patternIPV6NetworkMaskPrefixLength = new EReg( "(^IPV6NetworkMaskPrefixLength:\\h+)", "" );
-    static final _patternListVMs = ~/^(?:")(\S+)(?:").(?:{)(\S+)(?:})$/gm;
+    static final _patternListVMs = ~/^(?:")(.+)(?:").(?:{)(\S+)(?:})$/gm;
     static final _patternMByte = new EReg( "(\\hMByte)", "" );
     static final _patternMediumType = new EReg( "(^MediumType:\\h+)", "" );
     static final _patternMemoryAvailable = new EReg( "(^Memory available:\\h+)", "" );
@@ -484,11 +484,11 @@ class VirtualBox extends AbstractApp {
 
                 }
 
-            for ( f in _onListVMs ) f();
-
             }
 
         }
+
+        for ( f in _onListVMs ) f();
 
     }
 

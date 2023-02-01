@@ -300,6 +300,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _provisionServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.START_SERVER, _startServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _stopServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _syncServer );
@@ -392,6 +393,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _vagrantGlobalStatusFinished() {
 
+		Vagrant.getInstance().onGlobalStatus.remove( _vagrantGlobalStatusFinished );
+
 		for ( i in Vagrant.getInstance().machines ) {
 
 			for ( s in _servers ) {
@@ -441,6 +444,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _virtualBoxListVMsUpdated() {
+
+		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
 		for ( i in VirtualBox.getInstance().virtualMachines ) {
 
@@ -930,6 +935,26 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _openVirtualBoxGUI( e:SuperHumanApplicationEvent ) {
 
 		VirtualBox.getInstance().openGUI();
+
+	}
+
+	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
+
+		ParallelExecutor.create().add( Right( [
+			Vagrant.getInstance().getGlobalStatus(),
+			VirtualBox.getInstance().getListVMs()
+		] ) ).onStop( _refreshSystemInfoStopped ).execute();
+
+	}
+
+	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
+
+		if ( _serverPage != null ) {
+
+			_serverPage.vagrantMachines = Vagrant.getInstance().machines;
+			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualMachines;
+
+		}
 
 	}
 

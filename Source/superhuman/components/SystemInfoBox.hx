@@ -30,8 +30,10 @@
 
 package superhuman.components;
 
+import feathers.controls.Button;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
+import feathers.events.TriggerEvent;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.MouseEvent;
@@ -42,7 +44,9 @@ import superhuman.events.SuperHumanApplicationEvent;
 @:styleContext
 class SystemInfoBox extends LayoutGroup {
 
+    var _openVirtualBoxGUIButton:Button;
     var _openVirtualBoxGUILabel:Label;
+    var _refreshButton:Button;
     var _vagrantMachines:Array<VagrantMachine>;
     var _vagrantMachinesLabel:Label;
     var _virtualBoxMachines:Array<VirtualMachine>;
@@ -53,6 +57,7 @@ class SystemInfoBox extends LayoutGroup {
     function set_vagrantMachines( value ) {
         _vagrantMachines = value;
         if ( _vagrantMachinesLabel != null ) _vagrantMachinesLabel.text = LanguageManager.getInstance().getString( 'serverpage.systeminfo.vagrant', Std.string( _vagrantMachines.length ) );
+        if ( _refreshButton != null ) _refreshButton.enabled = true;
         return _vagrantMachines;
     }
 
@@ -61,6 +66,7 @@ class SystemInfoBox extends LayoutGroup {
     function set_virtualBoxMachines( value ) {
         _virtualBoxMachines = value;
         if ( _virtualBoxMachinesLabel != null ) _virtualBoxMachinesLabel.text = LanguageManager.getInstance().getString( 'serverpage.systeminfo.virtualbox', Std.string( _virtualBoxMachines.length ) );
+        if ( _refreshButton != null ) _refreshButton.enabled = true;
         return _virtualBoxMachines;
     }
 
@@ -88,13 +94,38 @@ class SystemInfoBox extends LayoutGroup {
         _openVirtualBoxGUILabel.variant = GenesisApplicationTheme.LABEL_LINK_SMALL;
         _openVirtualBoxGUILabel.useHandCursor = _openVirtualBoxGUILabel.buttonMode = true;
         _openVirtualBoxGUILabel.addEventListener( MouseEvent.CLICK, _openVirtualBoxGUILabelClicked );
-        this.addChild( _openVirtualBoxGUILabel );
+        //this.addChild( _openVirtualBoxGUILabel );
+
+        _refreshButton = new Button( LanguageManager.getInstance().getString( 'serverpage.systeminfo.refresh' ) );
+        _refreshButton.variant = GenesisApplicationTheme.BUTTON_TINY;
+        _refreshButton.addEventListener( TriggerEvent.TRIGGER, _refreshButtonTriggered );
+        this.addChild( _refreshButton );
+
+        _openVirtualBoxGUIButton = new Button( LanguageManager.getInstance().getString( 'serverpage.systeminfo.openvirtualbox' ) );
+        _openVirtualBoxGUIButton.variant = GenesisApplicationTheme.BUTTON_TINY;
+        _openVirtualBoxGUIButton.addEventListener( TriggerEvent.TRIGGER, _openVirtualBoxGUIButtonTriggered );
+        this.addChild( _openVirtualBoxGUIButton );
 
     }
 
     function _openVirtualBoxGUILabelClicked( e:MouseEvent ) {
 
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI );
+        this.dispatchEvent( evt );
+
+    }
+
+    function _openVirtualBoxGUIButtonTriggered( e:TriggerEvent ) {
+
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI );
+        this.dispatchEvent( evt );
+
+    }
+    
+    function _refreshButtonTriggered( e:TriggerEvent ) {
+
+        _refreshButton.enabled = false;
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO );
         this.dispatchEvent( evt );
 
     }
