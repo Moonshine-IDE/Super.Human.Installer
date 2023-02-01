@@ -1,4 +1,4 @@
-name: Deploy versioninfo to GitHub Pages
+name: Update versioninfo
 
 on:
   workflow_dispatch:
