@@ -285,7 +285,12 @@ class VirtualBox extends AbstractApp {
 
     public function openGUI() {
 
+        #if mac
         Shell.getInstance().open( [ "-a", "VirtualBox" ] );
+        #elseif windows
+        Shell.getInstance().open( [ "VirtualBox" ] );
+        #elseif linux
+        #end
 
     }
 
