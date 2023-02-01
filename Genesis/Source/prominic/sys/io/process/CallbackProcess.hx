@@ -43,7 +43,6 @@ class CallbackProcess extends BufferedProcess {
     
     final _callbackMutex:Mutex = new Mutex();
     final _enterFrameMutex:Mutex = new Mutex();
-    final _fps:Int = 30;
     
     var _cancelEventLoop:Bool = false;
     var _eventHandler:EventHandler;
@@ -94,7 +93,7 @@ class CallbackProcess extends BufferedProcess {
 
         super.start();
 
-        if ( !_cancelEventLoop ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _fps ) * 1000 ) );
+        if ( !_cancelEventLoop ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _performanceSettings.eventsPerSecond ) * 1000 ) );
 
     }
 
