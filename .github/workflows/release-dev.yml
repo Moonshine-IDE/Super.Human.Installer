@@ -31,15 +31,30 @@ jobs:
         with:
           name: SuperHumanInstallerDev-Setup
 
-      - name: Display structure of downloaded files
-        run: ls -R
+      - name: json-to-file
+        uses: devops-actions/json-to-file@v1.0.1
+        with:
+          json: |
+            {
+              "env": "development",
+              "version": "1.0.0-dev",
+              "platforms": {
+                "linux_url": "link",
+                "windows_url": "link",
+                "macos_url": "link",
+                "nuget_url": "link"
+              }
+            }
+          filename: versioninfodev.json
 
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
           name: Release
           draft: true
+          prerelease: true
           files: |
             SuperHumanInstallerDev-Setup.pkg
-            SuperHumanInstallerDev-Setup.exe            
+            SuperHumanInstallerDev-Setup.exe
+            versioninfodev.json
           fail_on_unmatched_files: true
