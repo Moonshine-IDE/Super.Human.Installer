@@ -39,6 +39,20 @@ jobs:
           field: ${{ env.environment }}.tag
           value: ${{ env.tag }}
 
+      - name: Update sha
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: site/versioninfo.json
+          field: ${{ env.environment }}.sha
+          value: ${{ github.sha }}
+
+      - name: Update date
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: site/versioninfo.json
+          field: ${{ env.environment }}.date
+          value: ${{ github.created_at }}
+
       - name: Update windows_url
         uses: jossef/action-set-json-field@v2.1
         with:
