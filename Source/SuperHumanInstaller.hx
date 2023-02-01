@@ -298,6 +298,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER, _openBrowser );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _provisionServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.START_SERVER, _startServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _stopServer );
@@ -406,6 +407,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+		if ( _serverPage != null ) _serverPage.vagrantMachines = Vagrant.getInstance().machines;
+
 	}
 
 	function _vagrantVersionUpdated() {
@@ -448,6 +451,8 @@ class SuperHumanInstaller extends GenesisApplication {
 			}
 
 		}
+
+		if ( _serverPage != null ) _serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualMachines;
 
 	}
 
@@ -919,6 +924,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._visitSourceCode(e);
 
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
+
+	}
+
+	function _openVirtualBoxGUI( e:SuperHumanApplicationEvent ) {
+
+		VirtualBox.getInstance().openGUI();
 
 	}
 

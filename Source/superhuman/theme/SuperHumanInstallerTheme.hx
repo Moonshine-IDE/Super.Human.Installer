@@ -34,6 +34,7 @@ import feathers.controls.LayoutGroup;
 import feathers.controls.TextInputState;
 import feathers.layout.AnchorLayout;
 import feathers.layout.AnchorLayoutData;
+import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.VerticalAlign;
 import feathers.layout.VerticalLayout;
@@ -43,6 +44,7 @@ import feathers.text.TextFormat;
 import genesis.application.theme.GenesisApplicationTheme;
 import superhuman.components.Console;
 import superhuman.components.ServerList;
+import superhuman.components.SystemInfoBox;
 import superhuman.components.WarningBox;
 
 class SuperHumanInstallerTheme extends GenesisApplicationTheme {
@@ -83,6 +85,7 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         this.styleProvider.setStyleFunction( LayoutGroup, LAYOUT_GROUP_SERVER_BUTTON_GROUP, _setLayoutGroupServerButtonGroupStyles );
         this.styleProvider.setStyleFunction( ServerItem, null, _setServerItemStyles );
         this.styleProvider.setStyleFunction( ServerList, null, _setServerListStyles );
+        this.styleProvider.setStyleFunction( SystemInfoBox, null, _setSystemInfoBoxStyles );
         this.styleProvider.setStyleFunction( WarningBox, null, _setWarningBoxStyles );
 
     }
@@ -159,6 +162,24 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         layout.setPadding( GenesisApplicationTheme.GRID * 2 );
         item.layout = layout;
         item.layoutData = new VerticalLayoutData( 100 );
+
+    }
+
+    function _setSystemInfoBoxStyles( box:SystemInfoBox ) {
+
+        box.layoutData = new VerticalLayoutData( 100 );
+
+        var r = new RectangleSkin( FillStyle.SolidColor( _themeColors.Box ) );
+        r.alpha = .3;
+        r.cornerRadius = GenesisApplicationTheme.GRID;
+        box.backgroundSkin = r;
+
+        var layout = new HorizontalLayout();
+        layout.horizontalAlign = HorizontalAlign.CENTER;
+        layout.verticalAlign = VerticalAlign.MIDDLE;
+        layout.setPadding( GenesisApplicationTheme.GRID * 1 );
+        layout.gap = GenesisApplicationTheme.GRID * 2;
+        box.layout = layout;
 
     }
 

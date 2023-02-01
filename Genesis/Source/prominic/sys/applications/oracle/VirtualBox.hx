@@ -30,6 +30,7 @@
 
 package prominic.sys.applications.oracle;
 
+import prominic.sys.applications.bin.Shell;
 import feathers.data.ArrayCollection;
 import haxe.io.Path;
 import prominic.core.ds.ChainedList;
@@ -279,6 +280,12 @@ class VirtualBox extends AbstractApp {
         var _versionExecutor = new Executor( this.path + this._executable, [ "-V" ] );
         _versionExecutor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
         return _versionExecutor;
+
+    }
+
+    public function openGUI() {
+
+        Shell.getInstance().open( [ "-a", "VirtualBox" ] );
 
     }
 

@@ -256,6 +256,11 @@
             "text":"Please install VirtualBox before using Super.Human.Installer",
             "buttoninstall":"Install"
         },
+        "systeminfo":{
+            "vagrant":"Vagrant Machines: %1",
+            "virtualbox": "VirtualBox Machines: %1",
+            "openvirtualbox": "(Open VirtualBox Manager)"
+        },
         "server":{
             "console":{
                 "start":"[SHI]: Starting server...\n",
