@@ -351,8 +351,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _checkAppsInitialized( executor:AbstractExecutor ) {
 
-		if ( executor != null ) executor.dispose();
-
 		if( Vagrant.getInstance().initialized && VirtualBox.getInstance().initialized ) {
 
 			if ( VirtualBox.getInstance().exists && Vagrant.getInstance().exists ) {
