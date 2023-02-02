@@ -55,10 +55,12 @@ class SettingsPage extends Page {
     var _buttonGroupLayout:HorizontalLayout;
     var _buttonSave:GenesisFormButton;
     var _cbApplicationWindow:GenesisFormCheckBox;
+    var _cbDisableVagrantLogging:GenesisFormCheckBox;
     var _cbKeepServersRunning:GenesisFormCheckBox;
     var _cbProvision:GenesisFormCheckBox;
     var _form:GenesisForm;
     var _label:Label;
+    var _rowAdvanced:GenesisFormRow;
     var _rowApplicationWindow:GenesisFormRow;
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
@@ -120,6 +122,17 @@ class SettingsPage extends Page {
 
         _form.addChild( _rowKeepServersRunning );
 
+        var spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.GRID * 4;
+        _form.addChild( spacer );
+
+        _rowAdvanced = new GenesisFormRow();
+        _rowAdvanced.text = LanguageManager.getInstance().getString( 'settingspage.advanced.title' );
+        _cbDisableVagrantLogging = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.disablevagrantlogging' ) );
+        _rowAdvanced.content.addChild( _cbDisableVagrantLogging );
+
+        _form.addChild( _rowAdvanced );
+
         var line = new HLine();
         line.width = _w;
         this.addChild( line );
@@ -150,6 +163,7 @@ class SettingsPage extends Page {
             _cbApplicationWindow.selected = SuperHumanInstaller.getInstance().config.preferences.savewindowposition;
             _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
             _cbKeepServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepserversrunning;
+            _cbDisableVagrantLogging.selected = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
 
         }
 
@@ -160,6 +174,7 @@ class SettingsPage extends Page {
         SuperHumanInstaller.getInstance().config.preferences.savewindowposition = _cbApplicationWindow.selected;
         SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart = _cbProvision.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepserversrunning = _cbKeepServersRunning.selected;
+        SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 

@@ -39,5 +39,6 @@ typedef SuperHumanPreferences = {
     ?windowwidth:Int,
     ?windowx:Int,
     ?windowy:Int,
+    ?disablevagrantlogging:Bool,
 
 }

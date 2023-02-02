@@ -313,6 +313,10 @@
             "alwaysprovision": "Always provision servers on start",
             "keeprunning": "Keep servers running on application exit"
         },
+        "advanced":{
+            "title": "Advanced",
+            "disablevagrantlogging": "Disable logging of Vagrant output in Console"
+        },
         "buttons":{
             "save": "Save",
             "cancel": "Cancel"

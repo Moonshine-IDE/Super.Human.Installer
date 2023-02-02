@@ -179,7 +179,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 					servers : [],
 					user: {},
-					preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true },
+					preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true, disablevagrantlogging: false },
 	
 				}
 
@@ -191,6 +191,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			if ( _config.preferences.keepserversrunning == null ) _config.preferences.keepserversrunning = true;
 			if ( _config.preferences.savewindowposition == null ) _config.preferences.savewindowposition = false;
 			if ( _config.preferences.provisionserversonstart == null ) _config.preferences.provisionserversonstart = true;
+			if ( _config.preferences.disablevagrantlogging == null ) _config.preferences.disablevagrantlogging = false;
 
 			var a:Array<String> = [];
 			for ( r in _defaultRoles ) a.push( r.value );

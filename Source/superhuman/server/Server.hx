@@ -947,7 +947,7 @@ class Server {
 
     function _vagrantRSyncStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant rsync: ${data}' );
 
     }
@@ -992,7 +992,7 @@ class Server {
 
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant halt: ${data}' );
 
     }
@@ -1007,7 +1007,7 @@ class Server {
 
     function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant provision: ${data}' );
 
     }
@@ -1038,7 +1038,7 @@ class Server {
 
     function _vagrantDestroyStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant destroy: ${data}' );
 
     }
@@ -1154,7 +1154,7 @@ class Server {
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
-        if ( console != null ) console.appendText( new String( data ) );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( new String( data ) );
         Logger.debug( '${this._id}: Vagrant up: ${data}' );
         
     }
