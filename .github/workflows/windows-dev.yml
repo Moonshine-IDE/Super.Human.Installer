@@ -81,9 +81,12 @@ jobs:
             --version ${{ steps.readversion.outputs.info }} `
             --out Templates/chocolatey/ `
             Templates/chocolatey/SuperHumanInstallerDev.nuspec
+          mv `
+            .\Templates\chocolatey\superhumaninstallerdev*.nupkg `
+            .\Templates\chocolatey\SuperHumanInstallerDev-Choco.nupkg
 
       - name: Upload choco package
         uses: actions/upload-artifact@v3
         with:
           name: SuperHumanInstallerDev-Choco
-          path: Templates/chocolatey/SuperHumanInstallerDev.${{ steps.readversion.outputs.info }}.nupkg
+          path: Templates/chocolatey/SuperHumanInstallerDev-Choco.nupkg
