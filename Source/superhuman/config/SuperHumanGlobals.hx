@@ -44,7 +44,7 @@ class SuperHumanGlobals {
     static public final PRETTY_PRINT:Bool = true;
 
     // Execute vagrant global-status with --prune switch
-    static public var PRUNE_VAGRANT_MACHINES:Bool = true;
+    static public var PRUNE_VAGRANT_MACHINES:Bool = false;
 
     // Source code url
     static public final SOURCE_CODE_URL:String = "https://github.com/Moonshine-IDE/Super.Human.Installer";
