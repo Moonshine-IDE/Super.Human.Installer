@@ -248,6 +248,7 @@ class DemoTasks extends AbstractProvisioner {
 
     function _getWebAddress():String {
 
+        Logger.verbose( 'Reading web address file from ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE}' );
         var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
         if ( !e ) return null;
 

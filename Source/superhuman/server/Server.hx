@@ -917,12 +917,12 @@ class Server {
 
         if ( s == null ) {
 
-            Logger.verbose( 'detectedpublicaddress.txt has invalid content or non-existent' );
+            Logger.verbose( 'The file has invalid content or non-existent' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
         } else {
 
-            Logger.verbose( 'detectedpublicaddress.txt content: ${s}' );
+            Logger.verbose( 'File content: ${s}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }

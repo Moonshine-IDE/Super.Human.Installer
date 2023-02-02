@@ -32,6 +32,7 @@ package prominic.sys.applications.hashicorp;
 
 import prominic.core.ds.ChainedList;
 import prominic.logging.Logger;
+import prominic.sys.applications.bin.Shell;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import prominic.sys.tools.SysTools;
