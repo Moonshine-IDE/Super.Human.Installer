@@ -62,6 +62,20 @@ jobs:
           file: site/versioninfo.json
           field: ${{ env.environment }}.windows_url
           value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Setup.exe"
+
+      - name: Update choco_url
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: site/versioninfo.json
+          field: ${{ env.environment }}.choco_url
+          value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Choco.nupkg"
+
+      - name: Update macos_url
+        uses: jossef/action-set-json-field@v2.1
+        with:
+          file: site/versioninfo.json
+          field: ${{ env.environment }}.macos_url
+          value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Setup.pkg"
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
