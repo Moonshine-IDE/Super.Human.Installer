@@ -301,5 +301,21 @@
             },
             "start":"Start server"
         }
+    },
+    "settingspage":{
+        "title": "Application Settings & Preferences",
+        "interface":{
+            "title": "User Interface",
+            "rememberwindowposition": "Remember application window size and position"
+        },
+        "servers":{
+            "title": "Servers",
+            "alwaysprovision": "Always provision servers on start",
+            "keeprunning": "Keep servers running on application exit"
+        },
+        "buttons":{
+            "save": "Save",
+            "cancel": "Cancel"
+        }
     }
 }
