@@ -51,7 +51,7 @@ import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.Event;
 import prominic.core.primitives.VersionInfo;
 import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
-import prominic.sys.applications.oracle.VirtualMachine;
+import prominic.sys.applications.oracle.VirtualBoxMachine;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
@@ -80,7 +80,7 @@ class ServerPage extends Page {
     var _systemInfoBox:SystemInfoBox;
     var _vagrantMachines:Array<VagrantMachine>;
     var _vagrantVersion:VersionInfo;
-    var _virtualBoxMachines:Array<VirtualMachine>;
+    var _virtualBoxMachines:Array<VirtualBoxMachine>;
     var _virtualBoxVersion:VersionInfo;
     var _warningBoxVagrant:WarningBox;
     var _warningBoxVirtualBox:WarningBox;
@@ -120,7 +120,7 @@ class ServerPage extends Page {
         return value;
     }
 
-    public var virtualBoxMachines( get, set ):Array<VirtualMachine>;
+    public var virtualBoxMachines( get, set ):Array<VirtualBoxMachine>;
     function get_virtualBoxMachines() return _virtualBoxMachines;
     function set_virtualBoxMachines( value ) {
         _virtualBoxMachines = value;

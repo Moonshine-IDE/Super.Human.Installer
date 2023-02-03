@@ -1,6 +1,6 @@
 package prominic.sys.applications.oracle;
 
-typedef VirtualMachine = {
+typedef VirtualBoxMachine = {
 
     // states with 'list vms' command:
     // starting

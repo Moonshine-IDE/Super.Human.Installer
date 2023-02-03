@@ -50,6 +50,7 @@ class VirtualBox extends AbstractApp {
     static final _patternIPV6Address = new EReg( "(^IPV6Address:\\h+)", "" );
     static final _patternIPV6NetworkMaskPrefixLength = new EReg( "(^IPV6NetworkMaskPrefixLength:\\h+)", "" );
     static final _patternListVMs = ~/^(?:")(.+)(?:").(?:{)(\S+)(?:})$/gm;
+    static final _patternListVMsLong = ~/^Name:(?s:.+?)(?=Name:)/gms;
     static final _patternMByte = new EReg( "(\\hMByte)", "" );
     static final _patternMediumType = new EReg( "(^MediumType:\\h+)", "" );
     static final _patternMemoryAvailable = new EReg( "(^Memory available:\\h+)", "" );
@@ -87,6 +88,29 @@ class VirtualBox extends AbstractApp {
     static final _patternX2APIC = ~/^(?:x2apic=")(.+)(?:")$/gm;
     static final _patternnestedHWVirt = ~/^(?:nested-hw-virt=")(.+)(?:")$/gm;
 
+    static final _patternVMEncryption2 = ~/^(?:Encryption:)(?:\s+)(\S+)$/gm;
+    static final _patternVMMemory2 = ~/^(?:Memory size:)(?:\s)*(\d+)(?:..)$/gm;
+    static final _patternVMVRam2 = ~/^(?:VRAM size:)(?:\s*)(\d+)(?:..)$/gm;
+    static final _patternCPUExecutionCap2 = ~/^(?:CPU exec cap:)(?:\s)*(\d+)(?:%)$/gm;
+    static final _patternCPUs2 = ~/^(?:Number of CPUs:)(?:\s)*(\d+)$/gm;
+    static final _patternVMState2 = ~/^(?:State:)(?:\s)*(.+)(?:.\(since.)(.+)(?:\))$/gm;
+    static final _patternCFGFile2 = ~/^(?:Config file:)(?:\s+)(.+)$/gm;
+    static final _patternSnapFldr2 = ~/^(?:Snapshot folder:)(?:\s+)(.+)$/gm;
+    static final _patternLogFldr2 = ~/^(?:Log folder:)(?:\s+)(.+)$/gm;
+    static final _patternHardwareUUID2 = ~/^(?:Hardware UUID:)(?:\s+)(.+)$/gm;
+    static final _patternOSType2 = ~/^(?:Guest OS:)(?:\s+)(.+)$/gm;
+    static final _patternPageFusion2 = ~/^(?:Page Fusion:)(?:\s+)(.+)$/gm;
+    static final _patternHPET2 = ~/^(?:HPET:)(?:\s+)(.+)$/gm;
+    static final _patternCPUProfile2 = ~/^(?:CPUProfile:)(?:\s+)(.+)$/gm;
+    static final _patternChipset2 = ~/^(?:Chipset:)(?:\s+)(.+)$/gm;
+    static final _patternFirmware2 = ~/^(?:Firmware:)(?:\s+)(.+)$/gm;
+    static final _patternPAE2 = ~/^(?:PAE:)(?:\s+)(.+)$/gm;
+    static final _patternLongmode2 = ~/^(?:Long Mode:)(?:\s+)(.+)$/gm;
+    static final _patternTripleFaultReset2 = ~/^(?:Triple Fault Reset:)(?:\s+)(.+)$/gm;
+    static final _patternAPIC2 = ~/^(?:APIC:)(?:\s+)(.+)$/gm;
+    static final _patternX2APIC2 = ~/^(?:X2APIC:)(?:\s+)(.+)$/gm;
+    static final _patternnestedHWVirt2 = ~/^(?:Nested VT-x\/AMD-V:)(?:\s+)(.+)$/gm;
+
     static final _versionPattern = ~/(\d+\.\d+\.\d+)/;
 
     static var _instance:VirtualBox;
@@ -112,7 +136,7 @@ class VirtualBox extends AbstractApp {
     var _tempHostInfoData:String;
     var _tempListVMsData:String;
     var _tempShowVMInfoData:String;
-    var _virtualMachines:Array<VirtualMachine>;
+    var _virtualBoxMachines:Array<VirtualBoxMachine>;
 
     public var hostInfo( get, never ):HostInfo;
     function get_hostInfo() return _hostInfo;
@@ -144,8 +168,8 @@ class VirtualBox extends AbstractApp {
     public var onVersion( get, never ):ChainedList<()->Void, VirtualBox>;
     function get_onVersion() return _onVersion;
 
-    public var virtualMachines( get, never ):Array<VirtualMachine>;
-    function get_virtualMachines() return _virtualMachines;
+    public var virtualBoxMachines( get, never ):Array<VirtualBoxMachine>;
+    function get_virtualBoxMachines() return _virtualBoxMachines;
 
     function new() {
 
@@ -166,7 +190,7 @@ class VirtualBox extends AbstractApp {
         _onShowVMInfo = new ChainedList( this );
         _onVersion = new ChainedList( this );
 
-        _virtualMachines = [];
+        _virtualBoxMachines = [];
         _showVMInfoExecutors = [];
         
         #if windows
@@ -221,11 +245,13 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getListVMs():Executor {
+    public function getListVMs( longFormat:Bool = false ):Executor {
 
         _tempListVMsData = "";
-        _virtualMachines = [];
-        var _listVMsExecutor = new Executor( this.path + this._executable, [ "list", "vms" ]);
+        _virtualBoxMachines = [];
+        var args:Array<String> = [ "list", "vms" ];
+        if ( longFormat ) args.push( "--long" );
+        var _listVMsExecutor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
         _listVMsExecutor.onStdOut( _listVMsExecutorStandardOutput ).onStop( _listVMsExecutorStop );
         return _listVMsExecutor;
 
@@ -486,9 +512,21 @@ class VirtualBox extends AbstractApp {
     function _listVMsExecutorStop( executor:AbstractExecutor ) {
 
         Logger.verbose( '_listVMsExecutorStop(): ${executor.exitCode} ${_tempListVMsData}' );
-        if ( executor.exitCode == 0 )
-            _processListVMsData();
-        
+
+        if ( executor.exitCode == 0 ) {
+
+            if ( ( executor.extraParams[ 0 ] != null && executor.extraParams[ 0 ] == true ) ) {
+
+                _processListVMsLongFormatData();
+
+            } else {
+
+                _processListVMsData();
+
+            }
+
+        }
+
     }
 
     function _processListVMsData() {
@@ -503,10 +541,10 @@ class VirtualBox extends AbstractApp {
 
                     if ( _patternListVMs.match( l ) ) {
 
-                        var vm:VirtualMachine = {};
+                        var vm:VirtualBoxMachine = {};
                         vm.name = _patternListVMs.matched( 1 );
                         vm.id = _patternListVMs.matched( 2 );
-                        _virtualMachines.push( vm );
+                        _virtualBoxMachines.push( vm );
 
                     }
 
@@ -524,10 +562,124 @@ class VirtualBox extends AbstractApp {
 
     }
 
+    function _processListVMsLongFormatData() {
+
+        var machineBlocks = _tempListVMsData.split( SysTools.lineEnd + SysTools.lineEnd );
+        trace( '>>>>>>>>>>>>>>>>>>>>>>> ${machineBlocks}');
+
+        if ( machineBlocks != null && machineBlocks.length > 0 ) {
+
+            for ( block in machineBlocks ) {
+
+                if ( block.length > 0 ) {
+
+                    var currentMachine:VirtualBoxMachine = {};
+
+                    var lines = block.split( SysTools.lineEnd );
+
+                    if ( lines != null && lines.length > 0 ) {
+
+                        for ( l in lines ) {
+
+                            trace( '------------------- ${l}' );
+
+                            try {
+
+                                if ( _patternVMEncryption2.match( l ) )
+                                    currentMachine.encryption = _patternVMEncryption2.matched( 1 ).toLowerCase() == "enabled";
+            
+                                if ( _patternVMMemory2.match( l ) )
+                                    currentMachine.memory = Std.parseInt( _patternVMMemory2.matched( 1 ) );
+            
+                                if ( _patternVMVRam2.match( l ) )
+                                    currentMachine.vram = Std.parseInt( _patternVMVRam2.matched( 1 ) );
+            
+                                if ( _patternCPUExecutionCap2.match( l ) )
+                                    currentMachine.cpuexecutioncap = Std.parseInt( _patternCPUExecutionCap2.matched( 1 ) );
+            
+                                if ( _patternCPUs2.match( l ) )
+                                    currentMachine.cpus = Std.parseInt( _patternCPUs2.matched( 1 ) );
+            
+                                if ( _patternVMState2.match( l ) )
+                                    currentMachine.VMState = _patternVMState2.matched( 1 );
+            
+                                if ( _patternCFGFile2.match( l ) ) {
+                                    currentMachine.CfgFile = Path.normalize( _patternCFGFile2.matched( 1 ) );
+                                    currentMachine.root = Path.directory( currentMachine.CfgFile );
+                                }
+            
+                                if ( _patternSnapFldr2.match( l ) )
+                                    currentMachine.SnapFldr = Path.normalize( _patternSnapFldr2.matched( 1 ) );
+            
+                                if ( _patternLogFldr2.match( l ) )
+                                    currentMachine.LogFldr = Path.normalize( _patternLogFldr2.matched( 1 ) );
+            
+                                if ( _patternHardwareUUID2.match( l ) )
+                                    currentMachine.hardwareuuid = _patternHardwareUUID2.matched( 1 );
+            
+                                if ( _patternOSType2.match( l ) )
+                                    currentMachine.ostype = _patternOSType2.matched( 1 );
+            
+                                if ( _patternPageFusion2.match( l ) )
+                                    currentMachine.pagefusion = _patternPageFusion2.matched( 1 );
+            
+                                if ( _patternHPET2.match( l ) )
+                                    currentMachine.hpet = _patternHPET2.matched( 1 );
+            
+                                if ( _patternCPUProfile2.match( l ) )
+                                    currentMachine.cpuprofile = _patternCPUProfile2.matched( 1 );
+            
+                                if ( _patternChipset2.match( l ) )
+                                    currentMachine.chipset = _patternChipset2.matched( 1 );
+            
+                                if ( _patternFirmware2.match( l ) )
+                                    currentMachine.firmware = _patternFirmware2.matched( 1 );
+            
+                                if ( _patternPAE2.match( l ) )
+                                    currentMachine.pae = _patternPAE2.matched( 1 );
+            
+                                if ( _patternLongmode2.match( l ) )
+                                    currentMachine.longmode = _patternLongmode2.matched( 1 );
+            
+                                if ( _patternTripleFaultReset2.match( l ) )
+                                    currentMachine.triplefaultreset = _patternTripleFaultReset2.matched( 1 );
+            
+                                if ( _patternAPIC2.match( l ) )
+                                    currentMachine.apic = _patternAPIC2.matched( 1 );
+            
+                                if ( _patternX2APIC2.match( l ) )
+                                    currentMachine.x2apic = _patternX2APIC2.matched( 1 );
+            
+                                if ( _patternnestedHWVirt2.match( l ) )
+                                    currentMachine.nestedhwvirt = _patternnestedHWVirt2.matched( 1 );
+            
+                            } catch( e ) {
+            
+                                Logger.error( 'RegExp processing failed with ${l}' );
+            
+                            }
+
+                        }
+
+                        trace( '@@@@@@@@@@@@@@@@@@@@@@@@@ ${currentMachine}' );
+                        _virtualBoxMachines.push( currentMachine );
+
+                    }
+
+                }
+                
+            }
+
+        }
+
+        for ( f in _onListVMs ) f();
+
+    }
+
     function _processShowVMInfoData( id:String ) {
 
-        var currentMachine:VirtualMachine = null;
-        for ( m in _virtualMachines ) if ( m.name == id || m.id == id ) currentMachine = m;
+        var currentMachine:VirtualBoxMachine = null;
+        for ( m in _virtualBoxMachines ) if ( m.name == id || m.id == id ) currentMachine = m;
 
         var a = _tempShowVMInfoData.split( SysTools.lineEnd );
 

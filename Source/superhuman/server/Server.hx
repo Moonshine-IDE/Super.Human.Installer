@@ -42,7 +42,7 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
-import prominic.sys.applications.oracle.VirtualMachine;
+import prominic.sys.applications.oracle.VirtualBoxMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
@@ -199,7 +199,9 @@ class Server {
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
     var _vagrantMachine:Property<VagrantMachine>;
-    var _virtualMachine:Property<VirtualMachine>;
+    var _virtualBoxMachine:Property<VirtualBoxMachine>;
+
+    //var _combinedVirtualMachine:Property<>
     
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
@@ -308,8 +310,8 @@ class Server {
         return '${Std.string( this._id )}--${this.domainName}';
     }
 
-    public var virtualMachine( get, never ):Property<VirtualMachine>;
-    function get_virtualMachine() return _virtualMachine;
+    public var virtualBoxMachine( get, never ):Property<VirtualBoxMachine>;
+    function get_virtualBoxMachine() return _virtualBoxMachine;
 
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
@@ -391,8 +393,8 @@ class Server {
         _vagrantMachine = new Property( { id:null, state:VagrantMachineState.Unknown } );
         _vagrantMachine.onChange.add( _propertyChanged );
 
-        _virtualMachine = new Property( {} );
-        _virtualMachine.onChange.add( _propertyChanged );
+        _virtualBoxMachine = new Property( {} );
+        _virtualBoxMachine.onChange.add( _propertyChanged );
 
         Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
         Vagrant.getInstance().onHalt.add( _onVagrantHalt );
@@ -718,7 +720,7 @@ class Server {
 
         if ( console != null ) {
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualMachine.value ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualBoxMachine.value ) ) );
         }
 
 		_startVagrantUp();
@@ -1075,8 +1077,8 @@ class Server {
         #if mac
         var f = Shell.getInstance().du( this._serverDir );
 
-        if ( this._virtualMachine.value != null && this._virtualMachine.value.root != null )
-            f += Shell.getInstance().du( this._virtualMachine.value.root );
+        if ( this._virtualBoxMachine.value != null && this._virtualBoxMachine.value.root != null )
+            f += Shell.getInstance().du( this._virtualBoxMachine.value.root );
 
         _diskUsage.value = f;
         #end
@@ -1225,21 +1227,21 @@ class Server {
     public function refreshVirtualBoxInfo() {
 
         if ( _refreshingVirtualBoxVMInfo ) return;
-        if ( this._virtualMachine.value == null || this._virtualMachine.value.id == null ) return;
+        if ( this._virtualBoxMachine.value == null || this._virtualBoxMachine.value.id == null ) return;
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this._virtualMachine.value.id ).execute();
+        VirtualBox.getInstance().getShowVMInfo( this._virtualBoxMachine.value.id ).execute();
         _refreshingVirtualBoxVMInfo = true;
 
     }
 
     function _onVirtualBoxShowVMInfo( id:String ) {
 
-        if ( id == this.virtualBoxId || id == this._virtualMachine.value.id || id == this._virtualMachine.value.name ) {
+        if ( id == this.virtualBoxId || id == this._virtualBoxMachine.value.id || id == this._virtualBoxMachine.value.name ) {
 
             _refreshingVirtualBoxVMInfo = false;
             VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
-            Logger.verbose( 'VirtualBox VM: ${this._virtualMachine.value}' );
+            Logger.verbose( 'VirtualBox VM: ${this._virtualBoxMachine.value}' );
             // calculateDiskSpace();
 
         }
