@@ -151,7 +151,7 @@ class DemoTasks extends AbstractProvisioner {
     function get_provisioned() return _webAddressFileExists();
 
     public var provisionSuccessful( get, never ):Bool;
-    function get_provisionSuccessful() return _getWebAddress() != null;
+    function get_provisionSuccessful() return _webAddressValid();
 
     public var safeIdExists( get, never ):Bool;
     function get_safeIdExists() return this.fileExists( Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
@@ -264,9 +264,33 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    function _webAddressValid():Bool {
+
+        if ( !_webAddressFileExists() ) return false;
+
+        try {
+
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
+            if ( c == null || c.length == 0 ) return false;
+
+            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return true;
+
+        } catch( e ) {}
+
+        return false;
+
+    }
+
     function _getWebAddress():String {
 
-        if ( !_webAddressFileExists() ) return null;
+        var e = _webAddressFileExists();
+
+        if ( !e ) {
+
+            Logger.error( 'File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
+            return null;
+
+        }
 
         try {
 
