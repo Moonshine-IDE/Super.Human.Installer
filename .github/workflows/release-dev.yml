@@ -52,7 +52,7 @@ jobs:
             {
               "workflow": "development",
               "version": "${{ steps.readversion.outputs.info }}",
-              "ref_name": "${{ github.ref_name }}",
+              "ref_name": "${{ github.ref_name }}"
             }
           filename: version.json
 
