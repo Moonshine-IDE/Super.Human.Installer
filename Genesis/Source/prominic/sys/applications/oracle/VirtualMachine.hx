@@ -2,31 +2,36 @@ package prominic.sys.applications.oracle;
 
 typedef VirtualMachine = {
 
-    ?name:String,
-    ?id:String,
-    ?root:String,
-    ?encryption:Bool,
-    ?memory:Int,
-    ?vram:Int,
-    ?cpuexecutioncap:Int,
-    ?cpus:Int,
-    ?VMState:String,
+    // states with 'list vms' command:
+    // starting
+    // running
+    // power off
+
     ?CfgFile:String,
-    ?SnapFldr:String,
     ?LogFldr:String,
-    ?description:String,
-    ?hardwareuuid:String,
-    ?ostype:String,
-    ?pagefusion:String,
-    ?hpet:String,
-    ?cpuprofile:String,
-    ?chipset:String,
-    ?firmware:String,
-    ?pae:String,
-    ?longmode:String,
-    ?triplefaultreset:String,
+    ?SnapFldr:String,
+    ?VMState:String,
     ?apic:String,
-    ?x2apic:String,
+    ?chipset:String,
+    ?cpuexecutioncap:Int,
+    ?cpuprofile:String,
+    ?cpus:Int,
+    ?description:String,
+    ?encryption:Bool,
+    ?firmware:String,
+    ?hardwareuuid:String,
+    ?hpet:String,
+    ?id:String,
+    ?longmode:String,
+    ?memory:Int,
+    ?name:String,
     ?nestedhwvirt:String,
+    ?ostype:String,
+    ?pae:String,
+    ?pagefusion:String,
+    ?root:String,
+    ?triplefaultreset:String,
+    ?vram:Int,
+    ?x2apic:String,
 
 }
