@@ -123,7 +123,7 @@ class Server {
         sc._userSafeId.value = data.user_safeid;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
-        sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
+        sc._vagrantMachine.value = { home: sc._serverDir, vagrantId: null, state: VagrantMachineState.Unknown, serverId: sc._id };
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
         sc._created = true;
@@ -201,7 +201,7 @@ class Server {
     var _vagrantMachine:Property<VagrantMachine>;
     var _virtualBoxMachine:Property<VirtualBoxMachine>;
 
-    //var _combinedVirtualMachine:Property<>
+    var _combinedVirtualMachine:Property<CombinedVirtualMachine>;
     
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
@@ -209,6 +209,9 @@ class Server {
     public var console( get, set ):IConsole;
     function get_console() return _console;
     function set_console( value:IConsole ):IConsole { _console = value; _provisioner.console = value; return _console; }
+
+    public var combinedVirtualMachine( get, never ):Property<CombinedVirtualMachine>;
+    function get_combinedVirtualMachine() return _combinedVirtualMachine;
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
@@ -325,6 +328,9 @@ class Server {
 
         _busy = new Property( false );
         _busy.onChange.add( _propertyChanged );
+
+        _combinedVirtualMachine = new Property( {} );
+        _combinedVirtualMachine.onChange.add( _propertyChanged );
 
         _dhcp4 = new Property( true );
         _dhcp4.onChange.add( _propertyChanged );
@@ -1063,7 +1069,7 @@ class Server {
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
         this._provisioner.deleteWebAddressFile();
-        this._vagrantMachine.value.id = null;
+        this._vagrantMachine.value.vagrantId = null;
         this._vagrantMachine.value.state = VagrantMachineState.NotCreated;
 
     }
@@ -1199,7 +1205,7 @@ class Server {
         this._busy.value = false;
 
         Logger.verbose( '_onVagrantStatus ${machine}' );
-        if( machine.id == this._vagrantMachine.value.id ) this._vagrantMachine.value = machine;
+        if( machine.vagrantId == this._vagrantMachine.value.vagrantId ) this._vagrantMachine.value = machine;
         Logger.verbose( '_onVagrantStatus ${this._vagrantMachine.value}' );
 
         switch ( machine.state ) {
@@ -1227,17 +1233,17 @@ class Server {
     public function refreshVirtualBoxInfo() {
 
         if ( _refreshingVirtualBoxVMInfo ) return;
-        if ( this._virtualBoxMachine.value == null || this._virtualBoxMachine.value.id == null ) return;
+        if ( this._virtualBoxMachine.value == null || this._virtualBoxMachine.value.virtualBoxId == null ) return;
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this._virtualBoxMachine.value.id ).execute();
+        VirtualBox.getInstance().getShowVMInfo( this._virtualBoxMachine.value.virtualBoxId ).execute();
         _refreshingVirtualBoxVMInfo = true;
 
     }
 
     function _onVirtualBoxShowVMInfo( id:String ) {
 
-        if ( id == this.virtualBoxId || id == this._virtualBoxMachine.value.id || id == this._virtualBoxMachine.value.name ) {
+        if ( id == this.virtualBoxId || id == this._virtualBoxMachine.value.virtualBoxId || id == this._virtualBoxMachine.value.name ) {
 
             _refreshingVirtualBoxVMInfo = false;
             VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
@@ -1245,6 +1251,16 @@ class Server {
             // calculateDiskSpace();
 
         }
+
+    }
+
+    /**
+     * Combined Virtual Machine
+     */
+
+    function _getCombinedVirtualMachine():CombinedVirtualMachine {
+
+        return _combinedVirtualMachine.value;
 
     }
 

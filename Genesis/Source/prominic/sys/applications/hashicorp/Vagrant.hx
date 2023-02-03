@@ -230,7 +230,7 @@ class Vagrant extends AbstractApp {
         if ( _destroyExecutors.exists( machine ) ) return _destroyExecutors.get( machine );
 
         var args:Array<String> = [ "destroy" ];
-        if ( machine != null && machine.id != null ) args.push( machine.id );
+        if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
         args.push( "-f" );
 
         var extraArgs:Array<Dynamic> = [];
@@ -255,7 +255,7 @@ class Vagrant extends AbstractApp {
         if ( _haltExecutors.exists( machine ) ) return _haltExecutors.get( machine );
 
         var args:Array<String> = [ "halt" ];
-        if ( machine != null && machine.id != null ) args.push( machine.id );
+        if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
 
         var extraArgs:Array<Dynamic> = [];
         if ( machine != null ) extraArgs.push( machine );
@@ -325,7 +325,7 @@ class Vagrant extends AbstractApp {
         if ( _rsyncExecutors.exists( machine ) ) return _rsyncExecutors.get( machine );
 
         var args:Array<String> = [ "rsync" ];
-        if ( machine != null && machine.id != null ) args.push( machine.id );
+        if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
 
         var extraArgs:Array<Dynamic> = [];
         if ( machine != null ) extraArgs.push( machine );
@@ -349,7 +349,7 @@ class Vagrant extends AbstractApp {
         if ( _provisionExecutors.exists( machine ) ) return _provisionExecutors.get( machine );
 
         var args:Array<String> = [ "provision" ];
-        if ( machine != null && machine.id != null ) args.push( machine.id );
+        if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
 
         var extraArgs:Array<Dynamic> = [];
         if ( machine != null ) extraArgs.push( machine );
@@ -373,7 +373,7 @@ class Vagrant extends AbstractApp {
         if ( _statusExecutors.exists( machine ) ) return _statusExecutors.get( machine );
 
         var args:Array<String> = [ "status" ];
-        if ( machine != null && machine.id != null ) args.push( machine.id );
+        if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
         args.push( "--machine-readable" );
 
         var extraArgs:Array<Dynamic> = [];
@@ -407,7 +407,7 @@ class Vagrant extends AbstractApp {
         if ( _upExecutors.exists( machine ) ) return _upExecutors.get( machine );
 
         var params:Array<String> = [ "up" ];
-        if ( machine != null && machine.id != null ) params.push( machine.id );
+        if ( machine != null && machine.vagrantId != null ) params.push( machine.vagrantId );
         if ( provision ) params.push( "--provision" );
 
         var extraArgs:Array<Dynamic> = [];
@@ -485,7 +485,7 @@ class Vagrant extends AbstractApp {
 
         for ( m in _machines ) {
 
-            if ( m.id == id ) return m;
+            if ( m.vagrantId == id ) return m;
 
         }
 
@@ -568,7 +568,7 @@ class Vagrant extends AbstractApp {
 
             if ( _currentMachine == null ) {
 
-                _currentMachine = { id: a[ 3 ] };
+                _currentMachine = { vagrantId: a[ 3 ] };
                 _machines.push( _currentMachine );
 
             }
@@ -735,7 +735,7 @@ typedef VagrantMachine = {
     ?provider:String,
     ?serverId:Int,
     ?state:VagrantMachineState,
-    id:String,
+    ?vagrantId:String,
 
 }
 

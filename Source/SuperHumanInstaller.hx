@@ -560,8 +560,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 					// Shutting down Vagrant machine
 					var vagrantArgs:Array<String> = [ 'halt' ];
-					if ( server.vagrantMachine.value != null && server.vagrantMachine.value.id != null ) {
-						vagrantArgs.push( server.vagrantMachine.value.id );
+					if ( server.vagrantMachine.value != null && server.vagrantMachine.value.vagrantId != null ) {
+						vagrantArgs.push( server.vagrantMachine.value.vagrantId );
 					} else {
 						Sys.setCwd( server.path.value );
 					}
@@ -739,7 +739,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 				for ( server in _servers ) {
 
-					if ( server.vagrantMachine.value.id == null ) server.refresh();
+					if ( server.vagrantMachine.value.vagrantId == null ) server.refresh();
 					if ( server.virtualBoxId != null ) server.refreshVirtualBoxInfo();
 					
 				}

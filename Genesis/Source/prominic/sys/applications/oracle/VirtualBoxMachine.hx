@@ -21,7 +21,6 @@ typedef VirtualBoxMachine = {
     ?firmware:String,
     ?hardwareuuid:String,
     ?hpet:String,
-    ?id:String,
     ?longmode:String,
     ?memory:Int,
     ?name:String,
@@ -33,5 +32,6 @@ typedef VirtualBoxMachine = {
     ?triplefaultreset:String,
     ?vram:Int,
     ?x2apic:String,
+    ?virtualBoxId:String,
 
 }

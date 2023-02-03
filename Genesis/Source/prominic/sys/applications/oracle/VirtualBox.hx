@@ -543,7 +543,7 @@ class VirtualBox extends AbstractApp {
 
                         var vm:VirtualBoxMachine = {};
                         vm.name = _patternListVMs.matched( 1 );
-                        vm.id = _patternListVMs.matched( 2 );
+                        vm.virtualBoxId = _patternListVMs.matched( 2 );
                         _virtualBoxMachines.push( vm );
 
                     }
@@ -679,7 +679,7 @@ class VirtualBox extends AbstractApp {
     function _processShowVMInfoData( id:String ) {
 
         var currentMachine:VirtualBoxMachine = null;
-        for ( m in _virtualBoxMachines ) if ( m.name == id || m.id == id ) currentMachine = m;
+        for ( m in _virtualBoxMachines ) if ( m.name == id || m.virtualBoxId == id ) currentMachine = m;
 
         var a = _tempShowVMInfoData.split( SysTools.lineEnd );
 
