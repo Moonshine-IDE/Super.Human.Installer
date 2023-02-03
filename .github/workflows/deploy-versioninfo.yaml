@@ -1,0 +1,62 @@
+name: Deploy versioninfo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+        
+      - name: Setup Directory
+        run: mkdir site
+
+      - name: json-to-file
+        uses: devops-actions/json-to-file@v1.0.1
+        with:
+          json: |
+            {
+              "production": {
+                  "tag": "0.0.0",
+                  "sha": "sha",
+                  "date": "date",
+                  "linux_url": "link",
+                  "windows_url": "link",
+                  "choco_url": "link",
+                  "macos_url": "link"
+              },
+              "development": {
+                  "tag": "0.0.0-dev",
+                  "sha": "sha",
+                  "date": "date",
+                  "linux_url": "link",
+                  "windows_url": "link",
+                  "choco_url": "link",
+                  "macos_url": "link"
+              }
+            }
+          filename: site/versioninfo.json
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: 'site'
+          
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
