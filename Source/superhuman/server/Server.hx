@@ -548,25 +548,12 @@ class Server {
 
         this.status.value = ServerStatus.Stopping;
 
-        if ( _provisioner.provisioned == true ) {
+        this._busy.value = true;
 
-            this._busy.value = true;
-
-            Vagrant.getInstance().getHalt( this._vagrantMachine )
-                .onStdOut( _vagrantHaltStandardOutputData )
-                .onStdErr( _vagrantHaltStandardErrorData )
-                .execute( this._serverDir );
-
-        } else {
-
-            this._busy.value = true;
-
-            Vagrant.getInstance().getHalt( this._vagrantMachine )
-                .onStdOut( _vagrantHaltStandardOutputData )
-                .onStdErr( _vagrantHaltStandardErrorData )
-                .execute( this._serverDir );
-
-        }
+        Vagrant.getInstance().getHalt( this._vagrantMachine )
+            .onStdOut( _vagrantHaltStandardOutputData )
+            .onStdErr( _vagrantHaltStandardErrorData )
+            .execute( this._serverDir );
 
     }
 
