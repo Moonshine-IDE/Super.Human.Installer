@@ -20,6 +20,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Read version
+        id: readversion
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta/@version'
     
       - name: Download macOS installer
         uses: actions/download-artifact@v3
@@ -41,16 +50,11 @@ jobs:
         with:
           json: |
             {
-              "env": "development",
-              "version": "1.0.0-dev",
-              "platforms": {
-                "linux_url": "link",
-                "windows_url": "link",
-                "macos_url": "link",
-                "nuget_url": "link"
-              }
+              "workflow": "development",
+              "version": "${{ steps.readversion.outputs.info }}",
+              "ref_name": "${{ github.ref_name }}",
             }
-          filename: versioninfodev.json
+          filename: version.json
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -62,5 +66,5 @@ jobs:
             SuperHumanInstallerDev-Setup.pkg
             SuperHumanInstallerDev-Setup.exe
             SuperHumanInstallerDev-Choco.nupkg
-            versioninfodev.json
+            version.json
           fail_on_unmatched_files: true
