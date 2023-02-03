@@ -179,7 +179,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 					servers : [],
 					user: {},
-					preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true },
+					preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true, disablevagrantlogging: false },
 	
 				}
 
@@ -191,6 +191,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			if ( _config.preferences.keepserversrunning == null ) _config.preferences.keepserversrunning = true;
 			if ( _config.preferences.savewindowposition == null ) _config.preferences.savewindowposition = false;
 			if ( _config.preferences.provisionserversonstart == null ) _config.preferences.provisionserversonstart = true;
+			if ( _config.preferences.disablevagrantlogging == null ) _config.preferences.disablevagrantlogging = false;
 
 			var a:Array<String> = [];
 			for ( r in _defaultRoles ) a.push( r.value );
@@ -298,7 +299,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER, _openBrowser );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _provisionServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.START_SERVER, _startServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _stopServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _syncServer );
@@ -349,8 +352,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _checkAppsInitialized( executor:AbstractExecutor ) {
 
-		if ( executor != null ) executor.dispose();
-
 		if( Vagrant.getInstance().initialized && VirtualBox.getInstance().initialized ) {
 
 			if ( VirtualBox.getInstance().exists && Vagrant.getInstance().exists ) {
@@ -391,6 +392,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _vagrantGlobalStatusFinished() {
 
+		Vagrant.getInstance().onGlobalStatus.remove( _vagrantGlobalStatusFinished );
+
 		for ( i in Vagrant.getInstance().machines ) {
 
 			for ( s in _servers ) {
@@ -405,6 +408,8 @@ class SuperHumanInstaller extends GenesisApplication {
 			}
 
 		}
+
+		if ( _serverPage != null ) _serverPage.vagrantMachines = Vagrant.getInstance().machines;
 
 	}
 
@@ -439,6 +444,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _virtualBoxListVMsUpdated() {
 
+		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
+
 		for ( i in VirtualBox.getInstance().virtualMachines ) {
 
 			for ( s in _servers ) {
@@ -448,6 +455,8 @@ class SuperHumanInstaller extends GenesisApplication {
 			}
 
 		}
+
+		if ( _serverPage != null ) _serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualMachines;
 
 	}
 
@@ -608,7 +617,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		Shell.getInstance().open( [ 'https://${a}:443/welcome.html' ] );
+		Shell.getInstance().open( [ '${a}' ] );
 
 	}
 
@@ -919,6 +928,62 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._visitSourceCode(e);
 
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
+
+	}
+
+	function _openVirtualBoxGUI( e:SuperHumanApplicationEvent ) {
+
+		VirtualBox.getInstance().openGUI();
+
+	}
+
+	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
+
+		Logger.verbose( 'Refreshing System Info...' );
+
+		ParallelExecutor.create().add( Right( [
+			Vagrant.getInstance().getGlobalStatus(),
+			VirtualBox.getInstance().getListVMs()
+		] ) ).onStop( _refreshSystemInfoStopped ).execute();
+
+	}
+
+	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
+
+		Logger.verbose( 'System Info refreshed' );
+		Logger.verbose( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
+		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualMachines}' );
+
+		for ( i in VirtualBox.getInstance().virtualMachines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.virtualBoxId == i.name ) s.virtualMachine.value = i;
+
+			}
+
+		}
+
+		for ( i in Vagrant.getInstance().machines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.path.value == i.home ) {
+
+					s.updateVagrantMachine( i );
+
+				}
+
+			}
+
+		}
+
+		if ( _serverPage != null ) {
+
+			_serverPage.vagrantMachines = Vagrant.getInstance().machines;
+			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualMachines;
+
+		}
 
 	}
 

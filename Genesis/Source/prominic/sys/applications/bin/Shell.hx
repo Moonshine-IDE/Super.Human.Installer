@@ -30,8 +30,10 @@
 
 package prominic.sys.applications.bin;
 
-import haxe.io.Path;
+#if windows
 import lime.system.System;
+#end
+import haxe.io.Path;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import sys.FileSystem;
@@ -268,10 +270,18 @@ class Shell extends AbstractApp {
     public function open( args:Array<String> ) {
 
         #if linux
-        Sys.command("/usr/bin/xdg-open", args );
+        Sys.command( "/usr/bin/xdg-open", args );
+        #elseif mac
+        Sys.command( "/usr/bin/open", args );
         #else
         System.openFile( StringTools.trim( args.join( " " ) ) );
         #end
+
+    }
+
+    public function exec( path:String ) {
+
+        Sys.command( 'exec ${path} &' );
 
     }
 

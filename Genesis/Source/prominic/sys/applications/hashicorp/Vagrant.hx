@@ -503,7 +503,14 @@ class Vagrant extends AbstractApp {
 
     function _globalStatusExecutorStopped( executor:AbstractExecutor ) {
 
+        Logger.verbose( '_globalStatusExecutorStopped(): ${executor.exitCode} ${_tempGlobalStatusData}' );
+
+        if ( _metadata == null ) _metadata = { machineCount: 0 };
+        if ( _machines == null ) _machines = [];
+
         _mutexGlobalStatusStop.acquire();
+
+        if ( executor.exitCode != 0 ) return;
 
         var a = _tempGlobalStatusData.split( SysTools.lineEnd );
 
@@ -511,16 +518,21 @@ class Vagrant extends AbstractApp {
 
             var s = StringTools.trim( v );
 
-            if ( s != null && s.length > 0 && _machineReadPattern.match( s ) ) {
+            try {
 
-                _processMachineReadable( s );
+                if ( s != null && s.length > 0 && _machineReadPattern.match( s ) ) {
+
+                    _processMachineReadable( s );
+
+                }
+
+            } catch ( e ) {
+
+                Logger.error( 'RegExp processing failed with ${s}' );
 
             }
 
         }
-
-        if ( _metadata == null ) _metadata = { machineCount: 0 };
-        if ( _machines == null ) _machines = [];
 
         for ( f in _onGlobalStatus ) f();
 
@@ -601,9 +613,6 @@ class Vagrant extends AbstractApp {
 
     function _versionExecutorStopped( _versionExecutor:AbstractExecutor ) {
         
-        _versionExecutor.dispose();
-        _versionExecutor = null;
-
         for ( f in _onVersion ) f();
 
     }
@@ -616,8 +625,6 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onUp ) f( executor.extraParams[ 0 ], executor.exitCode );
 
-        executor.dispose();
-
     }
 
     function _statusExecutorStopped( _statusExecutor:AbstractExecutor ) {
@@ -627,8 +634,6 @@ class Vagrant extends AbstractApp {
         if ( _statusExecutor.extraParams != null ) _statusExecutors.remove( _statusExecutor.extraParams[ 0 ] );
 
         for ( f in _onStatus ) f( _statusExecutor.extraParams[ 0 ] );
-
-        _statusExecutor.dispose();
 
     }
 
@@ -640,9 +645,17 @@ class Vagrant extends AbstractApp {
 
             var s = StringTools.trim( v );
 
-            if ( s != null && s.length > 0 && _machineReadPatternForStatus.match( s ) ) {
+            try {
 
-                _processMachineReadableForStatus( s, executor.extraParams[ 0 ] );
+                if ( s != null && s.length > 0 && _machineReadPatternForStatus.match( s ) ) {
+
+                    _processMachineReadableForStatus( s, executor.extraParams[ 0 ] );
+
+                }
+
+            } catch ( e ) {
+
+                Logger.error( 'RegExp processing failed with ${s}' );
 
             }
 
@@ -678,8 +691,6 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onHalt ) f( executor.extraParams[ 0 ] );
 
-        //executor.dispose();
-
     }
 
     function _destroyExecutorStopped( executor:AbstractExecutor ) {
@@ -688,8 +699,6 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onDestroy ) f( executor.extraParams[ 0 ] );
 
-        executor.dispose();
-
     }
 
     function _initMachineExecutorStopped( executor:AbstractExecutor ) {
@@ -697,8 +706,6 @@ class Vagrant extends AbstractApp {
         if ( executor.extraParams != null ) _initExecutors.remove( executor.extraParams[ 0 ] );
 
         for ( f in _onInitMachine ) f( executor.extraParams[ 0 ] );
-
-        executor.dispose();
 
     }
 

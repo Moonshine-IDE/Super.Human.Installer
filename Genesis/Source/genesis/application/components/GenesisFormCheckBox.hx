@@ -43,6 +43,7 @@ class GenesisFormCheckBox extends Check implements IValidator {
         super( text, selected );
 
         this._mandatory = mandatory;
+        this.disabledAlpha = .5;
 
     }
 
@@ -51,6 +52,14 @@ class GenesisFormCheckBox extends Check implements IValidator {
         if ( _mandatory ) return this.selected;
         
         return true;
+
+    }
+
+    override function update() {
+
+        super.update();
+
+        this.alpha = ( this.enabled ) ? 1 : this.disabledAlpha;
 
     }
 

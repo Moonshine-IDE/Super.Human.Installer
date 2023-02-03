@@ -50,6 +50,8 @@ import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.Event;
 import prominic.core.primitives.VersionInfo;
+import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
+import prominic.sys.applications.oracle.VirtualMachine;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
@@ -74,7 +76,11 @@ class ServerPage extends Page {
     var _maxServers:Int;
     var _serverList:ServerList;
     var _servers:ArrayCollection<Server>;
+    var _spacer:LayoutGroup;
+    var _systemInfoBox:SystemInfoBox;
+    var _vagrantMachines:Array<VagrantMachine>;
     var _vagrantVersion:VersionInfo;
+    var _virtualBoxMachines:Array<VirtualMachine>;
     var _virtualBoxVersion:VersionInfo;
     var _warningBoxVagrant:WarningBox;
     var _warningBoxVirtualBox:WarningBox;
@@ -88,13 +94,12 @@ class ServerPage extends Page {
         return value;
     }
 
-    public var virtualBoxInstalled( never, set ):Bool;
-    var _virtualBoxInstalled:Bool = false;
-    function set_virtualBoxInstalled( value:Bool ):Bool {
-        if ( _virtualBoxInstalled == value ) return value;
-        _virtualBoxInstalled = value;
-        if ( _warningBoxVirtualBox != null ) _warningBoxVirtualBox.visible = _warningBoxVirtualBox.includeInLayout = !_virtualBoxInstalled;
-        return value;
+    public var vagrantMachines( get, set ):Array<VagrantMachine>;
+    function get_vagrantMachines() return _vagrantMachines;
+    function set_vagrantMachines( value ) {
+        _vagrantMachines = value;
+        if ( _systemInfoBox != null ) _systemInfoBox.vagrantMachines = _vagrantMachines;
+        return _vagrantMachines;
     }
 
     public var vagrantVersion( never, set ):VersionInfo;
@@ -104,6 +109,23 @@ class ServerPage extends Page {
         if ( _warningBoxVagrant != null ) _warningBoxVagrant.visible = _warningBoxVagrant.includeInLayout = _vagrantVersion < SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
         return _vagrantVersion;
 
+    }
+
+    public var virtualBoxInstalled( never, set ):Bool;
+    var _virtualBoxInstalled:Bool = false;
+    function set_virtualBoxInstalled( value:Bool ):Bool {
+        if ( _virtualBoxInstalled == value ) return value;
+        _virtualBoxInstalled = value;
+        if ( _warningBoxVirtualBox != null ) _warningBoxVirtualBox.visible = _warningBoxVirtualBox.includeInLayout = !_virtualBoxInstalled;
+        return value;
+    }
+
+    public var virtualBoxMachines( get, set ):Array<VirtualMachine>;
+    function get_virtualBoxMachines() return _virtualBoxMachines;
+    function set_virtualBoxMachines( value ) {
+        _virtualBoxMachines = value;
+        if ( _systemInfoBox != null ) _systemInfoBox.virtualBoxMachines = _virtualBoxMachines;
+        return _virtualBoxMachines;
     }
 
     public function new( servers:ArrayCollection<Server>, maxServers:Int = 1 ) {
@@ -202,6 +224,19 @@ class ServerPage extends Page {
         _createServerButton.addEventListener( TriggerEvent.TRIGGER, _createServerButtonTriggered );
         _createServerButton.includeInLayout = _createServerButton.visible = _vagrantInstalled && _virtualBoxInstalled && _servers.length == 0 && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
         this.addChild( _createServerButton );
+
+        _spacer = new LayoutGroup();
+        _spacer.height = GenesisApplicationTheme.GRID * 4;
+        _spacer.includeInLayout = _spacer.visible = _vagrantInstalled && _virtualBoxInstalled && _servers.length == 0 && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
+        this.addChild( _spacer );
+
+        _systemInfoBox = new SystemInfoBox();
+        _systemInfoBox.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _forwardEvent );
+        _systemInfoBox.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _forwardEvent );
+        _systemInfoBox.visible = _systemInfoBox.includeInLayout = _vagrantInstalled && _virtualBoxInstalled && _vagrantVersion >= SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
+        if ( _vagrantMachines != null ) _systemInfoBox.vagrantMachines = _vagrantMachines;
+        if ( _virtualBoxMachines != null ) _systemInfoBox.virtualBoxMachines = _virtualBoxMachines;
+        this.addChild( _systemInfoBox );
 
         _warningBoxVagrant = new WarningBox();
         _warningBoxVagrant.title = LanguageManager.getInstance().getString( 'serverpage.vagrant.title' );

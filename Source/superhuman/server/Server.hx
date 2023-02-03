@@ -541,8 +541,6 @@ class Server {
 
         }
 
-        _provisioner.deleteWebAddressFile();
-
         _prepareFiles();
 
     }
@@ -764,7 +762,9 @@ class Server {
             NETWORK_NETMASK: ( _dhcp4.value ) ? "255.255.255.0" : _networkNetmask.value,
             NETWORK_GATEWAY: ( _dhcp4.value ) ? "" : _networkGateway.value,
 
-            ENV_OPEN_BROWSER: _openBrowser.value,
+            // Forcing false instead of
+            // ENV_OPEN_BROWSER: _openBrowser.value,
+            ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: _setupWait.value,
 
             RESOURCES_CPU: _numCPUs.value,
@@ -829,7 +829,8 @@ class Server {
             
             if ( r.match( output ) ) {
 
-                output = r.replace( output, "networks:\n\n    vbox:" );
+                //output = r.replace( output, "networks:\n\n    vbox:" );
+                output = r.replace( output, "vbox:" );
 
             }
 
@@ -916,12 +917,12 @@ class Server {
 
         if ( s == null ) {
 
-            Logger.verbose( 'detectedpublicaddress.txt has invalid content or non-existent' );
+            Logger.verbose( 'The file has invalid content or non-existent' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
         } else {
 
-            Logger.verbose( 'detectedpublicaddress.txt content: ${s}' );
+            Logger.verbose( 'File content: ${s}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }
@@ -946,7 +947,7 @@ class Server {
 
     function _vagrantRSyncStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant rsync: ${data}' );
 
     }
@@ -991,7 +992,7 @@ class Server {
 
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant halt: ${data}' );
 
     }
@@ -1006,7 +1007,7 @@ class Server {
 
     function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant provision: ${data}' );
 
     }
@@ -1037,7 +1038,7 @@ class Server {
 
     function _vagrantDestroyStandardOutputData( executor:AbstractExecutor, data:String ) {
 
-        if ( console != null ) console.appendText( data );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
         Logger.debug( 'Vagrant destroy: ${data}' );
 
     }
@@ -1100,6 +1101,8 @@ class Server {
 
         }
 
+        _provisioner.deleteWebAddressFile();
+
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
 
         Vagrant.getInstance().getUp( this._vagrantMachine.value, _provision, [] )
@@ -1135,6 +1138,8 @@ class Server {
             this.status.value = ServerStatus.Running;
             this._vagrantMachine.value.state = VagrantMachineState.Running;
 
+            if ( this._provisioner.provisioned && this._openBrowser.value ) this._provisioner.openWelcomePage();
+
         } else {
 
             this.status.value = ServerStatus.Error;
@@ -1149,7 +1154,7 @@ class Server {
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
-        if ( console != null ) console.appendText( new String( data ) );
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( new String( data ) );
         Logger.debug( '${this._id}: Vagrant up: ${data}' );
         
     }
@@ -1176,6 +1181,12 @@ class Server {
         this._status.value = ServerStatus.GetStatus;
 
         Vagrant.getInstance().getStatus( this._vagrantMachine.value ).execute( this._serverDir );
+
+    }
+
+    public function updateVagrantMachine( machine:VagrantMachine ) {
+
+        _onVagrantStatus( machine );
 
     }
 

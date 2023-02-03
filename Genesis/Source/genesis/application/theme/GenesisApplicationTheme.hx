@@ -93,6 +93,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_HIGHLIGHT:String = "button-hightlight";
     public static final BUTTON_SELECT_FILE:String = "button-select-file";
     public static final BUTTON_SMALL:String = "button-small";
+    public static final BUTTON_TINY:String = "button-tiny";
     public static final BUTTON_WARNING:String = "button-warning";
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
@@ -277,6 +278,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Button, BUTTON_HIGHLIGHT, _setButtonHighlightStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_SELECT_FILE, _setButtonSelectFileStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_SMALL, _setButtonSmallStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_TINY, _setButtonTinyStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_WARNING, _setButtonWarningStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON_INVALID, _setPopUpListViewInvalidButtonStyles );
@@ -371,7 +373,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         check.textFormat = _themeTypography.Large;
         check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
         check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
-        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -381,7 +382,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         check.textFormat = _themeTypography.Medium;
         check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
         check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
-        check.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -457,6 +457,17 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     }
 
+    function _setButtonTinyStyles( button:Button ) {
+
+        _setButtonStyles( button );
+        button.setPadding( 0 );
+        button.paddingLeft = button.paddingRight = GRID;
+        button.textFormat = _themeTypography.Pale;
+        button.disabledTextFormat = _themeTypography.Pale;
+        button.disabledAlpha = .5;
+
+    }
+
     function _setFormStyles( form:Form ) { }
 
     function _setFormItemStyles( item:FormItem ) { }
@@ -506,7 +517,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         cb.textFormat = _themeTypography.Default;
         cb.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
         cb.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
-        cb.disabledIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) : getAssetPath( ICON_CHECKBOX_LARGE_DISABLED ) );
         cb.horizontalAlign = HorizontalAlign.LEFT;
 
     }

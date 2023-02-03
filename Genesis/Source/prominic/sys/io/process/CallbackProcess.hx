@@ -43,7 +43,6 @@ class CallbackProcess extends BufferedProcess {
     
     final _callbackMutex:Mutex = new Mutex();
     final _enterFrameMutex:Mutex = new Mutex();
-    final _fps:Int = 30;
     
     var _cancelEventLoop:Bool = false;
     var _eventHandler:EventHandler;
@@ -75,7 +74,8 @@ class CallbackProcess extends BufferedProcess {
     /**
      * An AbstractProcess implementation that calls callback functions
      * on specific events of the spawned process. For stream output and event handling,
-     * an internal loop will be created and attached to the current thread
+     * an internal loop will be created and attached to the current thread. If the current
+     * thread does not have an event loop, callbacks will not be called.
      * @param cmd The command to execute, the process will be spawned with this command
      * @param args Optional command line arguments for the given process
      * @param workingDirectory The optional working directory of the process
@@ -94,7 +94,7 @@ class CallbackProcess extends BufferedProcess {
 
         super.start();
 
-        if ( !_cancelEventLoop ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _fps ) * 1000 ) );
+        if ( !_cancelEventLoop && Thread.current().events != null ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _performanceSettings.eventsPerSecond ) * 1000 ) );
 
     }
 

@@ -48,7 +48,8 @@ class EnterFrameCallbackProcess extends CallbackProcess {
      * A CallbackProcess implementation that calls callback functions
      * on specific events of the spawned process. For stream output and event handling,
      * either an internal loop will be created and attached to the current thread,
-     * or an openfl.display.DisplayObject's EnterFrame event will be used
+     * or an openfl.display.DisplayObject's EnterFrame event will be used. If the current
+     * thread does not have an event loop, callbacks will not be called.
      * @param cmd The command to execute, the process will be spawned with this command
      * @param args Optional command line arguments for the given process
      * @param workingDirectory The optional working directory of the process

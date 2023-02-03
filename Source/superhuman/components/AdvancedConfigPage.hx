@@ -122,14 +122,6 @@ class AdvancedConfigPage extends Page {
         _form = new GenesisForm();
         this.addChild( _form );
 
-        _rowDisableBridgeAdapter = new GenesisFormRow();
-        _rowDisableBridgeAdapter.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.disablebridgeadapter.text' );
-        _cbDisableBridgeAdapter = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.disablebridgeadapter.checkbox' ), _server.disableBridgeAdapter.value );
-        _cbDisableBridgeAdapter.addEventListener( Event.CHANGE, _cbDHCP_Or_cbDisableBridgeAdapterChanged_Changed );
-        _cbDisableBridgeAdapter.enabled = !_server.disableBridgeAdapter.locked;
-        _rowDisableBridgeAdapter.content.addChild( _cbDisableBridgeAdapter );
-        _form.addChild( _rowDisableBridgeAdapter );
-
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.text' );
         _dropdownNetworkInterface = new GenesisFormPupUpListView( VirtualBox.getInstance().bridgedInterfacesCollection );
@@ -146,7 +138,7 @@ class AdvancedConfigPage extends Page {
             }
         }
         _dropdownNetworkInterface.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.prompt' );
-        _dropdownNetworkInterface.enabled = !_server.networkBridge.locked;
+        _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value && _server.disableBridgeAdapter.locked;
         _rowNetworkInterface.content.addChild( _dropdownNetworkInterface );
         _form.addChild( _rowNetworkInterface );
 
@@ -154,7 +146,7 @@ class AdvancedConfigPage extends Page {
         _rowDHCP.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.dhcp.text' );
         _cbDHCP = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.dhcp.checkbox' ), _server.dhcp4.value );
         _cbDHCP.toolTip = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.dhcp.tooltip' );
-        _cbDHCP.addEventListener( Event.CHANGE, _cbDHCP_Or_cbDisableBridgeAdapterChanged_Changed );
+        _cbDHCP.addEventListener( Event.CHANGE, _cbDHCP_Or_cbDisableBridgeAdapterChanged );
         _rowDHCP.content.addChild( _cbDHCP );
         _form.addChild( _rowDHCP );
 
@@ -241,6 +233,15 @@ class AdvancedConfigPage extends Page {
         _rowMisc.content.addChild( _cbOpenBrowser );
         _form.addChild( _rowMisc );
 
+        _rowDisableBridgeAdapter = new GenesisFormRow();
+        _rowDisableBridgeAdapter.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.expert.text' );
+        _cbDisableBridgeAdapter = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.expert.disablebridgeadapter' ), _server.disableBridgeAdapter.value );
+        _cbDisableBridgeAdapter.addEventListener( Event.CHANGE, _cbDHCP_Or_cbDisableBridgeAdapterChanged );
+        _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
+        _cbDisableBridgeAdapter.enabled = !_server.disableBridgeAdapter.locked;
+        _rowDisableBridgeAdapter.content.addChild( _cbDisableBridgeAdapter );
+        _form.addChild( _rowDisableBridgeAdapter );
+
         var line = new HLine();
         line.width = _w;
         this.addChild( line );
@@ -274,6 +275,8 @@ class AdvancedConfigPage extends Page {
         _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
         _inputAlertEmail.enabled = !_server.userEmail.locked;
 
+        _updateForm();
+
     }
 
     public function setServer( server:Server ) {
@@ -305,6 +308,7 @@ class AdvancedConfigPage extends Page {
             _inputNetmaskIP.enabled = !_server.dhcp4.value && !_server.disableBridgeAdapter.value && !_server.networkNetmask.locked;
             _inputGatewayIP.enabled = !_server.dhcp4.value && !_server.disableBridgeAdapter.value && !_server.networkGateway.locked;
             _cbDHCP.enabled = !_server.dhcp4.locked && !_server.disableBridgeAdapter.value;
+            _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
             _cbDisableBridgeAdapter.enabled = !_server.disableBridgeAdapter.locked;
             _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
             _inputAlertEmail.enabled = !_server.userEmail.locked;
@@ -325,23 +329,38 @@ class AdvancedConfigPage extends Page {
 
             }
 
+            _updateForm();
+
         }
 
     }
 
-    function _cbDHCP_Or_cbDisableBridgeAdapterChanged_Changed( ?e:Event ) {
+    function _updateForm() {
 
-        if ( _cbDisableBridgeAdapter.selected ) {
+        var canChangeBridgeAdapter:Bool = !_server.disableBridgeAdapter.locked;
+        _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
+        _cbDisableBridgeAdapter.enabled = canChangeBridgeAdapter;
+        _cbDisableBridgeAdapter.update();
+        _cbDisableBridgeAdapter.validateNow();
+        _cbDisableBridgeAdapter.invalidate();
 
-            _cbDHCP.enabled = _dropdownNetworkInterface.enabled = _inputNetworkIP.enabled = _inputNameServer.enabled = _inputNameServer2.enabled = _inputNetmaskIP.enabled = _inputGatewayIP.enabled = false;
+        var canChangeNetworkValues:Bool = !_server.disableBridgeAdapter.locked && !_server.disableBridgeAdapter.value;
+        _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
+        _cbDHCP.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
+        _inputNetworkIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+        _inputGatewayIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+        _inputNetmaskIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+        _inputNameServer.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+        _inputNameServer2.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
 
-        } else {
+    }
 
-            _cbDHCP.enabled = true;
-            _dropdownNetworkInterface.enabled = true;
-            _inputNetworkIP.enabled = _inputNameServer.enabled = _inputNameServer2.enabled = _inputNetmaskIP.enabled = _inputGatewayIP.enabled = !_cbDHCP.selected;
+    function _cbDHCP_Or_cbDisableBridgeAdapterChanged( ?e:Event ) {
 
-        }
+        _server.disableBridgeAdapter.value = _cbDisableBridgeAdapter.selected;
+        _server.dhcp4.value = _cbDHCP.selected;
+
+        _updateForm();
 
     }
 

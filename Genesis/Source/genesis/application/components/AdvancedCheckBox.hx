@@ -28,17 +28,28 @@
  *  it in the license file.
  */
 
-package superhuman.config;
+package genesis.application.components;
 
-typedef SuperHumanPreferences = {
+import feathers.controls.Check;
 
-    ?keepserversrunning:Bool,
-    ?provisionserversonstart:Bool,
-    ?savewindowposition:Bool,
-    ?windowheight:Int,
-    ?windowwidth:Int,
-    ?windowx:Int,
-    ?windowy:Int,
-    ?disablevagrantlogging:Bool,
+class AdvancedCheckBox extends Check {
 
+    public function new( ?text:String, selected:Bool = false ) {
+        
+        super( text, selected );
+
+        this.disabledAlpha = .5;
+
+    }
+
+    override function update() {
+
+        super.update();
+
+        super.update();
+
+        this.alpha = ( this.enabled ) ? 1 : this.disabledAlpha;
+
+    }
+    
 }

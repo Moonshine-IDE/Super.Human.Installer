@@ -52,6 +52,13 @@ typedef ProcessPerformanceSettings = {
     ?disableWaitForExitThread:Bool,
 
     /**
+     * The number of times the looped thread is being executed per second.
+     * Applies only to implementations that have their internal loop defined and
+     * enabled. The default value is defined in AbstractProcess
+     */
+    ?eventsPerSecond:UInt,
+
+    /**
      * Size of the input buffer to read into, in bytes. The default value
      * in ProcessImpl is 32768
      */

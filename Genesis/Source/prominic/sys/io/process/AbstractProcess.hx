@@ -34,6 +34,7 @@ import haxe.io.Eof;
 import prominic.sys.io.process.data.Message;
 import prominic.sys.io.process.data.StringBuffer;
 import sys.io.Process;
+import sys.thread.Deque;
 import sys.thread.Mutex;
 import sys.thread.Thread;
 
@@ -45,6 +46,7 @@ abstract class AbstractProcess {
     static final _defaultPerformaceSettings:ProcessPerformanceSettings = {
 
         disableWaitForExitThread: true,
+        eventsPerSecond: 5,
         inputBufferSize: 32768,
         inputReadRepeatDelay: .0,
         messageReceiverRepeatDelay: .0,
@@ -58,6 +60,7 @@ abstract class AbstractProcess {
     var _bufferMutex:Mutex;
     var _className:String;
     var _cmd:String;
+    var _deque:Deque<Message>;
     var _done:Bool = false;
     var _exitCode:Int = -1;
     var _exited:Bool = false;
@@ -120,6 +123,7 @@ abstract class AbstractProcess {
         
         _performanceSettings = ( performanceSettings != null ) ? performanceSettings : _defaultPerformaceSettings;
         if ( _performanceSettings.disableWaitForExitThread == null ) _performanceSettings.disableWaitForExitThread = _defaultPerformaceSettings.disableWaitForExitThread;
+        if ( _performanceSettings.eventsPerSecond == null ) _performanceSettings.eventsPerSecond = _defaultPerformaceSettings.eventsPerSecond;
         if ( _performanceSettings.inputBufferSize == null ) _performanceSettings.inputBufferSize = _defaultPerformaceSettings.inputBufferSize;
         if ( _performanceSettings.inputReadRepeatDelay == null ) _performanceSettings.inputReadRepeatDelay = _defaultPerformaceSettings.inputReadRepeatDelay;
         if ( _performanceSettings.messageReceiverRepeatDelay == null ) _performanceSettings.inputReadRepeatDelay = _defaultPerformaceSettings.messageReceiverRepeatDelay;
@@ -131,6 +135,7 @@ abstract class AbstractProcess {
         _bufferMutex = new Mutex();
         _stderrBuffer = new StringBuffer();
         _stdoutBuffer = new StringBuffer();
+        _deque = new Deque();
 
     }
 
@@ -236,6 +241,8 @@ abstract class AbstractProcess {
     function _readStdOut() {
 
         final _threadName:String = "StdOut";
+        var data:String;
+        var object:MessageObject;
 
         #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Started' ); #end
 
@@ -244,9 +251,9 @@ abstract class AbstractProcess {
             try {
 
                 #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Trying to read' ); #end
-                final data = StreamTools.readInput( _process.stdout, _performanceSettings.inputBufferSize );
+                data = StreamTools.readInput( _process.stdout, _performanceSettings.inputBufferSize );
 
-                final object:MessageObject = { sender: MessageSender.StandardOutput };
+                object = { sender: MessageSender.StandardOutput };
 
                 if ( data != null && data.length > 0 ) {
 
@@ -261,7 +268,7 @@ abstract class AbstractProcess {
 
                 }
 
-                _receiverThread.sendMessage( Message.fromMessageObject( object ) );
+                _deque.add( Message.fromMessageObject( object ) );
 
                 if ( object.command == MessageCommand.Close ) {
                  
@@ -272,8 +279,8 @@ abstract class AbstractProcess {
             } catch ( e:Eof ) {
 
                 #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] EOF received, closing Input' ); #end
-                final object:MessageObject = { command: MessageCommand.Close, sender: MessageSender.StandardOutput };
-                _receiverThread.sendMessage( Message.fromMessageObject( object ) );
+                object = { command: MessageCommand.Close, sender: MessageSender.StandardOutput };
+                _deque.add( Message.fromMessageObject( object ) );
 
                 break;
 
@@ -290,6 +297,8 @@ abstract class AbstractProcess {
     function _readStdErr() {
 
         final _threadName:String = "StdErr";
+        var data:String;
+        var object:MessageObject;
 
         #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Started' ); #end
 
@@ -298,9 +307,9 @@ abstract class AbstractProcess {
             try {
 
                 #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Trying to read' ); #end
-                final data = StreamTools.readInput( _process.stderr, _performanceSettings.inputBufferSize );
+                data = StreamTools.readInput( _process.stderr, _performanceSettings.inputBufferSize );
 
-                final object:MessageObject = { sender: MessageSender.StandardError };
+                object = { sender: MessageSender.StandardError };
 
                 if ( data != null && data.length > 0 ) {
 
@@ -315,7 +324,8 @@ abstract class AbstractProcess {
 
                 }
 
-                _receiverThread.sendMessage( Message.fromMessageObject( object ) );
+                //_receiverThread.sendMessage( Message.fromMessageObject( object ) );
+                _deque.add( Message.fromMessageObject( object ) );
 
                 if ( object.command == MessageCommand.Close ) {
                     
@@ -326,8 +336,8 @@ abstract class AbstractProcess {
             } catch ( e:Eof ) {
 
                 #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] EOF received, closing Input' ); #end
-                final object:MessageObject = { command: MessageCommand.Close, sender: MessageSender.StandardError };
-                _receiverThread.sendMessage( Message.fromMessageObject( object ) );
+                object = { command: MessageCommand.Close, sender: MessageSender.StandardError };
+                _deque.add( Message.fromMessageObject( object ) );
 
                 break;
 
@@ -356,7 +366,7 @@ abstract class AbstractProcess {
         if ( _performanceSettings.waitForExitDelay > 0 ) Sys.sleep( _performanceSettings.waitForExitDelay );
 
         final object:MessageObject = { command: MessageCommand.Exit, sender: MessageSender.Process, value: e };
-        _receiverThread.sendMessage( Message.fromMessageObject( object ) );
+        _deque.add( Message.fromMessageObject( object ) );
 
         #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Finished' ); #end
 
@@ -365,18 +375,20 @@ abstract class AbstractProcess {
     function _waitForThreadMessages() {
 
         final _threadName:String = "MessageReceiver";
+        var message:Message;
+        var object:MessageObject;
 
         #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Started' ); #end
 
         while ( !_done ) {
 
             #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Waiting for messages' ); #end
-            final message:Message = Thread.readMessage( true );
+            message = _deque.pop( true );
 
             if ( message != null ) {
 
                 #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Message received' ); #end
-                var object:MessageObject = message.toMessageObject();
+                object = message.toMessageObject();
                 object.pid = this._pid;
 
                 switch ( object.sender ) {

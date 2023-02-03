@@ -42,6 +42,7 @@ import genesis.application.components.GenesisFormButton;
 import genesis.application.components.GenesisFormCheckBox;
 import genesis.application.components.HLine;
 import genesis.application.components.Page;
+import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import superhuman.events.SuperHumanApplicationEvent;
 
@@ -54,10 +55,12 @@ class SettingsPage extends Page {
     var _buttonGroupLayout:HorizontalLayout;
     var _buttonSave:GenesisFormButton;
     var _cbApplicationWindow:GenesisFormCheckBox;
+    var _cbDisableVagrantLogging:GenesisFormCheckBox;
     var _cbKeepServersRunning:GenesisFormCheckBox;
     var _cbProvision:GenesisFormCheckBox;
     var _form:GenesisForm;
     var _label:Label;
+    var _rowAdvanced:GenesisFormRow;
     var _rowApplicationWindow:GenesisFormRow;
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
@@ -82,7 +85,7 @@ class SettingsPage extends Page {
         this.addChild( _titleGroup );
 
         _label = new Label();
-        _label.text = 'Application Settings & Preferences';
+        _label.text = LanguageManager.getInstance().getString( 'settingspage.title' );
         _label.variant = GenesisApplicationTheme.LABEL_LARGE;
         _label.layoutData = new HorizontalLayoutData( 100 );
         _titleGroup.addChild( _label );
@@ -95,9 +98,9 @@ class SettingsPage extends Page {
         this.addChild( _form );
 
         _rowApplicationWindow = new GenesisFormRow();
-        _rowApplicationWindow.text = "User Interface";
+        _rowApplicationWindow.text = LanguageManager.getInstance().getString( 'settingspage.interface.title' );
 
-        _cbApplicationWindow = new GenesisFormCheckBox( "Remember application window size and position" );
+        _cbApplicationWindow = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.interface.rememberwindowposition' ) );
         _rowApplicationWindow.content.addChild( _cbApplicationWindow );
 
         _form.addChild( _rowApplicationWindow );
@@ -107,17 +110,28 @@ class SettingsPage extends Page {
         _form.addChild( spacer );
 
         _rowProvision = new GenesisFormRow();
-        _rowProvision.text = "Servers";
+        _rowProvision.text = LanguageManager.getInstance().getString( 'settingspage.servers.title' );
         _form.addChild( _rowProvision );
 
-        _cbProvision = new GenesisFormCheckBox( "Always provision servers on start" );
+        _cbProvision = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.servers.alwaysprovision' ) );
         // _rowProvision.content.addChild( _cbProvision );
          
         _rowKeepServersRunning = new GenesisFormRow();
-        _cbKeepServersRunning = new GenesisFormCheckBox( "Keep servers running on application exit" );
+        _cbKeepServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.servers.keeprunning' ) );
         _rowProvision.content.addChild( _cbKeepServersRunning );
 
         _form.addChild( _rowKeepServersRunning );
+
+        var spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.GRID * 4;
+        _form.addChild( spacer );
+
+        _rowAdvanced = new GenesisFormRow();
+        _rowAdvanced.text = LanguageManager.getInstance().getString( 'settingspage.advanced.title' );
+        _cbDisableVagrantLogging = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.disablevagrantlogging' ) );
+        _rowAdvanced.content.addChild( _cbDisableVagrantLogging );
+
+        _form.addChild( _rowAdvanced );
 
         var line = new HLine();
         line.width = _w;
@@ -128,10 +142,10 @@ class SettingsPage extends Page {
         _buttonGroupLayout.gap = GenesisApplicationTheme.GRID * 2;
         _buttonGroupLayout.horizontalAlign = HorizontalAlign.CENTER;
         _buttonGroup.layout = _buttonGroupLayout;
-        _buttonSave = new GenesisFormButton( "Save" );
+        _buttonSave = new GenesisFormButton( LanguageManager.getInstance().getString( 'settingspage.buttons.save' ) );
         _buttonSave.addEventListener( TriggerEvent.TRIGGER, _saveButtonTriggered );
         _buttonSave.width = GenesisApplicationTheme.GRID * 20;
-        _buttonCancel = new GenesisFormButton( "Cancel" );
+        _buttonCancel = new GenesisFormButton( LanguageManager.getInstance().getString( 'settingspage.buttons.cancel' ) );
         _buttonCancel.addEventListener( TriggerEvent.TRIGGER, _cancel );
         _buttonCancel.width = GenesisApplicationTheme.GRID * 20;
         _buttonGroup.addChild( _buttonSave );
@@ -149,6 +163,7 @@ class SettingsPage extends Page {
             _cbApplicationWindow.selected = SuperHumanInstaller.getInstance().config.preferences.savewindowposition;
             _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
             _cbKeepServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepserversrunning;
+            _cbDisableVagrantLogging.selected = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
 
         }
 
@@ -159,6 +174,7 @@ class SettingsPage extends Page {
         SuperHumanInstaller.getInstance().config.preferences.savewindowposition = _cbApplicationWindow.selected;
         SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart = _cbProvision.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepserversrunning = _cbKeepServersRunning.selected;
+        SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
