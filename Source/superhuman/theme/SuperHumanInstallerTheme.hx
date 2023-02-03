@@ -81,6 +81,8 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 
         this.styleProvider.setStyleFunction( Console, null, _setConsoleStyles );
         this.styleProvider.setStyleFunction( ConsoleTextArea, null, _setConsoleTextAreaStyles );
+        this.styleProvider.setStyleFunction( ConsoleTextList, null, _setConsoleTextListStyles );
+        this.styleProvider.setStyleFunction( ConsoleTextListItemRenderer, null, _setConsoleTextListItemRendererStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, LAYOUT_GROUP_APP_CHECKER_OVERLAY, _setLayoutGroupAppCheckerOverlayStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, LAYOUT_GROUP_SERVER_BUTTON_GROUP, _setLayoutGroupServerButtonGroupStyles );
         this.styleProvider.setStyleFunction( ServerItem, null, _setServerItemStyles );
@@ -105,6 +107,26 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         textArea.layoutData = new VerticalLayoutData( 100, 100 );
         textArea.setPadding( GenesisApplicationTheme.GRID * 2 );
         textArea.textFormat = _themeTypography.ConsoleText;
+
+    }
+
+    function _setConsoleTextListStyles( textList:ConsoleTextList ) {
+
+        textList.layoutData = new VerticalLayoutData( 100, 100 );
+        textList.setPadding( GenesisApplicationTheme.GRID * 2 );
+        textList.virtualLayout = true;
+
+        var layout = new VerticalLayout();
+        textList.layout = layout;
+
+    }
+
+    function _setConsoleTextListItemRendererStyles( itemRenderer:ConsoleTextListItemRenderer ) {
+
+        var layout = new HorizontalLayout();
+        itemRenderer.layout = layout;
+        itemRenderer.layoutData = new VerticalLayoutData( 100 );
+        itemRenderer.textFormat = ( itemRenderer.isError ) ? _themeTypography.ConsoleTextError : _themeTypography.ConsoleText;
 
     }
 
