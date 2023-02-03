@@ -10,7 +10,6 @@ typedef VirtualBoxMachine = {
     ?CfgFile:String,
     ?LogFldr:String,
     ?SnapFldr:String,
-    ?VMState:String,
     ?apic:String,
     ?chipset:String,
     ?cpuexecutioncap:Int,
@@ -29,9 +28,11 @@ typedef VirtualBoxMachine = {
     ?pae:String,
     ?pagefusion:String,
     ?root:String,
+    ?serverId:Int,
     ?triplefaultreset:String,
     ?vram:Int,
     ?x2apic:String,
     ?virtualBoxId:String,
+    ?virtualBoxState:String,
 
 }

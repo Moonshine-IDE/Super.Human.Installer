@@ -30,11 +30,9 @@
 
 package superhuman.server;
 
-import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
-import prominic.sys.applications.hashicorp.Vagrant.VagrantMachineState;
-
 class ServerStatusManager {
     
+    /*
     static public function getStatus( action:ServerAction, vagrantMachine:VagrantMachine, isValid:Bool, vagrantUpSuccessful:Bool ):ServerStatus {
 
         var result = ServerStatus.Unconfigured;
@@ -45,7 +43,7 @@ class ServerStatusManager {
                 result = ( isValid ) ? ServerStatus.Ready : ServerStatus.Unconfigured;
 
             case ServerAction.Start:
-                result = _getStatusFor_Start( vagrantMachine.state, vagrantUpSuccessful );
+                result = _getStatusFor_Start( vagrantMachine.vagrantState, vagrantUpSuccessful );
 
             default:
 
@@ -68,6 +66,61 @@ class ServerStatusManager {
             result = ServerStatus.FirstStart;
 
         }
+
+        return result;
+
+    }
+    */
+
+    static public function getRealStatus( server:Server ):ServerStatus {
+
+        var result = ServerStatus.Unknown;
+
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.combinedVirtualMachine.value}' );
+
+        switch server.combinedVirtualMachine.value.vagrantState {
+            
+            case "aborted":
+                result = ServerStatus.Error;
+
+            case "poweroff":
+                result = ServerStatus.Ready;
+
+            case "running":
+                result = ServerStatus.Running;
+
+            default:
+
+        }
+
+        switch server.combinedVirtualMachine.value.virtualBoxState {
+            
+            case "aborted":
+                result = ServerStatus.Error;
+
+            case "powered off":
+                result = ServerStatus.Ready;
+
+            case "running":
+                result = ServerStatus.Running;
+
+            case "starting":
+                result = ServerStatus.Running;
+
+            case "stopping":
+                result = ServerStatus.Running;
+
+            default:
+
+        }
+
+        if ( result == ServerStatus.Unknown) {
+
+            if ( server.isValid() ) result == ServerStatus.Ready;
+
+        }
+
+        if ( !server.isValid() ) result = ServerStatus.Unconfigured;
 
         return result;
 

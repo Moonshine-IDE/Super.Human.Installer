@@ -35,7 +35,6 @@ typedef CombinedVirtualMachine = {
     ?CfgFile:String,
     ?LogFldr:String,
     ?SnapFldr:String,
-    ?VMState:String,
     ?apic:String,
     ?chipset:String,
     ?cpuexecutioncap:Int,
@@ -61,7 +60,9 @@ typedef CombinedVirtualMachine = {
     ?state:CombinedVirtualMachineState,
     ?triplefaultreset:String,
     ?vagrantId:String,
+    ?vagrantState:String,
     ?virtualBoxId:String,
+    ?virtualBoxState:String,
     ?vram:Int,
     ?x2apic:String,
 
@@ -69,10 +70,21 @@ typedef CombinedVirtualMachine = {
 
 enum abstract CombinedVirtualMachineState( String ) to String {
 
+    // states with 'list vms' command:
+    // starting
+    // running
+    // powered off
+
+    // vagrant states
+    // aborted
+    // running
+    // poweroff
+
     var Aborted = "aborted";
     var NotCreated = "not_created";
-    var PowerOff = "poweroff";
+    var PowerOff = "powered off";
     var Running = "running";
+    var Starting = "starting";
     var Unknown = "unknown";
 
 }

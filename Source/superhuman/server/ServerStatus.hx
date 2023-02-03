@@ -31,6 +31,11 @@
 package superhuman.server;
 
 enum ServerStatus {
+
+    /**
+     * Used internally for an initial status
+     */
+    Unknown;
     
     /**
      * The server is invalid

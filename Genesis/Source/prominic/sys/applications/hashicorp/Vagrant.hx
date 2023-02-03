@@ -436,7 +436,7 @@ class Vagrant extends AbstractApp {
 
     }
 
-    public function stopAll( forced:Bool = false, machines:Array<VagrantMachine> ) {
+    public function stopAll( forced:Bool = false ) {
 
         _numExecutors = 0;
         if ( _globalStatusExecutor != null ) _numExecutors++;
@@ -589,7 +589,7 @@ class Vagrant extends AbstractApp {
 
         if ( a.contains( "state" ) && a.indexOf( "state" ) == 2 ) {
 
-            if ( _currentMachine != null ) _currentMachine.state = cast a[ 3 ];
+            if ( _currentMachine != null ) _currentMachine.vagrantState = cast a[ 3 ];
 
         }
 
@@ -715,7 +715,7 @@ class Vagrant extends AbstractApp {
 
         if ( a.contains( "state" ) ) {
 
-            machine.state = cast a[ 3 ];
+            machine.vagrantState = cast a[ 3 ];
 
         }
 
@@ -734,17 +734,7 @@ typedef VagrantMachine = {
     ?home:String,
     ?provider:String,
     ?serverId:Int,
-    ?state:VagrantMachineState,
     ?vagrantId:String,
-
-}
-
-enum abstract VagrantMachineState( String ) to String {
-
-    var Aborted = "aborted";
-    var NotCreated = "not_created";
-    var PowerOff = "poweroff";
-    var Running = "running";
-    var Unknown = "unknown";
+    ?vagrantState:String,
 
 }

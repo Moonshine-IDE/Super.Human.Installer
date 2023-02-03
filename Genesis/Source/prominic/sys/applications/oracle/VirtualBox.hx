@@ -88,6 +88,7 @@ class VirtualBox extends AbstractApp {
     static final _patternX2APIC = ~/^(?:x2apic=")(.+)(?:")$/gm;
     static final _patternnestedHWVirt = ~/^(?:nested-hw-virt=")(.+)(?:")$/gm;
 
+    static final _patternName2 = ~/^(?:Name:)(?:\s+)(.+)$/gm;
     static final _patternVMEncryption2 = ~/^(?:Encryption:)(?:\s+)(\S+)$/gm;
     static final _patternVMMemory2 = ~/^(?:Memory size:)(?:\s)*(\d+)(?:..)$/gm;
     static final _patternVMVRam2 = ~/^(?:VRAM size:)(?:\s*)(\d+)(?:..)$/gm;
@@ -272,7 +273,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getShowVMInfo( id:String ):Executor {
+    public function getShowVMInfo( id:String, machineReadable:Bool = true ):Executor {
 
         //if ( _showVMInfoExecutors.exists( id ) ) return _showVMInfoExecutors.get( id );
 
@@ -280,7 +281,7 @@ class VirtualBox extends AbstractApp {
 
         var args:Array<String> = [ "showvminfo" ];
         args.push( id );
-        args.push( "--machinereadable" );
+        if ( machineReadable ) args.push( "--machinereadable" );
 
         var extraArgs:Array<Dynamic> = [];
         extraArgs.push( id );
@@ -515,6 +516,8 @@ class VirtualBox extends AbstractApp {
 
         if ( executor.exitCode == 0 ) {
 
+            _virtualBoxMachines = [];
+
             if ( ( executor.extraParams[ 0 ] != null && executor.extraParams[ 0 ] == true ) ) {
 
                 _processListVMsLongFormatData();
@@ -565,7 +568,6 @@ class VirtualBox extends AbstractApp {
     function _processListVMsLongFormatData() {
 
         var machineBlocks = _tempListVMsData.split( SysTools.lineEnd + SysTools.lineEnd );
-        trace( '>>>>>>>>>>>>>>>>>>>>>>> ${machineBlocks}');
 
         if ( machineBlocks != null && machineBlocks.length > 0 ) {
 
@@ -581,10 +583,11 @@ class VirtualBox extends AbstractApp {
 
                         for ( l in lines ) {
 
-                            trace( '------------------- ${l}' );
-
                             try {
 
+                                if ( _patternName2.match( l ) )
+                                    currentMachine.name = _patternName2.matched( 1 );
+            
                                 if ( _patternVMEncryption2.match( l ) )
                                     currentMachine.encryption = _patternVMEncryption2.matched( 1 ).toLowerCase() == "enabled";
             
@@ -601,7 +604,7 @@ class VirtualBox extends AbstractApp {
                                     currentMachine.cpus = Std.parseInt( _patternCPUs2.matched( 1 ) );
             
                                 if ( _patternVMState2.match( l ) )
-                                    currentMachine.VMState = _patternVMState2.matched( 1 );
+                                    currentMachine.virtualBoxState = _patternVMState2.matched( 1 );
             
                                 if ( _patternCFGFile2.match( l ) ) {
                                     currentMachine.CfgFile = Path.normalize( _patternCFGFile2.matched( 1 ) );
@@ -661,7 +664,6 @@ class VirtualBox extends AbstractApp {
 
                         }
 
-                        trace( '@@@@@@@@@@@@@@@@@@@@@@@@@ ${currentMachine}' );
                         _virtualBoxMachines.push( currentMachine );
 
                     }
@@ -705,7 +707,7 @@ class VirtualBox extends AbstractApp {
                         currentMachine.cpus = Std.parseInt( _patternCPUs.matched( 1 ) );
 
                     if ( _patternVMState.match( l ) )
-                        currentMachine.VMState = _patternVMState.matched( 1 );
+                        currentMachine.virtualBoxState = _patternVMState.matched( 1 );
 
                     if ( _patternCFGFile.match( l ) ) {
                         currentMachine.CfgFile = Path.normalize( _patternCFGFile.matched( 1 ) );
