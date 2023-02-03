@@ -150,6 +150,9 @@ class DemoTasks extends AbstractProvisioner {
     public var provisioned( get, never ):Bool;
     function get_provisioned() return _webAddressFileExists();
 
+    public var provisionSuccessful( get, never ):Bool;
+    function get_provisionSuccessful() return _getWebAddress() != null;
+
     public var safeIdExists( get, never ):Bool;
     function get_safeIdExists() return this.fileExists( Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
 
