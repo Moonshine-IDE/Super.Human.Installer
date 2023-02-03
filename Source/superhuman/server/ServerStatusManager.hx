@@ -32,46 +32,6 @@ package superhuman.server;
 
 class ServerStatusManager {
     
-    /*
-    static public function getStatus( action:ServerAction, vagrantMachine:VagrantMachine, isValid:Bool, vagrantUpSuccessful:Bool ):ServerStatus {
-
-        var result = ServerStatus.Unconfigured;
-
-        switch ( action ) {
-
-            case ServerAction.Check:
-                result = ( isValid ) ? ServerStatus.Ready : ServerStatus.Unconfigured;
-
-            case ServerAction.Start:
-                result = _getStatusFor_Start( vagrantMachine.vagrantState, vagrantUpSuccessful );
-
-            default:
-
-        }
-
-        return result;
-
-    }
-
-    static function _getStatusFor_Start( vagrantState:VagrantMachineState, vagrantUpSuccessful:Bool ):ServerStatus {
-        
-        var result = ServerStatus.Unconfigured;
-
-        if ( vagrantUpSuccessful ) {
-
-            result = ServerStatus.Start;
-
-        } else {
-
-            result = ServerStatus.FirstStart;
-
-        }
-
-        return result;
-
-    }
-    */
-
     static public function getRealStatus( server:Server ):ServerStatus {
 
         var result = ServerStatus.Unknown;
