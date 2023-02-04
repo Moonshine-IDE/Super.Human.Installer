@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>superhumaninstaller</id>
+	<version>0.0.0</version>
+    <title>superhumaninstaller (Install)</title>
+	<authors>Prominic.NET</authors>
+	<description>Super.Human.Installer helps you install the latest and greatest HCL Domino technologies easily. </description>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

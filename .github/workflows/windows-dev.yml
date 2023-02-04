@@ -53,21 +53,21 @@ jobs:
 
       - name: Copy files to choco
         run: |
-          cp Templates/installer/SuperHumanInstallerDev-Setup.exe Templates/chocolatey/tools/
-          cp LICENSE.MD Templates/chocolatey/
+          cp Templates/installer/SuperHumanInstallerDev-Setup.exe Templates/chocolatey-dev/tools/
+          cp LICENSE.MD Templates/chocolatey-dev/
 
       - name: Create chocko package
         run: |
           choco pack `
             --version ${{ steps.readversion.outputs.info }} `
-            --out Templates/chocolatey/ `
+            --out Templates/chocolatey-dev/ `
             Templates/chocolatey/SuperHumanInstallerDev.nuspec
           mv `
-            .\Templates\chocolatey\superhumaninstallerdev*.nupkg `
-            .\Templates\chocolatey\SuperHumanInstallerDev-Choco.nupkg
+            .\Templates\chocolatey-dev\superhumaninstallerdev*.nupkg `
+            .\Templates\chocolatey-dev\SuperHumanInstallerDev-Choco.nupkg
 
       - name: Upload choco package
         uses: actions/upload-artifact@v3
         with:
           name: SuperHumanInstallerDev-Choco
-          path: Templates/chocolatey/SuperHumanInstallerDev-Choco.nupkg
+          path: Templates/chocolatey-dev/SuperHumanInstallerDev-Choco.nupkg

@@ -1,12 +1,12 @@
 ﻿$toolsDir   = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
-$fileLocaction = Join-Path $toolsDir 'SuperHumanInstaller-Setup.exe'
-$packageName = 'SuperHumanInstaller'
+$fileLocaction = Join-Path $toolsDir 'SuperHumanInstallerDev-Setup.exe'
+$packageName = 'SuperHumanInstallerDev'
 
 $packageArgs = @{
   packageName   = $packageName
   fileType      = 'EXE'
   file         	= $fileLocaction
-  softwareName  = 'SuperHumanInstaller'
+  softwareName  = 'SuperHumanInstallerDev'
 
   # MSI
   silentArgs    = "/S" #NSIS

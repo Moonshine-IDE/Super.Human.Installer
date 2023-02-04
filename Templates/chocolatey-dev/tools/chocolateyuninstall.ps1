@@ -1,9 +1,9 @@
-﻿$packageName = 'SuperHumanInstaller'
+﻿$packageName = 'SuperHumanInstallerDev'
 
 $packageArgs = @{
   packageName   = $packageName
   fileType      = 'EXE'
-  softwareName  = 'SuperHumanInstaller'
+  softwareName  = 'SuperHumanInstallerDev'
 
   # MSI
   silentArgs    = "/S" #NSIS

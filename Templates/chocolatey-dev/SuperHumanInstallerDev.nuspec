@@ -6,7 +6,7 @@
 	<version>0.0.0</version>
     <title>superhumaninstallerdev (Install)</title>
 	<authors>Prominic.NET</authors>
-	<description>Awesome tool</description>
+	<description>Super.Human.Installer helps you install the latest and greatest HCL Domino technologies easily. Development version.</description>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
