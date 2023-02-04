@@ -61,7 +61,7 @@ jobs:
           choco pack `
             --version ${{ steps.readversion.outputs.info }} `
             --out Templates/chocolatey-dev/ `
-            Templates/chocolatey/SuperHumanInstallerDev.nuspec
+            Templates/chocolatey-dev/SuperHumanInstallerDev.nuspec
           mv `
             .\Templates\chocolatey-dev\superhumaninstallerdev*.nupkg `
             .\Templates\chocolatey-dev\SuperHumanInstallerDev-Choco.nupkg
