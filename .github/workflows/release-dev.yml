@@ -57,7 +57,7 @@ jobs:
               "version": "${{ steps.readversion.outputs.info }}",
               "branch": "${{ github.ref_name }}",
               "commit_sha": "${{ github.sha }}",
-              "build_date": ${{ steps.current-time.outputs.readableTime }}
+              "build_date": "${{ steps.current-time.outputs.readableTime }}"
             }
           filename: buildinfodev.json
 
