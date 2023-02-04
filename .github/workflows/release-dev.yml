@@ -23,6 +23,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.0.2
+
       - name: Read version
         id: readversion
         uses: mavrosxristoforos/get-xml-info@1.1.1
@@ -54,7 +58,7 @@ jobs:
               "version": "${{ steps.readversion.outputs.info }}",
               "branch": "${{ github.ref_name }}",
               "sha": "${{ github.sha }}",
-              "date": "${{ github.event.inputs.date }}"
+              "date": ${{ steps.current-time.outputs.readableTime }}
             }
           filename: version.json
 
