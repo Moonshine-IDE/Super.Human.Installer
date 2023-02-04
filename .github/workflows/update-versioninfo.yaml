@@ -23,64 +23,15 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Get Current Time
-        id: current-time
-        uses: josStorer/get-current-time@v2.0.2
         
       - name: Setup Pages
         uses: actions/configure-pages@v3
 
-      - name: Download old file
+      - name: Generate versioninfo
         run: |
+          python DevOps/versioninfo.py
           mkdir site
-          wget -O site/versioninfo.json https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json
-
-      - name: Update tag
-        uses: jossef/action-set-json-field@v2.1
-        with:
-          file: site/versioninfo.json
-          field: ${{ env.environment }}.tag
-          value: ${{ env.tag }}
-
-      - name: Update sha
-        uses: jossef/action-set-json-field@v2.1
-        with:
-          file: site/versioninfo.json
-          field: ${{ env.environment }}.sha
-          value: ${{ github.sha }}
-
-      - name: Update date
-        uses: jossef/action-set-json-field@v2.1
-        with:
-          file: site/versioninfo.json
-          field: ${{ env.environment }}.date
-          value: ${{ steps.current-time.outputs.readableTime }}
-
-      - name: Update windows_url
-        uses: jossef/action-set-json-field@v2.1
-        with:
-          file: site/versioninfo.json
-          field: ${{ env.environment }}.windows_url
-          value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Setup.exe"
-
-      - name: Update choco_url
-        uses: jossef/action-set-json-field@v2.1
-        with:
-          file: site/versioninfo.json
-          field: ${{ env.environment }}.choco_url
-          value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Choco.nupkg"
-
-      - name: Update macos_url
-        uses: jossef/action-set-json-field@v2.1
-        with:
-          file: site/versioninfo.json
-          field: ${{ env.environment }}.macos_url
-          value: "https://github.com/Moonshine-IDE/Super.Human.Installer/releases/download/${{ env.tag }}/SuperHumanInstallerDev-Setup.pkg"
-          
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: 'site'
+          mv DevOps/versioninfo.json site
           
       - name: Deploy to GitHub Pages
         id: deployment
