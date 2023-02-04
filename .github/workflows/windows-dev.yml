@@ -36,29 +36,10 @@ jobs:
           haxelib install openfl
           haxelib run openfl setup
           haxelib install feathersui
-          
-      - name: Restore cache bin
-        id: cache-bin-restore
-        if: vars.USE_BIN_CACHE == 'true'
-        uses: actions/cache/restore@v3
-        with:
-          path: |
-            Export/Development/windows/
-            .cache
-          key: ${{ runner.os }}-cache-bin
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml windows -DHXCPP_COMPILE_CACHE=cache -debug -Dlogverbose -Dlogcolor
-          
-      - name: Save cache bin
-        id: cache-bin-save
-        uses: actions/cache/save@v3
-        with:
-          path: |
-            Export/Development/windows/
-            .cache
-          key: ${{ runner.os }}-cache-bin
+          haxelib run openfl build project.xml windows -debug -Dlogverbose -Dlogcolor
 
       - name: Create NSIS installer
         run: |
