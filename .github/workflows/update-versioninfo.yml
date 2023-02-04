@@ -34,7 +34,7 @@ jobs:
         run: |
           python DevOps/generate-vinfo.py
           mkdir site
-          mv versioninfo.json site
+          mv versioninfo.json site/versioninfo.json
           
       - name: Deploy to GitHub Pages
         id: deployment
