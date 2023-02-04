@@ -71,7 +71,7 @@
         "genesislink":"Click here to find out more",
         "opensource":"Open Source",
         "aboutopensource":"%1 is Open Source Software (OSS). Open source software (OSS) is software that is distributed with its source code, making it available for use, modification, and distribution with its original rights.",
-        "sourcelink":"Click here to visit source code repository"
+        "sourcelink":"Source Code on GitHub"
     },
     "supportpage":{
         "title":"Issues, problems, errors? Send us your log files",
