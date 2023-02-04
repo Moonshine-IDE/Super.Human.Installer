@@ -54,12 +54,13 @@ jobs:
         with:
           json: |
             {
+              "workflow": "development",
               "version": "${{ steps.readversion.outputs.info }}",
               "branch": "${{ github.ref_name }}",
               "commit_sha": "${{ github.sha }}",
               "build_date": "${{ steps.current-time.outputs.readableTime }}"
             }
-          filename: buildinfodev.json
+          filename: buildinfo.json
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -75,5 +76,5 @@ jobs:
             SuperHumanInstallerDev-Setup.pkg
             SuperHumanInstallerDev-Setup.exe
             SuperHumanInstallerDev-Choco.nupkg
-            buildinfodev.json
+            buildinfo.json
           fail_on_unmatched_files: true

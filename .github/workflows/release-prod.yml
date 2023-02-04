@@ -54,6 +54,7 @@ jobs:
         with:
           json: |
             {
+              "workflow": "production",
               "version": "${{ steps.readversion.outputs.info }}",
               "branch": "${{ github.ref_name }}",
               "commit_sha": "${{ github.sha }}",
