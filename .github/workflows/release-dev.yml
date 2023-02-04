@@ -1,4 +1,4 @@
-name: Draft Dev Release
+name: Release Development
 on: workflow_dispatch
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-dev.yml@master
     
   release:
-    name: Release
+    name: Draft Development Release
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
 
@@ -54,23 +54,25 @@ jobs:
         with:
           json: |
             {
-              "workflow": "development",
               "version": "${{ steps.readversion.outputs.info }}",
               "branch": "${{ github.ref_name }}",
-              "sha": "${{ github.sha }}",
-              "date": ${{ steps.current-time.outputs.readableTime }}
+              "commit_sha": "${{ github.sha }}",
+              "build_date": ${{ steps.current-time.outputs.readableTime }}
             }
-          filename: version.json
+          filename: buildinfodev.json
 
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          name: Release
+          name: Development Release
+          body: |
+            This is a Development Release of Super.Human.Installer.
+            It is not intended for production use.
           draft: true
           prerelease: true
           files: |
             SuperHumanInstallerDev-Setup.pkg
             SuperHumanInstallerDev-Setup.exe
             SuperHumanInstallerDev-Choco.nupkg
-            version.json
+            buildinfodev.json
           fail_on_unmatched_files: true
