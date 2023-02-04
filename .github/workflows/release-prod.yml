@@ -65,9 +65,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: Production Release
+          tag_name: ${{ steps.readversion.outputs.info }}
           body: |
             This is a Production Release of Super.Human.Installer.
-          draft: true
+          draft: false
           prerelease: false
           files: |
             SuperHumanInstaller-Setup.pkg
