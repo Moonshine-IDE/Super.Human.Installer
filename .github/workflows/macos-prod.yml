@@ -39,7 +39,7 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
+          haxelib run openfl build project.xml mac
 
       - name: Create package
         run: |
