@@ -251,16 +251,7 @@ class DemoTasks extends AbstractProvisioner {
 
     function _webAddressFileExists():Bool {
 
-        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-
-        if ( !e ) {
-
-            Logger.error( 'File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
-            return false;
-
-        }
-
-        return true;
+        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
 
     }
 
