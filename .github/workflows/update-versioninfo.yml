@@ -35,6 +35,11 @@ jobs:
           python DevOps/generate-vinfo.py
           mkdir site
           mv versioninfo.json site/versioninfo.json
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: 'site'
           
       - name: Deploy to GitHub Pages
         id: deployment
