@@ -1,0 +1,77 @@
+name: Release Production
+on: workflow_dispatch
+
+jobs:
+  build-linux:
+    name: Build on Linux
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/linux-prod.yml@master
+    
+  build-windows:
+    name: Build on Windows
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/windows-prod.yml@master
+    
+  build-macos:
+    name: Build on MacOS
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-prod.yml@master
+    
+  release:
+    name: Draft Production Release
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.0.2
+
+      - name: Read version
+        id: readversion
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta/@version'
+    
+      - name: Download macOS installer
+        uses: actions/download-artifact@v3
+        with:
+          name: SuperHumanInstaller-Setup
+
+      - name: Download windows installer
+        uses: actions/download-artifact@v3
+        with:
+          name: SuperHumanInstaller-Setup
+
+      - name: Download choco package
+        uses: actions/download-artifact@v3
+        with:
+          name: SuperHumanInstaller-Choco
+
+      - name: json-to-file
+        uses: devops-actions/json-to-file@v1.0.1
+        with:
+          json: |
+            {
+              "version": "${{ steps.readversion.outputs.info }}",
+              "branch": "${{ github.ref_name }}",
+              "commit_sha": "${{ github.sha }}",
+              "build_date": ${{ steps.current-time.outputs.readableTime }}
+            }
+          filename: buildinfo.json
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Production Release
+          body: |
+            This is a Production Release of Super.Human.Installer.
+          draft: true
+          prerelease: false
+          files: |
+            SuperHumanInstaller-Setup.pkg
+            SuperHumanInstaller-Setup.exe
+            SuperHumanInstaller-Choco.nupkg
+            buildinfo.json
+          fail_on_unmatched_files: true
