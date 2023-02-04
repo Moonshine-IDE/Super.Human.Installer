@@ -12,6 +12,7 @@ class BuildMacro {
         var defaultGitCommit:String = null;
         var fields = Context.getBuildFields();
 
+        #if !display
         var p = new Process( 'git', [ "branch", "--show-current" ] );
         var e = p.exitCode();
 
@@ -20,6 +21,7 @@ class BuildMacro {
             defaultGitBranch = p.stdout.readLine();
 
         }
+        #end
 
         var gitBranch = {
 
@@ -34,6 +36,7 @@ class BuildMacro {
 
         fields.push( gitBranch );
 
+        #if !display
         var p = new Process( 'git', [ "rev-parse", "--short", "HEAD" ] );
         var e = p.exitCode();
 
@@ -42,6 +45,7 @@ class BuildMacro {
             defaultGitCommit = p.stdout.readLine();
 
         }
+        #end
 
         var gitCommit = {
 
