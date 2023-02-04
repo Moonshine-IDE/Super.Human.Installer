@@ -39,12 +39,13 @@ import openfl.events.MouseEvent;
 
 class AboutPage extends Page {
 
+    var _buildInfoLabel:Label;
     var _genesisInfoLabel:Label;
     var _genesisLinkLabel:Label;
-    var _label:Label;
     var _image:AdvancedAssetLoader;
-    var _openSourceLabel:Label;
+    var _label:Label;
     var _openSourceDescriptionLabel:Label;
+    var _openSourceLabel:Label;
     var _openSourceLinkLabel:Label;
     
     public function new() {
@@ -91,6 +92,13 @@ class AboutPage extends Page {
         _openSourceLinkLabel.useHandCursor = _openSourceLinkLabel.buttonMode = true;
         _openSourceLinkLabel.addEventListener( MouseEvent.CLICK, _openSourceLinkLabelTriggered );
         this.addChild( _openSourceLinkLabel );
+
+        #if buildmacros
+        _buildInfoLabel = new Label( 'BRANCH BUILD\nBranch: ${GenesisApplication.GIT_BRANCH}\nCommit: ${GenesisApplication.GIT_COMMIT}' );
+        _buildInfoLabel.variant = GenesisApplicationTheme.LABEL_SMALL_CENTERED;
+        _buildInfoLabel.wordWrap = true;
+        this.addChild( _buildInfoLabel );
+        #end
 
     }
 

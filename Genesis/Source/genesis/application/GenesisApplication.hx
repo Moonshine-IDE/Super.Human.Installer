@@ -69,7 +69,7 @@ import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
 import sys.FileSystem;
 
-#if build_macros
+#if buildmacros
 @:build( BuildMacro.createGitInfo() )
 #end
 
