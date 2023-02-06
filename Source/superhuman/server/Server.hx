@@ -781,12 +781,8 @@ class Server {
 
         if ( !_created ) return;
 
-        //TODO
-        //var save:Bool = property == cast _vagrantUpSuccessful;
-
         _setServerStatus();
 
-        //for ( f in _onUpdate ) f( this, save );
         for ( f in _onUpdate ) f( this, true );
 
     }
