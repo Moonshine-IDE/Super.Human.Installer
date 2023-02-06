@@ -86,4 +86,24 @@ class StrTools {
 
     }
 
+    static public function timeToFormattedString( timeMs:Float ):String {
+
+        var result = "";
+
+        final totalSeconds = Std.int( timeMs / 1000 );
+        
+        final remainingSeconds = totalSeconds % 60;
+        final remainingSecondsS = ( remainingSeconds < 10 ) ? '0${remainingSeconds}' : '${remainingSeconds}';
+
+        final totalMinutes = Std.int( totalSeconds / 60 ) % 60;
+        final totalMinutesS = ( totalMinutes < 10 ) ? '0${totalMinutes}' : '${totalMinutes}';
+
+        final totalHours = Std.int( totalSeconds / 3600 );
+        final totalHoursS:String = ( totalHours < 10 ) ? '0${totalHours}' : '${totalHours}';
+
+        result = '${totalHoursS}:${totalMinutesS}:${remainingSecondsS}';
+        return result;
+
+    }
+
 }
