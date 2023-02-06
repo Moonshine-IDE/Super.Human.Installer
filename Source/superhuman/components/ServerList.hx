@@ -150,6 +150,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonSync:GenesisButton;
     var _console:Console;
     var _develKeys:Property<Bool>;
+    var _elapsedTimeLabel:Label;
     var _labelInfo:Label;
     var _labelRoles:Label;
     var _labelTitle:Label;
@@ -158,6 +159,8 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _serverUpdated:Bool = false;
     var _spacer:LayoutGroup;
     var _statusLabel:Label;
+    var _statusLabelGroup:LayoutGroup;
+    var _statusLabelGroupLayout:HorizontalLayout;
     var _titleGroup:LayoutGroup;
     var _titleGroupLayout:HorizontalLayout;
 
@@ -208,9 +211,21 @@ class ServerItem extends LayoutGroupItemRenderer {
         _labelInfo.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
         this.addChild( _labelInfo );
 
-        _statusLabel = new Label( "Status:" );
+        _statusLabelGroupLayout = new HorizontalLayout();
+        _statusLabelGroupLayout.gap = GenesisApplicationTheme.GRID;
+
+        _statusLabelGroup = new LayoutGroup();
+        _statusLabelGroup.layout = _statusLabelGroupLayout;
+        this.addChild( _statusLabelGroup );
+
+        _statusLabel = new Label( '' );
         _statusLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
-        this.addChild( _statusLabel );
+        _statusLabelGroup.addChild( _statusLabel );
+
+        _elapsedTimeLabel = new Label( '' );
+        _elapsedTimeLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+        _elapsedTimeLabel.includeInLayout = _elapsedTimeLabel.visible = false;
+        _statusLabelGroup.addChild( _elapsedTimeLabel );
 
         _buttonGroup = new LayoutGroup();
         _buttonGroup.variant = SuperHumanInstallerTheme.LAYOUT_GROUP_SERVER_BUTTON_GROUP;
@@ -314,6 +329,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             if ( _server.onUpdate != null ) _server.onUpdate.clear();
             if ( _server.onStatusUpdate != null ) _server.onStatusUpdate.clear();
+            if ( _server.onVagrantUpElapsedTimerUpdate != null ) _server.onVagrantUpElapsedTimerUpdate.clear();
 
         }
 
@@ -330,9 +346,11 @@ class ServerItem extends LayoutGroupItemRenderer {
             // so the entire List must be cleared
             _server.onUpdate.clear();
             _server.onStatusUpdate.clear();
+            _server.onVagrantUpElapsedTimerUpdate.clear();
             #else
             _server.onUpdate.remove( _updateServer );
             _server.onStatusUpdate.remove( _updateServer );
+            _server.onVagrantUpElapsedTimerUpdate.remove( _updateVagrantUpElapsedTimer );
             #end
 
         }
@@ -341,9 +359,12 @@ class ServerItem extends LayoutGroupItemRenderer {
         #if neko
         // Putting back the main class' function on Neko
         _server.onUpdate.add( SuperHumanInstaller.getInstance().onServerPropertyChanged );
+        _server.onStatusUpdate.add( _updateServer );
+        _server.onVagrantUpElapsedTimerUpdate.add( _updateVagrantUpElapsedTimer );
         #end
         _server.onUpdate.add( _updateServer );
         _server.onStatusUpdate.add( _updateServer );
+        _server.onVagrantUpElapsedTimerUpdate.add( _updateVagrantUpElapsedTimer );
 
         if ( _labelTitle != null ) {
 
@@ -536,6 +557,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = false;
         _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
         _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unavailable' );
+        _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = false;
 
         _progressIndicator.visible = _server.busy;
         if ( _server.busy ) _progressIndicator.start() else _progressIndicator.stop();
@@ -555,9 +577,13 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.FirstStart:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.firststart' );
+                _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
+                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
 
             case ServerStatus.Start:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
+                _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
+                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
 
             case ServerStatus.Initializing:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.initializing' );
@@ -609,6 +635,17 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = false;
                 _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.stopped' );
+
+        }
+
+    }
+
+    function _updateVagrantUpElapsedTimer() {
+
+        if ( _server != null && _elapsedTimeLabel != null && _elapsedTimeLabel.visible == true ) {
+
+            var elapsed = StrTools.timeToFormattedString( _server.vagrantUpElapsedTime );
+            _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', '${elapsed}' );
 
         }
 

@@ -51,8 +51,6 @@ class Executor extends AbstractExecutor implements IDisposable {
     var _numTries:Int;
     var _pid:Int;
     var _process:CallbackProcess;
-    var _startTime:Date;
-    var _stopTime:Date;
     var _timeout:Float = 0;
     var _validExitCodes:Array<Float>;
     var _workingDirectory:String;
@@ -65,19 +63,6 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     public var pid( get, never ):Int;
     function get_pid() return _pid;
-
-    public var runtime( get, never ):Null<Float>;
-    function get_runtime() {
-        var result:Null<Float> = null;
-        if ( _startTime != null ) {
-            if ( _stopTime != null ) {
-                result = _stopTime.getTime() - _startTime.getTime();
-            } else {
-                result = Date.now().getTime() - _startTime.getTime();
-            }
-        }
-        return result;
-    }
 
     public var workingDirectory( get, never ):String;
     function get_workingDirectory() return _workingDirectory;

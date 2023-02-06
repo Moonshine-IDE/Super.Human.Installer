@@ -315,6 +315,7 @@
             "status":{
                 "destroying": "Status: Destroying, please wait...",
                 "error": "Status: Error. Please check the server's output, review your server configuration, and try again",
+                "elapsedtime": "(Elapsed time: %1)",
                 "firststart": "Status: Starting for the first time. This might take a while, please be patient",
                 "getstatus": "Status: Retrieving status, please wait...",
                 "initializing": "Status: Initializing",

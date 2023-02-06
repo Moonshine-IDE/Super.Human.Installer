@@ -42,6 +42,8 @@ abstract class AbstractExecutor {
     var _onStdOut:List<( AbstractExecutor, String ) -> Void>;
     var _onStop:List<( AbstractExecutor ) -> Void>;
     var _running:Bool = false;
+    var _startTime:Date;
+    var _stopTime:Date;
 
     public var exitCode( get, never ):Float;
     function get_exitCode() return _exitCode;
@@ -54,6 +56,19 @@ abstract class AbstractExecutor {
 
     public var running( get, never ):Bool;
     function get_running() return _running;
+
+    public var runtime( get, never ):Null<Float>;
+    function get_runtime() {
+        var result:Null<Float> = null;
+        if ( _startTime != null ) {
+            if ( _stopTime != null ) {
+                result = _stopTime.getTime() - _startTime.getTime();
+            } else {
+                result = Date.now().getTime() - _startTime.getTime();
+            }
+        }
+        return result;
+    }
 
     function new( ?extraParams:Array<Dynamic> ) {
 

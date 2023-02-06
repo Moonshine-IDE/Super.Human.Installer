@@ -191,6 +191,7 @@ class Server {
     var _numCPUs:Property<Int>;
     var _onStatusUpdate:List<( Server, Bool ) -> Void>;
     var _onUpdate:List<( Server, Bool ) -> Void>;
+    var _onVagrantUpElapsedTimerUpdate:List<()->Void>;
     var _openBrowser:Property<Bool>;
     var _organization:ValidatingProperty;
     var _path:Property<String>;
@@ -205,7 +206,9 @@ class Server {
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
     var _vagrantMachine:VagrantMachine;
+    var _vagrantUpElapsedTime:Float;
     var _vagrantUpExecutor:AbstractExecutor;
+    var _vagrantUpExecutorElapsedTimer:Timer;
     var _vagrantUpExecutorStopTimer:Timer;
     var _virtualBoxMachine:VirtualBoxMachine;
     
@@ -276,6 +279,9 @@ class Server {
     public var onUpdate( get, never ):List<( Server, Bool ) -> Void>;
     function get_onUpdate() return _onUpdate;
     
+    public var onVagrantUpElapsedTimerUpdate( get, never ):List<() -> Void>;
+    function get_onVagrantUpElapsedTimerUpdate() return _onVagrantUpElapsedTimerUpdate;
+    
     public var openBrowser( get, never ):Property<Bool>;
     function get_openBrowser() return _openBrowser;
     
@@ -313,6 +319,9 @@ class Server {
 
     public var userSafeId( get, never ):Property<String>;
     function get_userSafeId() return _userSafeId;
+
+    public var vagrantUpElapsedTime( get, never ):Float;
+    function get_vagrantUpElapsedTime() return _vagrantUpElapsedTime;
 
     public var virtualBoxId( get, never ):String;
     function get_virtualBoxId() {
@@ -373,6 +382,7 @@ class Server {
 
         _onStatusUpdate = new List();
         _onUpdate = new List();
+        _onVagrantUpElapsedTimerUpdate = new List();
 
         _openBrowser = new Property( false );
         _openBrowser.onChange.add( _propertyChanged );
@@ -414,6 +424,9 @@ class Server {
 
         if ( _onUpdate != null ) _onUpdate.clear();
         _onUpdate = null;
+
+        if ( _onVagrantUpElapsedTimerUpdate != null ) _onVagrantUpElapsedTimerUpdate.clear();
+        _onVagrantUpElapsedTimerUpdate = null;
 
         if ( _provisioner != null ) _provisioner.dispose();
         _provisioner = null;
@@ -1035,6 +1048,8 @@ class Server {
             .onStdErr( _vagrantUpStandardErrorData );
 
         _vagrantUpExecutor.execute( _serverDir );
+        _vagrantUpElapsedTime = 0;
+        _startVagrantUpElapsedTimer();
 
     }
 
@@ -1076,6 +1091,7 @@ class Server {
         _vagrantUpExecutor = null;
         _provisioner.onProvisioningFileChanged.clear();
         _provisioner.stopFileWatcher();
+        _stopVagrantUpElapsedTimer();
 
     }
 
@@ -1219,11 +1235,39 @@ class Server {
                 // Wait 5 seconds to make sure
                 _vagrantUpExecutorStopTimer = Timer.delay( () -> {
 
-                    _vagrantUpExecutor.simulateStop();
+                    if ( _vagrantUpExecutor != null ) _vagrantUpExecutor.simulateStop();
 
                 }, SuperHumanGlobals.SIMULATE_VAGRANT_UP_EXIT_TIMEOUT );
 
             }
+
+        }
+
+    }
+
+    //
+    // Calculating elapsed time for vagrant up
+    //
+
+    function _startVagrantUpElapsedTimer() {
+
+        _stopVagrantUpElapsedTimer();
+
+        _vagrantUpExecutorElapsedTimer = new Timer( 1000 );
+        _vagrantUpExecutorElapsedTimer.run = () -> {
+            _vagrantUpElapsedTime = _vagrantUpExecutor.runtime;
+            Logger.verbose( 'Vagrant up time: ${_vagrantUpElapsedTime}' );
+            if ( _onVagrantUpElapsedTimerUpdate != null ) for ( f in _onVagrantUpElapsedTimerUpdate ) f();
+        };
+
+    }
+
+    function _stopVagrantUpElapsedTimer() {
+
+        if ( _vagrantUpExecutorElapsedTimer != null ) {
+
+            _vagrantUpExecutorElapsedTimer.stop();
+            _vagrantUpExecutorElapsedTimer = null;
 
         }
 
