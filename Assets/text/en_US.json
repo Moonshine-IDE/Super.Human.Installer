@@ -299,7 +299,36 @@
                 "serverloaded":"[SHI]: Server initialized\n",
                 "virtualboxmachine":"[SHI]: VirtualBox VM: %1\n"
             },
-            "start":"Start server"
+            "configure": "Configure server",
+            "delete": "Delete server",
+            "destroy": "Destroy server",
+            "directory": "Open server directory in default file manager, and in Terminal",
+            "output": "Display console output",
+            "provision": "Run provisioning on server",
+            "resync": "Re-sync configuration files",
+            "roles": "Roles: %1",
+            "start":" Start server",
+            "stop": "Stop server",
+            "sysinfo": "Provisioner: %1  •  System: %2 %3, %4GB RAM",
+            "vagrantssh": "Open Vagrant SSH in terminal",
+            "welcomepage": "Open Welcome page",
+            "status":{
+                "destroying": "Status: Destroying, please wait...",
+                "error": "Status: Error. Please check the server's output, review your server configuration, and try again",
+                "firststart": "Status: Starting for the first time. This might take a while, please be patient",
+                "getstatus": "Status: Retrieving status, please wait...",
+                "initializing": "Status: Initializing",
+                "provisioning": "Status: Provisioning, please wait...",
+                "ready": "Status: Ready to start",
+                "readyprovisioned": "Status: Ready to start (Provisioned)",
+                "rsyncing": "Status: Synchronizing, please wait...",
+                "running": "Status: Running",
+                "start": "Status: Starting, please wait",
+                "stopped": "Status: Stopped",
+                "stopping": "Status: Stopping, please wait...",
+                "unavailable": "Status: Unavailable",
+                "unconfigured": "Status: Not configured. Please configure your server"
+            }
         }
     },
     "settingspage":{
