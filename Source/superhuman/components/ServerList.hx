@@ -171,6 +171,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         if ( _server != null ) {
 
+            if ( _server.onStatusUpdate != null ) _server.onStatusUpdate.clear();
             if ( _server.onUpdate != null ) _server.onUpdate.clear();
             _server = null;
 
@@ -312,6 +313,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server != null ) {
 
             if ( _server.onUpdate != null ) _server.onUpdate.clear();
+            if ( _server.onStatusUpdate != null ) _server.onStatusUpdate.clear();
 
         }
 
@@ -327,8 +329,10 @@ class ServerItem extends LayoutGroupItemRenderer {
             // List.remove( func ) is not working on Neko,
             // so the entire List must be cleared
             _server.onUpdate.clear();
+            _server.onStatusUpdate.clear();
             #else
             _server.onUpdate.remove( _updateServer );
+            _server.onStatusUpdate.remove( _updateServer );
             #end
 
         }
@@ -339,6 +343,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _server.onUpdate.add( SuperHumanInstaller.getInstance().onServerPropertyChanged );
         #end
         _server.onUpdate.add( _updateServer );
+        _server.onStatusUpdate.add( _updateServer );
 
         if ( _labelTitle != null ) {
 

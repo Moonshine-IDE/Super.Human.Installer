@@ -185,6 +185,7 @@ class Server {
     var _networkGateway:ValidatingProperty;
     var _networkNetmask:ValidatingProperty;
     var _numCPUs:Property<Int>;
+    var _onStatusUpdate:List<( Server, Bool ) -> Void>;
     var _onUpdate:List<( Server, Bool ) -> Void>;
     var _openBrowser:Property<Bool>;
     var _organization:ValidatingProperty;
@@ -265,6 +266,9 @@ class Server {
     public var numCPUs( get, never ):Property<Int>;
     function get_numCPUs() return _numCPUs;
 
+    public var onStatusUpdate( get, never ):List<( Server, Bool ) -> Void>;
+    function get_onStatusUpdate() return _onStatusUpdate;
+    
     public var onUpdate( get, never ):List<( Server, Bool ) -> Void>;
     function get_onUpdate() return _onUpdate;
     
@@ -363,6 +367,7 @@ class Server {
         _numCPUs = new Property( 1 );
         _numCPUs.onChange.add( _propertyChanged );
 
+        _onStatusUpdate = new List();
         _onUpdate = new List();
 
         _openBrowser = new Property( false );
@@ -381,8 +386,7 @@ class Server {
         _setupWait.onChange.add( _propertyChanged );
 
         _status = new Property( ServerStatus.Unconfigured );
-        // No need to call _propertyChanged?
-        //_status.onChange.add( _propertyChanged );
+        _status.onChange.add( _serverStatusChanged );
 
         _type = ServerType.Domino;
 
@@ -400,6 +404,9 @@ class Server {
     }
 
     public function dispose() {
+
+        if ( _onStatusUpdate != null ) _onStatusUpdate.clear();
+        _onStatusUpdate = null;
 
         if ( _onUpdate != null ) _onUpdate.clear();
         _onUpdate = null;
@@ -1165,6 +1172,12 @@ class Server {
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
         this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
             ( this._provisioner != null && this._provisioner.provisioned == true );
+
+    }
+
+    function _serverStatusChanged( property:Property<ServerStatus> ) {
+
+        for ( f in _onStatusUpdate ) f( this, false );
 
     }
 

@@ -934,7 +934,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		ParallelExecutor.create().add( Right( [
 			Vagrant.getInstance().getGlobalStatus(),
-			VirtualBox.getInstance().getListVMs()
+			VirtualBox.getInstance().getListVMs( true )
 		] ) ).onStop( _refreshSystemInfoStopped ).execute();
 
 	}
@@ -945,22 +945,22 @@ class SuperHumanInstaller extends GenesisApplication {
 		Logger.verbose( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
 		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
-		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
-
-			for ( s in _servers ) {
-
-				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
-
-			}
-
-		}
-
 		for ( i in Vagrant.getInstance().machines ) {
 
 			for ( s in _servers ) {
 
 				if ( s.path.value == i.home ) s.setVagrantMachine( i );
 				// TODO s.updateVagrantMachine();
+
+			}
+
+		}
+
+		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
 
 			}
 
