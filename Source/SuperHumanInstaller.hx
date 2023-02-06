@@ -728,6 +728,8 @@ class SuperHumanInstaller extends GenesisApplication {
 				Logger.debug( 'VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
 				Logger.debug( 'VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
+				for ( s in _servers ) s.setServerStatus();
+
 				_loadingPage.stopProgressIndicator();
 				this.selectedPageId = PAGE_SERVER;
 

@@ -36,10 +36,10 @@ class ServerStatusManager {
 
         var result = ServerStatus.Unknown;
 
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.combinedVirtualMachine.value}' );
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.combinedVirtualMachine.value.state}' );
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.combinedVirtualMachine.value.vagrantState}' );
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.combinedVirtualMachine.value.virtualBoxState}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.state}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.vagrantState}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.virtualBoxState}' );
 
         switch server.combinedVirtualMachine.value.vagrantState {
             
@@ -79,13 +79,16 @@ class ServerStatusManager {
 
         if ( result == ServerStatus.Unknown ) {
 
-            if ( server.isValid() ) result == ServerStatus.Ready;
+            if ( server.isValid() )
+                result = ServerStatus.Ready
+            else
+                result = ServerStatus.Unconfigured;
 
         }
 
         if ( !server.isValid() ) result = ServerStatus.Unconfigured;
 
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ result: ${result}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} result: ${result}' );
 
         return result;
 

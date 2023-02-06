@@ -128,6 +128,7 @@ class Server {
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
         sc._created = true;
+        sc._setServerStatus();
         return sc;
 
     }
@@ -553,9 +554,8 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
 
-        this.status.value = ServerStatus.Stopping;
-
         this._busy.value = true;
+        this.status.value = ServerStatus.Stopping;
 
         Vagrant.getInstance().getHalt( this._vagrantMachine )
             .onStdOut( _vagrantHaltStandardOutputData )
@@ -1178,6 +1178,12 @@ class Server {
     function _serverStatusChanged( property:Property<ServerStatus> ) {
 
         for ( f in _onStatusUpdate ) f( this, false );
+
+    }
+
+    public function setServerStatus() {
+
+        _setServerStatus();
 
     }
 
