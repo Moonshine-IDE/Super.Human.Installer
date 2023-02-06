@@ -1154,9 +1154,12 @@ class Server {
 
     }
 
-    function _setServerStatus() {
+    function _setServerStatus( ignoreBusyState:Bool = false ) {
 
-        this.status.value = ServerStatusManager.getRealStatus( this );
+        // Do not change status if server is busy
+        if ( !ignoreBusyState && this._busy.value ) return;
+
+        this._status.value = ServerStatusManager.getRealStatus( this );
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
         this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
