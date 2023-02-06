@@ -30,16 +30,18 @@
 
 package superhuman.server;
 
+import prominic.logging.Logger;
+
 class ServerStatusManager {
     
     static public function getRealStatus( server:Server ):ServerStatus {
 
         var result = ServerStatus.Unknown;
 
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value}' );
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.state}' );
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.vagrantState}' );
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.virtualBoxState}' );
+        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
+        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine.state: ${server.combinedVirtualMachine.value.state}' );
+        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine.vagrantState: ${server.combinedVirtualMachine.value.vagrantState}' );
+        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine.virtualBoxState: ${server.combinedVirtualMachine.value.virtualBoxState}' );
 
         switch server.combinedVirtualMachine.value.vagrantState {
             
@@ -88,7 +90,7 @@ class ServerStatusManager {
 
         if ( !server.isValid() ) result = ServerStatus.Unconfigured;
 
-        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} result: ${result}' );
+        Logger.verbose( 'Server[${server.id}] assumed status: ${result}' );
 
         return result;
 
