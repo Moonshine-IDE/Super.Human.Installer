@@ -577,7 +577,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
-                _statusLabel.text = "Status: Ready to start";
+                _statusLabel.text = ( _server.provisioned ) ? "Status: Ready to start (Provisioned)" : "Status: Ready to start";
 
             case ServerStatus.Provisioning:
                 _statusLabel.text = "Status: Provisioning, please wait...";
