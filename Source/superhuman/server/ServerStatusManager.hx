@@ -39,9 +39,6 @@ class ServerStatusManager {
         var result = ServerStatus.Unknown;
 
         Logger.verbose( 'Server[${server.id}].combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
-        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine.state: ${server.combinedVirtualMachine.value.state}' );
-        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine.vagrantState: ${server.combinedVirtualMachine.value.vagrantState}' );
-        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine.virtualBoxState: ${server.combinedVirtualMachine.value.virtualBoxState}' );
 
         switch server.combinedVirtualMachine.value.vagrantState {
             
