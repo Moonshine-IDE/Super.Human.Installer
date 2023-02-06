@@ -446,13 +446,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
-		trace( '>>>>>>>>>>>>>>>>>>>>>>>>>>>. ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
 
 			for ( s in _servers ) {
 
-				trace( '=========================== ${s.virtualBoxId} ${i.name}');
 				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
 
 			}
