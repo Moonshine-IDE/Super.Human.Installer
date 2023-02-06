@@ -522,7 +522,6 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provision' ) );
 
         this._busy.value = true;
-
         this._status.value = ServerStatus.Provisioning;
 
         Vagrant.getInstance().getProvision( this._vagrantMachine )
@@ -776,13 +775,7 @@ class Server {
 
     }
 
-    function _actionChanged( prop:Property<ServerAction> ) {
-    /*
-        if ( _action.value == null ) return;
-
-        this._status.value = ServerStatusManager.getStatus( _action.value, this._vagrantMachine.value, isValid(), this._provisioner.provisioned );
-    */
-    }
+    function _actionChanged( prop:Property<ServerAction> ) { }
 
     function _propertyChanged<T>( property:T ) {
 
