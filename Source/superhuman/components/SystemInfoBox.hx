@@ -38,7 +38,7 @@ import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.MouseEvent;
 import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
-import prominic.sys.applications.oracle.VirtualMachine;
+import prominic.sys.applications.oracle.VirtualBoxMachine;
 import superhuman.events.SuperHumanApplicationEvent;
 
 @:styleContext
@@ -49,7 +49,7 @@ class SystemInfoBox extends LayoutGroup {
     var _refreshButton:Button;
     var _vagrantMachines:Array<VagrantMachine>;
     var _vagrantMachinesLabel:Label;
-    var _virtualBoxMachines:Array<VirtualMachine>;
+    var _virtualBoxMachines:Array<VirtualBoxMachine>;
     var _virtualBoxMachinesLabel:Label;
 
     public var vagrantMachines( get, set ):Array<VagrantMachine>;
@@ -61,7 +61,7 @@ class SystemInfoBox extends LayoutGroup {
         return _vagrantMachines;
     }
 
-    public var virtualBoxMachines( get, set ):Array<VirtualMachine>;
+    public var virtualBoxMachines( get, set ):Array<VirtualBoxMachine>;
     function get_virtualBoxMachines() return _virtualBoxMachines;
     function set_virtualBoxMachines( value ) {
         _virtualBoxMachines = value;

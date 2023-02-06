@@ -66,6 +66,7 @@ import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
 import superhuman.managers.ServerManager;
+import superhuman.server.CombinedVirtualMachine;
 import superhuman.server.Server;
 import superhuman.server.ServerStatus;
 import superhuman.server.data.RoleData;
@@ -360,8 +361,12 @@ class SuperHumanInstaller extends GenesisApplication {
 				VirtualBox.getInstance().onVersion.add( _virtualBoxVersionUpdated ).onListVMs.add( _virtualBoxListVMsUpdated );
 
 				ParallelExecutor.create().add( Right( [
-					Vagrant.getInstance().getVersion(), Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ),
-					VirtualBox.getInstance().getBridgedInterfaces(), VirtualBox.getInstance().getHostInfo(), VirtualBox.getInstance().getVersion(), VirtualBox.getInstance().getListVMs()
+					Vagrant.getInstance().getVersion(),
+					Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ),
+					VirtualBox.getInstance().getBridgedInterfaces(),
+					VirtualBox.getInstance().getHostInfo(),
+					VirtualBox.getInstance().getVersion(),
+					VirtualBox.getInstance().getListVMs( true )
 				] ) ).onStop( _checkPrerequisitesFinished ).execute();
 
 			} else {
@@ -398,12 +403,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			for ( s in _servers ) {
 
-				if ( s.path.value == i.home ) {
-
-					s.vagrantMachine.value = i;
-					s.vagrantMachine.value.serverId = s.id;
-
-				}
+				if ( s.path.value == i.home ) s.setVagrantMachine( i );
 
 			}
 
@@ -446,17 +446,20 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
-		for ( i in VirtualBox.getInstance().virtualMachines ) {
+		trace( '>>>>>>>>>>>>>>>>>>>>>>>>>>>. ${VirtualBox.getInstance().virtualBoxMachines}' );
+
+		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
 
 			for ( s in _servers ) {
 
-				if ( s.virtualBoxId == i.name ) s.virtualMachine.value = i;
+				trace( '=========================== ${s.virtualBoxId} ${i.name}');
+				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
 
 			}
 
 		}
 
-		if ( _serverPage != null ) _serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualMachines;
+		if ( _serverPage != null ) _serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
 
 	}
 
@@ -538,9 +541,9 @@ class SuperHumanInstaller extends GenesisApplication {
 			Logger.debug( 'Shutting down server...' );
 
 			// Stop all possibly running executors
-			var vms:Array<VagrantMachine> = [];
-			for ( s in _servers ) vms.push( s.vagrantMachine.value );
-			Vagrant.getInstance().stopAll( false, vms );
+			var vms:Array<CombinedVirtualMachine> = [];
+			for ( s in _servers ) vms.push( s.combinedVirtualMachine.value );
+			Vagrant.getInstance().stopAll( false );
 
 			while( !_canExit ) {
 
@@ -554,8 +557,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 					// Shutting down Vagrant machine
 					var vagrantArgs:Array<String> = [ 'halt' ];
-					if ( server.vagrantMachine.value != null && server.vagrantMachine.value.id != null ) {
-						vagrantArgs.push( server.vagrantMachine.value.id );
+					if ( server.combinedVirtualMachine.value != null && server.combinedVirtualMachine.value.vagrantId != null ) {
+						vagrantArgs.push( server.combinedVirtualMachine.value.vagrantId );
 					} else {
 						Sys.setCwd( server.path.value );
 					}
@@ -578,10 +581,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._onWindowFocusIn();
 
 		if ( !SuperHumanGlobals.CHECK_VAGRANT_STATUS_ON_FOCUS ) return;
-
-		if ( !Vagrant.getInstance().exists ) return;
-
-		for ( server in _servers ) server.refreshVagrantStatus();
 
 	}
 
@@ -683,7 +682,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info( 'Starting server: ${e.server.id}' );
 		Logger.info( 'Server configuration: ${e.server.getData()}' );
-		Logger.info( 'VirtualBox VM: ${e.server.virtualMachine.value}' );
+		Logger.verbose( 'Virtual Machine: ${e.server.combinedVirtualMachine.value}' );
 		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.generateHostsFileContent()}\n----- Hosts.yml END -----' );
 
 		// TODO: Decide how to handle provisioning if required
@@ -727,17 +726,11 @@ class SuperHumanInstaller extends GenesisApplication {
 				Logger.debug( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
 				Logger.debug( 'VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
 				Logger.debug( 'VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
-				Logger.debug( 'VirtualBox vms: ${VirtualBox.getInstance().virtualMachines}' );
+				Logger.debug( 'VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
+
+				for ( s in _servers ) s.setServerStatus();
 
 				_loadingPage.stopProgressIndicator();
-
-				for ( server in _servers ) {
-
-					if ( server.vagrantMachine.value.id == null ) server.refresh();
-					if ( server.virtualBoxId != null ) server.refreshVirtualBoxInfo();
-					
-				}
-
 				this.selectedPageId = PAGE_SERVER;
 
 			}
@@ -943,7 +936,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		ParallelExecutor.create().add( Right( [
 			Vagrant.getInstance().getGlobalStatus(),
-			VirtualBox.getInstance().getListVMs()
+			VirtualBox.getInstance().getListVMs( true )
 		] ) ).onStop( _refreshSystemInfoStopped ).execute();
 
 	}
@@ -952,27 +945,24 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.verbose( 'System Info refreshed' );
 		Logger.verbose( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
-		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualMachines}' );
-
-		for ( i in VirtualBox.getInstance().virtualMachines ) {
-
-			for ( s in _servers ) {
-
-				if ( s.virtualBoxId == i.name ) s.virtualMachine.value = i;
-
-			}
-
-		}
+		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( i in Vagrant.getInstance().machines ) {
 
 			for ( s in _servers ) {
 
-				if ( s.path.value == i.home ) {
+				if ( s.path.value == i.home ) s.setVagrantMachine( i );
+				// TODO s.updateVagrantMachine();
 
-					s.updateVagrantMachine( i );
+			}
 
-				}
+		}
+
+		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
 
 			}
 
@@ -981,7 +971,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		if ( _serverPage != null ) {
 
 			_serverPage.vagrantMachines = Vagrant.getInstance().machines;
-			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualMachines;
+			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
 
 		}
 

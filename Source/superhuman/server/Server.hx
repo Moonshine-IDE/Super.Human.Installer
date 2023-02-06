@@ -42,11 +42,12 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
-import prominic.sys.applications.oracle.VirtualMachine;
+import prominic.sys.applications.oracle.VirtualBoxMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
 import superhuman.managers.ProvisionerManager;
+import superhuman.server.CombinedVirtualMachine.CombinedVirtualMachineState;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
@@ -123,10 +124,11 @@ class Server {
         sc._userSafeId.value = data.user_safeid;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
-        sc._vagrantMachine.value = { home: sc._serverDir, id: null, state: VagrantMachineState.Unknown, serverId: sc._id };
+        sc._combinedVirtualMachine.value = { home: sc._serverDir, vagrantId: null, virtualBoxId: null, state: CombinedVirtualMachineState.Unknown, serverId: sc._id };
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
         sc._created = true;
+        sc._setServerStatus();
         return sc;
 
     }
@@ -184,6 +186,7 @@ class Server {
     var _networkGateway:ValidatingProperty;
     var _networkNetmask:ValidatingProperty;
     var _numCPUs:Property<Int>;
+    var _onStatusUpdate:List<( Server, Bool ) -> Void>;
     var _onUpdate:List<( Server, Bool ) -> Void>;
     var _openBrowser:Property<Bool>;
     var _organization:ValidatingProperty;
@@ -198,8 +201,10 @@ class Server {
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
-    var _vagrantMachine:Property<VagrantMachine>;
-    var _virtualMachine:Property<VirtualMachine>;
+
+    var _combinedVirtualMachine:Property<CombinedVirtualMachine>;
+    var _vagrantMachine:VagrantMachine;
+    var _virtualBoxMachine:VirtualBoxMachine;
     
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
@@ -207,6 +212,9 @@ class Server {
     public var console( get, set ):IConsole;
     function get_console() return _console;
     function set_console( value:IConsole ):IConsole { _console = value; _provisioner.console = value; return _console; }
+
+    public var combinedVirtualMachine( get, never ):Property<CombinedVirtualMachine>;
+    function get_combinedVirtualMachine() return _combinedVirtualMachine;
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
@@ -259,6 +267,9 @@ class Server {
     public var numCPUs( get, never ):Property<Int>;
     function get_numCPUs() return _numCPUs;
 
+    public var onStatusUpdate( get, never ):List<( Server, Bool ) -> Void>;
+    function get_onStatusUpdate() return _onStatusUpdate;
+    
     public var onUpdate( get, never ):List<( Server, Bool ) -> Void>;
     function get_onUpdate() return _onUpdate;
     
@@ -300,16 +311,10 @@ class Server {
     public var userSafeId( get, never ):Property<String>;
     function get_userSafeId() return _userSafeId;
 
-    public var vagrantMachine( get, never ):Property<VagrantMachine>;
-    function get_vagrantMachine() return _vagrantMachine;
-
     public var virtualBoxId( get, never ):String;
     function get_virtualBoxId() {
         return '${Std.string( this._id )}--${this.domainName}';
     }
-
-    public var virtualMachine( get, never ):Property<VirtualMachine>;
-    function get_virtualMachine() return _virtualMachine;
 
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
@@ -323,6 +328,9 @@ class Server {
 
         _busy = new Property( false );
         _busy.onChange.add( _propertyChanged );
+
+        _combinedVirtualMachine = new Property( { state: CombinedVirtualMachineState.Unknown } );
+        _combinedVirtualMachine.onChange.add( _propertyChanged );
 
         _dhcp4 = new Property( true );
         _dhcp4.onChange.add( _propertyChanged );
@@ -360,6 +368,7 @@ class Server {
         _numCPUs = new Property( 1 );
         _numCPUs.onChange.add( _propertyChanged );
 
+        _onStatusUpdate = new List();
         _onUpdate = new List();
 
         _openBrowser = new Property( false );
@@ -378,7 +387,7 @@ class Server {
         _setupWait.onChange.add( _propertyChanged );
 
         _status = new Property( ServerStatus.Unconfigured );
-        _status.onChange.add( _propertyChanged );
+        _status.onChange.add( _serverStatusChanged );
 
         _type = ServerType.Domino;
 
@@ -388,21 +397,17 @@ class Server {
         _userSafeId = new Property();
         _userSafeId.onChange.add( _propertyChanged );
 
-        _vagrantMachine = new Property( { id:null, state:VagrantMachineState.Unknown } );
-        _vagrantMachine.onChange.add( _propertyChanged );
-
-        _virtualMachine = new Property( {} );
-        _virtualMachine.onChange.add( _propertyChanged );
-
         Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
         Vagrant.getInstance().onHalt.add( _onVagrantHalt );
         Vagrant.getInstance().onProvision.add( _onVagrantProvision );
         Vagrant.getInstance().onRSync.add( _onVagrantRSync );
-        Vagrant.getInstance().onStatus.add( _onVagrantStatus );
 
     }
 
     public function dispose() {
+
+        if ( _onStatusUpdate != null ) _onStatusUpdate.clear();
+        _onStatusUpdate = null;
 
         if ( _onUpdate != null ) _onUpdate.clear();
         _onUpdate = null;
@@ -517,10 +522,9 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provision' ) );
 
         this._busy.value = true;
-
         this._status.value = ServerStatus.Provisioning;
 
-        Vagrant.getInstance().getProvision( this._vagrantMachine.value )
+        Vagrant.getInstance().getProvision( this._vagrantMachine )
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
             .execute();
@@ -549,38 +553,13 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
 
+        this._busy.value = true;
         this.status.value = ServerStatus.Stopping;
 
-        if ( _provisioner.provisioned == true ) {
-
-            this._busy.value = true;
-
-            Vagrant.getInstance().getHalt( this._vagrantMachine.value )
-                .onStdOut( _vagrantHaltStandardOutputData )
-                .onStdErr( _vagrantHaltStandardErrorData )
-                .execute( this._serverDir );
-
-        } else {
-
-            this._busy.value = true;
-
-            Vagrant.getInstance().getHalt( this._vagrantMachine.value )
-                .onStdOut( _vagrantHaltStandardOutputData )
-                .onStdErr( _vagrantHaltStandardErrorData )
-                .execute( this._serverDir );
-
-        }
-
-    }
-
-    public function refresh() {
-
-        // TODO: Set provisioned to false if virtualmachine doesn't exist!
-        //if ( this._vagrantMachine == null || this._vagrantMachine.value == null || this._vagrantMachine.value.id == null )
-            _provisioner.deleteWebAddressFile();
-
-        _propertyChanged( null );
-        refreshVagrantStatus();
+        Vagrant.getInstance().getHalt( this._vagrantMachine )
+            .onStdOut( _vagrantHaltStandardOutputData )
+            .onStdErr( _vagrantHaltStandardErrorData )
+            .execute( this._serverDir );
 
     }
 
@@ -594,61 +573,6 @@ class Server {
         _propertyChanged( this._provisioner );
 
         return true;
-
-    }
-
-    function _checkStatus() {
-
-        this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
-        this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
-            ( this._provisioner != null && this._provisioner.provisioned == true );
-
-        if ( !isValid() ) {
-
-            this._status.value = ServerStatus.Unconfigured;
-            return;
-
-        }
-
-        if ( this._status.value == ServerStatus.Provisioning ) return;
-        if ( this._status.value == ServerStatus.RSyncing ) return;
-        if ( this._status.value == ServerStatus.GetStatus ) return;
-        if ( this._status.value == ServerStatus.Stopping ) return;
-        if ( this._status.value == ServerStatus.Stopped ) return;
-        if ( this._status.value == ServerStatus.Start ) return;
-        if ( this._status.value == ServerStatus.Running ) return;
-        if ( this._status.value == ServerStatus.Destroying ) return;
-        if ( this._status.value == ServerStatus.Ready ) return;
-
-        if ( _provisioner.provisioned == true ) {
-
-            if ( this._vagrantMachine.value != null ) {
-
-                switch ( this._vagrantMachine.value.state ) {
-
-                    case VagrantMachineState.Running:
-                        this._status.value = ServerStatus.Running;
-
-                    case VagrantMachineState.PowerOff:
-                        this._status.value = ServerStatus.Stopped;
-
-                    case VagrantMachineState.Aborted:
-                        this._status.value = ServerStatus.Unconfigured;
-                        _provisioner.deleteWebAddressFile();
-
-                    default:
-
-                }
-
-            } else {
-
-            }
-
-        } else {
-
-            if ( this._status.value == ServerStatus.Unconfigured ) this._status.value = ServerStatus.Ready;
-
-        }
 
     }
 
@@ -718,7 +642,7 @@ class Server {
 
         if ( console != null ) {
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualMachine.value ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualBoxMachine ) ) );
         }
 
 		_startVagrantUp();
@@ -851,25 +775,15 @@ class Server {
 
     }
 
-    function _actionChanged( prop:Property<ServerAction> ) {
-
-        if ( _action.value == null ) return;
-
-        this._status.value = ServerStatusManager.getStatus( _action.value, this._vagrantMachine.value, isValid(), this._provisioner.provisioned );
-
-    }
+    function _actionChanged( prop:Property<ServerAction> ) { }
 
     function _propertyChanged<T>( property:T ) {
 
         if ( !_created ) return;
 
-        //TODO
-        //var save:Bool = property == cast _vagrantUpSuccessful;
+        _setServerStatus();
 
-        //for ( f in _onUpdate ) f( this, save );
         for ( f in _onUpdate ) f( this, true );
-
-        _checkStatus();
 
     }
 
@@ -938,7 +852,7 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.RSyncing;
 
-        Vagrant.getInstance().getRSync( this._vagrantMachine.value )
+        Vagrant.getInstance().getRSync( this._vagrantMachine )
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
             .execute();
@@ -1029,7 +943,7 @@ class Server {
 
         _provisioner.deleteWebAddressFile();
 
-        Vagrant.getInstance().getDestroy( true, this._vagrantMachine.value )
+        Vagrant.getInstance().getDestroy( true, this._vagrantMachine )
             .onStdOut( _vagrantDestroyStandardOutputData )
             .onStdErr( _vagrantDestroyStandardErrorData )
             .execute();
@@ -1061,8 +975,8 @@ class Server {
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
         this._provisioner.deleteWebAddressFile();
-        this._vagrantMachine.value.id = null;
-        this._vagrantMachine.value.state = VagrantMachineState.NotCreated;
+        this._combinedVirtualMachine.value.vagrantId = null;
+        this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
 
     }
 
@@ -1075,8 +989,8 @@ class Server {
         #if mac
         var f = Shell.getInstance().du( this._serverDir );
 
-        if ( this._virtualMachine.value != null && this._virtualMachine.value.root != null )
-            f += Shell.getInstance().du( this._virtualMachine.value.root );
+        if ( this._combinedVirtualMachine.value != null && this._combinedVirtualMachine.value.root != null )
+            f += Shell.getInstance().du( this._combinedVirtualMachine.value.root );
 
         _diskUsage.value = f;
         #end
@@ -1105,7 +1019,7 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
 
-        Vagrant.getInstance().getUp( this._vagrantMachine.value, _provision, [] )
+        Vagrant.getInstance().getUp( this._vagrantMachine, _provision, [] )
             .onStart( _vagrantUpStarted )
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
@@ -1131,12 +1045,12 @@ class Server {
         if ( executor.exitCode == -1 ) {
 
             this.status.value = ServerStatus.Ready;
-            this._vagrantMachine.value.state = VagrantMachineState.PowerOff;
+            this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.PowerOff;
 
         } else if ( executor.exitCode == 0 ) {
 
             this.status.value = ServerStatus.Running;
-            this._vagrantMachine.value.state = VagrantMachineState.Running;
+            this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.Running;
 
             if ( this._provisioner.provisioned && this._openBrowser.value ) this._provisioner.openWelcomePage();
 
@@ -1167,82 +1081,101 @@ class Server {
     }
 
     /**
-     * Vagrant status
-     */
-
-    public function refreshVagrantStatus() {
-
-        if ( busy ) return;
-        if ( this._status.value == ServerStatus.Error || this._status.value == ServerStatus.Unconfigured || this._status.value == ServerStatus.Ready ) return;
-
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.refreshvagrantstatus' ) );
-
-        this._busy.value = true;
-        this._status.value = ServerStatus.GetStatus;
-
-        Vagrant.getInstance().getStatus( this._vagrantMachine.value ).execute( this._serverDir );
-
-    }
-
-    public function updateVagrantMachine( machine:VagrantMachine ) {
-
-        _onVagrantStatus( machine );
-
-    }
-
-    function _onVagrantStatus( machine:VagrantMachine ) {
-
-        if ( machine.serverId != this._id ) return;
-
-        this._busy.value = false;
-
-        Logger.verbose( '_onVagrantStatus ${machine}' );
-        if( machine.id == this._vagrantMachine.value.id ) this._vagrantMachine.value = machine;
-        Logger.verbose( '_onVagrantStatus ${this._vagrantMachine.value}' );
-
-        switch ( machine.state ) {
-
-            case VagrantMachineState.NotCreated | VagrantMachineState.Unknown | VagrantMachineState.Aborted:
-                this._provisioner.deleteWebAddressFile();
-                this._status.value = ServerStatus.Ready;
-
-            case VagrantMachineState.Running:
-                this._status.value = ServerStatus.Running;
-
-            case VagrantMachineState.PowerOff:
-                this._status.value = ServerStatus.Stopped;
-
-            default:
-
-        }
-
-    }
-
-    /**
      * VitualBox
      */
 
     public function refreshVirtualBoxInfo() {
 
         if ( _refreshingVirtualBoxVMInfo ) return;
-        if ( this._virtualMachine.value == null || this._virtualMachine.value.id == null ) return;
+        if ( this._virtualBoxMachine == null || this._virtualBoxMachine.virtualBoxId == null ) return;
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this._virtualMachine.value.id ).execute();
+        VirtualBox.getInstance().getShowVMInfo( this._virtualBoxMachine.virtualBoxId ).execute();
         _refreshingVirtualBoxVMInfo = true;
 
     }
 
     function _onVirtualBoxShowVMInfo( id:String ) {
 
-        if ( id == this.virtualBoxId || id == this._virtualMachine.value.id || id == this._virtualMachine.value.name ) {
+        if ( id == this.virtualBoxId || id == this._virtualBoxMachine.virtualBoxId || id == this._virtualBoxMachine.name ) {
 
             _refreshingVirtualBoxVMInfo = false;
             VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
-            Logger.verbose( 'VirtualBox VM: ${this._virtualMachine.value}' );
+            Logger.verbose( 'VirtualBox VM: ${this._virtualBoxMachine}' );
             // calculateDiskSpace();
 
         }
+
+    }
+
+    /**
+     * Combined Virtual Machine
+     */
+
+    function _getCombinedVirtualMachine():CombinedVirtualMachine {
+
+        return _combinedVirtualMachine.value;
+
+    }
+
+    public function setVagrantMachine( machine:VagrantMachine ) {
+
+        this._vagrantMachine = machine;
+        this._vagrantMachine.serverId = this._id;
+
+        var cvm:CombinedVirtualMachine = _combinedVirtualMachine.value;
+
+        for( i in Reflect.fields( machine ) ) {
+
+            Reflect.setField( cvm, i, Reflect.field( machine, i ) );
+
+        }
+
+        _combinedVirtualMachine.value = cvm;
+
+    }
+
+    public function setVirtualBoxMachine( machine:VirtualBoxMachine ) {
+
+        this._virtualBoxMachine = machine;
+        this._virtualBoxMachine.serverId = this._id;
+
+        var cvm:CombinedVirtualMachine = _combinedVirtualMachine.value;
+
+        for( i in Reflect.fields( machine ) ) {
+
+            Reflect.setField( cvm, i, Reflect.field( machine, i ) );
+
+        }
+
+        _combinedVirtualMachine.value = cvm;
+
+        _setServerStatus();
+
+    }
+
+    function _setServerStatus( ignoreBusyState:Bool = false ) {
+
+        // Do not change status if server is busy
+        if ( !ignoreBusyState && this._busy.value ) return;
+
+        this._status.value = ServerStatusManager.getRealStatus( this );
+
+        this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
+        this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
+            ( this._provisioner != null && this._provisioner.provisioned == true );
+
+    }
+
+    function _serverStatusChanged( property:Property<ServerStatus> ) {
+
+        for ( f in _onStatusUpdate ) f( this, false );
+
+    }
+
+    public function setServerStatus() {
+
+        _setServerStatus();
 
     }
 

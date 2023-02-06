@@ -30,86 +30,61 @@
 
 package superhuman.server;
 
-enum ServerStatus {
+typedef CombinedVirtualMachine = {
 
-    /**
-     * Used internally for an initial status
-     */
-    Unknown;
-    
-    /**
-     * The server is invalid
-     */
-    Invalid;
+    ?CfgFile:String,
+    ?LogFldr:String,
+    ?SnapFldr:String,
+    ?apic:String,
+    ?chipset:String,
+    ?cpuexecutioncap:Int,
+    ?cpuprofile:String,
+    ?cpus:Int,
+    ?description:String,
+    ?encryption:Bool,
+    ?firmware:String,
+    ?hardwareuuid:String,
+    ?home:String,
+    ?hpet:String,
+    ?id:Int,
+    ?longmode:String,
+    ?memory:Int,
+    ?name:String,
+    ?nestedhwvirt:String,
+    ?ostype:String,
+    ?pae:String,
+    ?pagefusion:String,
+    ?provider:String,
+    ?root:String,
+    ?serverId:Int,
+    ?state:CombinedVirtualMachineState,
+    ?triplefaultreset:String,
+    ?vagrantId:String,
+    ?vagrantState:String,
+    ?virtualBoxId:String,
+    ?virtualBoxState:String,
+    ?vram:Int,
+    ?x2apic:String,
 
-    /**
-     * The server is not running
-     */
-    Stopped;
+}
 
-    /**
-     * The server is stopping
-     */
-    Stopping;
+enum abstract CombinedVirtualMachineState( String ) to String {
 
-    /**
-     * The server has never been configured
-     */
-    Unconfigured;
+    // states with 'list vms' command:
+    // starting
+    // running
+    // powered off
 
-    /**
-     * The server is initializing, copying files to server directory
-     */
-    Initializing;
+    // vagrant states
+    // aborted
+    // running
+    // poweroff
 
-    /**
-     * The server is starting for the first time, previously 'vagrant up' was unsuccessful
-     */
-    FirstStart;
+    var Aborted = "aborted";
+    var NotCreated = "not_created";
+    var PowerOff = "powered off";
+    var Running = "running";
+    var Starting = "starting";
+    var Unknown = "unknown";
 
-    /**
-     * The server is starting
-     */
-    Start;
-
-    /**
-     * The server is configured, ready for first launch
-     */
-    Ready;
-
-    /**
-     * The server is running
-     */
-    Running;
-
-    /**
-     * The server is finished with an error
-     */
-    Error;
-
-    /**
-     * The server is finished with an error but still running
-     */
-    RunningWithError;
-
-    /**
-     * The server is provisioning
-     */
-    Provisioning;
-    
-    /**
-     * The server is RSyncing
-     */
-    RSyncing;
-
-    /**
-     * The server is retrieving status
-     */
-    GetStatus;
-
-    /**
-     * The server is about to be destroyed
-     */
-    Destroying;
-    
 }

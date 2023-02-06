@@ -69,6 +69,10 @@ import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
 import sys.FileSystem;
 
+#if buildmacros
+@:build( BuildMacro.createGitInfo() )
+#end
+
 abstract class GenesisApplication extends Application {
 
     static public final GENESIS_ADDRESS:String = "https://genesis.directory/";

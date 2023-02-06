@@ -27,6 +27,7 @@
 
 	<source path="Source"/>
 	<source path="Scripts"/>
+	<source path="Macros" />
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>

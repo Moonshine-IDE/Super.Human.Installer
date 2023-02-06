@@ -4,6 +4,7 @@
 **/Ignored/*
 **/Docs/*
 **/Dist/*
+**/dump/*
 *.code-workspace
 
 # Include files despite the parent folder being ignored

@@ -30,44 +30,65 @@
 
 package superhuman.server;
 
-import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
-import prominic.sys.applications.hashicorp.Vagrant.VagrantMachineState;
-
 class ServerStatusManager {
     
-    static public function getStatus( action:ServerAction, vagrantMachine:VagrantMachine, isValid:Bool, vagrantUpSuccessful:Bool ):ServerStatus {
+    static public function getRealStatus( server:Server ):ServerStatus {
 
-        var result = ServerStatus.Unconfigured;
+        var result = ServerStatus.Unknown;
 
-        switch ( action ) {
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.state}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.vagrantState}' );
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} ${server.combinedVirtualMachine.value.virtualBoxState}' );
 
-            case ServerAction.Check:
-                result = ( isValid ) ? ServerStatus.Ready : ServerStatus.Unconfigured;
+        switch server.combinedVirtualMachine.value.vagrantState {
+            
+            case "aborted":
+                result = ServerStatus.Error;
 
-            case ServerAction.Start:
-                result = _getStatusFor_Start( vagrantMachine.state, vagrantUpSuccessful );
+            case "poweroff":
+                result = ServerStatus.Ready;
+
+            case "running":
+                result = ServerStatus.Running;
 
             default:
 
         }
 
-        return result;
+        switch server.combinedVirtualMachine.value.virtualBoxState {
+            
+            case "aborted":
+                result = ServerStatus.Error;
 
-    }
+            case "powered off":
+                result = ServerStatus.Ready;
 
-    static function _getStatusFor_Start( vagrantState:VagrantMachineState, vagrantUpSuccessful:Bool ):ServerStatus {
-        
-        var result = ServerStatus.Unconfigured;
+            case "running":
+                result = ServerStatus.Running;
 
-        if ( vagrantUpSuccessful ) {
+            case "starting":
+                result = ServerStatus.Running;
 
-            result = ServerStatus.Start;
+            case "stopping":
+                result = ServerStatus.Running;
 
-        } else {
-
-            result = ServerStatus.FirstStart;
+            default:
 
         }
+
+        if ( result == ServerStatus.Unknown ) {
+
+            if ( server.isValid() )
+                result = ServerStatus.Ready
+            else
+                result = ServerStatus.Unconfigured;
+
+        }
+
+        if ( !server.isValid() ) result = ServerStatus.Unconfigured;
+
+        trace( '^^^^^^^^^^^^^^^^^^^^^^^ ${server.id} result: ${result}' );
 
         return result;
 

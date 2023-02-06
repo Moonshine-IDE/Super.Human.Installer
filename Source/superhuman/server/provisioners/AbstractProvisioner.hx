@@ -61,6 +61,9 @@ class AbstractProvisioner {
     public var exists( get, never ):Bool;
     function get_exists() return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
+    public var type( get, never ):ProvisionerType;
+    function get_type() return _type;
+
     public var version( get, never ):VersionInfo;
     function get_version() return _version;
 

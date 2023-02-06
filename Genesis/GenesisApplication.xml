@@ -15,6 +15,7 @@
 	<haxedef name="no-deprecation-warnings" />
 
 	<source path="Source" />
+	<source path="Macros" />
 
 	<section if="html5">
 		<window width="0" height="0" />
