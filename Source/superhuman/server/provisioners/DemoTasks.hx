@@ -48,7 +48,7 @@ using prominic.tools.ObjectTools;
 
 class DemoTasks extends AbstractProvisioner {
 
-    static final _IP_ADDRESS_PATTERN:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    static final _IP_ADDRESS_PATTERN:EReg = ~/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
     static final _SAFE_ID_FILE:String = "safe.ids";
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
@@ -148,6 +148,17 @@ class DemoTasks extends AbstractProvisioner {
 
     public var hostFileExists( get, never ):Bool;
     function get_hostFileExists() return this.fileExists( HOSTS_FILE );
+
+    public var ipAddress( get, never ):String;
+    function get_ipAddress() {
+        var result:String = null;
+        var wa = _getWebAddress();
+        if ( wa == null ) return result;
+        try {
+            if ( _IP_ADDRESS_PATTERN.match( wa ) ) return _IP_ADDRESS_PATTERN.matched( 0 );
+        } catch ( e ) {};
+        return result;
+    }
 
     public var onProvisioningFileChanged( get, never ):List<()->Void>;
     function get_onProvisioningFileChanged() return _onProvisioningFileChanged;

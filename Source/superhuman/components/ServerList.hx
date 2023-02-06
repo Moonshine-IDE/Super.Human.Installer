@@ -566,7 +566,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.running' );
+                _statusLabel.text = ( _server.provisioned ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.running', '(IP: ${_server.provisioner.ipAddress})' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', '' );
 
             case ServerStatus.Unconfigured:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;

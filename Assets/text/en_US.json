@@ -322,7 +322,7 @@
                 "ready": "Status: Ready to start",
                 "readyprovisioned": "Status: Ready to start (Provisioned)",
                 "rsyncing": "Status: Synchronizing, please wait...",
-                "running": "Status: Running",
+                "running": "Status: Running %1",
                 "start": "Status: Starting, please wait",
                 "stopped": "Status: Stopped",
                 "stopping": "Status: Stopping, please wait...",
