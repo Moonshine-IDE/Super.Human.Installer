@@ -144,8 +144,13 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    var _onProvisioningFileChanged:List<()->Void>;
+
     public var hostFileExists( get, never ):Bool;
     function get_hostFileExists() return this.fileExists( HOSTS_FILE );
+
+    public var onProvisioningFileChanged( get, never ):List<()->Void>;
+    function get_onProvisioningFileChanged() return _onProvisioningFileChanged;
 
     public var provisioned( get, never ):Bool;
     function get_provisioned() return _webAddressFileExists();
@@ -168,6 +173,8 @@ class DemoTasks extends AbstractProvisioner {
 
         if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
 
+        _onProvisioningFileChanged = new List();
+
     }
 
     public function copyInstallers( pathPairs:Array<PathPair>, callback:()->Void ) {
@@ -180,6 +187,15 @@ class DemoTasks extends AbstractProvisioner {
     public function deleteWebAddressFile() {
 
         this.deleteFileInTargetDirectory( WEB_ADDRESS_FILE );
+
+    }
+
+    override function dispose() {
+
+        if ( _onProvisioningFileChanged != null ) _onProvisioningFileChanged.clear();
+        _onProvisioningFileChanged = null;
+
+        super.dispose();
 
     }
 
@@ -249,29 +265,6 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
-    function _webAddressFileExists():Bool {
-
-        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-
-    }
-
-    function _webAddressValid():Bool {
-
-        if ( !_webAddressFileExists() ) return false;
-
-        try {
-
-            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-            if ( c == null || c.length == 0 ) return false;
-
-            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return true;
-
-        } catch( e ) {}
-
-        return false;
-
-    }
-
     function _getWebAddress():String {
 
         var e = _webAddressFileExists();
@@ -296,6 +289,30 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    override function _onFileWatcherFileAdded( path:String ) {
+
+        super._onFileWatcherFileAdded( path );
+
+        if ( path.indexOf( WEB_ADDRESS_FILE ) >= 0 ) {
+
+            if ( _onProvisioningFileChanged != null ) for ( f in _onProvisioningFileChanged ) f();
+
+        }
+
+    }
+
+    override function _onFileWatcherFileDeleted( path:String ) {
+
+        super._onFileWatcherFileDeleted( path );
+
+        if ( path.indexOf( WEB_ADDRESS_FILE ) >= 0 ) {
+
+            if ( _onProvisioningFileChanged != null ) for ( f in _onProvisioningFileChanged ) f();
+
+        }
+
+    }
+
     function _saveHostsFile( content:String ) {
 
         createTargetDirectory();
@@ -315,6 +332,29 @@ class DemoTasks extends AbstractProvisioner {
             return;
 
         }
+
+    }
+
+    function _webAddressFileExists():Bool {
+
+        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
+
+    }
+
+    function _webAddressValid():Bool {
+
+        if ( !_webAddressFileExists() ) return false;
+
+        try {
+
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
+            if ( c == null || c.length == 0 ) return false;
+
+            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return true;
+
+        } catch( e ) {}
+
+        return false;
 
     }
 

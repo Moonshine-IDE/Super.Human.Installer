@@ -143,4 +143,7 @@ class SerialExecutor extends AbstractExecutor {
     @:keep
     public function stop( ?forced:Bool ) { }
 
+    @:keep
+    public function simulateStop() {}
+
 }

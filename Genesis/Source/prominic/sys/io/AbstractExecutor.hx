@@ -112,6 +112,7 @@ abstract class AbstractExecutor {
     }
 
     abstract public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ):AbstractExecutor;
+    abstract public function simulateStop():Void;
     abstract public function stop( ?forced:Bool ):Void;
 
 }

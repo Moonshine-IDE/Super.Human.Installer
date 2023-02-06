@@ -32,6 +32,7 @@ package superhuman.server;
 
 import genesis.application.managers.LanguageManager;
 import haxe.Template;
+import haxe.Timer;
 import haxe.io.Path;
 import lime.system.System;
 import lime.ui.FileDialog;
@@ -45,6 +46,7 @@ import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.applications.oracle.VirtualBoxMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
+import superhuman.config.SuperHumanGlobals;
 import superhuman.interfaces.IConsole;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.CombinedVirtualMachine.CombinedVirtualMachineState;
@@ -170,6 +172,7 @@ class Server {
 
     var _action:Property<ServerAction>;
     var _busy:Property<Bool>;
+    var _combinedVirtualMachine:Property<CombinedVirtualMachine>;
     var _console:IConsole;
     var _created:Bool = false;
     var _dhcp4:Property<Bool>;
@@ -201,9 +204,9 @@ class Server {
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
-
-    var _combinedVirtualMachine:Property<CombinedVirtualMachine>;
     var _vagrantMachine:VagrantMachine;
+    var _vagrantUpExecutor:AbstractExecutor;
+    var _vagrantUpExecutorStopTimer:Timer;
     var _virtualBoxMachine:VirtualBoxMachine;
     
     public var busy( get, never ):Bool;
@@ -411,6 +414,9 @@ class Server {
 
         if ( _onUpdate != null ) _onUpdate.clear();
         _onUpdate = null;
+
+        if ( _provisioner != null ) _provisioner.dispose();
+        _provisioner = null;
 
     }
 
@@ -1003,6 +1009,8 @@ class Server {
 
     function _startVagrantUp() {
 
+        _provisioner.startFileWatcher();
+
         this._busy.value = true;
 
         if ( this._provisioner.provisioned ) {
@@ -1016,15 +1024,17 @@ class Server {
         }
 
         _provisioner.deleteWebAddressFile();
+        _provisioner.onProvisioningFileChanged.add( _onDemoTasksProvisioningFileChanged );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
 
-        Vagrant.getInstance().getUp( this._vagrantMachine, _provision, [] )
+        _vagrantUpExecutor = Vagrant.getInstance().getUp( this._vagrantMachine, _provision, [] )
             .onStart( _vagrantUpStarted )
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
-            .onStdErr( _vagrantUpStandardErrorData )
-            .execute( _serverDir );
+            .onStdErr( _vagrantUpStandardErrorData );
+
+        _vagrantUpExecutor.execute( _serverDir );
 
     }
 
@@ -1063,6 +1073,9 @@ class Server {
         this._hostname.locked = this._organization.locked = ( this._provisioner.provisioned == true );
 
         executor.dispose();
+        _vagrantUpExecutor = null;
+        _provisioner.onProvisioningFileChanged.clear();
+        _provisioner.stopFileWatcher();
 
     }
 
@@ -1154,6 +1167,10 @@ class Server {
 
     }
 
+    //
+    // Server Status
+    //
+
     function _setServerStatus( ignoreBusyState:Bool = false ) {
 
         // Do not change status if server is busy
@@ -1176,6 +1193,39 @@ class Server {
     public function setServerStatus() {
 
         _setServerStatus();
+
+    }
+
+    //
+    // Provisioning status check
+    //
+
+    function _onDemoTasksProvisioningFileChanged() {
+
+        if ( _vagrantUpExecutorStopTimer != null ) {
+
+            // Stopping the timer if it alredy exists
+            _vagrantUpExecutorStopTimer.stop();
+            _vagrantUpExecutorStopTimer = null;
+
+        }
+
+        // Was the server provisioned?
+        if ( this._provisioner.provisioned ) {
+
+            // Is the vagrant up executor still running?
+            if ( _vagrantUpExecutor != null ) {
+
+                // Wait 5 seconds to make sure
+                _vagrantUpExecutorStopTimer = Timer.delay( () -> {
+
+                    _vagrantUpExecutor.simulateStop();
+
+                }, SuperHumanGlobals.SIMULATE_VAGRANT_UP_EXIT_TIMEOUT );
+
+            }
+
+        }
 
     }
 

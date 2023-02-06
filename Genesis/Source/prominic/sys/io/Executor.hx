@@ -119,6 +119,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _processOnStdErr( ?process:AbstractProcess ) {
 
+        if ( _exitCode >= 0 ) return;
+
         _mutexStderr.acquire();
         var s = process.stderrBuffer.getAll();
         Logger.error( '${this} stderr: ${s}' );
@@ -129,6 +131,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _processOnStdOut( ?process:AbstractProcess ) {
 
+        if ( _exitCode >= 0 ) return;
+
         _mutexStdout.acquire();
         var s = process.stdoutBuffer.getAll();
         for ( f in _onStdOut ) f( this, s );
@@ -138,9 +142,27 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _processOnStop( ?process:AbstractProcess ) {
 
+        if ( _exitCode >= 0 ) return;
+
         _mutexStop.acquire();
         _running = false;
         _exitCode = _process.exitCode;
+        for ( f in _onStop ) f( this );
+        _mutexStop.release();
+
+    }
+
+    /**
+     * This function is implemented because in specific circumstances the spawned process
+     * never exits, so the exit code cannot be received, and the callbacks cannot be called.
+     */
+    public function simulateStop() {
+
+        if ( _exitCode >= 0 ) return;
+
+        _mutexStop.acquire();
+        _running = false;
+        _exitCode = 0;
         for ( f in _onStop ) f( this );
         _mutexStop.release();
 

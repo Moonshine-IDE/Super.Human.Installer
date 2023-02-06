@@ -46,6 +46,9 @@ class SuperHumanGlobals {
     // Execute vagrant global-status with --prune switch
     static public var PRUNE_VAGRANT_MACHINES:Bool = false;
 
+    // The time to wait after the provisioning proof file created, in milliseconds
+    static public final SIMULATE_VAGRANT_UP_EXIT_TIMEOUT:Int = 5000;
+
     // Source code url
     static public final SOURCE_CODE_URL:String = "https://github.com/Moonshine-IDE/Super.Human.Installer";
 
