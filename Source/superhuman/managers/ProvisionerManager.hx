@@ -43,8 +43,14 @@ class ProvisionerManager {
     
     static public function getBundledProvisioners():Array<ProvisionerDefinition> {
         
+        // Generate array of available provisioners, newest always at the top
         return [
 
+            {
+                name: "Demo-tasks v0.1.18",
+                data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.18" ) },
+                root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_DEMO_TASKS_LOCAL_PATH + "0.1.18"
+            },
             {
                 name: "Demo-tasks v0.1.17",
                 data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.17" ) },
