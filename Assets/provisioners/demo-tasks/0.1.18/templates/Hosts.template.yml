@@ -1,0 +1,239 @@
+---
+hosts:
+  -
+    settings:
+      hostname: ::SERVER_HOSTNAME:: #Default or Provide user option
+      domain: ::SERVER_DOMAIN:: #Default or Provide user option
+      server_id: '::SERVER_ID::' #Auto-generate
+      vcpus: ::RESOURCES_CPU:: #Default or Provide user option
+      memory: ::RESOURCES_RAM:: #Default or Provide user option
+
+      consoleport: ::SERVER_ID:: #Auto-generate
+      consolehost: 0.0.0.0
+      box: 'STARTcloud/debian11-server'
+      box_version: 0.0.3
+      os_type: 'Debian_64'
+      provider-type: virtualbox
+      firmware_type: UEFI
+      setup_wait: 300
+      vagrant_user_private_key_path: ./id_rsa
+      vagrant_user: startcloud
+      vagrant_user_pass: 'STARTcloud22@!'
+      vagrant_insert_key: true
+      ssh_forward_agent: true
+
+    networks:
+      - address: ::NETWORK_ADDRESS:: #Use a sane default, This is ignored when dhcp4 is set to true, Provide user option
+        netmask: ::NETWORK_NETMASK:: #Use a sane default, This is ignored when dhcp4 is set to true, Provide user option
+        gateway: ::NETWORK_GATEWAY:: #Blank, This is ignored when dhcp4 is set to true, Provide user option
+        dhcp4: ::NETWORK_DHCP4:: #Default, Provide user option in case they want static ip
+        dhcp6: false #Default, False always
+        bridge: ::NETWORK_BRIDGE:: #Blank or Provide user option
+        type: external
+        mac: auto
+        dns:
+          - nameserver: ::NETWORK_DNS_NAMESERVER_1::
+          - nameserver: ::NETWORK_DNS_NAMESERVER_2::
+
+    ## For later use in Data Portability
+    ## https://sleeplessbeastie.eu/2021/05/10/how-to-define-multiple-disks-inside-vagrant-using-virtualbox-provider/
+    #disks:
+    #  boot:
+    #    size: 30G
+    #  additional_disks:
+    #    - volume_name: disk1
+    #      size: 20G
+
+    # Moved to Hosts.rb, Here to document how to override, will be removed in future version once documented in README
+    #vbox:
+    #  directives:
+    #    - directive: vrde
+    #      value: 'on'
+
+    provisioning:
+      ansible.builtin.shell:
+        enabled: false
+        scripts:
+          - './scripts/aliases.sh'
+
+      ansible:
+        enabled: true
+        scripts:
+          - local:
+              - script: ansible/generate-playbook.yml
+                ansible_python_interpreter: /usr/bin/python3
+                compatibility_mode: 2.0
+                install_mode: pip
+                ssh_pipelining: true
+                verbose: false
+              - script: ansible/playbook.yml
+                ansible_python_interpreter: /usr/bin/python3
+                compatibility_mode: 2.0
+                install_mode: pip
+                ssh_pipelining: true
+                verbose: false
+
+    folders:
+      - map: .
+        to: /vagrant
+        type: virtualbox
+        disabled: true
+        automount: true
+        description: "Disable VBoxSF"
+      - map: ./ansible/
+        to: /vagrant/ansible/
+        type: rsync
+        args:
+          - '--verbose'
+          - '--archive'
+          - '--delete'
+          - '-z'
+          - '--copy-links'
+      - map: ./installers/
+        to: /vagrant/installers/
+        type: rsync
+        description: "Users will want to put their installer files into these folders"
+      - map: ./ssls/
+        to: /secure/
+        type: rsync
+      - map: ./safe-id-to-cross-certify/
+        to: /safe-id-to-cross-certify/
+        type: rsync
+
+    vars:
+      ## You can set global role variables here, look in the defaults folders for hints as to variables used by roles
+      domino_organization: ::SERVER_ORGANIZATION:: #Default or Provide user option
+      domino_server_clustermates: 0
+      safe_notes_id: ::USER_SAFE_ID:: #Variable or Provide user option
+      domino_admin_notes_id_password: "password"
+
+      ## When using the default: demo.startcloud.com as the hostname and domain, we use the default-signed.crt certificates to provide a valid SSL
+      ## If the hostname and domain, ie demo.startcloud.com do not match the certificate we provide (ie demo.startcloud.com in default-signed.crt), some services may not start (ie nomadweb)
+      ## If a user does not mind using a self signed certificate for their development testing for their own domain  or are unable to replace the default-signed.crt files
+      ## they would set the below value to true so that the vm creates a SSL crt with the valid hostname, so that when the service compares the hostname it is to listen on and
+      ## the hostname the certificate is signed for it matches.
+      selfsigned_enabled: ::CERT_SELFSIGNED::
+      debug_all: true
+
+    roles:
+      - name: startcloud_setup
+      - name: startcloud_networking
+      - name: startcloud_hostname
+      - name: startcloud_dependencies
+      - name: startcloud_service_user
+      - name: startcloud_ssl
+      - name: sdkman_install
+      - name: sdkman_java
+      - name: sdkman_maven
+      - name: sdkman_gradle
+      - name: domino_reset
+      - name: domino_install
+        port_forwards:
+          - guest: 442
+            host: 8442
+            ip: 127.0.0.1
+            proxied: true
+            url: domino
+          - guest: 82
+            host: 8882
+            ip: 127.0.0.1
+            proxied: true
+            url: domino
+          - guest: 1352
+            host: 2352
+            ip: 127.0.0.1
+            proxied: false
+      - name: domino_vagrant_rest_api
+        port_forwards:
+          - guest: 8080
+            host: 8080
+            ip: 127.0.0.1
+            proxied: true
+            url: restapi
+      - name: domino_service_nash
+      - name: domino_java_config
+      - name: domino_java_tools
+      - name: domino_updatesite
+      - name: domino_config
+      - name: domino_genesis
+      - name: domino_genesis_applications
+      - name: domino_cross_certify
+      - name: domino_leap
+        port_forwards:
+          - guest: 442
+            host: 8442
+            ip: 127.0.0.1
+            proxied: true
+            url: leap
+          - guest: 82
+            host: 8882
+            ip: 127.0.0.1
+            proxied: true
+            url: leap
+      - name: domino_nomadweb
+        port_forwards:
+          - guest: 9443
+            host: 9443
+            ip: 127.0.0.1
+            proxied: true
+            url: nomadweb
+      - name: domino_traveler
+        port_forwards:
+          - guest: 442
+            host: 8442
+            ip: 127.0.0.1
+            proxied: true
+            url: traveler
+      - name: domino_traveler_htmo
+      - name: domino_verse
+        port_forwards:
+          - guest: 442
+            host: 8442
+            ip: 127.0.0.1
+            proxied: true
+            url: verse
+      - name: domino_appdevpack
+      - name: domino_rest_api
+      - name: domino_vagrant_readme
+      - name: startcloud_quick_start
+        port_forwards:
+          - guest: 8000
+            host: 8000
+            ip: 127.0.0.1
+            proxied: true
+            url: welcome
+      - name: startcloud_vagrant_readme
+      #   Future To-Do: Access to Wine Bottle with Notes Client installed
+      #  - name: startcloud_tomcat
+      #    port_forwards:
+      #      - guest: 8089
+      #        host: 8089
+      #        ip: 127.0.0.1
+      #        proxied: true
+      #        url: tomcat
+      #      - guest: 8843
+      #        host: 8843
+      #        ip: 127.0.0.1
+      #        proxied: true
+      #        url: tomcat
+      #  - name: startcloud_mariadb
+      #  - name: startcloud_chrome
+      #  - name: startcloud_guacamole
+      - name: startcloud_haproxy
+        port_forwards:
+          - guest: 443
+            host: 6443
+            ip: 127.0.0.1
+            proxied: false
+            url: haproxy
+          - guest: 80
+            host: 6080
+            ip: 127.0.0.1
+            proxied: false
+            url: haproxy
+          - guest: 444
+            host: 6444
+            ip: 127.0.0.1
+            proxied: false
+            url: haproxy
+      - name: startcloud_lockdown

@@ -1,0 +1,6 @@
+        port_forwards:
+          - guest: 8080
+            host: 8080
+            ip: 127.0.0.1
+            proxied: true
+            url: restapi

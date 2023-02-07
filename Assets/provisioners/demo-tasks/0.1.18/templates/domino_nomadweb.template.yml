@@ -1,0 +1,6 @@
+        port_forwards:
+          - guest: 9443
+            host: 9443
+            ip: 127.0.0.1
+            proxied: true
+            url: nomadweb

@@ -1,0 +1,11 @@
+        port_forwards:
+          - guest: 442
+            host: 8442
+            ip: 127.0.0.1
+            proxied: true
+            url: leap
+          - guest: 82
+            host: 8882
+            ip: 127.0.0.1
+            proxied: true
+            url: leap

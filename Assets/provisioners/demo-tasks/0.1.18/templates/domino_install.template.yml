@@ -1,0 +1,15 @@
+        port_forwards:
+          - guest: 442
+            host: 8442
+            ip: 127.0.0.1
+            proxied: true
+            url: domino
+          - guest: 82
+            host: 8882
+            ip: 127.0.0.1
+            proxied: true
+            url: domino
+          - guest: 1352
+            host: 2352
+            ip: 127.0.0.1
+            proxied: false
