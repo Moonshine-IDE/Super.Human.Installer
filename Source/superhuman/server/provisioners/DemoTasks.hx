@@ -32,6 +32,7 @@ package superhuman.server.provisioners;
 
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
+import haxe.Template;
 import haxe.io.Path;
 import lime.system.System;
 import prominic.core.primitives.VersionInfo;
@@ -55,6 +56,17 @@ class DemoTasks extends AbstractProvisioner {
     static final _TASK_IDENTIFIER_PATTERN:EReg = ~/(?:\s{6})(?:- name: )(\S+)/;
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
     static final _WEB_ADDRESS_PATTERN:EReg = ~/(?:https:\/\/)(.*)(?::\d{1,5}\/welcome.html)/;
+
+    // Additional templates for version 0.1.18+
+    static final _TEMPLATE_DOMINO_INSTALL:String = "domino_install.template.yml";
+    static final _TEMPLATE_DOMINO_LEAP:String = "domino_leap.template.yml";
+    static final _TEMPLATE_DOMINO_NOMADWEB:String = "domino_nomadweb.template.yml";
+    static final _TEMPLATE_DOMINO_TRAVELER:String = "domino_traveler.template.yml";
+    static final _TEMPLATE_DOMINO_VAGRANT_REST_API:String = "domino_vagrant_rest_api.template.yml";
+    static final _TEMPLATE_DOMINO_VERSE:String = "domino_verse.template.yml";
+    static final _TEMPLATE_STARTCLOUD_HAPROXY:String = "startcloud_haproxy.template.yml";
+    static final _TEMPLATE_STARTCLOUD_QUICK_START:String = "startcloud_quick_start.template.yml";
+    static final _TEMPLATE_STARTCLOUD_VAGRANT_README:String = "startcloud_vagrant_readme.template.yml";
 
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
@@ -146,6 +158,7 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    var _hostsTemplate:String;
     var _onProvisioningFileChanged:List<()->Void>;
     var _startedTasks:Array<String>;
     var _tasks:Array<String>;
@@ -252,6 +265,230 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    public function generateHostsFileContent():String {
+
+        _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
+
+        var replace = {
+
+            USER_EMAIL: _server.userEmail.value,
+            USER_SAFE_ID: _SAFE_ID_FILE,
+
+            SERVER_ID: _server.id,
+            SERVER_HOSTNAME: _server.url.hostname,
+            SERVER_DOMAIN: _server.url.domainName,
+            SERVER_ORGANIZATION: _server.organization.value,
+
+            NETWORK_BRIDGE: _server.networkBridge.value,
+
+            // Always true, never false
+            NETWORK_DHCP4: true,
+            NETWORK_DNS_NAMESERVER_1: ( _server.dhcp4.value ) ? "1.1.1.1" : _server.nameServer1.value,
+            NETWORK_DNS_NAMESERVER_2: ( _server.dhcp4.value ) ? "1.0.0.1" : _server.nameServer2.value,
+            NETWORK_ADDRESS: ( _server.dhcp4.value ) ? "192.168.2.1" : _server.networkAddress.value,
+            NETWORK_NETMASK: ( _server.dhcp4.value ) ? "255.255.255.0" : _server.networkNetmask.value,
+            NETWORK_GATEWAY: ( _server.dhcp4.value ) ? "" : _server.networkGateway.value,
+
+            // Forcing false instead of
+            // ENV_OPEN_BROWSER: _openBrowser.value,
+            ENV_OPEN_BROWSER: false,
+            ENV_SETUP_WAIT: _server.setupWait.value,
+
+            RESOURCES_CPU: _server.numCPUs.value,
+            RESOURCES_RAM: Std.string( _server.memory.value ) + "G",
+
+            ROLE_LEAP: "",
+            ROLE_NOMADWEB: "",
+            ROLE_TRAVELER: "",
+            ROLE_TRAVELER_HTMO: "",
+            ROLE_VERSE: "",
+            ROLE_APPDEVPACK: "",
+            ROLE_STARTCLOUD_QUICK_START: "",
+            ROLE_STARTCLOUD_HAPROXY: "",
+            ROLE_STARTCLOUD_VAGRANT_README: "",
+            ROLE_RESTAPI: "",
+            ROLE_DOMINO_INSTALL: "",
+            ROLE_DOMINO_VAGRANT_REST_API: "",
+
+            CERT_SELFSIGNED: ( _server.url.hostname + "." + _server.url.domainName ).toLowerCase() != "demo.startcloud.com",
+
+        };
+
+        for ( r in _server.roles.value ) {
+
+            var replaceWith:String = "";
+
+            if ( r.value == "leap" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-leap";
+                    if ( _server.disableBridgeAdapter.value && _version >= "0.1.18" ) replaceWith += "\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_DOMINO_LEAP );
+
+                } else {
+
+                    replaceWith = "#- name: domino-leap";
+
+                }
+
+                replace.ROLE_LEAP = replaceWith;
+
+            }
+
+            if ( r.value == "nomadweb" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-nomadweb";
+                    if ( _server.disableBridgeAdapter.value && _version >= "0.1.18" ) replaceWith += "\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_DOMINO_NOMADWEB );
+
+                } else {
+
+                    replaceWith = "#- name: domino-nomadweb";
+
+                }
+
+                replace.ROLE_NOMADWEB = replaceWith;
+
+            }
+
+            if ( r.value == "traveler" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-traveler";
+                    if ( _server.disableBridgeAdapter.value && _version >= "0.1.18" ) replaceWith += "\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_DOMINO_TRAVELER );
+
+                } else {
+
+                    replaceWith = "#- name: domino-traveler";
+
+                }
+
+                replace.ROLE_TRAVELER = replaceWith;
+
+            }
+
+            if ( r.value == "traveler" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-traveler-htmo";
+
+                } else {
+
+                    replaceWith = "#- name: domino-traveler-htmo";
+
+                }
+
+                replace.ROLE_TRAVELER_HTMO = replaceWith;
+
+            }
+
+            if ( r.value == "verse" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-verse";
+                    if ( _server.disableBridgeAdapter.value && _version >= "0.1.18" ) replaceWith += "\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_DOMINO_VERSE );
+
+                } else {
+
+                    replaceWith = "#- name: domino-verse";
+
+                }
+
+                replace.ROLE_VERSE = replaceWith;
+
+            }
+
+            if ( r.value == "appdevpack" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-appdevpack";
+
+                } else {
+
+                    replaceWith = "#- name: domino-appdevpack";
+
+                }
+
+                replace.ROLE_APPDEVPACK = replaceWith;
+
+            }
+
+            if ( r.value == "domino-rest-api" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-rest-api";
+
+                } else {
+
+                    replaceWith = "#- name: domino-rest-api";
+
+                }
+
+                replace.ROLE_RESTAPI = replaceWith;
+
+            }
+
+            if ( _server.disableBridgeAdapter.value && _version >= "0.1.18" ) {
+
+                replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud-quick-start\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_STARTCLOUD_QUICK_START );
+                replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud-haproxy\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_STARTCLOUD_HAPROXY );
+                replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud-vagrant-readme\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_STARTCLOUD_VAGRANT_README );
+                replace.ROLE_DOMINO_INSTALL = "- name: domino_install\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_DOMINO_INSTALL );
+                replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino_vagrant_rest_api\n" + getFileContentFromSourceTemplateDirectory( _TEMPLATE_DOMINO_VAGRANT_REST_API );
+
+            } else {
+
+                replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud-quick-start";
+                replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud-haproxy";
+                replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud-vagrant-readme";
+                replace.ROLE_DOMINO_INSTALL = "- name: domino_install";
+                replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino_vagrant_rest_api";
+
+            }
+
+        }
+
+        var template = new Template( _hostsTemplate );
+		var output = template.execute( replace );
+
+        if ( _server.disableBridgeAdapter.value ) {
+
+            if ( _version >= "0.1.18" ) {
+
+                // Remove the contents of networks yaml tag
+                var r:EReg = ~/(?:networks:)((.|\n)*)(?: For later)/;
+
+                if ( r.match( output ) ) {
+
+                    output = r.replace( output, "## For later" );
+
+                }
+
+            } else {
+
+                // Remove the contents of networks yaml tag
+                var r:EReg = ~/(?:networks:)((.|\n)*)(?:vbox:)/;
+                
+                if ( r.match( output ) ) {
+
+                    output = r.replace( output, "vbox:" );
+
+                }
+
+            }
+
+        }
+
+        return output;
+
+    }
+
     public function openWelcomePage() {
 
         System.openURL( _getWebAddress() );
@@ -264,6 +501,14 @@ class DemoTasks extends AbstractProvisioner {
 
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
         if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
+
+        Logger.verbose( '${this}: Reinitialized' );
+
+    }
+
+    public function saveHostsFile() {
+
+        if ( _server.isValid() ) this._saveHostsFile();
 
     }
 
@@ -284,19 +529,25 @@ class DemoTasks extends AbstractProvisioner {
 
             } catch ( e:Exception ) {
 
-                Logger.error( 'Notes Safe ID at ${safeIdPath} cannot be copied to ${safeIdDir + _SAFE_ID_FILE}. Details: ${e.details()} Message: ${e.message}' );
+                Logger.error( '${this}: Notes Safe ID at ${safeIdPath} cannot be copied to ${safeIdDir + _SAFE_ID_FILE}. Details: ${e.details()} Message: ${e.message}' );
                 if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copysafeidfailed', '${e.details()} Message: ${e.message}' ), true );
 
             }
 
         } else {
 
-            Logger.error( 'Notes Safe ID does not exist at ${safeIdPath}' );
+            Logger.error( '${this}: Notes Safe ID does not exist at ${safeIdPath}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.safeidnonexistent', safeIdPath ), true );
 
         }
 
         return false;
+
+    }
+
+    public override function toString():String {
+
+        return '[DemoTasks(v${this._version})]';
 
     }
 
@@ -348,7 +599,7 @@ class DemoTasks extends AbstractProvisioner {
 
         if ( !e ) {
 
-            Logger.error( 'File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
+            Logger.error( '${this}: File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
             return null;
 
         }
@@ -390,21 +641,23 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
-    function _saveHostsFile( content:String ) {
+    function _saveHostsFile() {
 
         createTargetDirectory();
+
+        var content = generateHostsFileContent();
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', content ) );
 
         try {
 
             File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
-            Logger.debug( 'Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
+            Logger.debug( '${this}: Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
 
         } catch ( e:Exception ) {
 
-            Logger.error( 'Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
+            Logger.error( '${this}: Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
             return;
 

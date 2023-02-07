@@ -1,0 +1,16 @@
+      #   Future To-Do: Access to Wine Bottle with Notes Client installed
+      #  - name: startcloud_tomcat
+      #    port_forwards:
+      #      - guest: 8089
+      #        host: 8089
+      #        ip: 127.0.0.1
+      #        proxied: true
+      #        url: tomcat
+      #      - guest: 8843
+      #        host: 8843
+      #        ip: 127.0.0.1
+      #        proxied: true
+      #        url: tomcat
+      #  - name: startcloud_mariadb
+      #  - name: startcloud_chrome
+      #  - name: startcloud_guacamole

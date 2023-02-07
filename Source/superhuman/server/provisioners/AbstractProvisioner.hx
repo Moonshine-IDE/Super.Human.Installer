@@ -110,7 +110,7 @@ class AbstractProvisioner {
 
         }
 
-        Logger.debug( 'Copying server configuration files to ${_targetPath}' );
+        Logger.debug( '${this}: Copying server configuration files to ${_targetPath}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "" ) );
         FileTools.copyDirectory( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT, _targetPath, FileOverwriteRule.Always, callback );
 
@@ -222,7 +222,7 @@ class AbstractProvisioner {
             _fileWatcher.onAdd.add( _onFileWatcherFileAdded );
             _fileWatcher.onDelete.add( _onFileWatcherFileDeleted );
             _fileWatcher.addDirectory( this._targetPath, true );
-            Logger.verbose( '[${this._type} v${this._version}]: FileWatcher started at: ${_targetPath}' );
+            Logger.verbose( '${this}: FileWatcher started at: ${_targetPath}' );
     
         }
 
@@ -236,22 +236,28 @@ class AbstractProvisioner {
             _fileWatcher.onDelete.removeAll();
             _fileWatcher.removeDirectory( this._targetPath );
             _fileWatcher = null;
-            Logger.verbose( '[${this._type} v${this._version}]: FileWatcher stopped at: ${_targetPath}' );
+            Logger.verbose( '${this}: FileWatcher stopped at: ${_targetPath}' );
 
         }
 
     }
 
+    public function toString():String {
+
+        return '[AbstractProvisioner(v${this._version})]';
+
+    }
+
     function _onFileWatcherFileAdded( path:String ) {
 
-        Logger.verbose( '[${this._type} v${this._version}]: FileWatcher file added at: ${path}' );
+        Logger.verbose( '${this}: FileWatcher file added at: ${path}' );
         for ( f in _onFileAdded ) f( path );
 
     }
 
     function _onFileWatcherFileDeleted( path:String ) {
 
-        Logger.verbose( '[${this._type} v${this._version}]: FileWatcher file deleted at: ${path}' );
+        Logger.verbose( '${this}: FileWatcher file deleted at: ${path}' );
         for ( f in _onFileDeleted ) f( path );
 
     }

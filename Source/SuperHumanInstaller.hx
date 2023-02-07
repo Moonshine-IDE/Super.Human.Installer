@@ -685,7 +685,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		Logger.info( '${this}: Starting server: ${e.server.id}' );
 		Logger.info( '${this}: Server configuration: ${e.server.getData()}' );
 		Logger.verbose( '${this}: Virtual Machine: ${e.server.combinedVirtualMachine.value}' );
-		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.generateHostsFileContent()}\n----- Hosts.yml END -----' );
+		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.provisioner.generateHostsFileContent()}\n----- Hosts.yml END -----' );
 
 		// TODO: Decide how to handle provisioning if required
 		// e.server.start( _config.preferences.provisionserversonstart );

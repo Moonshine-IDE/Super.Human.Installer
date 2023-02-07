@@ -127,29 +127,8 @@ hosts:
       - name: sdkman_maven
       - name: sdkman_gradle
       - name: domino_reset
-      - name: domino_install
-        port_forwards:
-          - guest: 442
-            host: 8442
-            ip: 127.0.0.1
-            proxied: true
-            url: domino
-          - guest: 82
-            host: 8882
-            ip: 127.0.0.1
-            proxied: true
-            url: domino
-          - guest: 1352
-            host: 2352
-            ip: 127.0.0.1
-            proxied: false
-      - name: domino_vagrant_rest_api
-        port_forwards:
-          - guest: 8080
-            host: 8080
-            ip: 127.0.0.1
-            proxied: true
-            url: restapi
+      ::ROLE_DOMINO_INSTALL::
+      ::ROLE_DOMINO_VAGRANT_REST_API::
       - name: domino_service_nash
       - name: domino_java_config
       - name: domino_java_tools
@@ -158,82 +137,15 @@ hosts:
       - name: domino_genesis
       - name: domino_genesis_applications
       - name: domino_cross_certify
-      - name: domino_leap
-        port_forwards:
-          - guest: 442
-            host: 8442
-            ip: 127.0.0.1
-            proxied: true
-            url: leap
-          - guest: 82
-            host: 8882
-            ip: 127.0.0.1
-            proxied: true
-            url: leap
-      - name: domino_nomadweb
-        port_forwards:
-          - guest: 9443
-            host: 9443
-            ip: 127.0.0.1
-            proxied: true
-            url: nomadweb
-      - name: domino_traveler
-        port_forwards:
-          - guest: 442
-            host: 8442
-            ip: 127.0.0.1
-            proxied: true
-            url: traveler
-      - name: domino_traveler_htmo
-      - name: domino_verse
-        port_forwards:
-          - guest: 442
-            host: 8442
-            ip: 127.0.0.1
-            proxied: true
-            url: verse
-      - name: domino_appdevpack
-      - name: domino_rest_api
+      ::ROLE_LEAP::
+      ::ROLE_NOMADWEB::
+      ::ROLE_TRAVELER::
+      ::ROLE_TRAVELER_HTMO::
+      ::ROLE_VERSE::
+      ::ROLE_APPDEVPACK::
+      ::ROLE_RESTAPI::
       - name: domino_vagrant_readme
-      - name: startcloud_quick_start
-        port_forwards:
-          - guest: 8000
-            host: 8000
-            ip: 127.0.0.1
-            proxied: true
-            url: welcome
-      - name: startcloud_vagrant_readme
-      #   Future To-Do: Access to Wine Bottle with Notes Client installed
-      #  - name: startcloud_tomcat
-      #    port_forwards:
-      #      - guest: 8089
-      #        host: 8089
-      #        ip: 127.0.0.1
-      #        proxied: true
-      #        url: tomcat
-      #      - guest: 8843
-      #        host: 8843
-      #        ip: 127.0.0.1
-      #        proxied: true
-      #        url: tomcat
-      #  - name: startcloud_mariadb
-      #  - name: startcloud_chrome
-      #  - name: startcloud_guacamole
-      - name: startcloud_haproxy
-        port_forwards:
-          - guest: 443
-            host: 6443
-            ip: 127.0.0.1
-            proxied: false
-            url: haproxy
-          - guest: 80
-            host: 6080
-            ip: 127.0.0.1
-            proxied: false
-            url: haproxy
-          - guest: 444
-            host: 6444
-            ip: 127.0.0.1
-            proxied: false
-            url: haproxy
+      ::ROLE_STARTCLOUD_QUICK_START::
+      ::ROLE_STARTCLOUD_VAGRANT_README::
+      ::ROLE_STARTCLOUD_HAPROXY::
       - name: startcloud_lockdown

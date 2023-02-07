@@ -32,7 +32,6 @@ package superhuman.server;
 
 import genesis.application.managers.LanguageManager;
 import haxe.Json;
-import haxe.Template;
 import haxe.Timer;
 import haxe.io.Path;
 import lime.system.System;
@@ -61,8 +60,6 @@ import sys.io.File;
 class Server {
 
     static final _CONFIG_FILE = ".shi-server";
-    static final _SAFE_ID_FILENAME:String = "safe.ids";
-    static final _VAGRANTFILE:String = "Vagrantfile";
 
     static final _VK_CERTIFIER:EReg = ~/^(?!\W)([a-zA-Z0-9-]+)?([^\W])$/;
     static final _VK_DOMAIN:EReg = ~/^[a-zA-Z0-9]+\.[a-zA-Z0-9.-_]+$/;
@@ -183,7 +180,6 @@ class Server {
     var _diskUsage:Property<Float>;
     var _forceVagrantProvisioning:Bool;
     var _hostname:ValidatingProperty;
-    var _hostsTemplate:String;
     var _id:Int;
     var _memory:Property<Float>;
     var _nameServer1:ValidatingProperty;
@@ -677,7 +673,8 @@ class Server {
 
         _saveSafeId();
 
-        if ( !_provisioner.hostFileExists ) _provisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
+        //if ( !_provisioner.hostFileExists ) _provisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, generateHostsFileContent() );
+        if ( !_provisioner.hostFileExists ) _provisioner.saveHostsFile();
 
         if ( console != null ) {
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
@@ -697,120 +694,7 @@ class Server {
 
     public function saveHostsFile() {
 
-        if ( isValid() ) this._saveHostsFile();
-
-    }
-
-    public function generateHostsFileContent():String {
-
-        _hostsTemplate = _provisioner.getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
-
-        var replace = {
-
-            USER_EMAIL: _userEmail.value,
-            USER_SAFE_ID: _SAFE_ID_FILENAME,
-
-            SERVER_ID: _id,
-            SERVER_HOSTNAME: url.hostname,
-            SERVER_DOMAIN: url.domainName,
-            SERVER_ORGANIZATION: _organization.value,
-
-            NETWORK_BRIDGE: _networkBridge.value,
-
-            // Always true, never false
-            NETWORK_DHCP4: true,
-            NETWORK_DNS_NAMESERVER_1: ( _dhcp4.value ) ? "1.1.1.1" : _nameServer1.value,
-            NETWORK_DNS_NAMESERVER_2: ( _dhcp4.value ) ? "1.0.0.1" : _nameServer2.value,
-            NETWORK_ADDRESS: ( _dhcp4.value ) ? "192.168.2.1" : _networkAddress.value,
-            NETWORK_NETMASK: ( _dhcp4.value ) ? "255.255.255.0" : _networkNetmask.value,
-            NETWORK_GATEWAY: ( _dhcp4.value ) ? "" : _networkGateway.value,
-
-            // Forcing false instead of
-            // ENV_OPEN_BROWSER: _openBrowser.value,
-            ENV_OPEN_BROWSER: false,
-            ENV_SETUP_WAIT: _setupWait.value,
-
-            RESOURCES_CPU: _numCPUs.value,
-            RESOURCES_RAM: Std.string( _memory.value ) + "G",
-
-            ROLE_LEAP: "",
-            ROLE_NOMADWEB: "",
-            ROLE_TRAVELER: "",
-            ROLE_TRAVELER_HTMO: "",
-            ROLE_VERSE: "",
-            ROLE_APPDEVPACK: "",
-            ROLE_STARTCLOUD_QUICK_START: "",
-            ROLE_STARTCLOUD_HAPROXY: "",
-            ROLE_STARTCLOUD_VAGRANT_README: "",
-            ROLE_RESTAPI: "",
-
-            CERT_SELFSIGNED: ( url.hostname + "." + url.domainName ).toLowerCase() != "demo.startcloud.com",
-
-        };
-
-        var travelerEnabled:Bool = false;
-        var verseEnabled:Bool = false;
-
-        for ( r in _roles.value ) {
-
-            if ( r.value == "leap" )
-                replace.ROLE_LEAP = ( r.enabled ) ? "- name: domino-leap" : "#- name: domino-leap";
-
-            if ( r.value == "nomadweb" )
-                replace.ROLE_NOMADWEB = ( r.enabled ) ? "- name: domino-nomadweb" : "#- name: domino-nomadweb";
-
-            if ( r.value == "traveler" ) {
-                travelerEnabled = r.enabled;
-                replace.ROLE_TRAVELER = ( r.enabled ) ? "- name: domino-traveler" : "#- name: domino-traveler";
-                replace.ROLE_TRAVELER_HTMO = ( r.enabled ) ? "- name: domino-traveler-htmo" : "#- name: domino-traveler-htmo";
-            }
-
-            if ( r.value == "verse" ) {
-                verseEnabled = r.enabled;
-                replace.ROLE_VERSE = ( r.enabled ) ? "- name: domino-verse" : "#- name: domino-verse";
-            }
-
-            if ( r.value == "appdevpack" )
-                replace.ROLE_APPDEVPACK = ( r.enabled ) ? "- name: domino-appdevpack" : "#- name: domino-appdevpack";
-
-            if ( r.value == "domino-rest-api" )
-                replace.ROLE_RESTAPI = ( r.enabled ) ? "- name: domino-rest-api" : "#- name: domino-rest-api";
-
-            replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud-quick-start";
-            replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud-haproxy";
-            replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud-vagrant-readme";
-
-        }
-
-        var template = new Template( _hostsTemplate );
-		var output = template.execute( replace );
-
-        if ( this._disableBridgeAdapter.value ) {
-
-            // Remove the contents of networks yaml tag
-            var r:EReg = ~/(?:networks:)((.|\n)*)(?:vbox:)/;
-            
-            if ( r.match( output ) ) {
-
-                //output = r.replace( output, "networks:\n\n    vbox:" );
-                output = r.replace( output, "vbox:" );
-
-            }
-
-        }
-
-        return output;
-
-    }
-
-    function _saveHostsFile() {
-
-        Sys.setCwd( System.applicationDirectory );
-
-		var output = generateHostsFileContent();
-
-        _provisioner.saveContentToFileInTargetDirectory( DemoTasks.HOSTS_FILE, output );
-        Logger.verbose( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', output ) );
+        if ( isValid() ) this.provisioner.saveHostsFile();
 
     }
 
