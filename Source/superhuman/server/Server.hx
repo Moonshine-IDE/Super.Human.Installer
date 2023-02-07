@@ -756,7 +756,7 @@ class Server {
             if ( r.value == "traveler" ) {
                 travelerEnabled = r.enabled;
                 replace.ROLE_TRAVELER = ( r.enabled ) ? "- name: domino-traveler" : "#- name: domino-traveler";
-                replace.ROLE_TRAVELER_HTMO = ( r.enabled ) ? "- name: domino-traveler-htmo" : "# - name: domino-traveler-htmo";
+                replace.ROLE_TRAVELER_HTMO = ( r.enabled ) ? "- name: domino-traveler-htmo" : "#- name: domino-traveler-htmo";
             }
 
             if ( r.value == "verse" ) {
