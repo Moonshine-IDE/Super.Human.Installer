@@ -92,7 +92,7 @@ class Server {
 
         if ( data.provisioner == null ) {
 
-            sc._provisioner = new DemoTasks( latestDemoTasks.root, sc._serverDir );
+            sc._provisioner = new DemoTasks( latestDemoTasks.root, sc._serverDir, sc );
 
         } else {
 
@@ -100,13 +100,13 @@ class Server {
 
             if ( provisioner != null ) {
 
-                sc._provisioner = new DemoTasks( provisioner.root, sc._serverDir );
+                sc._provisioner = new DemoTasks( provisioner.root, sc._serverDir, sc );
 
             } else {
 
                 // The server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                sc._provisioner = new DemoTasks( null, sc._serverDir );
+                sc._provisioner = new DemoTasks( null, sc._serverDir, sc );
 
             }
 

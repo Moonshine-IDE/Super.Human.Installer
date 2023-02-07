@@ -185,9 +185,9 @@ class DemoTasks extends AbstractProvisioner {
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
     
-    public function new( sourcePath:String, targetPath:String ) {
+    public function new( sourcePath:String, targetPath:String, server:Server ) {
 
-        super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath );
+        super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath, server );
 
         _versionFile = "version.rb";
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );

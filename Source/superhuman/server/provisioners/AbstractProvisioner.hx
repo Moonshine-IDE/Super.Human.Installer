@@ -49,13 +49,14 @@ class AbstractProvisioner {
     
     var _exists:Bool = false;
     var _fileWatcher:FileWatcher;
+    var _onFileAdded:List<(String)->Void>;
+    var _onFileDeleted:List<(String)->Void>;
+    var _server:Server;
     var _sourcePath:String;
     var _targetPath:String;
     var _type:ProvisionerType;
     var _version:VersionInfo;
     var _versionFile:String = "version.txt";
-    var _onFileAdded:List<(String)->Void>;
-    var _onFileDeleted:List<(String)->Void>;
 
     public var console:IConsole;
 
@@ -80,11 +81,12 @@ class AbstractProvisioner {
     public var version( get, never ):VersionInfo;
     function get_version() return _version;
 
-    function new( type:ProvisionerType, sourcePath:String, targetPath:String ) {
+    function new( type:ProvisionerType, sourcePath:String, targetPath:String, server:Server ) {
 
         _type = type;
         _sourcePath = sourcePath;
         _targetPath = targetPath;
+        _server = server;
 
         _onFileAdded = new List();
         _onFileDeleted = new List();
