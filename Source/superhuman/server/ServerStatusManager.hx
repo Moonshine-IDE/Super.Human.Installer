@@ -73,6 +73,7 @@ class ServerStatusManager {
                 result = ServerStatus.Running;
 
             default:
+                result = ServerStatus.Unknown;
 
         }
 
