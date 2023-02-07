@@ -313,6 +313,8 @@ class VirtualBox extends AbstractApp {
 
     public function openGUI() {
 
+        Logger.verbose( '${this}: Opening GUI' );
+
         #if mac
         Shell.getInstance().open( [ "-a", "VirtualBox" ] );
         #elseif windows
@@ -320,6 +322,12 @@ class VirtualBox extends AbstractApp {
         #elseif linux
         Shell.getInstance().exec( '${this._path}VirtualBox' );
         #end
+
+    }
+
+    public override function toString():String {
+
+        return '[VirtualBox]';
 
     }
 
@@ -331,7 +339,8 @@ class VirtualBox extends AbstractApp {
 
     function _bridgedInterfaceExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_bridgedInterfaceExecutorStop(): ${executor.exitCode} ${_tempBridgedInterfaceData}' );
+        Logger.verbose( '${this}: bridgedInterfaceExecutor stopped with exit code: ${executor.exitCode}, data:${_tempBridgedInterfaceData}' );
+
         if ( executor.exitCode == 0 )
             _processBridgedInterfacesData();
 
@@ -345,7 +354,8 @@ class VirtualBox extends AbstractApp {
 
     function _hostInfoExecutorExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_hostInfoExecutorExecutorStop(): ${executor.exitCode} ${_tempHostInfoData}' );
+        Logger.verbose( '${this}: hostInfoExecutor stopped with exit code: ${executor.exitCode}, data:${_tempHostInfoData}' );
+
         if ( executor.exitCode == 0 )
             _processHostInfoData();
 
@@ -496,7 +506,8 @@ class VirtualBox extends AbstractApp {
 
     function _showVMInfoExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_showVMInfoExecutorStopped(): ${executor.exitCode} ${_tempHostInfoData}' );
+        Logger.verbose( '${this}: showVMInfoExecutor stopped with exit code: ${executor.exitCode}, data:${_tempHostInfoData}' );
+        
         if ( executor.exitCode == 0 )
             _processShowVMInfoData( executor.extraParams[ 0 ] );
 
@@ -512,7 +523,7 @@ class VirtualBox extends AbstractApp {
 
     function _listVMsExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_listVMsExecutorStop(): ${executor.exitCode} ${_tempListVMsData}' );
+        Logger.verbose( '${this}: listVMsExecutor stopped with exit code: ${executor.exitCode}, data:${_tempListVMsData}' );
 
         if ( executor.exitCode == 0 ) {
 

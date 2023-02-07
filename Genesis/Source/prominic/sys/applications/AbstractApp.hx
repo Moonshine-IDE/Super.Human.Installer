@@ -139,6 +139,12 @@ abstract class AbstractApp {
 
     }
 
+    public function toString():String {
+
+        return '[AbstractApp]';
+
+    }
+
     function _initStandardOutput( executor:AbstractExecutor, data:String ) {
 
         Logger.verbose( '_initStandardOutput ${data}' );

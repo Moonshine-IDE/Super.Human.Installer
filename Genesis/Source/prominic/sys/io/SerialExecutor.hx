@@ -31,6 +31,7 @@
 package prominic.sys.io;
 
 import haxe.ds.Either;
+import prominic.logging.Logger;
 
 class SerialExecutor extends AbstractExecutor {
 
@@ -98,6 +99,8 @@ class SerialExecutor extends AbstractExecutor {
 
     public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
+        Logger.verbose( '${this}: execute() extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+
         for ( e in _executors ) {
 
             e.onStop( _executorStopped );
@@ -145,5 +148,11 @@ class SerialExecutor extends AbstractExecutor {
 
     @:keep
     public function simulateStop() {}
+
+    public override function toString():String {
+
+        return '[SerialExecutor:${this._id}]';
+
+    }
 
 }

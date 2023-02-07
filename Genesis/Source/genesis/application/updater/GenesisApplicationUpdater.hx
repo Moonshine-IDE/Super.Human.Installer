@@ -30,8 +30,9 @@
 
 package genesis.application.updater;
 
+import genesis.application.updater.GenesisApplicationUpdaterInfo;
+import haxe.Json;
 import haxe.io.Path;
-import haxe.xml.Access;
 import lime.system.System;
 import openfl.Lib;
 import openfl.events.Event;
@@ -59,14 +60,16 @@ class GenesisApplicationUpdater extends EventDispatcher {
     var _installerTotalSize:Float;
     var _isDownloading:Bool = false;
     var _updaterInfo:GenesisApplicationUpdaterInfo;
+    var _updaterInfoEntry:GenesisApplicationUpdaterEntry;
+    var _updaterInfoEntryURL:String;
     var _versionInfoLoader:URLLoader;
     var _versionInfoURL:String;
 
     public var isDownloading( get, never ):Bool;
     function get_isDownloading() return _isDownloading;
 
-    public var updaterInfo( get, never ):GenesisApplicationUpdaterInfo;
-    function get_updaterInfo() return _updaterInfo;
+    public var updaterInfoEntry( get, never ):GenesisApplicationUpdaterEntry;
+    function get_updaterInfoEntry() return _updaterInfoEntry;
     
     public function new() {
 
@@ -78,7 +81,7 @@ class GenesisApplicationUpdater extends EventDispatcher {
 
         if ( !_isDownloading || _downloadLoader == null ) return;
 
-        Logger.info( 'Download cancelled' );
+        Logger.info( '${this}: Download cancelled' );
 
         _downloadLoader.removeEventListener( Event.COMPLETE, _downloadLoaderComplete );
         _downloadLoader.removeEventListener( ProgressEvent.PROGRESS, _downloadLoaderProgress );
@@ -109,19 +112,20 @@ class GenesisApplicationUpdater extends EventDispatcher {
 
         if ( _updaterInfo == null ) {
 
-            Logger.warning( 'VersionInfo not found, stopping updater' );
+            Logger.warning( '${this}: VersionInfo not found, stopping updater' );
             return;
 
         }
 
         _installerPath = Path.addTrailingSlash( System.applicationStorageDirectory ) + "downloads";
         FileSystem.createDirectory( _installerPath );
-        _installerPath += "/" + Path.withoutDirectory( _updaterInfo.url.split( 'https://' )[ 1 ] );
+
+        _installerPath += "/" + Path.withoutDirectory( _updaterInfoEntryURL.split( 'https://' )[ 1 ] );
         if ( FileSystem.exists( _installerPath ) ) FileSystem.deleteFile( _installerPath );
 
-        Logger.info( 'Downloading update from ${_updaterInfo.url} to ${_installerPath}' );
+        Logger.info( '${this}: Downloading update from ${_updaterInfoEntryURL} to ${_installerPath}' );
 
-        var request = new URLRequest( _updaterInfo.url );
+        var request = new URLRequest( _updaterInfoEntryURL );
 
         _downloadLoader = new URLLoader();
         _downloadLoader.addEventListener( Event.COMPLETE, _downloadLoaderComplete );
@@ -143,9 +147,15 @@ class GenesisApplicationUpdater extends EventDispatcher {
 
     }
 
+    public override function toString():String {
+
+        return '[Updater]';
+
+    }
+
     function _downloadLoaderComplete( e:Event ) {
 
-        Logger.info( 'Downloading update completed' );
+        Logger.info( '${this}: Downloading update completed' );
 
         _downloadLoader.removeEventListener( Event.COMPLETE, _downloadLoaderComplete );
         _downloadLoader.removeEventListener( ProgressEvent.PROGRESS, _downloadLoaderProgress );
@@ -166,7 +176,7 @@ class GenesisApplicationUpdater extends EventDispatcher {
         _downloadLoader.removeEventListener( ProgressEvent.PROGRESS, _downloadLoaderProgress );
         _downloadLoader.removeEventListener( IOErrorEvent.IO_ERROR, _downloadLoaderError );
 
-        Logger.error( 'VersionInfo download error at ${_versionInfoURL}. Error: ${e.errorID} ${e.text} ${e.type}' );
+        Logger.error( '${this}: Download error at ${_updaterInfoEntryURL}. Error: ${e.errorID} ${e.text} ${e.type}' );
 
         _isDownloading = false;
 
@@ -193,16 +203,15 @@ class GenesisApplicationUpdater extends EventDispatcher {
         _processVersionInfoData( _versionInfoLoader.data );
 
         var evt:GenesisApplicationUpdaterEvent = new GenesisApplicationUpdaterEvent( GenesisApplicationUpdaterEvent.UPDATE_NOT_FOUND );
-        
-        if ( this._updaterInfo.version != null && this._updaterInfo.url != null ) {
+
+        if ( _updaterInfoEntry != null && _updaterInfoEntryURL != null ) {
 
             var currentVersion:VersionInfo = Lib.application.meta.get( "version" );
-
-            if ( this._updaterInfo.version > currentVersion )
+            if ( this._updaterInfoEntry.version > currentVersion )
                 evt = new GenesisApplicationUpdaterEvent( GenesisApplicationUpdaterEvent.UPDATE_FOUND );
 
         }
-
+        
         this.dispatchEvent( evt );
 
     }
@@ -212,39 +221,37 @@ class GenesisApplicationUpdater extends EventDispatcher {
         _versionInfoLoader.removeEventListener( Event.COMPLETE, _versionInfoLoaderComplete );
         _versionInfoLoader.removeEventListener( IOErrorEvent.IO_ERROR, _versionInfoLoaderError );
 
-        Logger.error( 'VersionInfo download error at ${_versionInfoURL}. Error: ${e.errorID} ${e.text} ${e.type}' );
+        Logger.error( '${this}: VersionInfo download error at ${_versionInfoURL}. Error: ${e.errorID} ${e.text} ${e.type}' );
         this.dispatchEvent( new GenesisApplicationUpdaterEvent( GenesisApplicationUpdaterEvent.UPDATE_NOT_FOUND ) );
 
     }
 
     function _processVersionInfoData( data:String ) {
 
-        var xml:Access = new Access( Xml.parse( data ) );
-
         try {
 
-            #if windows
-            var root = xml.node.update.node.exe;
-            var version:VersionInfo = root.node.version.innerData;
-            var url:String = root.node.url.innerData;
-            var description:String = StringTools.trim( root.node.description.innerData );
-            _updaterInfo = { version: version, url: url, description: description };
+            _updaterInfo = Json.parse( data );
+            #if debug
+            _updaterInfoEntry = _updaterInfo.development;
+            #else
+            _updaterInfoEntry = _updaterInfo.production;
             #end
-
-            #if mac
-            var root = xml.node.update.node.pkg;
-            var version:VersionInfo = root.node.version.innerData;
-            var url:String = root.node.url.innerData;
-            var description:String = StringTools.trim( root.node.description.innerData );
-            _updaterInfo = { version: version, url: url, description: description };
-            #end
-
+            
             #if linux
-            var version:VersionInfo = "0.0.0";
-            _updaterInfo = { version: version, url: "", description: "" };
+            _updaterInfoEntryURL = _updaterInfoEntry.linux_url;
+            #elseif mac
+            _updaterInfoEntryURL = _updaterInfoEntry.macos_url;
+            #elseif windows
+            _updaterInfoEntryURL = _updaterInfoEntry.windows_url;
             #end
 
-        } catch ( e ) {}
+            Logger.debug( '${this}: VersionInfo downloaded: ${_updaterInfo}' );
+
+        } catch ( e ) {
+
+            Logger.error( '${this}: VersionInfo cannot be parsed: ${data}' );
+
+        };
 
     }
 
@@ -260,7 +267,7 @@ class GenesisApplicationUpdater extends EventDispatcher {
 
         } catch ( e ) {
 
-            Logger.error( 'Downloaded data cannot be written to ${_installerPath}' );
+            Logger.error( '${this}: Downloaded data cannot be written to ${_installerPath}' );
 
         }
 

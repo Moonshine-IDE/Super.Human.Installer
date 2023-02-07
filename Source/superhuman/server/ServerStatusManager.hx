@@ -38,7 +38,7 @@ class ServerStatusManager {
 
         var result = ServerStatus.Unknown;
 
-        Logger.verbose( 'Server[${server.id}].combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
+        Logger.verbose( '${server}.combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
 
         switch server.combinedVirtualMachine.value.vagrantState {
             
@@ -87,7 +87,7 @@ class ServerStatusManager {
 
         if ( !server.isValid() ) result = ServerStatus.Unconfigured;
 
-        Logger.verbose( 'Server[${server.id}] assumed status: ${result}' );
+        Logger.verbose( '${server}: Assumed status: ${result}' );
 
         return result;
 

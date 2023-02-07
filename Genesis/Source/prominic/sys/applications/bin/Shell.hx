@@ -30,15 +30,16 @@
 
 package prominic.sys.applications.bin;
 
-#if windows
-import lime.system.System;
-#end
 import haxe.io.Path;
+import prominic.logging.Logger;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
+#if windows
+import lime.system.System;
+#end
 #if ( windows || linux )
 import haxe.exceptions.NotImplementedException;
 #end
@@ -256,6 +257,7 @@ class Shell extends AbstractApp {
         #if windows
         return null;
         #else
+        Logger.verbose( '${this}: uname' );
         var p = new Process( "uname", [ "-m" ] );
         var b = p.stdout.readAll();
         var e = p.exitCode();
@@ -269,6 +271,8 @@ class Shell extends AbstractApp {
      */
     public function open( args:Array<String> ) {
 
+        Logger.verbose( '${this}: Open:${args}' );
+
         #if linux
         Sys.command( "/usr/bin/xdg-open", args );
         #elseif mac
@@ -281,6 +285,7 @@ class Shell extends AbstractApp {
 
     public function exec( path:String ) {
 
+        Logger.verbose( '${this}: Exec:${path}' );
         Sys.command( 'exec ${path} &' );
 
     }
@@ -293,6 +298,8 @@ class Shell extends AbstractApp {
     public function md5( path:String ):String {
 
         if ( !FileSystem.exists( path ) ) return null;
+
+        Logger.verbose( '${this}: Checking MD5 at:${path}' );
 
         #if mac
         var p = new Process( "md5", [ "-q", path ] );
@@ -329,6 +336,8 @@ class Shell extends AbstractApp {
 
     public function openTerminal( ?path:String ) {
 
+        Logger.verbose( '${this}: Opening Terminal at:${path}' );
+
         #if mac
         Sys.command( "open", [ "-a", "Terminal", path ] );
         #end
@@ -344,6 +353,7 @@ class Shell extends AbstractApp {
 
     public function runShellScript( path:String, ?content:String ) {
 
+        Logger.verbose( '${this}: Running shell script at:${path} content:${content}' );
         var cwd = Sys.getCwd();
         if ( content != null ) File.saveContent( path, content );
         var dir = Path.directory( path );
@@ -511,6 +521,12 @@ class Shell extends AbstractApp {
         #else
             throw new NotImplementedException( "Shell.du() is not implemented on this platform" );
         #end
+
+    }
+
+    public override function toString():String {
+
+        return '[Shell]';
 
     }
 

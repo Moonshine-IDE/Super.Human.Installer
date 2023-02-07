@@ -31,6 +31,7 @@
 package prominic.sys.io;
 
 import haxe.ds.Either;
+import prominic.logging.Logger;
 
 class ParallelExecutor extends AbstractExecutor {
 
@@ -83,6 +84,8 @@ class ParallelExecutor extends AbstractExecutor {
 
     public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
+        Logger.verbose( '${this}: execute() extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+
         if ( _executors.length == 0 ) {
 
             for ( f in _onStop ) f( this );
@@ -121,5 +124,11 @@ class ParallelExecutor extends AbstractExecutor {
 
     @:keep
     public function simulateStop() {}
+
+    public override function toString():String {
+
+        return '[ParallelExecutor:${this._id}]';
+
+    }
     
 }

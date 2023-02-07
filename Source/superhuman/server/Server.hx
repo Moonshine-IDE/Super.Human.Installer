@@ -617,8 +617,8 @@ class Server {
 
     function _prepareFilesComplete() {
 
-        Logger.debug( 'Configuration files copied to ${this._serverDir}' );
-        Logger.debug( 'Copying installer files to ${this._serverDir}/installers' );
+        Logger.debug( '${this}: Configuration files copied to ${this._serverDir}' );
+        Logger.debug( '${this}: Copying installer files to ${this._serverDir}/installers' );
 
         var paths:Array<PathPair> = [];
 
@@ -657,7 +657,7 @@ class Server {
 
         }
 
-        Logger.verbose( 'Installer and Fixpack path pairs: ${paths}' );
+        Logger.verbose( '${this}: Installer and Fixpack path pairs: ${paths}' );
 
         _provisioner.copyInstallers( paths, _batchCopyComplete );
 
@@ -665,7 +665,7 @@ class Server {
 
     function _batchCopyComplete() {
 
-        Logger.debug( 'Setting working directory to ${_serverDir}' );
+        Logger.debug( '${this}: Setting working directory to ${_serverDir}' );
         console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.setworkingdirectory', _serverDir ) );
 		Sys.setCwd( _serverDir );
 
@@ -864,12 +864,12 @@ class Server {
 
         if ( s == null ) {
 
-            Logger.verbose( 'The file has invalid content or non-existent' );
+            Logger.verbose( '${this}: The web address file has invalid content or non-existent' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
         } else {
 
-            Logger.verbose( 'File content: ${s}' );
+            Logger.verbose( '${this}: Web address file content: ${s}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }
@@ -895,14 +895,14 @@ class Server {
     function _vagrantRSyncStandardOutputData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.debug( 'Vagrant rsync: ${data}' );
+        Logger.debug( '${this}: Vagrant rsync: ${data}' );
 
     }
 
     function _vagrantRSyncStandardErrorData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null ) console.appendText( data, true );
-        Logger.error( 'Vagrant rsync error: ${data}' );
+        Logger.error( '${this}: Vagrant rsync error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.rsyncerror' ), true );
 
     }
@@ -911,7 +911,7 @@ class Server {
 
         if ( machine != null && machine.serverId != this._id ) return;
 
-        Logger.verbose( '_onVagrantRSync ${machine}' );
+        Logger.verbose( '${this}: _onVagrantRSync ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running;
 
@@ -921,7 +921,7 @@ class Server {
 
         if ( machine != null && machine.serverId != this._id ) return;
 
-        Logger.verbose( '_onVagrantHalt ${machine}' );
+        Logger.verbose( '${this}: _onVagrantHalt ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Stopped;
 
@@ -931,7 +931,7 @@ class Server {
 
         if ( machine != null && machine.serverId != this._id ) return;
 
-        Logger.verbose( '_onVagrantProvision ${machine}' );
+        Logger.verbose( '${this}: _onVagrantProvision ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running;
 
@@ -940,14 +940,14 @@ class Server {
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.debug( 'Vagrant halt: ${data}' );
+        Logger.debug( '${this}: Vagrant halt: ${data}' );
 
     }
 
     function _vagrantHaltStandardErrorData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null ) console.appendText( data, true );
-        Logger.error( 'Vagrant halt error: ${data}' );
+        Logger.error( '${this}: Vagrant halt error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stopfailed' ), true );
 
     }
@@ -955,14 +955,14 @@ class Server {
     function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.debug( 'Vagrant provision: ${data}' );
+        Logger.debug( '${this}: Vagrant provision: ${data}' );
 
     }
 
     function _vagrantProvisionStandardErrorData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null ) console.appendText( data, true );
-        Logger.error( 'Vagrant provision error: ${data}' );
+        Logger.error( '${this}: Vagrant provision error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provisionerror' ), true );
 
     }
@@ -986,14 +986,14 @@ class Server {
     function _vagrantDestroyStandardOutputData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.debug( 'Vagrant destroy: ${data}' );
+        Logger.debug( '${this}: Vagrant destroy: ${data}' );
 
     }
 
     function _vagrantDestroyStandardErrorData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null ) console.appendText( data, true );
-        Logger.error( 'Vagrant destroy error: ${data}' );
+        Logger.error( '${this}: Vagrant destroy error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyerror' ), true );
 
     }
@@ -1004,7 +1004,7 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
-        Logger.verbose( '_onVagrantDestroy ${machine}' );
+        Logger.verbose( '${this}: _onVagrantDestroy ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
         this._provisioner.deleteWebAddressFile();
@@ -1070,14 +1070,14 @@ class Server {
 
     function _vagrantUpStarted( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this._id}: Vagrant up started' );
+        Logger.debug( '${this}: Vagrant up started' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstarted' ) );
 
     }
 
     function _vagrantUpStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this._id}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
+        Logger.debug( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ) ) );
 
         this._busy.value = false;
@@ -1113,7 +1113,7 @@ class Server {
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( new String( data ) );
-        Logger.debug( '${this._id}: Vagrant up: ${data}' );
+        Logger.debug( '${this}: Vagrant up: ${data}' );
         _provisioner.updateTaskProgress( data );
         
     }
@@ -1121,7 +1121,7 @@ class Server {
     function _vagrantUpStandardErrorData( executor:AbstractExecutor, data:String ) {
         
         if ( console != null ) console.appendText( data, true );
-        Logger.error( '${this._id}: Vagrant up error: ${data}' );
+        Logger.error( '${this}: Vagrant up error: ${data}' );
 
     }
 
@@ -1146,7 +1146,7 @@ class Server {
 
             _refreshingVirtualBoxVMInfo = false;
             VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
-            Logger.verbose( 'VirtualBox VM: ${this._virtualBoxMachine}' );
+            Logger.verbose( '${this}: VirtualBox VM: ${this._virtualBoxMachine}' );
             // calculateDiskSpace();
 
         }
@@ -1285,6 +1285,12 @@ class Server {
             _vagrantUpExecutorElapsedTimer = null;
 
         }
+
+    }
+
+    public function toString():String {
+
+        return '[Server:${this._id}]';
 
     }
 

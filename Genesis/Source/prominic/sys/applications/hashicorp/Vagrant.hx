@@ -468,6 +468,12 @@ class Vagrant extends AbstractApp {
 
     }
 
+    public override function toString():String {
+
+        return '[Vagrant]';
+
+    }
+
     function _stopAllStop( e:AbstractExecutor ) {
 
         _numExecutors--;
@@ -619,7 +625,7 @@ class Vagrant extends AbstractApp {
 
     function _upExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( 'upExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.verbose( '${this}: upExecutor stopped with exitCode: ${executor.exitCode}' );
 
         if ( executor.extraParams != null ) _upExecutors.remove( executor.extraParams[ 0 ] );
 
@@ -629,7 +635,7 @@ class Vagrant extends AbstractApp {
 
     function _statusExecutorStopped( _statusExecutor:AbstractExecutor ) {
         
-        Logger.verbose( 'statusExecutor stopped with exitCode: ${_statusExecutor.exitCode}' );
+        Logger.verbose( '${this}: statusExecutor stopped with exitCode: ${_statusExecutor.exitCode}' );
 
         if ( _statusExecutor.extraParams != null ) _statusExecutors.remove( _statusExecutor.extraParams[ 0 ] );
 
@@ -665,6 +671,8 @@ class Vagrant extends AbstractApp {
 
     function _rsyncExecutorStopped( executor:AbstractExecutor ) {
 
+        Logger.verbose( '${this}: rsyncExecutor stopped with exitCode: ${executor.exitCode}' );
+
         if ( executor.extraParams != null ) _rsyncExecutors.remove( executor.extraParams[ 0 ] );
 
         for ( f in _onRSync ) f( executor.extraParams[ 0 ] );
@@ -674,6 +682,8 @@ class Vagrant extends AbstractApp {
     }
 
     function _provisionExecutorStopped( executor:AbstractExecutor ) {
+
+        Logger.verbose( '${this}: provisionExecutor stopped with exitCode: ${executor.exitCode}' );
 
         if ( executor.extraParams != null ) _provisionExecutors.remove( executor.extraParams[ 0 ] );
 
@@ -685,7 +695,7 @@ class Vagrant extends AbstractApp {
 
     function _haltExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_haltExecutorStopped ${executor}' );
+        Logger.verbose( '${this}: haltExecutor stopped with exitCode: ${executor.exitCode}' );
 
         if ( executor.extraParams != null ) _haltExecutors.remove( executor.extraParams[ 0 ] );
 
@@ -695,6 +705,8 @@ class Vagrant extends AbstractApp {
 
     function _destroyExecutorStopped( executor:AbstractExecutor ) {
 
+        Logger.verbose( '${this}: destroyExecutor stopped with exitCode: ${executor.exitCode}' );
+
         if ( executor.extraParams != null ) _destroyExecutors.remove( executor.extraParams[ 0 ] );
 
         for ( f in _onDestroy ) f( executor.extraParams[ 0 ] );
@@ -702,6 +714,8 @@ class Vagrant extends AbstractApp {
     }
 
     function _initMachineExecutorStopped( executor:AbstractExecutor ) {
+
+        Logger.verbose( '${this}: initMachineExecutor stopped with exitCode: ${executor.exitCode}' );
 
         if ( executor.extraParams != null ) _initExecutors.remove( executor.extraParams[ 0 ] );
 

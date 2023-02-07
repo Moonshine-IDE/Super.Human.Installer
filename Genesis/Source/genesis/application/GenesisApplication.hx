@@ -81,11 +81,7 @@ abstract class GenesisApplication extends Application {
     static public final PAGE_LOGIN:String = "page-login";
     static public final PAGE_SUPPORT:String = "page-support";
     static public final PAGE_UPDATE:String = "page-update";
-    #if debug
-    static public final UPDATER_ADDRESS:String = "https://static.moonshine-ide.com/downloads/superhumaninstaller/updater-dev.xml";
-    #else
-    static public final UPDATER_ADDRESS:String = "https://static.moonshine-ide.com/downloads/superhumaninstaller/updater.xml";
-    #end
+    static public final UPDATER_ADDRESS:String = "https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json";
 
     static var _instance:GenesisApplication;
 
@@ -191,24 +187,24 @@ abstract class GenesisApplication extends Application {
         _versionInfo = _version;
 
         if ( FileSystem.exists( logFilePath ) ) 
-            Logger.info( 'Log file created at ${logFilePath}' )
+            Logger.info( '${this}: Log file created at ${logFilePath}' )
         else
-            Logger.warning( 'Log file creation failed at ${logFilePath}' );
+            Logger.warning( '${this}: Log file creation failed at ${logFilePath}' );
 
-        Logger.info( 'Initializing ${_title} v${_version}...' );
+        Logger.info( '${this}: Initializing ${_title} v${_version}...' );
 
         _cpuArchitecture = prominic.sys.tools.SysTools.getCPUArchitecture();
 
         #if cpp
-        Logger.info( 'Platform: Native(C++), OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
+        Logger.info( '${this}: Platform: Native(C++), OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
         #elseif neko
-        Logger.info( 'Platform: Neko, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
+        Logger.info( '${this}: Platform: Neko, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
         #else
-        Logger.info( 'Platform: Unknown, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
+        Logger.info( '${this}: Platform: Unknown, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
         #end
-		Logger.info( 'SysInfo: DevideModel: ${System.deviceModel} DeviceVendor: ${System.deviceVendor} Endianness: ${System.endianness} PlatformLabel: ${System.platformLabel} PlatformName: ${System.platformName} PlatformVersion: ${System.platformVersion}' );
-        Logger.info( #if debug 'Debug build: true' #else 'Debug build: false' #end );
-        Logger.debug( 'Application storage directory: ${System.applicationStorageDirectory}' );
+		Logger.info( '${this}: SysInfo: DevideModel: ${System.deviceModel} DeviceVendor: ${System.deviceVendor} Endianness: ${System.endianness} PlatformLabel: ${System.platformLabel} PlatformName: ${System.platformName} PlatformVersion: ${System.platformVersion}' );
+        Logger.info( #if debug '${this}: Debug build: true' #else '${this}: Debug build: false' #end );
+        Logger.debug( '${this}: Application storage directory: ${System.applicationStorageDirectory}' );
 
         this.disabledAlpha = .5;
 
@@ -357,18 +353,20 @@ abstract class GenesisApplication extends Application {
         
         ToastManager.getInstance().container = _toastGroup;
 
+        #if !neko
         _updater.addEventListener( GenesisApplicationUpdaterEvent.UPDATE_FOUND, _updateFound );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.EXIT_APP, _exitApp );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_START, _downloadStart );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_CANCELLED, _downloadCancelled );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_FAILED, _downloadCancelled );
         _updater.checkUpdates( UPDATER_ADDRESS );
+        #end
 
     }
 
     function _updateFound( e:Event ) {
 
-        Logger.debug( 'Update found: ${ _updater.updaterInfo }' );
+        Logger.debug( '${this}: Update found: ${ _updater.updaterInfoEntry }' );
         _header.updateFound();
         
     }
@@ -422,6 +420,12 @@ abstract class GenesisApplication extends Application {
             }
 
         }
+
+    }
+
+    public override function toString():String {
+
+        return '[GenesisApplication]';
 
     }
 

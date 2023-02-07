@@ -149,7 +149,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_instance = this;
 
-		Logger.info( 'Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
+		Logger.info( '${this}: Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
 		ServerManager.serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
@@ -252,7 +252,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		if ( result != null && result.length > 0 ) {
 
 			_processId = result[ 0 ].pid;
-			Logger.verbose( 'SuperHumanInstaller process id found: ${_processId}' );
+			Logger.verbose( '${this}: SuperHumanInstaller process id found: ${_processId}' );
 
 		}
 
@@ -274,7 +274,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _uncaughtError( e:UncaughtErrorEvent ) {
 
-		Logger.fatal( '${e}' );
+		Logger.fatal( '${this}: Fatal error: ${e}' );
 
 	}
 
@@ -385,11 +385,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( Vagrant.getInstance().exists ) {
 
-			Logger.debug( 'Vagrant is installed at ${Vagrant.getInstance().path}' );
+			Logger.debug( '${this}: Vagrant is installed at ${Vagrant.getInstance().path}' );
 
 		} else {
 
-			Logger.warning( 'Vagrant is not installed' );
+			Logger.warning( '${this}: Vagrant is not installed' );
 
 		}
 
@@ -415,7 +415,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _vagrantVersionUpdated() {
 
-		Logger.info( 'Vagrant version: ${Vagrant.getInstance().version}' );
+		Logger.info( '${this}: Vagrant version: ${Vagrant.getInstance().version}' );
 		_serverPage.vagrantVersion = Vagrant.getInstance().version;
 
 	}
@@ -426,11 +426,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( VirtualBox.getInstance().exists ) {
 
-			Logger.debug( 'VirtualBox is installed at ${VirtualBox.getInstance().path}' );
+			Logger.debug( '${this}: VirtualBox is installed at ${VirtualBox.getInstance().path}' );
 
 		} else {
 
-			Logger.warning( 'VirtualBox is not installed' );
+			Logger.warning( '${this}: VirtualBox is not installed' );
 
 		}
 
@@ -438,7 +438,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _virtualBoxVersionUpdated() {
 
-		Logger.info( 'VirtualBox version: ${VirtualBox.getInstance().version}' );
+		Logger.info( '${this}: VirtualBox version: ${VirtualBox.getInstance().version}' );
 
 	}
 
@@ -446,7 +446,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
-		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.verbose( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
 
@@ -537,7 +537,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( !_config.preferences.keepserversrunning && VirtualBox.getInstance().exists && Vagrant.getInstance().exists ) {
 
-			Logger.debug( 'Shutting down server...' );
+			Logger.debug( '${this}: Shutting down server...' );
 
 			// Stop all possibly running executors
 			var vms:Array<CombinedVirtualMachine> = [];
@@ -611,6 +611,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		if ( a == null || a.length == 0 ) {
 
 			if ( e.server.console != null ) e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${a}]' ), true );
+			Logger.error( '${this}: Web address is invalid: \"${a}\"' );
 			return;
 
 		}
@@ -631,7 +632,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-		Logger.debug( 'Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+		Logger.debug( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 
 	}
 
@@ -674,15 +675,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( _cpuArchitecture == CPUArchitecture.Arm64 ) {
 
-			Logger.info( 'CPU Architecture ${_cpuArchitecture} is not supported' );
+			Logger.warning( '${this}: CPU Architecture ${_cpuArchitecture} is not supported' );
 			_showCPUArchitectureNotSupportedWarning();
 			return;
 
 		}
 
-		Logger.info( 'Starting server: ${e.server.id}' );
-		Logger.info( 'Server configuration: ${e.server.getData()}' );
-		Logger.verbose( 'Virtual Machine: ${e.server.combinedVirtualMachine.value}' );
+		Logger.info( '${this}: Starting server: ${e.server.id}' );
+		Logger.info( '${this}: Server configuration: ${e.server.getData()}' );
+		Logger.verbose( '${this}: Virtual Machine: ${e.server.combinedVirtualMachine.value}' );
 		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.generateHostsFileContent()}\n----- Hosts.yml END -----' );
 
 		// TODO: Decide how to handle provisioning if required
@@ -723,10 +724,10 @@ class SuperHumanInstaller extends GenesisApplication {
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
 				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
 
-				Logger.debug( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
-				Logger.debug( 'VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
-				Logger.debug( 'VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
-				Logger.debug( 'VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
+				Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
+				Logger.debug( '${this}: VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
+				Logger.debug( '${this}: VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
+				Logger.debug( '${this}: VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 				for ( s in _servers ) s.setServerStatus();
 
@@ -862,7 +863,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _deleteServerInstance( server:Server, deleteFiles:Bool = false ) {
 
-		Logger.debug( 'Deleting server ${server.id} deleteFiles:${deleteFiles}' );
+		Logger.debug( '${this}: Deleting server ${server.id} deleteFiles:${deleteFiles}' );
 
 		server.dispose();
 		_servers.remove( server );
@@ -940,7 +941,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
 
-		Logger.verbose( 'Refreshing System Info...' );
+		Logger.verbose( '${this}: Refreshing System Info...' );
 
 		ParallelExecutor.create().add( Right( [
 			Vagrant.getInstance().getGlobalStatus(),
@@ -951,9 +952,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
 
-		Logger.verbose( 'System Info refreshed' );
-		Logger.verbose( 'Vagrant machines: ${Vagrant.getInstance().machines}' );
-		Logger.verbose( 'VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.verbose( '${this}: System Info refreshed' );
+		Logger.verbose( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
+		Logger.verbose( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( i in Vagrant.getInstance().machines ) {
 
@@ -982,6 +983,12 @@ class SuperHumanInstaller extends GenesisApplication {
 			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
 
 		}
+
+	}
+
+	public override function toString():String {
+
+		return '[Super.Human.Installer]';
 
 	}
 

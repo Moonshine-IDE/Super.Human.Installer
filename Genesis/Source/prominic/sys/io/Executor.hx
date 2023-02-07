@@ -111,7 +111,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         for ( f in _onStart ) f( this );
 
-        Logger.verbose( '${this} execute() in ${Sys.getCwd()}' );
+        Logger.verbose( '${this}: execute() in ${Sys.getCwd()}' );
 
         Sys.setCwd( currentWorkingDirectory );
 
@@ -176,7 +176,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _process != null ) {
 
-            Logger.verbose( '${this} stop( forced:${forced} )' );
+            Logger.verbose( '${this}: stop( forced:${forced} )' );
             _process.stop( forced );
 
         }
@@ -213,15 +213,15 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    public function toString():String {
+    public override function toString():String {
 
         if ( _process != null ) {
 
-            return 'Executor: ${_command} ${_args} PID: ${this._pid}';
+            return '[Executor:${_command} ${_args} PID: ${this._pid}]';
 
         }
 
-        return 'Executor: ${_command} ${_args} PID: null';
+        return '[Executor:${_command} ${_args} PID: null]';
 
     }
 
