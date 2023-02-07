@@ -48,6 +48,7 @@ ShowInstDetails show
 ShowUnInstDetails show
 
 Section "MainSection" SEC01
+  RMDir /r "$INSTDIR"
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
   File /r "..\..\Export\Development\windows\bin\*.*"
