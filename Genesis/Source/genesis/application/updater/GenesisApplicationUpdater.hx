@@ -245,7 +245,7 @@ class GenesisApplicationUpdater extends EventDispatcher {
             _updaterInfoEntryURL = _updaterInfoEntry.windows_url;
             #end
 
-            Logger.debug( '${this}: VersionInfo downloaded: ${_updaterInfo}' );
+            Logger.debug( '${this}: VersionInfo downloaded and parsed: ${_updaterInfo}' );
 
         } catch ( e ) {
 
