@@ -217,11 +217,11 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _process != null ) {
 
-            return '[Executor:${_command} ${_args} PID: ${this._pid}]';
+            return '[Executor:${this._id}: ${_command} ${_args} PID: ${this._pid}]';
 
         }
 
-        return '[Executor:${_command} ${_args} PID: null]';
+        return '[Executor:${this._id}: ${_command} ${_args} PID: null]';
 
     }
 

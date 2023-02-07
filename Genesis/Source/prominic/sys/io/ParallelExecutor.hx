@@ -84,7 +84,9 @@ class ParallelExecutor extends AbstractExecutor {
 
     public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
-        Logger.verbose( '${this}: execute() extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+        var a:Array<String> = [];
+        for ( e in _executors ) a.push( e.id );
+        Logger.verbose( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
         if ( _executors.length == 0 ) {
 
