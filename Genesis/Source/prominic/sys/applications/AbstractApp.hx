@@ -147,27 +147,21 @@ abstract class AbstractApp {
 
     function _initStandardOutput( executor:AbstractExecutor, data:String ) {
 
-        Logger.verbose( '_initStandardOutput ${data}' );
         var a = data.split( SysTools.lineEnd );
         if ( data.length > 0 && a.length > 0 && StringTools.trim( a[ 0 ] ).length > 0 ) this._path = Path.addTrailingSlash( Path.directory( a[ 0 ] ) );
-        Logger.verbose( '_path ${this._path}' );
 
     }
 
     function _initStandardError( executor:AbstractExecutor, data:String ) {
 
-        Logger.verbose( '_initStandardError ${data}' );
+        Logger.verbose( '${this}: _initStandardError ${data}' );
         
     }
 
     function _initStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_initStop ${executor.exitCode}' );
-
         _initExecutor.dispose();
-
         _initialized = true;
-        
         _initializationComplete();
 
         for ( f in _onInit ) f( this );
