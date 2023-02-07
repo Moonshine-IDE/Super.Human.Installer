@@ -645,7 +645,11 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server != null && _elapsedTimeLabel != null && _elapsedTimeLabel.visible == true ) {
 
             var elapsed = StrTools.timeToFormattedString( _server.vagrantUpElapsedTime );
-            _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', '${elapsed}' );
+            var percentage = StrTools.calculatePercentage( _server.provisioner.numberOfStartedTasks, _server.provisioner.numberOfTasks );
+            if ( _server.provisioner.provisioned )
+                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', '${elapsed}' )
+            else
+                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtimewithtasks', '${elapsed}', '${_server.provisioner.numberOfStartedTasks+1}/${_server.provisioner.numberOfTasks+1}' );
 
         }
 

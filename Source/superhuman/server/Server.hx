@@ -905,7 +905,7 @@ class Server {
 
     function _onVagrantHalt( machine:VagrantMachine ) {
 
-        if ( machine.serverId != this._id ) return;
+        if ( machine != null && machine.serverId != this._id ) return;
 
         Logger.verbose( '_onVagrantHalt ${machine}' );
         this._busy.value = false;
@@ -1022,6 +1022,7 @@ class Server {
 
     function _startVagrantUp() {
 
+        _provisioner.calculateTotalNumberOfTasks();
         _provisioner.startFileWatcher();
 
         this._busy.value = true;
@@ -1099,6 +1100,7 @@ class Server {
      
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( new String( data ) );
         Logger.debug( '${this._id}: Vagrant up: ${data}' );
+        _provisioner.updateTaskProgress( data );
         
     }
 
@@ -1256,7 +1258,6 @@ class Server {
         _vagrantUpExecutorElapsedTimer = new Timer( 1000 );
         _vagrantUpExecutorElapsedTimer.run = () -> {
             _vagrantUpElapsedTime = _vagrantUpExecutor.runtime;
-            Logger.verbose( 'Vagrant up time: ${_vagrantUpElapsedTime}' );
             if ( _onVagrantUpElapsedTimerUpdate != null ) for ( f in _onVagrantUpElapsedTimerUpdate ) f();
         };
 

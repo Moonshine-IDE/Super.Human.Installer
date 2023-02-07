@@ -106,4 +106,11 @@ class StrTools {
 
     }
 
+    static public function calculatePercentage( value:Int, total:Int ):Int {
+
+        if ( total <= 0 ) return 0;
+        return Std.int( ( value / total ) * 100 );
+
+    }
+
 }

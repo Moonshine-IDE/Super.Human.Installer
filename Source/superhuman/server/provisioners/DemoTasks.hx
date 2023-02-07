@@ -48,9 +48,11 @@ using prominic.tools.ObjectTools;
 
 class DemoTasks extends AbstractProvisioner {
 
+    static final _CURRENT_TASK_IDENTIFIER_PATTERN:EReg = ~/(?:TASK \x{5b})(\S+)(?:.+)(?:\x{3a})(?:.*)/m;
     static final _IP_ADDRESS_PATTERN:EReg = ~/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
     static final _SAFE_ID_FILE:String = "safe.ids";
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
+    static final _TASK_IDENTIFIER_PATTERN:EReg = ~/^(?:\s+)(?:- name: )(\S+)$/m;
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
     static final _WEB_ADDRESS_PATTERN:EReg = ~/^(?:https:\/\/)(.*)(?::\d{3})(?:\/.*)$/gm;
 
@@ -145,6 +147,8 @@ class DemoTasks extends AbstractProvisioner {
     }
 
     var _onProvisioningFileChanged:List<()->Void>;
+    var _startedTasks:Array<String>;
+    var _tasks:Array<String>;
 
     public var hostFileExists( get, never ):Bool;
     function get_hostFileExists() return this.fileExists( HOSTS_FILE );
@@ -159,6 +163,12 @@ class DemoTasks extends AbstractProvisioner {
         } catch ( e ) {};
         return result;
     }
+
+    public var numberOfStartedTasks( get, never ):Int;
+    function get_numberOfStartedTasks() return _startedTasks.length;
+
+    public var numberOfTasks( get, never ):Int;
+    function get_numberOfTasks() return _tasks.length;
 
     public var onProvisioningFileChanged( get, never ):List<()->Void>;
     function get_onProvisioningFileChanged() return _onProvisioningFileChanged;
@@ -185,6 +195,37 @@ class DemoTasks extends AbstractProvisioner {
         if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
 
         _onProvisioningFileChanged = new List();
+
+    }
+
+    public function calculateTotalNumberOfTasks() {
+
+        _tasks = [];
+        _startedTasks = [];
+
+        try {
+
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE );
+
+            while ( true ) {
+
+                if ( _TASK_IDENTIFIER_PATTERN.match( c ) ) {
+
+                    var s = _TASK_IDENTIFIER_PATTERN.matched( 1 );
+                    _tasks.push( s );
+                    c = _TASK_IDENTIFIER_PATTERN.replace( c, "" );
+
+                } else {
+
+                    break;
+
+                }
+
+            }
+
+        } catch ( e ) {};
+
+        Logger.verbose( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
 
     }
 
@@ -255,6 +296,30 @@ class DemoTasks extends AbstractProvisioner {
         }
 
         return false;
+
+    }
+
+    public function updateTaskProgress( input:String ) {
+
+        try {
+
+            while ( true ) {
+
+                if ( _CURRENT_TASK_IDENTIFIER_PATTERN.match( input ) ) {
+
+                    var s = _CURRENT_TASK_IDENTIFIER_PATTERN.matched( 1 );
+                    if ( !_startedTasks.contains( s ) && _tasks.contains( s ) ) _startedTasks.push( s );
+                    input = _CURRENT_TASK_IDENTIFIER_PATTERN.replace( input, "" );
+
+                } else {
+
+                    break;
+
+                }
+
+            }
+
+        } catch ( e ) {};
 
     }
 
