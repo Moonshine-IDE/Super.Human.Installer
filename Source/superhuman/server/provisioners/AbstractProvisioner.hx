@@ -225,7 +225,7 @@ class AbstractProvisioner {
 
     public function stopFileWatcher() {
 
-        if ( _fileWatcher == null ) {
+        if ( _fileWatcher != null ) {
 
             _fileWatcher.onAdd.removeAll();
             _fileWatcher.onDelete.removeAll();
