@@ -278,7 +278,6 @@ class Vagrant extends AbstractApp {
         var p:String = ( path != null ) ? path : Sys.getCwd();
         if ( _initExecutors.exists( p ) ) return _initExecutors.get( p );
 
-        if ( path != null ) Sys.setCwd( path );
         if ( vagrantFileContent != null ) File.saveContent( 'Vagrantfile', vagrantFileContent );
 
         var args:Array<String> = [ "init" ];

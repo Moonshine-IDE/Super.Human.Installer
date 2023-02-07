@@ -667,7 +667,6 @@ class Server {
 
         Logger.debug( '${this}: Setting working directory to ${_serverDir}' );
         console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.setworkingdirectory', _serverDir ) );
-		Sys.setCwd( _serverDir );
 
         _saveSafeId();
 
