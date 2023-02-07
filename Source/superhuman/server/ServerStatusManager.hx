@@ -46,7 +46,7 @@ class ServerStatusManager {
                 result = ServerStatus.Error;
 
             case "poweroff":
-                result = ServerStatus.Ready;
+                result = ServerStatus.Stopped;
 
             case "running":
                 result = ServerStatus.Running;
@@ -61,7 +61,7 @@ class ServerStatusManager {
                 result = ServerStatus.Error;
 
             case "powered off":
-                result = ServerStatus.Ready;
+                result = ServerStatus.Stopped;
 
             case "running":
                 result = ServerStatus.Running;
