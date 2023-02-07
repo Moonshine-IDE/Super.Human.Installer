@@ -227,7 +227,7 @@ class Vagrant extends AbstractApp {
     public function getDestroy( force:Bool = false, ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( _destroyExecutors.exists( machine ) ) return _destroyExecutors.get( machine );
+        if ( machine != null && _destroyExecutors.exists( machine ) ) return _destroyExecutors.get( machine );
 
         var args:Array<String> = [ "destroy" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -252,7 +252,7 @@ class Vagrant extends AbstractApp {
     public function getHalt( ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( _haltExecutors.exists( machine ) ) return _haltExecutors.get( machine );
+        if ( machine != null && _haltExecutors.exists( machine ) ) return _haltExecutors.get( machine );
 
         var args:Array<String> = [ "halt" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -322,7 +322,7 @@ class Vagrant extends AbstractApp {
     public function getRSync( machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( _rsyncExecutors.exists( machine ) ) return _rsyncExecutors.get( machine );
+        if ( machine != null && _rsyncExecutors.exists( machine ) ) return _rsyncExecutors.get( machine );
 
         var args:Array<String> = [ "rsync" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -346,7 +346,7 @@ class Vagrant extends AbstractApp {
     public function getProvision( machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( _provisionExecutors.exists( machine ) ) return _provisionExecutors.get( machine );
+        if ( machine != null && _provisionExecutors.exists( machine ) ) return _provisionExecutors.get( machine );
 
         var args:Array<String> = [ "provision" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -370,7 +370,7 @@ class Vagrant extends AbstractApp {
     public function getStatus( machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( _statusExecutors.exists( machine ) ) return _statusExecutors.get( machine );
+        if ( machine != null && _statusExecutors.exists( machine ) ) return _statusExecutors.get( machine );
 
         var args:Array<String> = [ "status" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
