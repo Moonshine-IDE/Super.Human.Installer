@@ -646,7 +646,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             var elapsed = StrTools.timeToFormattedString( _server.vagrantUpElapsedTime );
             var percentage = StrTools.calculatePercentage( _server.provisioner.numberOfStartedTasks, _server.provisioner.numberOfTasks );
-            if ( _server.provisioner.provisioned )
+            if ( _server.provisionedBeforeStart )
                 _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', '${elapsed}' )
             else
                 _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtimewithtasks', '${elapsed}', '${_server.provisioner.numberOfStartedTasks+1}/${_server.provisioner.numberOfTasks+1}' );

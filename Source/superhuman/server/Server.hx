@@ -181,6 +181,7 @@ class Server {
     var _dhcp4:Property<Bool>;
     var _disableBridgeAdapter:Property<Bool>;
     var _diskUsage:Property<Float>;
+    var _forceVagrantProvisioning:Bool;
     var _hostname:ValidatingProperty;
     var _hostsTemplate:String;
     var _id:Int;
@@ -198,7 +199,7 @@ class Server {
     var _openBrowser:Property<Bool>;
     var _organization:ValidatingProperty;
     var _path:Property<String>;
-    var _provision:Bool;
+    var _provisionedBeforeStart:Bool;
     var _provisioner:DemoTasks;
     var _refreshingVirtualBoxVMInfo:Bool = false;
     var _roles:Property<Array<RoleData>>;
@@ -296,6 +297,9 @@ class Server {
 
     public var provisioned( get, never ):Bool;
     function get_provisioned() return _provisioner.provisioned;
+
+    public var provisionedBeforeStart( get, never ):Bool;
+    function get_provisionedBeforeStart() return _provisionedBeforeStart;
 
     public var provisioner( get, never ):DemoTasks;
     function get_provisioner() return _provisioner;
@@ -541,6 +545,8 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.Provisioning;
 
+        _provisioner.deleteWebAddressFile();
+
         if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
             Vagrant.getInstance().onProvision.add( _onVagrantProvision );
 
@@ -566,7 +572,7 @@ class Server {
 
         this._busy.value = true;
 
-        _provision = provision;
+        _forceVagrantProvisioning = provision;
         this.status.value = ServerStatus.Initializing;
 
         if ( console != null ) {
@@ -1047,6 +1053,8 @@ class Server {
 
         this._busy.value = true;
 
+        _provisionedBeforeStart = this._provisioner.provisioned;
+
         if ( this._provisioner.provisioned ) {
 
             this.status.value = ServerStatus.Start;
@@ -1060,9 +1068,9 @@ class Server {
         _provisioner.deleteWebAddressFile();
         _provisioner.onProvisioningFileChanged.add( _onDemoTasksProvisioningFileChanged );
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
-        _vagrantUpExecutor = Vagrant.getInstance().getUp( null, _provision, [] )
+        _vagrantUpExecutor = Vagrant.getInstance().getUp( null, _forceVagrantProvisioning, [] )
             .onStart( _vagrantUpStarted )
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
