@@ -546,7 +546,7 @@ class Server {
         Vagrant.getInstance().getProvision( this._vagrantMachine )
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
-            .execute();
+            .execute( this._serverDir );
 
     }
 
@@ -895,7 +895,7 @@ class Server {
 
     function _onVagrantRSync( machine:VagrantMachine ) {
 
-        if ( machine.serverId != this._id ) return;
+        if ( machine != null && machine.serverId != this._id ) return;
 
         Logger.verbose( '_onVagrantRSync ${machine}' );
         this._busy.value = false;
@@ -965,7 +965,7 @@ class Server {
         Vagrant.getInstance().getDestroy( true, this._vagrantMachine )
             .onStdOut( _vagrantDestroyStandardOutputData )
             .onStdErr( _vagrantDestroyStandardErrorData )
-            .execute();
+            .execute( this._serverDir );
 
     }
 
@@ -986,7 +986,7 @@ class Server {
 
     function _onVagrantDestroy( machine:VagrantMachine ) {
 
-        if ( machine.serverId != this._id ) return;
+        if ( machine != null && machine.serverId != this._id ) return;
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
