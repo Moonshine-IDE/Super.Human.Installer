@@ -45,6 +45,7 @@ class GenesisApplicationEvent extends Event {
     public static final START_PROCESS:String = "startProcess";
     public static final VISIT_GENESIS_DIRECTORY:String = "visitGenesisDirectory";
     public static final VISIT_SOURCE_CODE:String = "visitSourceCode";
+    public static final VISIT_SOURCE_CODE_ISSUES:String = "visitSourceCodeIssues";
 
     public var pageId:String;
     public var password:String;

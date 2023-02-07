@@ -923,6 +923,14 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	override function _visitSourceCodeIssues(?e:Dynamic) {
+
+		super._visitSourceCodeIssues(e);
+
+		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUES_URL );
+
+	}
+
 	function _openVirtualBoxGUI( e:SuperHumanApplicationEvent ) {
 
 		VirtualBox.getInstance().openGUI();

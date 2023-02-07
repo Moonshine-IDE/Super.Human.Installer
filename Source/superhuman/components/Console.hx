@@ -30,7 +30,6 @@
 
 package superhuman.components;
 
-import feathers.controls.AssetLoader;
 import feathers.controls.Button;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
@@ -48,6 +47,7 @@ import feathers.layout.VerticalAlign;
 import feathers.layout.VerticalLayoutData;
 import feathers.text.TextFormat;
 import feathers.utils.DisplayObjectRecycler;
+import genesis.application.components.AdvancedAssetLoader;
 import genesis.application.components.HLine;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
@@ -117,17 +117,17 @@ class Console extends LayoutGroup implements IConsole {
         _topGroup.addChild( _titleLabel );
 
         _clearButton = new Button( LanguageManager.getInstance().getString( 'console.buttonclear' ) );
-        _clearButton.icon = new AssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CLEAR ) );
+        _clearButton.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CLEAR ) );
         _clearButton.addEventListener( TriggerEvent.TRIGGER, _clearButtonTriggered );
         _topGroup.addChild( _clearButton );
 
         _copyButton = new Button( LanguageManager.getInstance().getString( 'console.buttoncopy' ) );
-        _copyButton.icon = new AssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_COPY ) );
+        _copyButton.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_COPY ) );
         _copyButton.addEventListener( TriggerEvent.TRIGGER, _copyButtonTriggered );
         _topGroup.addChild( _copyButton );
 
         _closeButton = new Button( LanguageManager.getInstance().getString( 'console.buttonclose' ) );
-        _closeButton.icon = new AssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CLOSE ) );
+        _closeButton.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CLOSE ) );
         _closeButton.addEventListener( TriggerEvent.TRIGGER, _closeButtonTriggered );
         _topGroup.addChild( _closeButton );
 

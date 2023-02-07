@@ -343,6 +343,7 @@ abstract class GenesisApplication extends Application {
 
         _supportPage = new SupportPage();
         _supportPage.addEventListener( GenesisApplicationEvent.OPEN_LOGS_DIRECTORY, _openLogsDirectory );
+        _supportPage.addEventListener( GenesisApplicationEvent.VISIT_SOURCE_CODE_ISSUES, _visitSourceCodeIssues );
         addPage( _supportPage, PAGE_SUPPORT );
 
         _updatePage = new UpdatePage();
@@ -488,6 +489,8 @@ abstract class GenesisApplication extends Application {
     }
 
     function _visitSourceCode( ?e:Dynamic ) {}
+
+    function _visitSourceCodeIssues( ?e:Dynamic ) {}
 
     function _menuSelected( e:GenesisApplicationEvent ) {
 
