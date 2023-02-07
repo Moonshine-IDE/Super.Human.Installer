@@ -1056,7 +1056,7 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_provision})' ) );
 
-        _vagrantUpExecutor = Vagrant.getInstance().getUp( this._vagrantMachine, _provision, [] )
+        _vagrantUpExecutor = Vagrant.getInstance().getUp( null, _provision, [] )
             .onStart( _vagrantUpStarted )
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
