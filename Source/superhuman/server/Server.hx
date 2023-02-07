@@ -874,7 +874,7 @@ class Server {
         Vagrant.getInstance().getRSync( this._vagrantMachine )
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
-            .execute();
+            .execute( this._serverDir );
 
     }
 
@@ -915,7 +915,7 @@ class Server {
 
     function _onVagrantProvision( machine:VagrantMachine ) {
 
-        if ( machine.serverId != this._id ) return;
+        if ( machine != null && machine.serverId != this._id ) return;
 
         Logger.verbose( '_onVagrantProvision ${machine}' );
         this._busy.value = false;
