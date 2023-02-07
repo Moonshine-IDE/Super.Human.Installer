@@ -766,7 +766,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _openServerDir( e:SuperHumanApplicationEvent ) {
 
 		Shell.getInstance().open( [ e.server.path.value ] );
-		Shell.getInstance().openTerminal( e.server.path.value );
+		Shell.getInstance().openTerminal( e.server.path.value, false );
 
 	}
 

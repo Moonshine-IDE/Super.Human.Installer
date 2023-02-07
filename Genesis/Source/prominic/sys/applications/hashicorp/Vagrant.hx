@@ -47,7 +47,11 @@ class Vagrant extends AbstractApp {
     static final _machineReadPattern = ~/((\d+),(.*),(.+),(.+))/gm;
     static final _machineReadPatternForStatus = ~/(\d+,.*,(\w|-)+,(\w|-|\/|\\|\.)*,*(.)+)/gm;
     static final _versionPattern = ~/(\d+\.\d+\.\d+)/;
+    #if windows
+    static final _SSH_SCRIPT:String = "ssh.bat";
+    #else
     static final _SSH_SCRIPT:String = "ssh.sh";
+    #end
 
     static var _instance:Vagrant;
 
@@ -423,7 +427,9 @@ class Vagrant extends AbstractApp {
     public function ssh() {
         
         #if windows
-        Logger.warning( 'Vagrant ssh is not implemented yet on this platform' );
+        var terminalCommand:String = 'cd "${Sys.getCwd()}"\r\nvagrant ssh';
+        File.saveContent( '${Sys.getCwd()}/${_SSH_SCRIPT}', terminalCommand );
+        Shell.getInstance().openTerminal( '${Sys.getCwd()}/${_SSH_SCRIPT}' );
         #elseif linux
         Logger.warning( 'Vagrant ssh is not implemented yet on this platform' );
         #else

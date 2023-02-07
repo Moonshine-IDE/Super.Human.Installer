@@ -334,7 +334,7 @@ class Shell extends AbstractApp {
 
     }
 
-    public function openTerminal( ?path:String ) {
+    public function openTerminal( ?path:String, launchFileAtPath:Bool = true ) {
 
         Logger.verbose( '${this}: Opening Terminal at:${path}' );
 
@@ -345,7 +345,10 @@ class Shell extends AbstractApp {
         #if windows
         var cwd = Sys.getCwd();
         Sys.setCwd( path );
-        System.openFile( "cmd.exe" );
+        if ( launchFileAtPath )
+            System.openFile( path )
+        else
+            System.openFile( "cmd.exe" );
         Sys.setCwd( cwd );
         #end
 
