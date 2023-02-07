@@ -30,7 +30,6 @@
 
 package genesis.application.updater;
 
-import haxe.crypto.Md5;
 import haxe.io.Path;
 import haxe.xml.Access;
 import lime.system.System;
@@ -252,9 +251,6 @@ class GenesisApplicationUpdater extends EventDispatcher {
     function _updateLocalFile( data:ByteArray ) {
 
         try {
-
-            var m = Md5.make( data );
-            Logger.verbose( 'Downloaded installer MD5: ${m.toHex()}' );
 
             _installerFile = new File( _installerPath );
             _installerFileStream = new FileStream();
