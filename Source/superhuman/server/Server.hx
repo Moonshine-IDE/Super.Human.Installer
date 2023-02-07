@@ -31,6 +31,7 @@
 package superhuman.server;
 
 import genesis.application.managers.LanguageManager;
+import haxe.Json;
 import haxe.Template;
 import haxe.Timer;
 import haxe.io.Path;
@@ -55,9 +56,11 @@ import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.DemoTasks;
 import sys.FileSystem;
+import sys.io.File;
 
 class Server {
 
+    static final _CONFIG_FILE = ".shi-server";
     static final _SAFE_ID_FILENAME:String = "safe.ids";
     static final _VAGRANTFILE:String = "Vagrantfile";
 
@@ -547,6 +550,17 @@ class Server {
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
             .execute( this._serverDir );
+
+    }
+
+    public function saveData() {
+
+        try {
+
+            var s = Json.stringify( getData() );
+            File.saveContent( Path.addTrailingSlash( this._serverDir ) + _CONFIG_FILE, s );
+
+        } catch ( e ) {};
 
     }
 

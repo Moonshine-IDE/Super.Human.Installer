@@ -626,6 +626,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		for ( server in _servers ) {
 
 			_config.servers.push( server.getData() );
+			server.saveData();
 
 		}
 
