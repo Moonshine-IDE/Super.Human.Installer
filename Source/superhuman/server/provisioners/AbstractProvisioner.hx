@@ -71,6 +71,9 @@ class AbstractProvisioner {
     public var onFileDeleted( get, never ):List<(String)->Void>;
     function get_onFileDeleted() return _onFileDeleted;
 
+    public var targetPath( get, never ):String;
+    function get_targetPath() return _targetPath;
+
     public var type( get, never ):ProvisionerType;
     function get_type() return _type;
 
