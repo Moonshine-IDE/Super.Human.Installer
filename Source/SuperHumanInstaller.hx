@@ -148,6 +148,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener( UncaughtErrorEvent.UNCAUGHT_ERROR, _uncaughtError );
 
 		_instance = this;
+		_updaterAddress = SuperHumanGlobals.UPDATER_ADDRESS;
 
 		Logger.info( '${this}: Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 

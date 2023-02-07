@@ -81,7 +81,6 @@ abstract class GenesisApplication extends Application {
     static public final PAGE_LOGIN:String = "page-login";
     static public final PAGE_SUPPORT:String = "page-support";
     static public final PAGE_UPDATE:String = "page-update";
-    static public final UPDATER_ADDRESS:String = "https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json";
 
     static var _instance:GenesisApplication;
 
@@ -115,6 +114,7 @@ abstract class GenesisApplication extends Application {
     var _toastGroup:LayoutGroup;
     var _updatePage:UpdatePage;
     var _updater:GenesisApplicationUpdater;
+    var _updaterAddress:String;
     var _version:String;
     var _versionInfo:VersionInfo;
     var _window:Window;
@@ -359,7 +359,7 @@ abstract class GenesisApplication extends Application {
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_START, _downloadStart );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_CANCELLED, _downloadCancelled );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_FAILED, _downloadCancelled );
-        _updater.checkUpdates( UPDATER_ADDRESS );
+        if ( _updaterAddress != null ) _updater.checkUpdates( _updaterAddress );
         #end
 
     }
