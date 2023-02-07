@@ -413,11 +413,6 @@ class Server {
         _userSafeId = new Property();
         _userSafeId.onChange.add( _propertyChanged );
 
-        Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
-        Vagrant.getInstance().onHalt.add( _onVagrantHalt );
-        Vagrant.getInstance().onProvision.add( _onVagrantProvision );
-        Vagrant.getInstance().onRSync.add( _onVagrantRSync );
-
     }
 
     public function dispose() {
@@ -546,6 +541,9 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.Provisioning;
 
+        if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
+            Vagrant.getInstance().onProvision.add( _onVagrantProvision );
+
         Vagrant.getInstance().getProvision( this._vagrantMachine )
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
@@ -588,6 +586,9 @@ class Server {
 
         this._busy.value = true;
         this.status.value = ServerStatus.Stopping;
+
+        if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantHalt ) )
+            Vagrant.getInstance().onHalt.add( _onVagrantHalt );
 
         Vagrant.getInstance().getHalt( this._vagrantMachine )
             .onStdOut( _vagrantHaltStandardOutputData )
@@ -884,6 +885,9 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.RSyncing;
 
+        if ( !Lambda.has( Vagrant.getInstance().onRSync, _onVagrantRSync ) )
+            Vagrant.getInstance().onRSync.add( _onVagrantRSync );
+
         Vagrant.getInstance().getRSync( this._vagrantMachine )
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
@@ -908,7 +912,7 @@ class Server {
 
     function _onVagrantRSync( machine:VagrantMachine ) {
 
-        if ( machine != null && machine.serverId != this._id ) return;
+        Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
 
         Logger.verbose( '${this}: _onVagrantRSync ${machine}' );
         this._busy.value = false;
@@ -918,7 +922,7 @@ class Server {
 
     function _onVagrantHalt( machine:VagrantMachine ) {
 
-        if ( machine != null && machine.serverId != this._id ) return;
+        Vagrant.getInstance().onHalt.remove( _onVagrantHalt );
 
         Logger.verbose( '${this}: _onVagrantHalt ${machine}' );
         this._busy.value = false;
@@ -928,7 +932,7 @@ class Server {
 
     function _onVagrantProvision( machine:VagrantMachine ) {
 
-        if ( machine != null && machine.serverId != this._id ) return;
+        Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
 
         Logger.verbose( '${this}: _onVagrantProvision ${machine}' );
         this._busy.value = false;
@@ -975,6 +979,9 @@ class Server {
 
         _provisioner.deleteWebAddressFile();
 
+        if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantDestroy ) )
+            Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
+
         Vagrant.getInstance().getDestroy( true, this._vagrantMachine )
             .onStdOut( _vagrantDestroyStandardOutputData )
             .onStdErr( _vagrantDestroyStandardErrorData )
@@ -999,7 +1006,7 @@ class Server {
 
     function _onVagrantDestroy( machine:VagrantMachine ) {
 
-        if ( machine != null && machine.serverId != this._id ) return;
+        Vagrant.getInstance().onDestroy.remove( _onVagrantDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
