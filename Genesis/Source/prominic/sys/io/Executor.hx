@@ -111,7 +111,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         for ( f in _onStart ) f( this );
 
-        Logger.verbose( '${this} execute' );
+        Logger.verbose( '${this} execute() in ${Sys.getCwd()}' );
 
         Sys.setCwd( currentWorkingDirectory );
 
