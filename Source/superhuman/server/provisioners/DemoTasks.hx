@@ -226,6 +226,7 @@ class DemoTasks extends AbstractProvisioner {
         } catch ( e ) {};
 
         Logger.verbose( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
+        Logger.verbose( '[${this._type} v${this._version}]: Total tasks: ${_tasks}' );
 
     }
 
