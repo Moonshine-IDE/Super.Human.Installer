@@ -54,7 +54,7 @@ class DemoTasks extends AbstractProvisioner {
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
     static final _TASK_IDENTIFIER_PATTERN:EReg = ~/(?:\s{6})(?:- name: )(\S+)/;
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
-    static final _WEB_ADDRESS_PATTERN:EReg = ~/^(?:https:\/\/)(.*)(?::\d{3})(?:\/.*)$/gm;
+    static final _WEB_ADDRESS_PATTERN:EReg = ~/(?:https:\/\/)(.*)(?::\d{1,5}\/welcome.html)/;
 
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
