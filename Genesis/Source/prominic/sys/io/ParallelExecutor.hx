@@ -115,6 +115,7 @@ class ParallelExecutor extends AbstractExecutor {
 
         if ( _executors.length == 0 ) {
 
+            Logger.verbose( '${this}: All executors stopped. Errors: ${this._hasError}' );
             for ( f in _onStop ) f( this );
 
         }

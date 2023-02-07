@@ -127,6 +127,7 @@ class SerialExecutor extends AbstractExecutor {
 
         if ( executor.exitCode != 0 && _stopOnError ) {
 
+            Logger.verbose( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}' );
             for ( f in _onStop ) f( this );
             return;
 
@@ -139,6 +140,7 @@ class SerialExecutor extends AbstractExecutor {
 
         } else {
 
+            Logger.verbose( '${this}: All executors stopped' );
             for ( f in _onStop ) f( this );
 
         }
