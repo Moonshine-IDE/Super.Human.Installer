@@ -1003,8 +1003,8 @@ class Server {
 
             if ( _provisionedBeforeStart ) {
 
-                this.status.value = ServerStatus.Error;
                 this._busy.value = false;
+                this.status.value = ServerStatus.Error;
                 this._hostname.locked = this._organization.locked = ( this._provisioner.provisioned == true );
 
                 executor.dispose();
