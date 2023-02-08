@@ -170,7 +170,10 @@ class Console extends LayoutGroup implements IConsole {
         _hasNewMessage = true;
         if ( isError ) _hasError = true;
 
-        _textList.appendText( text.toString(), isError );
+        #if windows
+        text = StringTools.replace( text, '\r\n', '\n' );
+        #end
+        _textList.appendText( text, isError );
         this.dispatchEvent( new Event( Event.CHANGE ) );
 
     }
