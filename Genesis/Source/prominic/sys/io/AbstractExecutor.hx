@@ -36,6 +36,7 @@ abstract class AbstractExecutor {
 
     var _exitCode:Float;
     var _extraParams:Array<Dynamic>;
+    var _hasErrors:Bool = false;
     var _id:String;
     var _onStart:List<( AbstractExecutor ) -> Void>;
     var _onStdErr:List<( AbstractExecutor, String ) -> Void>;
@@ -50,6 +51,9 @@ abstract class AbstractExecutor {
 
     public var extraParams( get, never ):Array<Dynamic>;
     function get_extraParams() return _extraParams;
+
+    public var hasErrors( get, never ):Bool;
+    function get_hasErrors() return _hasErrors;
 
     public var id( get, never ):String;
     function get_id() return _id;

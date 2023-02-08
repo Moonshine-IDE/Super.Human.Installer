@@ -89,6 +89,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _running ) return this;
 
+        _hasErrors = false;
+
         var currentWorkingDirectory = Sys.getCwd();
 
         if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
@@ -126,6 +128,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _mutexStderr.acquire();
         var s = process.stderrBuffer.getAll();
         Logger.error( '${this} stderr: ${s}' );
+        _hasErrors = true;
         for ( f in _onStdErr ) f( this, s );
         _mutexStderr.release();
 
