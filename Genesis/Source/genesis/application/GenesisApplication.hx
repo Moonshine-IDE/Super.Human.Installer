@@ -159,6 +159,7 @@ abstract class GenesisApplication extends Application {
         _instance = this;
 
         _window = lime.app.Application.current.window;
+        GenesisApplicationTheme.SCALE_FACTOR = _window.scale;
 
         _processArgs();
         

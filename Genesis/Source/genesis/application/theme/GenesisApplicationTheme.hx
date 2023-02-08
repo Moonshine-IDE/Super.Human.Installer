@@ -79,6 +79,8 @@ import openfl.text.TextFormatAlign;
 
 class GenesisApplicationTheme extends ClassVariantTheme {
 
+    public static var SCALE_FACTOR:Float;
+
     public static final CORNER_RADIUS:Int = 3;
     public static final GRID:Int = 6;
     public static final DISABLED_ALPHA:Float = .33;
@@ -118,33 +120,33 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final PAGE_INDICATOR_INVISIBLE:String = "page-indicator-invisible";
     public static final TEXT_AREA_PRIVACY:String = "text-area-privacy";
 
-    public static final ICON_CHECKBOX_LARGE:String = "assets/images/common/checkbox_large.png";
-    public static final ICON_CHECKBOX_LARGE_DISABLED:String = "assets/images/common/checkbox_large_disabled.png";
-    public static final ICON_CHECKBOX_LARGE_SELECTED:String = "assets/images/common/checkbox_large_selected.png";
-    public static final ICON_CLEAR:String = "assets/images/common/clear.png";
-    public static final ICON_CLOSE:String = "assets/images/common/close.png";
-    public static final ICON_CONSOLE:String = "assets/images/common/console.png";
-    public static final ICON_COPY:String = "assets/images/common/copy.png";
-    public static final ICON_DELETE:String = "assets/images/common/delete.png";
-    public static final ICON_DESTROY:String = "assets/images/common/destroy.png";
-    public static final ICON_DESTROY_SMALL:String = "assets/images/common/destroy_small.png";
-    public static final ICON_ERROR:String = "assets/images/common/error.png";
-    public static final ICON_FOLDER:String = "assets/images/common/folder.png";
-    public static final ICON_GITHUB:String = "assets/images/common/github.png";
-    public static final ICON_HELP:String = "assets/images/common/help.png";
-    public static final ICON_LOCATE_FILE:String = "assets/images/common/locatefile.png";
-    public static final ICON_OK:String = "assets/images/common/ok.png";
-    public static final ICON_OUTPUT:String = "assets/images/common/output.png";
-    public static final ICON_OUTPUT_ERROR:String = "assets/images/common/output_error.png";
-    public static final ICON_OUTPUT_NEW:String = "assets/images/common/output_new.png";
-    public static final ICON_REFRESH:String = "assets/images/common/refresh.png";
-    public static final ICON_SETTINGS:String = "assets/images/common/settings.png";
-    public static final ICON_SETTINGS_WARNING:String = "assets/images/common/settings_warning.png";
-    public static final ICON_START:String = "assets/images/common/start.png";
-    public static final ICON_STOP:String = "assets/images/common/stop.png";
-    public static final ICON_UPLOAD:String = "assets/images/common/upload.png";
-    public static final ICON_WARNING:String = "assets/images/common/warning.png";
-    public static final ICON_WEB:String = "assets/images/common/web.png";
+    public static var ICON_CHECKBOX_LARGE:String = "assets/images/common/checkbox_large.png";
+    public static var ICON_CHECKBOX_LARGE_DISABLED:String = "assets/images/common/checkbox_large_disabled.png";
+    public static var ICON_CHECKBOX_LARGE_SELECTED:String = "assets/images/common/checkbox_large_selected.png";
+    public static var ICON_CLEAR:String = "assets/images/common/clear.png";
+    public static var ICON_CLOSE:String = "assets/images/common/close.png";
+    public static var ICON_CONSOLE:String = "assets/images/common/console.png";
+    public static var ICON_COPY:String = "assets/images/common/copy.png";
+    public static var ICON_DELETE:String = "assets/images/common/delete.png";
+    public static var ICON_DESTROY:String = "assets/images/common/destroy.png";
+    public static var ICON_DESTROY_SMALL:String = "assets/images/common/destroy_small.png";
+    public static var ICON_ERROR:String = "assets/images/common/error.png";
+    public static var ICON_FOLDER:String = "assets/images/common/folder@1x.png";
+    public static var ICON_GITHUB:String = "assets/images/common/github.png";
+    public static var ICON_HELP:String = "assets/images/common/help.png";
+    public static var ICON_LOCATE_FILE:String = "assets/images/common/locatefile.png";
+    public static var ICON_OK:String = "assets/images/common/ok.png";
+    public static var ICON_OUTPUT:String = "assets/images/common/output.png";
+    public static var ICON_OUTPUT_ERROR:String = "assets/images/common/output_error.png";
+    public static var ICON_OUTPUT_NEW:String = "assets/images/common/output_new.png";
+    public static var ICON_REFRESH:String = "assets/images/common/refresh.png";
+    public static var ICON_SETTINGS:String = "assets/images/common/settings.png";
+    public static var ICON_SETTINGS_WARNING:String = "assets/images/common/settings_warning.png";
+    public static var ICON_START:String = "assets/images/common/start.png";
+    public static var ICON_STOP:String = "assets/images/common/stop.png";
+    public static var ICON_UPLOAD:String = "assets/images/common/upload.png";
+    public static var ICON_WARNING:String = "assets/images/common/warning.png";
+    public static var ICON_WEB:String = "assets/images/common/web.png";
 
     public static final IMAGE_GENESIS_DIRECTORY:String = "assets/images/genesisdirectory.png";
     public static final IMAGE_HELP:String = "assets/images/help.png";
@@ -153,14 +155,53 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     var _mode:ThemeMode;
     var _themeColors:ThemeColors;
     var _themeTypography:Typography;
+    var _scaleFactor:Float = 1;
 
-    public function new( mode:ThemeMode = ThemeMode.Dark ) {
+    public function new( mode:ThemeMode = ThemeMode.Dark, scaleFactor:Float = 1 ) {
 
         super();
 
         _mode = mode;
+        _scaleFactor = scaleFactor;
 
+        _initAssets();
         _init();
+
+    }
+
+    function _initAssets() {
+
+        if ( SCALE_FACTOR >= 2 ) {
+            
+            ICON_CHECKBOX_LARGE = "assets/images/common/checkbox_large@2x.png";
+            ICON_CHECKBOX_LARGE_DISABLED = "assets/images/common/checkbox_large_disabled@2x.png";
+            ICON_CHECKBOX_LARGE_SELECTED = "assets/images/common/checkbox_large_selected@2x.png";
+            ICON_CLEAR = "assets/images/common/clear@2x.png";
+            ICON_CLOSE = "assets/images/common/close@2x.png";
+            ICON_CONSOLE = "assets/images/common/console@2x.png";
+            ICON_COPY = "assets/images/common/copy@2x.png";
+            ICON_DELETE = "assets/images/common/delete@2x.png";
+            ICON_DESTROY = "assets/images/common/destroy@2x.png";
+            ICON_DESTROY_SMALL = "assets/images/common/destroy_small@2x.png";
+            ICON_ERROR = "assets/images/common/error@2x.png";
+            ICON_FOLDER = "assets/images/common/folder@2x.png";
+            ICON_GITHUB = "assets/images/common/github@2x.png";
+            ICON_HELP = "assets/images/common/help@2x.png";
+            ICON_LOCATE_FILE = "assets/images/common/locatefile@2x.png";
+            ICON_OK = "assets/images/common/ok@2x.png";
+            ICON_OUTPUT = "assets/images/common/output@2x.png";
+            ICON_OUTPUT_ERROR = "assets/images/common/output_error@2x.png";
+            ICON_OUTPUT_NEW = "assets/images/common/output_new@2x.png";
+            ICON_REFRESH = "assets/images/common/refresh@2x.png";
+            ICON_SETTINGS = "assets/images/common/settings@2x.png";
+            ICON_SETTINGS_WARNING = "assets/images/common/settings_warning@2x.png";
+            ICON_START = "assets/images/common/start@2x.png";
+            ICON_STOP = "assets/images/common/stop@2x.png";
+            ICON_UPLOAD = "assets/images/common/upload@2x.png";
+            ICON_WARNING = "assets/images/common/warning@2x.png";
+            ICON_WEB = "assets/images/common/web@2x.png";
+            
+        }
 
     }
 
