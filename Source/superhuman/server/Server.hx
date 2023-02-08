@@ -534,25 +534,6 @@ class Server {
 
     }
 
-    public function provision() {
-
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provision' ) );
-
-        this._busy.value = true;
-        this._status.value = ServerStatus.Provisioning;
-
-        _provisioner.deleteWebAddressFile();
-
-        if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
-            Vagrant.getInstance().onProvision.add( _onVagrantProvision );
-
-        Vagrant.getInstance().getProvision( this._vagrantMachine )
-            .onStdOut( _vagrantProvisionStandardOutputData )
-            .onStdErr( _vagrantProvisionStandardErrorData )
-            .execute( this._serverDir );
-
-    }
-
     public function saveData() {
 
         try {
@@ -579,23 +560,6 @@ class Server {
         }
 
         _prepareFiles();
-
-    }
-
-    public function stop() {
-
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
-
-        this._busy.value = true;
-        this.status.value = ServerStatus.Stopping;
-
-        if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantHalt ) )
-            Vagrant.getInstance().onHalt.add( _onVagrantHalt );
-
-        Vagrant.getInstance().getHalt( this._vagrantMachine )
-            .onStdOut( _vagrantHaltStandardOutputData )
-            .onStdErr( _vagrantHaltStandardErrorData )
-            .execute( this._serverDir );
 
     }
 
@@ -768,6 +732,58 @@ class Server {
 
     }
 
+    //
+    // Vagrant provision
+    //
+
+    public function provision() {
+
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provision' ) );
+
+        this._busy.value = true;
+        this._status.value = ServerStatus.Provisioning;
+
+        _provisioner.deleteWebAddressFile();
+
+        if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
+            Vagrant.getInstance().onProvision.add( _onVagrantProvision );
+
+        Vagrant.getInstance().getProvision( this._vagrantMachine )
+            .onStdOut( _vagrantProvisionStandardOutputData )
+            .onStdErr( _vagrantProvisionStandardErrorData )
+            .execute( this._serverDir );
+
+    }
+
+    function _onVagrantProvision( machine:VagrantMachine ) {
+
+        Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
+
+        Logger.verbose( '${this}: _onVagrantProvision ${machine}' );
+        this._busy.value = false;
+        this._status.value = ServerStatus.Running;
+
+    }
+
+    function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
+
+        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
+        Logger.debug( '${this}: Vagrant provision: ${data}' );
+
+    }
+
+    function _vagrantProvisionStandardErrorData( executor:AbstractExecutor, data:String ) {
+
+        if ( console != null ) console.appendText( data, true );
+        Logger.error( '${this}: Vagrant provision error: ${data}' );
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provisionerror' ), true );
+
+    }
+
+    //
+    // Vagrant rsync
+    //
+
     public function rsync() {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.rsync' ) );
@@ -782,6 +798,16 @@ class Server {
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
             .execute( this._serverDir );
+
+    }
+
+    function _onVagrantRSync( machine:VagrantMachine ) {
+
+        Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
+
+        Logger.verbose( '${this}: _onVagrantRSync ${machine}' );
+        this._busy.value = false;
+        this._status.value = ServerStatus.Running;
 
     }
 
@@ -800,13 +826,24 @@ class Server {
 
     }
 
-    function _onVagrantRSync( machine:VagrantMachine ) {
+    //
+    // Vagrant stop
+    //
 
-        Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
+    public function stop() {
 
-        Logger.verbose( '${this}: _onVagrantRSync ${machine}' );
-        this._busy.value = false;
-        this._status.value = ServerStatus.Running;
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
+
+        this._busy.value = true;
+        this.status.value = ServerStatus.Stopping;
+
+        if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantHalt ) )
+            Vagrant.getInstance().onHalt.add( _onVagrantHalt );
+
+        Vagrant.getInstance().getHalt( this._vagrantMachine )
+            .onStdOut( _vagrantHaltStandardOutputData )
+            .onStdErr( _vagrantHaltStandardErrorData )
+            .execute( this._serverDir );
 
     }
 
@@ -817,16 +854,6 @@ class Server {
         Logger.verbose( '${this}: _onVagrantHalt ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Stopped;
-
-    }
-
-    function _onVagrantProvision( machine:VagrantMachine ) {
-
-        Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
-
-        Logger.verbose( '${this}: _onVagrantProvision ${machine}' );
-        this._busy.value = false;
-        this._status.value = ServerStatus.Running;
 
     }
 
@@ -845,20 +872,9 @@ class Server {
 
     }
 
-    function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
-
-        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.debug( '${this}: Vagrant provision: ${data}' );
-
-    }
-
-    function _vagrantProvisionStandardErrorData( executor:AbstractExecutor, data:String ) {
-
-        if ( console != null ) console.appendText( data, true );
-        Logger.error( '${this}: Vagrant provision error: ${data}' );
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provisionerror' ), true );
-
-    }
+    //
+    // Vagrant destroy
+    //
 
     public function destroy() {
 
@@ -909,26 +925,9 @@ class Server {
 
     }
 
-    /**
-     * Local filesystem functions
-     */
-
-    public function calculateDiskSpace() {
-
-        #if mac
-        var f = Shell.getInstance().du( this._serverDir );
-
-        if ( this._combinedVirtualMachine.value != null && this._combinedVirtualMachine.value.root != null )
-            f += Shell.getInstance().du( this._combinedVirtualMachine.value.root );
-
-        _diskUsage.value = f;
-        #end
-
-    }
-
-    /**
-     * Vagrant up
-     */
+    //
+    // Vagrant up
+    //
 
     function _startVagrantUp() {
 
@@ -1023,9 +1022,9 @@ class Server {
 
     }
 
-    /**
-     * VitualBox
-     */
+    //
+    // VirtualBox
+    //
 
     public function refreshVirtualBoxInfo() {
 
@@ -1051,9 +1050,9 @@ class Server {
 
     }
 
-    /**
-     * Combined Virtual Machine
-     */
+    //
+    // Combined Virtual Machine
+    //
 
     function _getCombinedVirtualMachine():CombinedVirtualMachine {
 
@@ -1189,6 +1188,23 @@ class Server {
     public function toString():String {
 
         return '[Server:${this._id}]';
+
+    }
+
+    //
+    // Local filesystem functions
+    //
+
+    public function calculateDiskSpace() {
+
+        #if mac
+        var f = Shell.getInstance().du( this._serverDir );
+
+        if ( this._combinedVirtualMachine.value != null && this._combinedVirtualMachine.value.root != null )
+            f += Shell.getInstance().du( this._combinedVirtualMachine.value.root );
+
+        _diskUsage.value = f;
+        #end
 
     }
 
