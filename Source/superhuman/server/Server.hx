@@ -840,7 +840,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantHalt ) )
             Vagrant.getInstance().onHalt.add( _onVagrantHalt );
 
-        Vagrant.getInstance().getHalt( this._vagrantMachine )
+        Vagrant.getInstance().getHalt( false, null )
             .onStdOut( _vagrantHaltStandardOutputData )
             .onStdErr( _vagrantHaltStandardErrorData )
             .execute( this._serverDir );
@@ -1007,27 +1007,24 @@ class Server {
 
             if ( _provisionedBeforeStart ) {
 
-                this._busy.value = false;
-                this.status.value = ServerStatus.Error;
-                this._hostname.locked = this._organization.locked = ( this._provisioner.provisioned == true );
+                // Stop Vagrant machine if up is unsuccessful
+                Logger.verbose( '${this}: Server start was unsuccessful, forcefully stopping server' );
 
-                executor.dispose();
-                _vagrantUpExecutor = null;
-                _provisioner.onProvisioningFileChanged.clear();
-                _provisioner.stopFileWatcher();
-                _stopVagrantUpElapsedTimer();
+                if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantUpHalt ) )
+                    Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
+        
+                Vagrant.getInstance().getHalt( true, null ).execute( this._serverDir );
 
             } else {
 
-                // Destroy server if provisioning was unsuccessful
+                // Destroy Vagrant machine if provisioning was unsuccessful
                 Logger.verbose( '${this}: First start was unsuccessful, destroying server' );
                 _provisioner.deleteWebAddressFile();
 
                 if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
                     Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
 
-                Vagrant.getInstance().getDestroy( true, null )
-                    .execute( this._serverDir );
+                Vagrant.getInstance().getDestroy( true, null ).execute( this._serverDir );
 
             }
 
@@ -1076,6 +1073,24 @@ class Server {
         this._provisioner.stopFileWatcher();
         this._provisioner.onProvisioningFileChanged.clear();
         this._provisioner.deleteWebAddressFile();
+        this._stopVagrantUpElapsedTimer();
+
+    }
+
+    function _onVagrantUpHalt( machine:VagrantMachine ) {
+
+        Logger.verbose( '${this}: Vagrant halt finished after server start was unsuccessful' );
+        Vagrant.getInstance().onDestroy.remove( _onVagrantUpHalt );
+
+        //if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
+
+        this._busy.value = false;
+        this._status.value = ServerStatus.Error;
+        this._combinedVirtualMachine.value.vagrantId = null;
+        this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
+        this._vagrantUpExecutor = null;
+        this._provisioner.stopFileWatcher();
+        this._provisioner.onProvisioningFileChanged.clear();
         this._stopVagrantUpElapsedTimer();
 
     }
