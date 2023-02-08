@@ -39,7 +39,8 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml mac
+          haxelib run openfl build project.xml mac `
+            -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
 
       - name: Create package
         run: |
