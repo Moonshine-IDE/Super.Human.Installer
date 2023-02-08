@@ -46,6 +46,7 @@ import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.applications.oracle.VirtualBoxMachine;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.FileTools;
+import prominic.sys.tools.StrTools;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.interfaces.IConsole;
 import superhuman.managers.ProvisionerManager;
@@ -979,7 +980,10 @@ class Server {
             Logger.debug( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
         }
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ) ), executor.exitCode > 0 );
+        var elapsed = StrTools.timeToFormattedString( _vagrantUpElapsedTime );
+        Logger.debug( '${this}: Vagrant up elapsed time: ${elapsed}' );
+
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ), elapsed ), executor.exitCode > 0 );
 
         final hasErrors:Bool = executor.hasErrors || executor.exitCode > 0;
 
