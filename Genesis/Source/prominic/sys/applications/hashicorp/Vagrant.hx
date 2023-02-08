@@ -253,12 +253,13 @@ class Vagrant extends AbstractApp {
      * @param machine The VagrantMachine
      * @return Executor
      */
-    public function getHalt( ?machine:VagrantMachine ):Executor {
+    public function getHalt( force:Bool = false, ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
         if ( machine != null && _haltExecutors.exists( machine ) ) return _haltExecutors.get( machine );
 
         var args:Array<String> = [ "halt" ];
+        if ( force ) args.push( '-f' );
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
 
         var extraArgs:Array<Dynamic> = [];
