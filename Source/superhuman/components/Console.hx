@@ -168,7 +168,7 @@ class Console extends LayoutGroup implements IConsole {
     public function appendText( text:String, isError:Bool = false ) {
 
         _hasNewMessage = true;
-        if ( !_hasError ) _hasError = isError;
+        if ( isError ) _hasError = true;
 
         _textList.appendText( text.toString(), isError );
         this.dispatchEvent( new Event( Event.CHANGE ) );
@@ -214,12 +214,10 @@ class ConsoleTextArea extends TextArea {
 
         if ( isError ) {
 
-            //this.textFieldViewPort.textField.htmlText += '<font color="#${_errorColorHex}">${text}</font>';
             this.text += text;
 
         } else {
 
-            //this.textFieldViewPort.textField.htmlText += '<font color="#${_normalColorHex}">${text}</font>';
             this.text += text;
 
         }
@@ -283,6 +281,7 @@ class ConsoleTextList extends ListView {
 
             itemRenderer.text = state.data.text;
             itemRenderer.isError = state.data.isError;
+            itemRenderer.textFormat = ( state.data.isError ) ? SuperHumanInstallerTheme.getInstance().consoleTextErrorFormat : SuperHumanInstallerTheme.getInstance().consoleTextFormat;
 
         };
 
