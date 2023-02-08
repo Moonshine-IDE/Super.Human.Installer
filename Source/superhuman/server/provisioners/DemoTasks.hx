@@ -505,8 +505,6 @@ class HostsFileGenerator {
             NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
             NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
 
-            // Forcing false instead of
-            // ENV_OPEN_BROWSER: _openBrowser.value,
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: provisioner.server.setupWait.value,
 
@@ -698,9 +696,6 @@ class HostsFileGenerator {
             NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
             NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
 
-            // Forcing false instead of
-            // ENV_OPEN_BROWSER: _openBrowser.value,
-            ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: provisioner.server.setupWait.value,
 
             RESOURCES_CPU: provisioner.server.numCPUs.value,
