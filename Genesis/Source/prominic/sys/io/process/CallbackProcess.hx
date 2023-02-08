@@ -89,12 +89,27 @@ class CallbackProcess extends BufferedProcess {
 
     /**
      * Starts the process and sets up the relevant threads for stream processing.
+     * @param inlineExecution If true, the process launches without additional output listener threads,
+     * waiting for exit code in the current thread, therefore it's a thread blocking function. Stdout,
+     * stderr data, pid, exit code, and callbacks are only available after the process finishes
      */
-    override function start() {
+    override function start( ?inlineExecution:Bool ) {
 
-        super.start();
+        super.start( inlineExecution );
+
+        if ( inlineExecution ) return;
 
         if ( !_cancelEventLoop && Thread.current().events != null ) _eventHandler = Thread.current().events.repeat( _frameLoop, Std.int( ( 1 / _performanceSettings.eventsPerSecond ) * 1000 ) );
+
+    }
+
+    override function _startInline() {
+
+        super._startInline();
+
+        if ( _onStdOut != null && this._stdoutBuffer.length > 0 ) _onStdOut( this );
+        if ( _onStdErr != null && this._stderrBuffer.length > 0 ) _onStdErr( this );
+        if ( _onStop != null ) _onStop( this );
 
     }
 

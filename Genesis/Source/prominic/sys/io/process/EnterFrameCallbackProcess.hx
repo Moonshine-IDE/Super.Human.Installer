@@ -67,17 +67,20 @@ class EnterFrameCallbackProcess extends CallbackProcess {
 
     /**
      * Starts the process and sets up the relevant threads or event listeners for stream processing.
+     * @param inlineExecution If true, the process launches without additional output listener threads,
+     * waiting for exit code in the current thread, therefore it's a thread blocking function. Stdout,
+     * stderr data, pid, exit code, and callbacks are only available after the process finishes
      */
-    override function start() {
+    override function start( ?inlineExecution:Bool ) {
 
-        if ( _enterFrameEventDispatcher != null ) {
+        if ( !inlineExecution && _enterFrameEventDispatcher != null ) {
 
             _enterFrameEventDispatcher.addEventListener( Event.ENTER_FRAME, _eventLoop );
             _cancelEventLoop = true;
 
         }
 
-        super.start();
+        super.start( inlineExecution );
 
     }
 

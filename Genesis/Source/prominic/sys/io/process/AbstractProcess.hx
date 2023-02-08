@@ -45,7 +45,7 @@ abstract class AbstractProcess {
 
     static final _defaultPerformaceSettings:ProcessPerformanceSettings = {
 
-        disableWaitForExitThread: true,
+        disableWaitForExitThread: false,
         eventsPerSecond: 5,
         inputBufferSize: 32768,
         inputReadRepeatDelay: .0,
@@ -161,19 +161,30 @@ abstract class AbstractProcess {
 
     /**
      * Starts the process and sets up the relevant threads for stream processing.
+     * @param inlineExecution If true, the process launches without additional output listener threads,
+     * waiting for exit code in the current thread, therefore it's a thread blocking function. Stdout,
+     * stderr data, pid, and exit code are only available after the process finishes
      */
-    public function start() {
+    public function start( ?inlineExecution:Bool ) {
 
         // The process is either running or already exited
         if ( _process != null || _running || _exited ) return;
 
-        #if verbose_process_logs trace( '[${_className}] start()' ); #end
+        #if verbose_process_logs trace( '[${_className}] start(inlineExecution:${inlineExecution})' ); #end
+
+        if ( inlineExecution ) {
+
+            _startInline();
+            return;
+
+        }
 
         _mutex.acquire();
         final cwd:String = Sys.getCwd();
         if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
         _process = new Process( _cmd, _args );
         _pid = _process.getPid();
+        ProcessManager.runningProcesses.add( this );
         _running = true;
         if ( _workingDirectory != null ) Sys.setCwd( cwd );
         _mutex.release();
@@ -230,8 +241,9 @@ abstract class AbstractProcess {
         _mutex.acquire();
         _exitCode = _process.exitCode();
         _process.close();
-        _exited = true;
+        _exited = _stdoutFinished = _stderrFinished = true;
         _running = false;
+        ProcessManager.runningProcesses.remove( this );
         _mutex.release();
         #if verbose_process_logs trace( '[${_className}:${_pid}][ProcessExit] Exit code received: ${_exitCode}' ); #end
         #if verbose_process_logs trace( '[${_className}:${_pid}][ProcessExit] Finished' ); #end
@@ -348,6 +360,28 @@ abstract class AbstractProcess {
         }
 
         #if verbose_process_logs trace( '[${_className}:${_pid}][Thread:${_threadName}] Finished' ); #end
+
+    }
+
+    function _startInline() {
+
+        #if verbose_process_logs trace( '[${_className}] Starting inline execution' ); #end
+        final cwd:String = Sys.getCwd();
+        if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
+        _process = new Process( _cmd, _args );
+        _pid = _process.getPid();
+        ProcessManager.runningProcesses.add( this );
+        _running = true;
+        if ( _workingDirectory != null ) Sys.setCwd( cwd );
+        _exitCode = _process.exitCode();
+        final stdOutB = _process.stdout.readAll();
+        final stdOut:String = ( stdOutB != null ) ? stdOutB.toString() : "";
+        final stdErrB = _process.stderr.readAll();
+        final stdErr:String = ( stdErrB != null ) ? stdErrB.toString() : "";
+        if ( stdOut.length > 0 ) _stdoutBuffer.add( stdOut );
+        if ( stdErr.length > 0 ) _stderrBuffer.add( stdErr );
+        ProcessManager.runningProcesses.remove( this );
+        #if verbose_process_logs trace( '[${_className}:${_pid}] Inline execution finished' ); #end
 
     }
 
