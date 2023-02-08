@@ -59,7 +59,7 @@ import sys.io.File;
 
 class Server {
 
-    static final _CONFIG_FILE = ".shi-server";
+    static final _CONFIG_FILE = "server.shi";
 
     static final _VK_CERTIFIER:EReg = ~/^(?!\W)([a-zA-Z0-9-]+)?([^\W])$/;
     static final _VK_DOMAIN:EReg = ~/^[a-zA-Z0-9]+\.[a-zA-Z0-9.-_]+$/;
