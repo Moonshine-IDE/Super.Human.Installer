@@ -146,12 +146,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final ICON_WARNING:String = "assets/images/common/warning.png";
     public static final ICON_WEB:String = "assets/images/common/web.png";
 
-    public static final DARK_ICON_CHECKBOX:String = "assets/images/dark/checkbox.png";
-    public static final DARK_ICON_CHECKBOX_SELECTED:String = "assets/images/dark/checkbox_selected.png";
-
-    public static final LIGHT_ICON_CHECKBOX:String = "assets/images/light/checkbox.png";
-    public static final LIGHT_ICON_CHECKBOX_SELECTED:String = "assets/images/light/checkbox_selected.png";
-
     public static final IMAGE_GENESIS_DIRECTORY:String = "assets/images/genesisdirectory.png";
     public static final IMAGE_HELP:String = "assets/images/help.png";
     public static final IMAGE_SUPPORT:String = "assets/images/support.png";
