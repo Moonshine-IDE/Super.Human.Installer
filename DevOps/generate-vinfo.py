@@ -55,7 +55,10 @@ def main():
     if production is not None:
         production_buildinfo = get_buildinfo(production)
         production_versioninfo = {
+            "tag_name": production["tag_name"],
             "version": production_buildinfo["version"],
+            "release_url": production["html_url"],
+            "branch": production_buildinfo["branch"],
             "commit_sha": production_buildinfo["commit_sha"],
             "build_date": production_buildinfo["build_date"],
             "linux_url": get_download_url(production, "SuperHumanInstaller-Setup.AppImage"),
@@ -68,7 +71,10 @@ def main():
     if development is not None:
         development_buildinfo = get_buildinfo(development)
         development_versioninfo = {
+            "tag_name": development["tag_name"],
             "version": development_buildinfo["version"],
+            "release_url": development["html_url"],
+            "branch": development_buildinfo["branch"],
             "commit_sha": development_buildinfo["commit_sha"],
             "build_date": development_buildinfo["build_date"],
             "linux_url": get_download_url(development, "SuperHumanInstallerDev-Setup.AppImage"),
