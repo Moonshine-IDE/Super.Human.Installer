@@ -311,7 +311,7 @@ class ConsoleTextList extends ListView {
     public function getText():String {
 
         var s:String = "";
-        for ( e in _elements ) s += e.text + "\n";
+        for ( e in _elements ) s += e.text;
         return s;
 
     }
