@@ -1,9 +1,0 @@
-port="{{ startcloud_quick_start_port_forwards[0].guest }}"
-theme="--theme"
-thememode="dark"
-servercert="--server-certificate"
-{% if selfsigned_enabled %}
-servercertfile="{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pem"
-{% else %}
-servercertfile="{{ cert_dir }}/combined/default-signed.pem"
-{% endif %}

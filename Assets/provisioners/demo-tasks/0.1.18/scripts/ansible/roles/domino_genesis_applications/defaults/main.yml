@@ -1,4 +1,0 @@
----
-genesis_packages_debug: false
-genesis_packages:
-  - netmonitor

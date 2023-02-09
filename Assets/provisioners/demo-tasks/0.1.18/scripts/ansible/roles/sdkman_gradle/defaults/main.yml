@@ -1,6 +1,0 @@
----
-gradle_version: 5.4.1
-sdkman_update_alternatives:
-  - candidate: gradle
-    name: gradle
-    link: /usr/bin/gradle

@@ -1,8 +1,0 @@
----
-# -
-#   name: "Begin Example Java App"
-#   ansible.builtin.file:
-#     path: "{{ item }}"
-#     state: directory
-#   with_items:
-#     - "/This/is/just/a/placeholder"
