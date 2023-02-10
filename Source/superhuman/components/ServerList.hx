@@ -572,7 +572,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = !_server.provisioned;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
-                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped' );
+                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
                 _statusLabel.text = ( forced ) ?  LanguageManager.getInstance().getString( 'serverpage.server.status.stoppingforced' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopping' );
@@ -583,13 +583,13 @@ class ServerItem extends LayoutGroupItemRenderer {
 
                     _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
                     _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
-                    _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
+                    _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "00:00:00" );
 
                 } else {
 
                     _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.firststart' );
                     _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
-                    _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
+                    _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "00:00:00" );
 
                 } 
 
@@ -613,7 +613,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
-                _statusLabel.text = ( _server.provisioned ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.readyprovisioned' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );
+                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );
 
             case ServerStatus.Provisioning:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.provisioning' );

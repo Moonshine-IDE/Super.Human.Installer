@@ -255,6 +255,12 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    public function deleteProvisioningProofFile() {
+
+        this.deleteFileInTargetDirectory( PROVISIONING_PROOF_FILE );
+
+    }
+
     public function deleteWebAddressFile() {
 
         this.deleteFileInTargetDirectory( WEB_ADDRESS_FILE );
