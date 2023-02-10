@@ -1202,9 +1202,6 @@ class Server {
         this._status.value = ServerStatusManager.getRealStatus( this );
         this._currentAction = ServerAction.None( false );
 
-        //if ( this._status.value == ServerStatus.Ready || this._status.value == ServerStatus.Unconfigured && this._provisioner != null )
-        //    this._provisioner.deleteProvisioningProofFile();
-
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
         this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
             ( this._provisioner != null && this._provisioner.provisioned == true );
