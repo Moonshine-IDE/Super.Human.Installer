@@ -1126,10 +1126,10 @@ class Server {
 
         if ( _refreshingVirtualBoxVMInfo ) return;
 
-        Logger.verbose( '${this}: Refreshing VirtualBox VM Info for id: ${ this._combinedVirtualMachine.value.virtualBoxId}' );
+        Logger.verbose( '${this}: Refreshing VirtualBox VM Info for id: ${this.virtualBoxId}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this._combinedVirtualMachine.value.virtualBoxId ).execute( this._serverDir );
+        VirtualBox.getInstance().getShowVMInfo( this.virtualBoxId ).execute( this._serverDir );
         _refreshingVirtualBoxVMInfo = true;
 
     }
@@ -1140,7 +1140,7 @@ class Server {
 
         Logger.verbose( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
 
-        if ( id == this._combinedVirtualMachine.value.virtualBoxId ) {
+        if ( id == this.virtualBoxId ) {
 
             var vbm = VirtualBox.getInstance().getVirtualMachineById( id );
 
@@ -1216,6 +1216,9 @@ class Server {
 
         this._status.value = ServerStatusManager.getRealStatus( this );
         this._currentAction = ServerAction.None( false );
+
+        //if ( this._status.value == ServerStatus.Ready || this._status.value == ServerStatus.Unconfigured && this._provisioner != null )
+        //    this._provisioner.deleteProvisioningProofFile();
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
         this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
