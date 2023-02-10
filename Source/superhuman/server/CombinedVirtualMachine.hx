@@ -30,41 +30,16 @@
 
 package superhuman.server;
 
+import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
+import prominic.sys.applications.oracle.VirtualBoxMachine;
+
 typedef CombinedVirtualMachine = {
 
-    ?CfgFile:String,
-    ?LogFldr:String,
-    ?SnapFldr:String,
-    ?apic:String,
-    ?chipset:String,
-    ?cpuexecutioncap:Int,
-    ?cpuprofile:String,
-    ?cpus:Int,
-    ?description:String,
-    ?encryption:Bool,
-    ?firmware:String,
-    ?hardwareuuid:String,
     ?home:String,
-    ?hpet:String,
-    ?id:Int,
-    ?longmode:String,
-    ?memory:Int,
-    ?name:String,
-    ?nestedhwvirt:String,
-    ?ostype:String,
-    ?pae:String,
-    ?pagefusion:String,
-    ?provider:String,
-    ?root:String,
     ?serverId:Int,
     ?state:CombinedVirtualMachineState,
-    ?triplefaultreset:String,
-    ?vagrantId:String,
-    ?vagrantState:String,
-    ?virtualBoxId:String,
-    ?virtualBoxState:String,
-    ?vram:Int,
-    ?x2apic:String,
+    ?vagrantMachine:VagrantMachine,
+    ?virtualBoxMachine:VirtualBoxMachine,
 
 }
 

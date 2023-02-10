@@ -131,7 +131,8 @@ class Server {
         sc._userSafeId.value = data.user_safeid;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
-        sc._combinedVirtualMachine.value = { home: sc._serverDir, vagrantId: null, virtualBoxId: null, state: CombinedVirtualMachineState.Unknown, serverId: sc._id };
+        //sc._combinedVirtualMachine.value = { home: sc._serverDir, vagrantId: null, virtualBoxId: null, state: CombinedVirtualMachineState.Unknown, serverId: sc._id };
+        sc._combinedVirtualMachine.value = { home: sc._serverDir, serverId: sc._id, vagrantMachine: { vagrantId: null, serverId: sc._id }, virtualBoxMachine: { virtualBoxId: null, serverId: sc._id } };
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
         sc._created = true;
@@ -212,12 +213,10 @@ class Server {
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
     var _vagrantHaltExecutor:AbstractExecutor;
-    var _vagrantMachine:VagrantMachine;
     var _vagrantUpElapsedTime:Float;
     var _vagrantUpExecutor:AbstractExecutor;
     var _vagrantUpExecutorElapsedTimer:Timer;
     var _vagrantUpExecutorStopTimer:Timer;
-    var _virtualBoxMachine:VirtualBoxMachine;
     
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
@@ -654,7 +653,7 @@ class Server {
 
         if ( console != null ) {
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( _virtualBoxMachine ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( this._combinedVirtualMachine.value.virtualBoxMachine ) ) );
         }
 
 		_startVagrantUp();
@@ -760,7 +759,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
             Vagrant.getInstance().onProvision.add( _onVagrantProvision );
 
-        Vagrant.getInstance().getProvision( this._vagrantMachine )
+        Vagrant.getInstance().getProvision( this._combinedVirtualMachine.value.vagrantMachine )
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
             .execute( this._serverDir );
@@ -806,7 +805,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onRSync, _onVagrantRSync ) )
             Vagrant.getInstance().onRSync.add( _onVagrantRSync );
 
-        Vagrant.getInstance().getRSync( this._vagrantMachine )
+        Vagrant.getInstance().getRSync( this._combinedVirtualMachine.value.vagrantMachine )
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
             .execute( this._serverDir );
@@ -943,8 +942,7 @@ class Server {
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
         this._provisioner.deleteProvisioningProofFile();
-        this._combinedVirtualMachine.value.vagrantId = null;
-        this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
+        this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
 
     }
 
@@ -1081,8 +1079,7 @@ class Server {
 
         //this._busy.value = false;
         //this._status.value = ServerStatus.Stopped( true );
-        this._combinedVirtualMachine.value.vagrantId = null;
-        this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
+        this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
         this._vagrantUpExecutor = null;
         this._provisioner.stopFileWatcher();
         this._provisioner.onProvisioningFileChanged.clear();
@@ -1101,10 +1098,6 @@ class Server {
 
         //if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
 
-        //this._busy.value = false;
-        //this._status.value = ServerStatus.Stopped( true );
-        this._combinedVirtualMachine.value.vagrantId = null;
-        this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
         this._vagrantUpExecutor = null;
         this._provisioner.stopFileWatcher();
         this._provisioner.onProvisioningFileChanged.clear();
@@ -1134,6 +1127,7 @@ class Server {
     function _onVirtualBoxShowVMInfo( id:String ) {
 
         VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
+        _refreshingVirtualBoxVMInfo = false;
 
         Logger.verbose( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
 
@@ -1143,9 +1137,9 @@ class Server {
 
             if ( vbm != null ) {
 
+                Logger.verbose( '${this}: VirtualBox VM: ${this._combinedVirtualMachine.value.virtualBoxMachine}' );
                 setVirtualBoxMachine( vbm );
-                _refreshingVirtualBoxVMInfo = false;
-                Logger.verbose( '${this}: VirtualBox VM: ${this._virtualBoxMachine}' );
+                _setServerStatus();
                 // calculateDiskSpace();
 
             }
@@ -1168,37 +1162,31 @@ class Server {
 
     public function setVagrantMachine( machine:VagrantMachine ) {
 
-        this._vagrantMachine = machine;
-        this._vagrantMachine.serverId = this._id;
+        this._combinedVirtualMachine.value.vagrantMachine.serverId = this._id;
 
-        var cvm:CombinedVirtualMachine = _combinedVirtualMachine.value;
+        var vm:VagrantMachine = _combinedVirtualMachine.value.vagrantMachine;
 
         for( i in Reflect.fields( machine ) ) {
 
-            Reflect.setField( cvm, i, Reflect.field( machine, i ) );
+            Reflect.setField( vm, i, Reflect.field( machine, i ) );
 
         }
-
-        _combinedVirtualMachine.value = cvm;
 
     }
 
     public function setVirtualBoxMachine( machine:VirtualBoxMachine ) {
 
-        this._virtualBoxMachine = machine;
-        this._virtualBoxMachine.serverId = this._id;
+        this._combinedVirtualMachine.value.virtualBoxMachine.serverId = this._id;
 
-        var cvm:CombinedVirtualMachine = _combinedVirtualMachine.value;
+        var vm:VirtualBoxMachine = _combinedVirtualMachine.value.virtualBoxMachine;
 
         for( i in Reflect.fields( machine ) ) {
 
-            Reflect.setField( cvm, i, Reflect.field( machine, i ) );
+            Reflect.setField( vm, i, Reflect.field( machine, i ) );
 
         }
 
-        cvm.virtualBoxId = this.virtualBoxId;
-
-        _setServerStatus();
+        vm.virtualBoxId = this.virtualBoxId;
 
     }
 
@@ -1236,8 +1224,15 @@ class Server {
     }
 
     //
-    // Provisioning status check
+    // Provisioning and Provisioning proof check
     //
+
+    public function deleteProvisioningProof() {
+
+        if ( this._provisioner != null ) this._provisioner.deleteProvisioningProofFile();
+        _setServerStatus();
+
+    }
 
     function _onDemoTasksProvisioningFileChanged() {
 
@@ -1310,8 +1305,8 @@ class Server {
         #if mac
         var f = Shell.getInstance().du( this._serverDir );
 
-        if ( this._combinedVirtualMachine.value != null && this._combinedVirtualMachine.value.root != null )
-            f += Shell.getInstance().du( this._combinedVirtualMachine.value.root );
+        if ( this._combinedVirtualMachine.value != null && this._combinedVirtualMachine.value.virtualBoxMachine.root != null )
+            f += Shell.getInstance().du( this._combinedVirtualMachine.value.virtualBoxMachine.root );
 
         _diskUsage.value = f;
         #end

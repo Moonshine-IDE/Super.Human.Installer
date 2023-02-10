@@ -455,6 +455,13 @@ var _advancedConfigPage:AdvancedConfigPage;
 
 		}
 
+		for ( s in _servers ) {
+
+			// Deleting provisioning proof file if VirtualBox machine does not exist for this server
+			if ( s.combinedVirtualMachine.value.virtualBoxMachine.name == null ) s.deleteProvisioningProof();
+
+		}
+
 		if ( _serverPage != null ) _serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
 
 	}
@@ -553,8 +560,8 @@ var _advancedConfigPage:AdvancedConfigPage;
 
 					// Shutting down Vagrant machine
 					var vagrantArgs:Array<String> = [ 'halt' ];
-					if ( server.combinedVirtualMachine.value != null && server.combinedVirtualMachine.value.vagrantId != null ) {
-						vagrantArgs.push( server.combinedVirtualMachine.value.vagrantId );
+					if ( server.combinedVirtualMachine.value != null && server.combinedVirtualMachine.value.vagrantMachine.vagrantId != null ) {
+						vagrantArgs.push( server.combinedVirtualMachine.value.vagrantMachine.vagrantId );
 					} else {
 						Sys.setCwd( server.path.value );
 					}

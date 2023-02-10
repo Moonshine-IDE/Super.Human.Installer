@@ -42,7 +42,7 @@ class ServerStatusManager {
 
         final hasError = ( server.currentAction != null ) ? server.currentAction.getParameters()[ 0 ] : false;
 
-        switch server.combinedVirtualMachine.value.vagrantState {
+        switch server.combinedVirtualMachine.value.vagrantMachine.vagrantState {
             
             case "aborted":
                 result = ServerStatus.Stopped( true );
@@ -57,7 +57,7 @@ class ServerStatusManager {
 
         }
 
-        switch server.combinedVirtualMachine.value.virtualBoxState {
+        switch server.combinedVirtualMachine.value.virtualBoxMachine.virtualBoxState {
             
             case "aborted":
                 result = ServerStatus.Stopped( true );
