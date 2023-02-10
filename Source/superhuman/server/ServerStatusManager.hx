@@ -40,16 +40,18 @@ class ServerStatusManager {
 
         Logger.verbose( '${server}.combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
 
+        final hasError = ( server.currentAction != null ) ? server.currentAction.getParameters()[ 0 ] : false;
+
         switch server.combinedVirtualMachine.value.vagrantState {
             
             case "aborted":
-                result = ServerStatus.Error;
+                result = ServerStatus.Stopped( true );
 
             case "poweroff":
-                result = ServerStatus.Stopped;
+                result = ServerStatus.Stopped( false );
 
             case "running":
-                result = ServerStatus.Running;
+                result = ServerStatus.Running( false );
 
             default:
 
@@ -58,19 +60,19 @@ class ServerStatusManager {
         switch server.combinedVirtualMachine.value.virtualBoxState {
             
             case "aborted":
-                result = ServerStatus.Error;
+                result = ServerStatus.Stopped( true );
 
             case "powered off":
-                result = ServerStatus.Stopped;
+                result = ServerStatus.Stopped( false );
 
             case "running":
-                result = ServerStatus.Running;
+                result = ServerStatus.Running( hasError );
 
             case "starting":
-                result = ServerStatus.Running;
+                result = ServerStatus.Running( false );
 
             case "stopping":
-                result = ServerStatus.Running;
+                result = ServerStatus.Running( false );
 
             default:
                 result = ServerStatus.Unknown;

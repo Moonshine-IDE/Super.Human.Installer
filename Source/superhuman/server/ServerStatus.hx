@@ -45,12 +45,12 @@ enum ServerStatus {
     /**
      * The server is not running
      */
-    Stopped;
+    Stopped( hasError:Bool );
 
     /**
      * The server is stopping
      */
-    Stopping;
+    Stopping( forced:Bool );
 
     /**
      * The server has never been configured
@@ -63,14 +63,9 @@ enum ServerStatus {
     Initializing;
 
     /**
-     * The server is starting for the first time, previously 'vagrant up' was unsuccessful
-     */
-    FirstStart;
-
-    /**
      * The server is starting
      */
-    Start;
+    Start( provisionedBefore:Bool );
 
     /**
      * The server is configured, ready for first launch
@@ -80,17 +75,7 @@ enum ServerStatus {
     /**
      * The server is running
      */
-    Running;
-
-    /**
-     * The server is finished with an error
-     */
-    Error;
-
-    /**
-     * The server is finished with an error but still running
-     */
-    RunningWithError;
+    Running( hasError:Bool );
 
     /**
      * The server is provisioning

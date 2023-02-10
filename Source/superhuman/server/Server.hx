@@ -58,6 +58,8 @@ import superhuman.server.provisioners.DemoTasks;
 import sys.FileSystem;
 import sys.io.File;
 
+using prominic.tools.ObjectTools;
+
 class Server {
 
     static final _CONFIG_FILE = "server.shi";
@@ -76,6 +78,8 @@ class Server {
     #else
     static final _VK_EMAIL:EReg = ~/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
     #end
+
+    static public var keepFailedServersRunning:Bool = false;
 
     static public function create( data:ServerData, rootDir:String ):Server {
 
@@ -176,6 +180,7 @@ class Server {
     var _combinedVirtualMachine:Property<CombinedVirtualMachine>;
     var _console:IConsole;
     var _created:Bool = false;
+    var _currentAction:ServerAction = ServerAction.None( false );
     var _dhcp4:Property<Bool>;
     var _disableBridgeAdapter:Property<Bool>;
     var _diskUsage:Property<Float>;
@@ -206,6 +211,7 @@ class Server {
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
+    var _vagrantHaltExecutor:AbstractExecutor;
     var _vagrantMachine:VagrantMachine;
     var _vagrantUpElapsedTime:Float;
     var _vagrantUpExecutor:AbstractExecutor;
@@ -222,6 +228,9 @@ class Server {
 
     public var combinedVirtualMachine( get, never ):Property<CombinedVirtualMachine>;
     function get_combinedVirtualMachine() return _combinedVirtualMachine;
+
+    public var currentAction( get, never ):ServerAction;
+    function get_currentAction() return _currentAction;
 
     public var dhcp4( get, never ):Property<Bool>;
     function get_dhcp4() return _dhcp4;
@@ -243,6 +252,8 @@ class Server {
     function get_domainName():String {
         return url.hostname + "." + url.domainName;
     }
+
+    public var hasExecutionErrors:Bool = false;
 
     public var hostname( get, never ):ValidatingProperty;
     function get_hostname() return _hostname;
@@ -548,6 +559,7 @@ class Server {
 
     public function start( provision:Bool = false ) {
 
+        this._currentAction = ServerAction.Start( false );
         this._busy.value = true;
 
         _forceVagrantProvisioning = provision;
@@ -761,7 +773,7 @@ class Server {
 
         Logger.verbose( '${this}: _onVagrantProvision ${machine}' );
         this._busy.value = false;
-        this._status.value = ServerStatus.Running;
+        this._status.value = ServerStatus.Running( false );
 
     }
 
@@ -807,7 +819,7 @@ class Server {
 
         Logger.verbose( '${this}: _onVagrantRSync ${machine}' );
         this._busy.value = false;
-        this._status.value = ServerStatus.Running;
+        this._status.value = ServerStatus.Running( false );
 
     }
 
@@ -830,17 +842,19 @@ class Server {
     // Vagrant stop
     //
 
-    public function stop() {
+    public function stop( forced:Bool = false ) {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
 
         this._busy.value = true;
-        this.status.value = ServerStatus.Stopping;
+        this.status.value = ServerStatus.Stopping( forced );
+        this._currentAction = ServerAction.Stop( false );
 
         if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantHalt ) )
             Vagrant.getInstance().onHalt.add( _onVagrantHalt );
 
-        Vagrant.getInstance().getHalt( false, null )
+        _vagrantHaltExecutor = Vagrant.getInstance()
+            .getHalt( forced, null )
             .onStdOut( _vagrantHaltStandardOutputData )
             .onStdErr( _vagrantHaltStandardErrorData )
             .execute( this._serverDir );
@@ -851,9 +865,21 @@ class Server {
 
         Vagrant.getInstance().onHalt.remove( _onVagrantHalt );
 
-        Logger.verbose( '${this}: _onVagrantHalt ${machine}' );
-        this._busy.value = false;
-        this._status.value = ServerStatus.Stopped;
+        if ( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 ) {
+
+            Logger.error( '${this}: Server cannot be stopped' );
+
+        } else {
+
+            Logger.info( '${this}: Server stopped' );
+
+        }
+
+        this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
+        refreshVirtualBoxInfo();
+
+        _vagrantHaltExecutor.dispose();
+        _vagrantHaltExecutor = null;
 
     }
 
@@ -937,18 +963,8 @@ class Server {
         this._busy.value = true;
 
         _provisionedBeforeStart = this._provisioner.provisioned;
-
-        if ( this._provisioner.provisioned ) {
-
-            this.status.value = ServerStatus.Start;
-
-        } else {
-
-            this.status.value = ServerStatus.FirstStart;
-
-        }
-
-        _provisioner.deleteWebAddressFile();
+        this.status.value = ServerStatus.Start( this._provisioner.provisioned );
+        //_provisioner.deleteWebAddressFile();
         _provisioner.onProvisioningFileChanged.add( _onDemoTasksProvisioningFileChanged );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
@@ -985,60 +1001,61 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ), elapsed ), executor.exitCode > 0 );
 
-        final hasErrors:Bool = executor.hasErrors || executor.exitCode > 0;
+        hasExecutionErrors = executor.hasErrors || executor.exitCode > 0;
+        this._currentAction = ServerAction.Start( hasExecutionErrors );
 
-        if ( executor.exitCode == -1 ) {
+        if ( hasExecutionErrors ) {
 
-            this._busy.value = false;
-            this.status.value = ServerStatus.Ready;
-            this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.PowerOff;
+            // Vagrant up finished with either exitcode > 0, or an error happened during execution
 
-        } else if ( executor.exitCode == 0 ) {
+            if ( keepFailedServersRunning ) {
 
-            this._busy.value = false;
-            this.status.value = ServerStatus.Running;
-            this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.Running;
+                // Keeping the failed server running in its current state
+                Logger.verbose( '${this}: Server start was unsuccessful, keeping the server in its current status' );
 
-            if ( this._provisioner.provisioned && this._openBrowser.value ) this._provisioner.openWelcomePage();
-
-        }
-
-        if ( hasErrors ) {
-
-            if ( _provisionedBeforeStart ) {
-
-                // Stop Vagrant machine if up is unsuccessful
-                Logger.verbose( '${this}: Server start was unsuccessful, forcefully stopping server' );
-
-                if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantUpHalt ) )
-                    Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
-        
-                Vagrant.getInstance().getHalt( true, null ).execute( this._serverDir );
+                // Refreshing VirtualBox info
+                this._currentAction = ServerAction.GetStatus( true );
+                refreshVirtualBoxInfo();
 
             } else {
 
-                // Destroy Vagrant machine if provisioning was unsuccessful
-                Logger.verbose( '${this}: First start was unsuccessful, destroying server' );
-                _provisioner.deleteWebAddressFile();
+                // Stop or destroy the server
 
-                if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
-                    Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
+                if ( _provisionedBeforeStart ) {
 
-                Vagrant.getInstance().getDestroy( true, null ).execute( this._serverDir );
+                    // The server was provisioned before, so 'vagrant halt' is needed
+                    Logger.verbose( '${this}: Server start was unsuccessful, stopping server' );
+
+                    if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantUpHalt ) )
+                        Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
+            
+                    this._currentAction = ServerAction.Stop( true );
+                    Vagrant.getInstance().getHalt( false, null ).execute( this._serverDir );
+
+                } else {
+
+                    // The server wasn't provisioned before, so 'vagrant destroy' is needed
+                    Logger.verbose( '${this}: First start was unsuccessful, destroying server' );
+                    //_provisioner.deleteWebAddressFile();
+
+                    if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
+                        Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
+
+                    this._currentAction = ServerAction.Destroy( true );
+                    Vagrant.getInstance().getDestroy( true, null ).execute( this._serverDir );
+
+                }
 
             }
 
         } else {
 
-            this._busy.value = false;
-            this._hostname.locked = this._organization.locked = ( this._provisioner.provisioned == true );
+            // Vagrant up successfully finished without errors
 
-            executor.dispose();
-            _vagrantUpExecutor = null;
-            _provisioner.onProvisioningFileChanged.clear();
-            _provisioner.stopFileWatcher();
-            _stopVagrantUpElapsedTimer();
-    
+            // Refreshing VirtualBox info
+            this._currentAction = ServerAction.GetStatus( false );
+            refreshVirtualBoxInfo();
+
         }
 
     }
@@ -1065,8 +1082,8 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
 
-        this._busy.value = false;
-        this._status.value = ServerStatus.Error;
+        //this._busy.value = false;
+        //this._status.value = ServerStatus.Stopped( true );
         this._combinedVirtualMachine.value.vagrantId = null;
         this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
         this._vagrantUpExecutor = null;
@@ -1074,6 +1091,9 @@ class Server {
         this._provisioner.onProvisioningFileChanged.clear();
         this._provisioner.deleteWebAddressFile();
         this._stopVagrantUpElapsedTimer();
+
+        this._currentAction = ServerAction.GetStatus( false );
+        refreshVirtualBoxInfo();
 
     }
 
@@ -1084,14 +1104,17 @@ class Server {
 
         //if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
 
-        this._busy.value = false;
-        this._status.value = ServerStatus.Error;
+        //this._busy.value = false;
+        //this._status.value = ServerStatus.Stopped( true );
         this._combinedVirtualMachine.value.vagrantId = null;
         this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
         this._vagrantUpExecutor = null;
         this._provisioner.stopFileWatcher();
         this._provisioner.onProvisioningFileChanged.clear();
         this._stopVagrantUpElapsedTimer();
+
+        this._currentAction = ServerAction.GetStatus( false );
+        refreshVirtualBoxInfo();
 
     }
 
@@ -1102,24 +1125,37 @@ class Server {
     public function refreshVirtualBoxInfo() {
 
         if ( _refreshingVirtualBoxVMInfo ) return;
-        if ( this._virtualBoxMachine == null || this._virtualBoxMachine.virtualBoxId == null ) return;
+
+        Logger.verbose( '${this}: Refreshing VirtualBox VM Info for id: ${ this._combinedVirtualMachine.value.virtualBoxId}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this._virtualBoxMachine.virtualBoxId ).execute();
+        VirtualBox.getInstance().getShowVMInfo( this._combinedVirtualMachine.value.virtualBoxId ).execute( this._serverDir );
         _refreshingVirtualBoxVMInfo = true;
 
     }
 
     function _onVirtualBoxShowVMInfo( id:String ) {
 
-        if ( id == this.virtualBoxId || id == this._virtualBoxMachine.virtualBoxId || id == this._virtualBoxMachine.name ) {
+        VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
 
-            _refreshingVirtualBoxVMInfo = false;
-            VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
-            Logger.verbose( '${this}: VirtualBox VM: ${this._virtualBoxMachine}' );
-            // calculateDiskSpace();
+        Logger.verbose( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
+
+        if ( id == this._combinedVirtualMachine.value.virtualBoxId ) {
+
+            var vbm = VirtualBox.getInstance().getVirtualMachineById( id );
+
+            if ( vbm != null ) {
+
+                setVirtualBoxMachine( vbm );
+                _refreshingVirtualBoxVMInfo = false;
+                Logger.verbose( '${this}: VirtualBox VM: ${this._virtualBoxMachine}' );
+                // calculateDiskSpace();
+
+            }
 
         }
+
+        this._busy.value = false;
 
     }
 
@@ -1163,7 +1199,7 @@ class Server {
 
         }
 
-        _combinedVirtualMachine.value = cvm;
+        cvm.virtualBoxId = this.virtualBoxId;
 
         _setServerStatus();
 
@@ -1179,6 +1215,7 @@ class Server {
         if ( !ignoreBusyState && this._busy.value ) return;
 
         this._status.value = ServerStatusManager.getRealStatus( this );
+        this._currentAction = ServerAction.None( false );
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
         this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =

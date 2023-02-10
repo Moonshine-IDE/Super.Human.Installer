@@ -72,6 +72,7 @@ class DemoTasks extends AbstractProvisioner {
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
     static public final PROVISIONER_TYPE:ProvisionerType = ProvisionerType.DemoTasks;
+    static public final PROVISIONING_PROOF_FILE:String = ".vagrant/provisioned-briged-ip.txt";
     static public final WEB_ADDRESS_FILE:String = ".vagrant/done.txt";
 
     static public function getDefaultProvisionerRoles():Map<String, RoleData> {
@@ -188,7 +189,7 @@ class DemoTasks extends AbstractProvisioner {
     function get_onProvisioningFileChanged() return _onProvisioningFileChanged;
 
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _webAddressFileExists();
+    function get_provisioned() return _provisioningProofFileExists();
 
     public var provisionSuccessful( get, never ):Bool;
     function get_provisionSuccessful() return _webAddressValid();
@@ -427,6 +428,12 @@ class DemoTasks extends AbstractProvisioner {
             if ( _onProvisioningFileChanged != null ) for ( f in _onProvisioningFileChanged ) f();
 
         }
+
+    }
+
+    function _provisioningProofFileExists():Bool {
+
+        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PROVISIONING_PROOF_FILE );
 
     }
 

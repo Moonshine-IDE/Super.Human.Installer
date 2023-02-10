@@ -32,6 +32,8 @@ package superhuman.config;
 
 typedef SuperHumanPreferences = {
 
+    ?disablevagrantlogging:Bool,
+    ?keepfailedserversrunning:Bool,
     ?keepserversrunning:Bool,
     ?provisionserversonstart:Bool,
     ?savewindowposition:Bool,
@@ -39,6 +41,5 @@ typedef SuperHumanPreferences = {
     ?windowwidth:Int,
     ?windowx:Int,
     ?windowy:Int,
-    ?disablevagrantlogging:Bool,
 
 }

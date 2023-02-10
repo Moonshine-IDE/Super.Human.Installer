@@ -328,9 +328,12 @@
                 "readyprovisioned": "Status: Ready to start (Provisioned)",
                 "rsyncing": "Status: Synchronizing, please wait...",
                 "running": "Status: Running %1",
+                "runningwitherrors": "Status: Running with errors. Please check the server's output for details %1",
                 "start": "Status: Starting, please wait",
                 "stopped": "Status: Stopped",
+                "stoppedwitherrors": "Status: Stopped with errors. Please check the server's output, review your server configuration, and try again",
                 "stopping": "Status: Stopping, please wait...",
+                "stoppingforced": "Status: Forcefully stopping, please wait...",
                 "unavailable": "Status: Unavailable",
                 "unconfigured": "Status: Not configured. Please configure your server"
             }
@@ -348,8 +351,9 @@
             "keeprunning": "Keep servers running on application exit"
         },
         "advanced":{
-            "title": "Advanced",
-            "disablevagrantlogging": "Disable logging of Vagrant output in Console"
+            "title": "Expert Settings",
+            "disablevagrantlogging": "Disable logging of Vagrant output in Console",
+            "keepfailedserversrunning": "Do not stop/destroy servers that failed to start"
         },
         "buttons":{
             "save": "Save",

@@ -471,6 +471,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.STOP_SERVER );
         event.server = _server;
+        event.forced = e.shiftKey;
         this.dispatchEvent( event );
 
     }
@@ -566,33 +567,41 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         switch ( _server.status.value ) {
 
-            case ServerStatus.Stopped:
+            case ServerStatus.Stopped( hasError ):
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
-                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
+                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned;
+                _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = !_server.provisioned;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.stopped' );
+                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped' );
 
-            case ServerStatus.Stopping:
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.stopping' );
+            case ServerStatus.Stopping( forced ):
+                _statusLabel.text = ( forced ) ?  LanguageManager.getInstance().getString( 'serverpage.server.status.stoppingforced' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopping' );
 
-            case ServerStatus.FirstStart:
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.firststart' );
-                _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
-                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
+            case ServerStatus.Start( provisionedBefore ):
 
-            case ServerStatus.Start:
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
-                _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
-                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
+                if ( provisionedBefore ) {
+
+                    _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
+                    _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
+                    _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
+
+                } else {
+
+                    _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.firststart' );
+                    _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = true;
+                    _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', "" );
+
+                } 
 
             case ServerStatus.Initializing:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.initializing' );
 
-            case ServerStatus.Running:
+            case ServerStatus.Running( hasError ):
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
-                _statusLabel.text = ( _server.provisioned ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.running', '(IP: ${_server.provisioner.ipAddress})' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', '' );
+                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.runningwitherrors', ( _server.provisioned ) ? '(IP: ${_server.provisioner.ipAddress})' : '' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', ( _server.provisioned ) ? '(IP: ${_server.provisioner.ipAddress})' : '' );
+                
 
             case ServerStatus.Unconfigured:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
@@ -617,12 +626,6 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Destroying:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.destroying' );
-
-            case ServerStatus.Error:
-                _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
-                _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
-                _buttonStart.enabled = _buttonStart.visible = _buttonStart.includeInLayout = true;
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.error' );
 
             default:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;

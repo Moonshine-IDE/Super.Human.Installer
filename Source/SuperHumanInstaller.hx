@@ -100,6 +100,14 @@ class SuperHumanInstaller extends GenesisApplication {
 		return _instance;
 
 	}
+	
+	final _defaultConfig:SuperHumanConfig = {
+
+		servers : [],
+		user: {},
+		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
+
+	}
 
 	final _validHashes:Map<String, Map<String, Array<String>>> = [
 		
@@ -113,7 +121,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	];
 
-	var _advancedConfigPage:AdvancedConfigPage;
+var _advancedConfigPage:AdvancedConfigPage;
 	var _appCheckerOverlay:LayoutGroup;
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
@@ -177,23 +185,17 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			} catch ( e ) {
 
-				_config = {
-
-					servers : [],
-					user: {},
-					preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true, disablevagrantlogging: false },
-	
-				}
+				_config = _defaultConfig;
 
 			}
 
 			if ( _config.user == null ) _config.user = {};
-
-			if ( _config.preferences == null ) _config.preferences = { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true };
+			if ( _config.preferences == null ) _config.preferences = { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false };
 			if ( _config.preferences.keepserversrunning == null ) _config.preferences.keepserversrunning = true;
 			if ( _config.preferences.savewindowposition == null ) _config.preferences.savewindowposition = false;
-			if ( _config.preferences.provisionserversonstart == null ) _config.preferences.provisionserversonstart = true;
+			if ( _config.preferences.provisionserversonstart == null ) _config.preferences.provisionserversonstart = false;
 			if ( _config.preferences.disablevagrantlogging == null ) _config.preferences.disablevagrantlogging = false;
+			if ( _config.preferences.keepfailedserversrunning == null ) _config.preferences.keepfailedserversrunning = false;
 
 			var a:Array<String> = [];
 			for ( r in _defaultRoles ) a.push( r.value );
@@ -210,14 +212,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		} else {
 
-			_config = {
-
-				servers : [],
-				user: {},
-				preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:true },
-
-			}
-
+			_config = _defaultConfig;
 			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config ) );
 
 		}
@@ -244,6 +239,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
 		Shell.getInstance().findProcessId( 'SuperHumanInstaller', null, _processIdFound );
 
 	}
@@ -623,6 +619,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _saveConfig() {
 
+		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
+
 		_config.servers = [];
 
 		for ( server in _servers ) {
@@ -632,8 +630,16 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-		Logger.debug( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+		try {
+
+			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
+			Logger.debug( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+
+		} catch ( e ) {
+
+			Logger.error( '${this}: Configuration cannot be saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+
+		}
 
 	}
 
@@ -695,7 +701,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _stopServer( e:SuperHumanApplicationEvent ) {
 
-		e.server.stop();
+		e.server.stop( e.forced );
 
 	}
 
@@ -747,7 +753,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		switch ( server.status.value ) {
 
-			case ServerStatus.Stopping | ServerStatus.Initializing | ServerStatus.FirstStart | ServerStatus.Running:
+			case ServerStatus.Stopping( true ) | ServerStatus.Stopping( false ) | ServerStatus.Initializing | ServerStatus.Running( true ) | ServerStatus.Running( false ):
 				_header.updateButtonEnabled = false;
 
 			default:

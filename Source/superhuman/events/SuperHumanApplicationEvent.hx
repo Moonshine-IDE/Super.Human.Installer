@@ -68,8 +68,9 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
 
     public var console:Console;
     public var data:String;
-    public var server:Server;
+    public var forced:Bool = false;
     public var provisionerType:ProvisionerType;
+    public var server:Server;
     
     public function new( type:String ) {
 
