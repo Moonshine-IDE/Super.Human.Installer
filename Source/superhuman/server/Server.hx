@@ -1077,8 +1077,6 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
 
-        //this._busy.value = false;
-        //this._status.value = ServerStatus.Stopped( true );
         this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
         this._vagrantUpExecutor = null;
         this._provisioner.stopFileWatcher();
