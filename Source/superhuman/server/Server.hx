@@ -878,9 +878,6 @@ class Server {
         this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
         refreshVirtualBoxInfo();
 
-        _vagrantHaltExecutor.dispose();
-        _vagrantHaltExecutor = null;
-
     }
 
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
