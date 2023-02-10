@@ -755,7 +755,7 @@ class Server {
         this._busy.value = true;
         this._status.value = ServerStatus.Provisioning;
 
-        _provisioner.deleteWebAddressFile();
+        _provisioner.deleteProvisioningProofFile();
 
         if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
             Vagrant.getInstance().onProvision.add( _onVagrantProvision );
@@ -942,7 +942,7 @@ class Server {
         Logger.verbose( '${this}: _onVagrantDestroy ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
-        this._provisioner.deleteWebAddressFile();
+        this._provisioner.deleteProvisioningProofFile();
         this._combinedVirtualMachine.value.vagrantId = null;
         this._combinedVirtualMachine.value.state = CombinedVirtualMachineState.NotCreated;
 
@@ -1086,7 +1086,7 @@ class Server {
         this._vagrantUpExecutor = null;
         this._provisioner.stopFileWatcher();
         this._provisioner.onProvisioningFileChanged.clear();
-        this._provisioner.deleteWebAddressFile();
+        this._provisioner.deleteProvisioningProofFile();
         this._stopVagrantUpElapsedTimer();
 
         this._currentAction = ServerAction.GetStatus( false );
