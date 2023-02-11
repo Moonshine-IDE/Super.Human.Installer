@@ -38,7 +38,7 @@ class ServerStatusManager {
 
         var result = ServerStatus.Unknown;
 
-        Logger.verbose( '${server}.combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
+        Logger.debug( '${server}.combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
 
         final hasError = ( server.currentAction != null ) ? server.currentAction.getParameters()[ 0 ] : false;
 
@@ -90,7 +90,7 @@ class ServerStatusManager {
 
         if ( !server.isValid() ) result = ServerStatus.Unconfigured;
 
-        Logger.verbose( '${server}: Assumed status: ${result}' );
+        Logger.debug( '${server}: Assumed status: ${result}' );
 
         return result;
 

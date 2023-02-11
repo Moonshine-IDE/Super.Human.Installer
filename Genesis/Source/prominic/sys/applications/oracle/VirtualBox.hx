@@ -320,7 +320,7 @@ class VirtualBox extends AbstractApp {
 
     public function openGUI() {
 
-        Logger.verbose( '${this}: Opening GUI' );
+        Logger.debug( '${this}: Opening GUI' );
 
         #if mac
         Shell.getInstance().open( [ "-a", "VirtualBox" ] );
@@ -346,7 +346,7 @@ class VirtualBox extends AbstractApp {
 
     function _bridgedInterfaceExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '${this}: bridgedInterfaceExecutor stopped with exit code: ${executor.exitCode}, data:${_tempBridgedInterfaceData}' );
+        Logger.debug( '${this}: bridgedInterfaceExecutor stopped with exit code: ${executor.exitCode}, data:${_tempBridgedInterfaceData}' );
 
         if ( executor.exitCode == 0 )
             _processBridgedInterfacesData();
@@ -361,7 +361,7 @@ class VirtualBox extends AbstractApp {
 
     function _hostInfoExecutorExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '${this}: hostInfoExecutor stopped with exit code: ${executor.exitCode}, data: ${_tempHostInfoData}' );
+        Logger.debug( '${this}: hostInfoExecutor stopped with exit code: ${executor.exitCode}, data: ${_tempHostInfoData}' );
 
         if ( executor.exitCode == 0 )
             _processHostInfoData();
@@ -513,7 +513,7 @@ class VirtualBox extends AbstractApp {
 
     function _showVMInfoExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( '${this}: showVMInfoExecutor stopped with exit code: ${executor.exitCode}' );
+        Logger.debug( '${this}: showVMInfoExecutor stopped with exit code: ${executor.exitCode}' );
         
         if ( executor.exitCode == 0 )
             _processShowVMInfoLongFormatData( executor.extraParams[ 0 ] );
@@ -532,7 +532,7 @@ class VirtualBox extends AbstractApp {
 
     function _listVMsExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( '${this}: listVMsExecutor stopped with exit code: ${executor.exitCode}' );
+        Logger.debug( '${this}: listVMsExecutor stopped with exit code: ${executor.exitCode}' );
 
         if ( executor.exitCode == 0 ) {
 

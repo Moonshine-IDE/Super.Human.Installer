@@ -113,7 +113,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         for ( f in _onStart ) f( this );
 
-        Logger.verbose( '${this}: execute() in ${Sys.getCwd()}' );
+        Logger.debug( '${this}: execute() in ${Sys.getCwd()}' );
 
         Sys.setCwd( currentWorkingDirectory );
 
@@ -179,7 +179,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _process != null ) {
 
-            Logger.verbose( '${this}: stop( forced:${forced} )' );
+            Logger.debug( '${this}: stop( forced:${forced} )' );
             _process.stop( forced );
 
         }
@@ -194,7 +194,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _process.stop( true );
         #elseif mac
         var e = Sys.command( "kill", [ "-" + Std.string( Std.int( signal ) ), Std.string( this._pid ) ] );
-        Logger.verbose( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
+        Logger.debug( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
         #elseif linux
         // Not implemented yet
         _process.stop( true );
@@ -204,8 +204,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     override public function dispose() {
 
-        //if ( _advancedProcess != null ) _advancedProcess.dispose();
-        //_advancedProcess = null;
+        Logger.debug( '${this}: Disposing...' );
+
         _command = null;
         _args = null;
         _workingDirectory = null;
@@ -220,11 +220,11 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _process != null ) {
 
-            return '[Executor:${this._id}: ${_command} ${_args} PID: ${this._pid}]';
+            return '[Executor(${this._id}: ${_command} ${_args}, PID: ${this._pid})]';
 
         }
 
-        return '[Executor:${this._id}: ${_command} ${_args} PID: null]';
+        return '[Executor(${this._id}: ${_command} ${_args} PID: null)]';
 
     }
 

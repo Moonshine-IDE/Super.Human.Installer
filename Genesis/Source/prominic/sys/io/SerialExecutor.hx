@@ -84,6 +84,8 @@ class SerialExecutor extends AbstractExecutor {
 
     override public function dispose() {
 
+        Logger.debug( '${this}: Disposing...' );
+        
         for ( e in _executors ) {
 
             e.dispose();
@@ -101,7 +103,7 @@ class SerialExecutor extends AbstractExecutor {
 
         var a:Array<String> = [];
         for ( e in _executors ) a.push( e.id );
-        Logger.verbose( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+        Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
         for ( e in _executors ) {
 
@@ -127,7 +129,7 @@ class SerialExecutor extends AbstractExecutor {
 
         if ( executor.exitCode != 0 && _stopOnError ) {
 
-            Logger.verbose( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}' );
+            Logger.debug( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}' );
             for ( f in _onStop ) f( this );
             return;
 
@@ -140,7 +142,7 @@ class SerialExecutor extends AbstractExecutor {
 
         } else {
 
-            Logger.verbose( '${this}: All executors stopped' );
+            Logger.debug( '${this}: All executors stopped' );
             for ( f in _onStop ) f( this );
 
         }
@@ -155,7 +157,7 @@ class SerialExecutor extends AbstractExecutor {
 
     public override function toString():String {
 
-        return '[SerialExecutor:${this._id}]';
+        return '[SerialExecutor(${this._id})]';
 
     }
 

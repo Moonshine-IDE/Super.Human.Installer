@@ -249,7 +249,7 @@ var _advancedConfigPage:AdvancedConfigPage;
 		if ( result != null && result.length > 0 ) {
 
 			_processId = result[ 0 ].pid;
-			Logger.verbose( '${this}: SuperHumanInstaller process id found: ${_processId}' );
+			Logger.debug( '${this}: SuperHumanInstaller process id found: ${_processId}' );
 
 		}
 
@@ -443,7 +443,7 @@ var _advancedConfigPage:AdvancedConfigPage;
 
 		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
-		Logger.verbose( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
 
@@ -697,8 +697,8 @@ var _advancedConfigPage:AdvancedConfigPage;
 
 		Logger.info( '${this}: Starting server: ${e.server.id}' );
 		Logger.info( '${this}: Server configuration: ${e.server.getData()}' );
-		Logger.verbose( '${this}: Virtual Machine: ${e.server.combinedVirtualMachine.value}' );
-		Logger.verbose( '\n----- Hosts.yml START -----\n${e.server.provisioner.generateHostsFileContent()}\n----- Hosts.yml END -----' );
+		Logger.debug( '${this}: Virtual Machine: ${e.server.combinedVirtualMachine.value}' );
+		Logger.debug( '\n----- Hosts.yml START -----\n${e.server.provisioner.generateHostsFileContent()}\n----- Hosts.yml END -----' );
 
 		// TODO: Decide how to handle provisioning if required
 		// e.server.start( _config.preferences.provisionserversonstart );
@@ -955,7 +955,7 @@ var _advancedConfigPage:AdvancedConfigPage;
 
 	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
 
-		Logger.verbose( '${this}: Refreshing System Info...' );
+		Logger.debug( '${this}: Refreshing System Info...' );
 
 		ParallelExecutor.create().add( Right( [
 			Vagrant.getInstance().getGlobalStatus(),
@@ -966,9 +966,9 @@ var _advancedConfigPage:AdvancedConfigPage;
 
 	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
 
-		Logger.verbose( '${this}: System Info refreshed' );
-		Logger.verbose( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
-		Logger.verbose( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.debug( '${this}: System Info refreshed' );
+		Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
+		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( i in Vagrant.getInstance().machines ) {
 

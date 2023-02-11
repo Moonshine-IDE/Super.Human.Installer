@@ -243,8 +243,8 @@ class DemoTasks extends AbstractProvisioner {
 
         } catch ( e ) {};
 
-        Logger.verbose( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
-        Logger.verbose( '[${this._type} v${this._version}]: Total tasks: ${_tasks}' );
+        Logger.debug( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
+        Logger.debug( '[${this._type} v${this._version}]: Total tasks: ${_tasks}' );
 
     }
 
@@ -298,7 +298,7 @@ class DemoTasks extends AbstractProvisioner {
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
         if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
 
-        Logger.verbose( '${this}: Reinitialized' );
+        Logger.debug( '${this}: Reinitialized' );
 
     }
 

@@ -78,6 +78,8 @@ class ParallelExecutor extends AbstractExecutor {
 
     override public function dispose() {
 
+        Logger.debug( '${this}: Disposing...' );
+        
         super.dispose();
 
     }
@@ -86,7 +88,7 @@ class ParallelExecutor extends AbstractExecutor {
 
         var a:Array<String> = [];
         for ( e in _executors ) a.push( e.id );
-        Logger.verbose( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+        Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
         if ( _executors.length == 0 ) {
 
@@ -115,7 +117,7 @@ class ParallelExecutor extends AbstractExecutor {
 
         if ( _executors.length == 0 ) {
 
-            Logger.verbose( '${this}: All executors stopped. Errors: ${this._hasError}' );
+            Logger.debug( '${this}: All executors stopped. Errors: ${this._hasError}' );
             for ( f in _onStop ) f( this );
 
         }
@@ -130,7 +132,7 @@ class ParallelExecutor extends AbstractExecutor {
 
     public override function toString():String {
 
-        return '[ParallelExecutor:${this._id}]';
+        return '[ParallelExecutor(${this._id})]';
 
     }
     
