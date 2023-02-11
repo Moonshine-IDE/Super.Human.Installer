@@ -99,8 +99,8 @@ abstract class AbstractApp {
     public function getInit():Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( '${_name}_${AbstractAppExecutorContext.Init}' ) )
-            return ExecutorManager.executors.get( '${_name}_${AbstractAppExecutorContext.Init}' );
+        if ( ExecutorManager.getInstance().exists( '${_name}_${AbstractAppExecutorContext.Init}' ) )
+            return ExecutorManager.getInstance().get( '${_name}_${AbstractAppExecutorContext.Init}' );
 
         //
         // Setting up system path
@@ -109,7 +109,7 @@ abstract class AbstractApp {
 
         final executor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
         executor.onStdErr( _initStandardError ).onStdOut( _initStandardOutput ).onStop( _initStop );
-        ExecutorManager.executors.set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
+        ExecutorManager.getInstance().set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
         return executor;
 
     }
@@ -165,7 +165,7 @@ abstract class AbstractApp {
 
         for ( f in _onInit ) f( this );
 
-        ExecutorManager.executors.remove( '${_name}_${AbstractAppExecutorContext.Init}' );
+        ExecutorManager.getInstance().remove( '${_name}_${AbstractAppExecutorContext.Init}' );
 
         executor.dispose();
         _initializationComplete();

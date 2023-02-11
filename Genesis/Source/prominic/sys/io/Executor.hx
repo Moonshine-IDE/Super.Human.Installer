@@ -34,6 +34,7 @@ import prominic.core.interfaces.IDisposable;
 import prominic.logging.Logger;
 import prominic.sys.io.process.AbstractProcess;
 import prominic.sys.io.process.CallbackProcess;
+import prominic.sys.io.process.ProcessTools.KillSignal;
 import sys.thread.Mutex;
 
 class Executor extends AbstractExecutor implements IDisposable {
@@ -229,17 +230,5 @@ class Executor extends AbstractExecutor implements IDisposable {
         return '[Executor(${this._id}: ${_command} ${_args} PID: null)]';
 
     }
-
-}
-
-enum abstract KillSignal( Int ) from Int to Int  {
-    
-    var HangUp = 1;
-    var Interrupt = 2;
-    var Quit = 3;
-    var Abort = 6;
-    var Kill = 9;
-    var Alarm = 14;
-    var Terminate = 15;
 
 }

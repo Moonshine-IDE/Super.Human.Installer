@@ -31,9 +31,67 @@
 package prominic.sys.applications;
 
 import prominic.sys.io.Executor;
+import prominic.sys.io.process.ProcessTools.KillSignal;
 
 class ExecutorManager {
-    
-    static public final executors:Map<String, Executor> = [];
+
+    static var _instance:ExecutorManager;
+
+    static public function getInstance():ExecutorManager {
+
+        if ( _instance == null ) _instance = new ExecutorManager();
+        return _instance;
+
+    }
+
+    var _executors:Map<String, Executor>;
+
+    function new() {
+
+        _executors = [];
+
+    }
+
+    public function clear() {
+
+        _executors.clear();
+
+    }
+
+    public function exists( key:String ):Bool {
+
+        return _executors.exists( key );
+
+    }
+
+    public function get( key:String ):Executor {
+
+        return _executors.get( key );
+
+    }
+
+    public function killAll() {
+
+        for ( e in _executors ) e.kill( KillSignal.Kill );
+
+    }
+
+    public function remove( key:String ):Bool {
+
+        return _executors.remove( key );
+
+    }
+
+    public function set( key:String, value:Executor ) {
+
+        _executors.set( key, value );
+
+    }
+
+    public function stopAll( ?forced:Bool ) {
+
+        for ( e in _executors ) e.stop( forced );
+
+    }
 
 }

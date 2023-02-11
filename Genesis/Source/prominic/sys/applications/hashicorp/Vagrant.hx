@@ -214,8 +214,8 @@ class Vagrant extends AbstractApp {
     public function getDestroy( id:String, force:Bool = false, ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.Destroy}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.Destroy}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Destroy}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Destroy}${id}' );
 
         var args:Array<String> = [ "destroy" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -226,7 +226,7 @@ class Vagrant extends AbstractApp {
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _destroyExecutorStopped );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.Destroy}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Destroy}${id}', executor );
         return executor;
 
     }
@@ -240,8 +240,8 @@ class Vagrant extends AbstractApp {
     public function getHalt( id:String, force:Bool = false, ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.Halt}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.Halt}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Halt}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Halt}${id}' );
 
         var args:Array<String> = [ "halt" ];
         if ( force ) args.push( '-f' );
@@ -252,7 +252,7 @@ class Vagrant extends AbstractApp {
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _haltExecutorStopped );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.Halt}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Halt}${id}', executor );
         return executor;
 
     }
@@ -265,8 +265,8 @@ class Vagrant extends AbstractApp {
     public function getInitMachine( id:String, ?vagrantFileContent:String, ?path:String ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.Init}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.Init}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Init}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Init}${id}' );
 
         if ( vagrantFileContent != null ) File.saveContent( 'Vagrantfile', vagrantFileContent );
 
@@ -277,7 +277,7 @@ class Vagrant extends AbstractApp {
         
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _initMachineExecutorStopped );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.Init}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Init}${id}', executor );
         return executor;
 
     }
@@ -290,8 +290,8 @@ class Vagrant extends AbstractApp {
     public function getGlobalStatus( prune:Bool = false ):Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( VagrantExecutorContext.GlobalStatus ) )
-            return ExecutorManager.executors.get( VagrantExecutorContext.GlobalStatus );
+        if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.GlobalStatus ) )
+            return ExecutorManager.getInstance().get( VagrantExecutorContext.GlobalStatus );
 
         _tempGlobalStatusData = "";
 
@@ -301,7 +301,7 @@ class Vagrant extends AbstractApp {
 
         final executor = new Executor( this._path + this._executable, args );
         executor.onStop( _globalStatusExecutorStopped ).onStdOut( _globalStatusExecutorStandardOutput );
-        ExecutorManager.executors.set( VagrantExecutorContext.GlobalStatus, executor );
+        ExecutorManager.getInstance().set( VagrantExecutorContext.GlobalStatus, executor );
         return executor;
 
     }
@@ -315,8 +315,8 @@ class Vagrant extends AbstractApp {
     public function getRSync( id:String, ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.RSync}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.RSync}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.RSync}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.RSync}${id}' );
 
         var args:Array<String> = [ "rsync" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -326,7 +326,7 @@ class Vagrant extends AbstractApp {
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _rsyncExecutorStopped );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.RSync}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.RSync}${id}', executor );
         return executor;
 
     }
@@ -340,8 +340,8 @@ class Vagrant extends AbstractApp {
     public function getProvision( id:String, ?machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.Provision}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.Provision}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Provision}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Provision}${id}' );
 
         var args:Array<String> = [ "provision" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -351,7 +351,7 @@ class Vagrant extends AbstractApp {
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _provisionExecutorStopped );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.Provision}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Provision}${id}', executor );
         return executor;
 
     }
@@ -365,8 +365,8 @@ class Vagrant extends AbstractApp {
     public function getStatus( id:String, machine:VagrantMachine ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.Status}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.Status}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Status}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Status}${id}' );
 
         var args:Array<String> = [ "status" ];
         if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
@@ -377,7 +377,7 @@ class Vagrant extends AbstractApp {
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _statusExecutorStopped ).onStdOut( _statusExecutorStandardOutput );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.Status}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Status}${id}', executor );
         return executor;
 
     }
@@ -389,12 +389,12 @@ class Vagrant extends AbstractApp {
     public function getVersion():Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( VagrantExecutorContext.Version ) )
-            return ExecutorManager.executors.get( VagrantExecutorContext.Version );
+        if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.Version ) )
+            return ExecutorManager.getInstance().get( VagrantExecutorContext.Version );
 
         final executor = new Executor( this.path + this._executable, [ "-v" ] );
         executor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
-        ExecutorManager.executors.set( VagrantExecutorContext.Version, executor );
+        ExecutorManager.getInstance().set( VagrantExecutorContext.Version, executor );
         return executor;
 
     }
@@ -402,8 +402,8 @@ class Vagrant extends AbstractApp {
     public function getUp( id:String, ?machine:VagrantMachine, ?provision:Bool = false, ?args:Array<String> ):Executor {
 
         // Return the already running executor for the given machine if it exists
-        if ( ExecutorManager.executors.exists( '${VagrantExecutorContext.Up}${id}' ) )
-            return ExecutorManager.executors.get( '${VagrantExecutorContext.Up}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Up}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Up}${id}' );
 
         var params:Array<String> = [ "up" ];
         if ( machine != null && machine.vagrantId != null ) params.push( id );
@@ -414,7 +414,7 @@ class Vagrant extends AbstractApp {
 
         final executor:Executor = new Executor( this._path + this._executable, params.concat( args ), extraArgs );
         executor.onStop( _upExecutorStopped );
-        ExecutorManager.executors.set( '${VagrantExecutorContext.Up}${id}', executor );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Up}${id}', executor );
         return executor;
 
     }
@@ -545,7 +545,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onGlobalStatus ) f();
 
-        ExecutorManager.executors.remove( VagrantExecutorContext.GlobalStatus );
+        ExecutorManager.getInstance().remove( VagrantExecutorContext.GlobalStatus );
 
         _mutexGlobalStatusStop.release();
 
@@ -627,7 +627,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onVersion ) f();
 
-        ExecutorManager.executors.remove( VagrantExecutorContext.Version );
+        ExecutorManager.getInstance().remove( VagrantExecutorContext.Version );
 
         executor.dispose();
 
@@ -639,7 +639,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onUp ) f( executor.extraParams[ 0 ], executor.exitCode );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.Up}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Up}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -651,7 +651,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onStatus ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.Status}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Status}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -689,7 +689,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onRSync ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.RSync}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.RSync}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -701,7 +701,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onProvision ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.Provision}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Provision}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -713,7 +713,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onHalt ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.Halt}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Halt}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -725,7 +725,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onDestroy ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.Destroy}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Destroy}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -737,7 +737,7 @@ class Vagrant extends AbstractApp {
 
         for ( f in _onInitMachine ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VagrantExecutorContext.Init}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Init}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 

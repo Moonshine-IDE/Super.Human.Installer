@@ -236,14 +236,14 @@ class VirtualBox extends AbstractApp {
     public function getBridgedInterfaces():Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( VirtualBoxExecutorContext.BridgedInterfaces ) )
-            return ExecutorManager.executors.get( VirtualBoxExecutorContext.BridgedInterfaces );
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.BridgedInterfaces ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.BridgedInterfaces );
 
         _tempBridgedInterfaceData = "";
 
         final executor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
         executor.onStop( _bridgedInterfaceExecutorStop ).onStdOut( _bridgedInterfaceExecutorStandardOutput );
-        ExecutorManager.executors.set( VirtualBoxExecutorContext.BridgedInterfaces, executor );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.BridgedInterfaces, executor );
         return executor;
 
     }
@@ -251,14 +251,14 @@ class VirtualBox extends AbstractApp {
     public function getHostInfo():Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( VirtualBoxExecutorContext.HostInfo ) )
-            return ExecutorManager.executors.get( VirtualBoxExecutorContext.HostInfo );
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.HostInfo ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.HostInfo );
 
         _tempHostInfoData = "";
 
         final executor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
         executor.onStdOut( _hostInfoExecutorExecutorStandardOutput ).onStop( _hostInfoExecutorExecutorStop );
-        ExecutorManager.executors.set( VirtualBoxExecutorContext.HostInfo, executor );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.HostInfo, executor );
         return executor;
 
     }
@@ -266,8 +266,8 @@ class VirtualBox extends AbstractApp {
     public function getListVMs( longFormat:Bool = false ):Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( VirtualBoxExecutorContext.ListVMs ) )
-            return ExecutorManager.executors.get( VirtualBoxExecutorContext.ListVMs );
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.ListVMs ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.ListVMs );
 
         _tempListVMsData = "";
         _virtualBoxMachines = [];
@@ -276,7 +276,7 @@ class VirtualBox extends AbstractApp {
 
         final executor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
         executor.onStdOut( _listVMsExecutorStandardOutput ).onStop( _listVMsExecutorStopped );
-        ExecutorManager.executors.set( VirtualBoxExecutorContext.ListVMs, executor );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.ListVMs, executor );
         return executor;
 
     }
@@ -284,8 +284,8 @@ class VirtualBox extends AbstractApp {
     public function getPowerOffVM( id:String ):Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( '${VirtualBoxExecutorContext.PowerOffVM}${id}' ) )
-            return ExecutorManager.executors.get( '${VirtualBoxExecutorContext.PowerOffVM}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.PowerOffVM}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.PowerOffVM}${id}' );
 
         var args:Array<String> = [ "controlvm" ];
         args.push( id );
@@ -296,7 +296,7 @@ class VirtualBox extends AbstractApp {
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStop( _powerOffVMExecutorStopped );
-        ExecutorManager.executors.set( '${VirtualBoxExecutorContext.PowerOffVM}${id}', executor );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.PowerOffVM}${id}', executor );
         return executor;
 
     }
@@ -304,8 +304,8 @@ class VirtualBox extends AbstractApp {
     public function getShowVMInfo( id:String, ?machineReadable:Bool ):Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' ) )
-            return ExecutorManager.executors.get( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' );
 
         _tempShowVMInfoData = "";
 
@@ -318,7 +318,7 @@ class VirtualBox extends AbstractApp {
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStdOut( _showVMInfoExecutorStandardOutput ).onStop( _showVMInfoExecutorStopped );
-        ExecutorManager.executors.set( '${VirtualBoxExecutorContext.ShowVMInfo}${id}', executor );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.ShowVMInfo}${id}', executor );
         return executor;
 
     }
@@ -326,8 +326,8 @@ class VirtualBox extends AbstractApp {
     public function getUnregisterVM( id:String, delete:Bool = false ):Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( '${VirtualBoxExecutorContext.UnregisterVM}${id}' ) )
-            return ExecutorManager.executors.get( '${VirtualBoxExecutorContext.UnregisterVM}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.UnregisterVM}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.UnregisterVM}${id}' );
 
         var args:Array<String> = [ "unregistervm" ];
         if ( delete ) args.push( "--delete" );
@@ -338,7 +338,7 @@ class VirtualBox extends AbstractApp {
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStop( _unregisterExecutorStopped );
-        ExecutorManager.executors.set( '${VirtualBoxExecutorContext.UnregisterVM}${id}', executor );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.UnregisterVM}${id}', executor );
         return executor;
 
     }
@@ -346,12 +346,12 @@ class VirtualBox extends AbstractApp {
     public function getVersion():Executor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.executors.exists( VirtualBoxExecutorContext.Version ) )
-            return ExecutorManager.executors.get( VirtualBoxExecutorContext.Version );
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.Version ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.Version );
 
         final executor = new Executor( this.path + this._executable, [ "-V" ] );
         executor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
-        ExecutorManager.executors.set( VirtualBoxExecutorContext.Version, executor );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.Version, executor );
         return executor;
 
     }
@@ -398,7 +398,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onBridgedInterfaces ) f( _bridgedInterfaces );
 
-        ExecutorManager.executors.remove( VirtualBoxExecutorContext.BridgedInterfaces );
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.BridgedInterfaces );
 
         executor.dispose();
 
@@ -419,7 +419,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onHostInfo ) f( _hostInfo );
 
-        ExecutorManager.executors.remove( VirtualBoxExecutorContext.HostInfo );
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.HostInfo );
 
         executor.dispose();
 
@@ -550,7 +550,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onVersion ) f();
 
-        ExecutorManager.executors.remove( VirtualBoxExecutorContext.Version );
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.Version );
 
         executor.dispose();
 
@@ -562,7 +562,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onPowerOffVM ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VirtualBoxExecutorContext.PowerOffVM}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.PowerOffVM}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -583,7 +583,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onShowVMInfo ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VirtualBoxExecutorContext.ShowVMInfo}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.ShowVMInfo}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -595,7 +595,7 @@ class VirtualBox extends AbstractApp {
         
         for ( f in _onUnregisterVM ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.executors.remove( '${VirtualBoxExecutorContext.UnregisterVM}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.UnregisterVM}${executor.extraParams[ 0 ]}' );
 
         executor.dispose();
 
@@ -629,7 +629,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onListVMs ) f();
 
-        ExecutorManager.executors.remove( VirtualBoxExecutorContext.ListVMs );
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.ListVMs );
 
         executor.dispose();
 
