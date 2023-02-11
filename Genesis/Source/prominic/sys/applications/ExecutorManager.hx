@@ -45,16 +45,28 @@ class ExecutorManager {
     }
 
     var _executors:Map<String, Executor>;
+    var _onExecutorListChanged:List<()->Void>;
+
+    public var onExecutorListChanged( get, never ):List<()->Void>;
+    function get_onExecutorListChanged() return _onExecutorListChanged;
 
     function new() {
 
         _executors = [];
+        _onExecutorListChanged = new List();
 
     }
 
     public function clear() {
 
         _executors.clear();
+        for ( f in _onExecutorListChanged ) f();
+
+    }
+
+    public function count():Int {
+
+        return Lambda.count( _executors );
 
     }
 
@@ -78,13 +90,16 @@ class ExecutorManager {
 
     public function remove( key:String ):Bool {
 
-        return _executors.remove( key );
+        var r = _executors.remove( key );
+        if ( r ) for ( f in _onExecutorListChanged ) f();
+        return r;
 
     }
 
     public function set( key:String, value:Executor ) {
 
         _executors.set( key, value );
+        for ( f in _onExecutorListChanged ) f();
 
     }
 
