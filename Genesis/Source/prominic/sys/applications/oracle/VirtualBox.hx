@@ -39,6 +39,8 @@ import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import prominic.sys.tools.SysTools;
 
+using Lambda;
+
 @:allow( prominic.sys )
 @:allow( prominic.sys.applications )
 class VirtualBox extends AbstractApp {
@@ -123,6 +125,9 @@ class VirtualBox extends AbstractApp {
 
     }
 
+    final _globalExecutors:Map<VirtualBoxExecutorContext, Executor> = [];
+    final _machineExecutors:Map<String, Map<VirtualBoxExecutorContext, Executor>> = [];
+
     var _bridgedInterfaces:Array<BridgedInterface>;
     var _bridgedInterfacesCollection:ArrayCollection<BridgedInterface>;
     var _hostInfo:HostInfo;
@@ -131,8 +136,8 @@ class VirtualBox extends AbstractApp {
     var _onListVMs:ChainedList<()->Void, VirtualBox>;
     var _onPowerOffVM:ChainedList<(String)->Void, VirtualBox>;
     var _onShowVMInfo:ChainedList<(String)->Void, VirtualBox>;
+    var _onUnregisterVM:ChainedList<(String)->Void, VirtualBox>;
     var _onVersion:ChainedList<()->Void, VirtualBox>;
-    var _showVMInfoExecutors:Map<String, Executor>;
     var _tempBridgedInterfaceData:String;
     var _tempHostInfoData:String;
     var _tempListVMsData:String;
@@ -166,6 +171,9 @@ class VirtualBox extends AbstractApp {
     public var onShowVMInfo( get, never ):ChainedList<(String)->Void, VirtualBox>;
     function get_onShowVMInfo() return _onShowVMInfo;
 
+    public var onUnregisterVM( get, never ):ChainedList<(String)->Void, VirtualBox>;
+    function get_onUnregisterVM() return _onUnregisterVM;
+
     public var onVersion( get, never ):ChainedList<()->Void, VirtualBox>;
     function get_onVersion() return _onVersion;
 
@@ -189,10 +197,10 @@ class VirtualBox extends AbstractApp {
         _onListVMs = new ChainedList( this );
         _onPowerOffVM = new ChainedList( this );
         _onShowVMInfo = new ChainedList( this );
+        _onUnregisterVM = new ChainedList( this );
         _onVersion = new ChainedList( this );
 
         _virtualBoxMachines = [];
-        _showVMInfoExecutors = [];
         
         #if windows
         var p = Sys.environment().get( "ProgramFiles");
@@ -230,35 +238,54 @@ class VirtualBox extends AbstractApp {
 
     public function getBridgedInterfaces():Executor {
 
+        if ( _globalExecutors.exists( VirtualBoxExecutorContext.BridgedInterfaces ) )
+            return _globalExecutors.get( VirtualBoxExecutorContext.BridgedInterfaces );
+
         _tempBridgedInterfaceData = "";
-        var _bridgedInterfaceExecutor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
-        _bridgedInterfaceExecutor.onStop( _bridgedInterfaceExecutorStop ).onStdOut( _bridgedInterfaceExecutorStandardOutput );
-        return _bridgedInterfaceExecutor;
+
+        final bridgedInterfaceExecutor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
+        bridgedInterfaceExecutor.onStop( _bridgedInterfaceExecutorStop ).onStdOut( _bridgedInterfaceExecutorStandardOutput );
+        _globalExecutors.set( VirtualBoxExecutorContext.BridgedInterfaces, bridgedInterfaceExecutor );
+        return bridgedInterfaceExecutor;
 
     }
 
     public function getHostInfo():Executor {
 
+        if ( _globalExecutors.exists( VirtualBoxExecutorContext.HostInfo ) )
+            return _globalExecutors.get( VirtualBoxExecutorContext.HostInfo );
+
         _tempHostInfoData = "";
-        var _hostInfoExecutor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
-        _hostInfoExecutor.onStdOut( _hostInfoExecutorExecutorStandardOutput ).onStop( _hostInfoExecutorExecutorStop );
-        return _hostInfoExecutor;
+
+        final hostInfoExecutor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
+        hostInfoExecutor.onStdOut( _hostInfoExecutorExecutorStandardOutput ).onStop( _hostInfoExecutorExecutorStop );
+        _globalExecutors.set( VirtualBoxExecutorContext.HostInfo, hostInfoExecutor );
+        return hostInfoExecutor;
 
     }
 
     public function getListVMs( longFormat:Bool = false ):Executor {
 
+        if ( _globalExecutors.exists( VirtualBoxExecutorContext.ListVMs ) )
+            return _globalExecutors.get( VirtualBoxExecutorContext.ListVMs );
+
         _tempListVMsData = "";
         _virtualBoxMachines = [];
         var args:Array<String> = [ "list", "vms" ];
         if ( longFormat ) args.push( "--long" );
-        var _listVMsExecutor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
-        _listVMsExecutor.onStdOut( _listVMsExecutorStandardOutput ).onStop( _listVMsExecutorStopped );
-        return _listVMsExecutor;
+
+        final listVMsExecutor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
+        listVMsExecutor.onStdOut( _listVMsExecutorStandardOutput ).onStop( _listVMsExecutorStopped );
+        _globalExecutors.set( VirtualBoxExecutorContext.ListVMs, listVMsExecutor );
+        return listVMsExecutor;
 
     }
 
     public function getPowerOffVM( id:String ):Executor {
+
+        // Return the already running executor for the given machine if it exists
+        if ( _machineExecutors.exists( id ) && _machineExecutors.get( id ).exists( VirtualBoxExecutorContext.PowerOffVM ) )
+            return _machineExecutors.get( id ).get( VirtualBoxExecutorContext.PowerOffVM );
 
         var args:Array<String> = [ "controlvm" ];
         args.push( id );
@@ -267,15 +294,21 @@ class VirtualBox extends AbstractApp {
         var extraArgs:Array<Dynamic> = [];
         extraArgs.push( id );
 
-        var _powerOffExecutor = new Executor( this.path + this._executable, args, extraArgs );
-        _powerOffExecutor.onStop( _powerOffVMExecutorStopped );
-        return _powerOffExecutor;
+        final powerOffExecutor = new Executor( this.path + this._executable, args, extraArgs );
+        powerOffExecutor.onStop( _powerOffVMExecutorStopped );
+
+        if ( !_machineExecutors.exists( id ) ) _machineExecutors.set( id, [] );
+        _machineExecutors.get( id ).set( VirtualBoxExecutorContext.PowerOffVM, powerOffExecutor );
+
+        return powerOffExecutor;
 
     }
 
     public function getShowVMInfo( id:String, ?machineReadable:Bool ):Executor {
 
-        //if ( _showVMInfoExecutors.exists( id ) ) return _showVMInfoExecutors.get( id );
+        // Return the already running executor for the given machine if it exists
+        if ( _machineExecutors.exists( id ) && _machineExecutors.get( id ).exists( VirtualBoxExecutorContext.ShowVMInfo ) )
+            return _machineExecutors.get( id ).get( VirtualBoxExecutorContext.ShowVMInfo );
 
         _tempShowVMInfoData = "";
 
@@ -286,28 +319,48 @@ class VirtualBox extends AbstractApp {
         var extraArgs:Array<Dynamic> = [];
         extraArgs.push( id );
 
-        var _showVMInfoExecutor = new Executor( this.path + this._executable, args, extraArgs );
-        _showVMInfoExecutor.onStdOut( _showVMInfoExecutorStandardOutput ).onStop( _showVMInfoExecutorStopped );
-        _showVMInfoExecutors.set( id, _showVMInfoExecutor );
-        return _showVMInfoExecutor;
+        final showVMInfoExecutor = new Executor( this.path + this._executable, args, extraArgs );
+        showVMInfoExecutor.onStdOut( _showVMInfoExecutorStandardOutput ).onStop( _showVMInfoExecutorStopped );
+
+        if ( !_machineExecutors.exists( id ) ) _machineExecutors.set( id, [] );
+        _machineExecutors.get( id ).set( VirtualBoxExecutorContext.ShowVMInfo, showVMInfoExecutor );
+
+        return showVMInfoExecutor;
 
     }
 
     public function getUnregisterVM( id:String, delete:Bool = false ):Executor {
 
+        // Return the already running executor for the given machine if it exists
+        if ( _machineExecutors.exists( id ) && _machineExecutors.get( id ).exists( VirtualBoxExecutorContext.UnregisterVM ) )
+            return _machineExecutors.get( id ).get( VirtualBoxExecutorContext.UnregisterVM );
+
         var args:Array<String> = [ "unregistervm" ];
         if ( delete ) args.push( "--delete" );
         args.push( id );
-        var _unregisterExecutor = new Executor( this.path + this._executable, args );
-        return _unregisterExecutor;
+
+        var extraArgs:Array<Dynamic> = [];
+        extraArgs.push( id );
+
+        final unregisterExecutor = new Executor( this.path + this._executable, args, extraArgs );
+        unregisterExecutor.onStop( _unregisterExecutorStopped );
+
+        if ( !_machineExecutors.exists( id ) ) _machineExecutors.set( id, [] );
+        _machineExecutors.get( id ).set( VirtualBoxExecutorContext.UnregisterVM, unregisterExecutor );
+
+        return unregisterExecutor;
 
     }
 
     public function getVersion():Executor {
 
-        var _versionExecutor = new Executor( this.path + this._executable, [ "-V" ] );
-        _versionExecutor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
-        return _versionExecutor;
+        if ( _globalExecutors.exists( VirtualBoxExecutorContext.Version ) )
+            return _globalExecutors.get( VirtualBoxExecutorContext.Version );
+
+        final versionExecutor = new Executor( this.path + this._executable, [ "-V" ] );
+        versionExecutor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
+        _globalExecutors.set( VirtualBoxExecutorContext.Version, versionExecutor );
+        return versionExecutor;
 
     }
 
@@ -351,6 +404,21 @@ class VirtualBox extends AbstractApp {
         if ( executor.exitCode == 0 )
             _processBridgedInterfacesData();
 
+        for ( f in _onBridgedInterfaces ) f( _bridgedInterfaces );
+
+        for ( k in _globalExecutors.keys() ) {
+
+            if ( _globalExecutors.get( k ) == executor ) {
+
+                _globalExecutors.remove( k );
+                break;
+
+            }
+
+        }
+
+        executor.dispose();
+
     }
 
     function _hostInfoExecutorExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
@@ -365,6 +433,21 @@ class VirtualBox extends AbstractApp {
 
         if ( executor.exitCode == 0 )
             _processHostInfoData();
+
+        for ( f in _onHostInfo ) f( _hostInfo );
+
+        for ( k in _globalExecutors.keys() ) {
+
+            if ( _globalExecutors.get( k ) == executor ) {
+
+                _globalExecutors.remove( k );
+                break;
+
+            }
+
+        }
+
+        executor.dispose();
 
     }
 
@@ -419,8 +502,6 @@ class VirtualBox extends AbstractApp {
 
             }
 
-            for ( f in _onBridgedInterfaces ) f( _bridgedInterfaces );
-
         }
 
     }
@@ -469,8 +550,6 @@ class VirtualBox extends AbstractApp {
 
             }
                 
-            for ( f in _onHostInfo ) f( _hostInfo );
-
         }
 
     }
@@ -485,8 +564,6 @@ class VirtualBox extends AbstractApp {
 
                 this._version = _versionPattern.matched( 0 );
 
-                for ( f in _onVersion ) f();
-
             }
 
         }
@@ -495,13 +572,47 @@ class VirtualBox extends AbstractApp {
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         
+        Logger.debug( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
+
+        for ( f in _onVersion ) f();
+
+        for ( k in _globalExecutors.keys() ) {
+
+            if ( _globalExecutors.get( k ) == executor ) {
+
+                _globalExecutors.remove( k );
+                break;
+
+            }
+
+        }
+
         executor.dispose();
 
     }
 
     function _powerOffVMExecutorStopped( executor:AbstractExecutor ) {
 
+        Logger.debug( '${this}: powerOffVMExecutor stopped with exitCode: ${executor.exitCode}' );
+
         for ( f in _onPowerOffVM ) f( executor.extraParams[ 0 ] );
+
+        for ( id in _machineExecutors.keys() ) {
+
+            if ( id == executor.extraParams[ 0 ] ) {
+
+                _machineExecutors.get( id ).remove( VirtualBoxExecutorContext.PowerOffVM );
+
+                if ( _machineExecutors.get( id ).count() == 0 )
+                    _machineExecutors.remove( id );
+
+                break;
+
+            }
+
+        }
+
+        executor.dispose();
 
     }
 
@@ -518,9 +629,49 @@ class VirtualBox extends AbstractApp {
         if ( executor.exitCode == 0 )
             _processShowVMInfoLongFormatData( executor.extraParams[ 0 ] );
 
-        _showVMInfoExecutors.remove( executor.extraParams[ 0 ] );
-
         for ( f in _onShowVMInfo ) f( executor.extraParams[ 0 ] );
+
+        for ( id in _machineExecutors.keys() ) {
+
+            if ( id == executor.extraParams[ 0 ] ) {
+
+                _machineExecutors.get( id ).remove( VirtualBoxExecutorContext.ShowVMInfo );
+
+                if ( _machineExecutors.get( id ).count() == 0 )
+                    _machineExecutors.remove( id );
+
+                break;
+
+            }
+
+        }
+
+        executor.dispose();
+
+    }
+
+    function _unregisterExecutorStopped( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this}: unregisterExecutor stopped with exit code: ${executor.exitCode}' );
+        
+        for ( f in _onUnregisterVM ) f( executor.extraParams[ 0 ] );
+
+        for ( id in _machineExecutors.keys() ) {
+
+            if ( id == executor.extraParams[ 0 ] ) {
+
+                _machineExecutors.get( id ).remove( VirtualBoxExecutorContext.UnregisterVM );
+
+                if ( _machineExecutors.get( id ).count() == 0 )
+                    _machineExecutors.remove( id );
+
+                break;
+
+            }
+
+        }
+
+        executor.dispose();
 
     }
 
@@ -551,6 +702,19 @@ class VirtualBox extends AbstractApp {
         }
 
         for ( f in _onListVMs ) f();
+
+        for ( k in _globalExecutors.keys() ) {
+
+            if ( _globalExecutors.get( k ) == executor ) {
+
+                _globalExecutors.remove( k );
+                break;
+
+            }
+
+        }
+
+        executor.dispose();
 
     }
 
@@ -906,5 +1070,18 @@ class VirtualBox extends AbstractApp {
         _virtualBoxMachines.push( currentMachine );
 
     }
+
+}
+
+enum VirtualBoxExecutorContext {
+
+    BridgedInterfaces;
+    HostInfo;
+    ListVMs;
+    PowerOffVM;
+    ShowVMInfo;
+    Version;
+    VMInfo;
+    UnregisterVM;
 
 }
