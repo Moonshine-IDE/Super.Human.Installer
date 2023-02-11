@@ -49,7 +49,6 @@ abstract class AbstractApp {
 
     var _env:Map<String, String>;
     var _executable:String;
-    var _initExecutor:Executor;
     var _initialized:Bool = false;
     var _name:String;
     var _onInit:ChainedList<(AbstractApp) -> Void, AbstractApp>;
@@ -81,6 +80,7 @@ abstract class AbstractApp {
 
     public function new() {
 
+        _name = "AbstractApp";
         _onInit = new ChainedList( this );
 
     }
@@ -98,20 +98,19 @@ abstract class AbstractApp {
 
     public function getInit():Executor {
 
-        if ( _initialized ) {
-
-            return _initExecutor;
-
-        }
+        // Return the already running executor if it exists
+        if ( ExecutorManager.executors.exists( '${_name}_${AbstractAppExecutorContext.Init}' ) )
+            return ExecutorManager.executors.get( '${_name}_${AbstractAppExecutorContext.Init}' );
 
         //
         // Setting up system path
         //
         for ( p in _pathAdditions ) SysTools.addToPath( p );
 
-        _initExecutor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
-        _initExecutor.onStdErr( _initStandardError ).onStdOut( _initStandardOutput ).onStop( _initStop );
-        return _initExecutor;
+        final executor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
+        executor.onStdErr( _initStandardError ).onStdOut( _initStandardOutput ).onStop( _initStop );
+        ExecutorManager.executors.set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
+        return executor;
 
     }
 
@@ -160,14 +159,25 @@ abstract class AbstractApp {
 
     function _initStop( executor:AbstractExecutor ) {
 
-        _initExecutor.dispose();
+        Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
+
         _initialized = true;
-        _initializationComplete();
 
         for ( f in _onInit ) f( this );
+
+        ExecutorManager.executors.remove( '${_name}_${AbstractAppExecutorContext.Init}' );
+
+        executor.dispose();
+        _initializationComplete();
         
     }
 
     function _initializationComplete():Void {}
+
+}
+
+enum abstract AbstractAppExecutorContext( String ) to String {
+
+    var Init = "AbstractApp_Init";
 
 }
