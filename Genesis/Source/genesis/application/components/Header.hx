@@ -43,7 +43,7 @@ import genesis.application.theme.GenesisApplicationTheme;
 class Header extends LayoutGroup {
 
     var _label:Label;
-    var _logoLoader:AssetLoader;
+    var _logoLoader:AdvancedAssetLoader;
     var _mainMenu:MainMenu;
     var _spacer:LayoutGroup;
     var _updateButton:Button;
