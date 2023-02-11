@@ -30,7 +30,6 @@
 
 package genesis.application.components;
 
-import feathers.controls.AssetLoader;
 import feathers.controls.Button;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
