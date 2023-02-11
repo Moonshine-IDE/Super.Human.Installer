@@ -30,7 +30,6 @@
 
 package prominic.sys.io;
 
-import haxe.crypto.Md5;
 import haxe.io.Bytes;
 import haxe.io.Path;
 import prominic.logging.Logger;
@@ -52,7 +51,7 @@ class FileTools {
     static var _copyDirectoryCallback:()->Void;
     static var _copyDirectoryThreaded:Bool;
     static var _destinationPath:String;
-    static var _mutex:Mutex;
+    static var _mutex:Mutex = new Mutex();
     static var _overwriteRule:FileOverwriteRule;
     static var _sourcePath:String;
 
@@ -195,14 +194,13 @@ class FileTools {
         _batchCopyCallback = callback;
         _batchCopyPerFileCallback = perFileCallback;
 
-        Thread.runWithEventLoop( _batchCopy );
+        Thread.createWithEventLoop( _batchCopy );
 
     }
 
     static function _batchCopy() {
 
-        var mutex = new Mutex();
-        mutex.acquire();
+        _mutex.acquire();
 
         for ( p in _batchCopyPaths ) {
 
@@ -244,7 +242,7 @@ class FileTools {
 
         }
 
-        mutex.release();
+        _mutex.release();
 
         if ( _batchCopyCallback != null ) _batchCopyCallback();
 
