@@ -636,7 +636,7 @@ class Server {
 
         }
 
-        Logger.verbose( '${this}: Installer and Fixpack path pairs: ${paths}' );
+        Logger.debug( '${this}: Installer and Fixpack path pairs: ${paths}' );
 
         _provisioner.copyInstallers( paths, _batchCopyComplete );
 
@@ -729,12 +729,12 @@ class Server {
 
         if ( s == null ) {
 
-            Logger.verbose( '${this}: The web address file has invalid content or non-existent' );
+            Logger.debug( '${this}: The web address file has invalid content or non-existent' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
         } else {
 
-            Logger.verbose( '${this}: Web address file content: ${s}' );
+            Logger.debug( '${this}: Web address file content: ${s}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }
@@ -759,7 +759,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
             Vagrant.getInstance().onProvision.add( _onVagrantProvision );
 
-        Vagrant.getInstance().getProvision( this._combinedVirtualMachine.value.vagrantMachine )
+        Vagrant.getInstance().getProvision( Std.string( this._id ), this._combinedVirtualMachine.value.vagrantMachine )
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
             .execute( this._serverDir );
@@ -770,7 +770,7 @@ class Server {
 
         Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
 
-        Logger.verbose( '${this}: _onVagrantProvision ${machine}' );
+        Logger.debug( '${this}: _onVagrantProvision ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -805,7 +805,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onRSync, _onVagrantRSync ) )
             Vagrant.getInstance().onRSync.add( _onVagrantRSync );
 
-        Vagrant.getInstance().getRSync( this._combinedVirtualMachine.value.vagrantMachine )
+        Vagrant.getInstance().getRSync( Std.string( this._id ), this._combinedVirtualMachine.value.vagrantMachine )
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
             .execute( this._serverDir );
@@ -816,7 +816,7 @@ class Server {
 
         Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
 
-        Logger.verbose( '${this}: _onVagrantRSync ${machine}' );
+        Logger.debug( '${this}: _onVagrantRSync ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -853,7 +853,7 @@ class Server {
             Vagrant.getInstance().onHalt.add( _onVagrantHalt );
 
         _vagrantHaltExecutor = Vagrant.getInstance()
-            .getHalt( forced, null )
+            .getHalt( Std.string( this._id ), forced, null )
             .onStdOut( _vagrantHaltStandardOutputData )
             .onStdErr( _vagrantHaltStandardErrorData )
             .execute( this._serverDir );
@@ -910,7 +910,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantDestroy ) )
             Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
 
-        Vagrant.getInstance().getDestroy( true, null )
+        Vagrant.getInstance().getDestroy( Std.string( this._id ), true, null )
             .onStdOut( _vagrantDestroyStandardOutputData )
             .onStdErr( _vagrantDestroyStandardErrorData )
             .execute( this._serverDir );
@@ -938,7 +938,7 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
-        Logger.verbose( '${this}: _onVagrantDestroy ${machine}' );
+        Logger.debug( '${this}: _onVagrantDestroy ${machine}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Ready;
         this._provisioner.deleteProvisioningProofFile();
@@ -964,7 +964,7 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
-        _vagrantUpExecutor = Vagrant.getInstance().getUp( null, _forceVagrantProvisioning, [] )
+        _vagrantUpExecutor = Vagrant.getInstance().getUp( Std.string( this._id ), _forceVagrantProvisioning, [] )
             .onStart( _vagrantUpStarted )
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
@@ -1006,7 +1006,7 @@ class Server {
             if ( keepFailedServersRunning ) {
 
                 // Keeping the failed server running in its current state
-                Logger.verbose( '${this}: Server start was unsuccessful, keeping the server in its current status' );
+                Logger.debug( '${this}: Server start was unsuccessful, keeping the server in its current status' );
 
                 // Refreshing VirtualBox info
                 this._currentAction = ServerAction.GetStatus( true );
@@ -1019,25 +1019,25 @@ class Server {
                 if ( _provisionedBeforeStart ) {
 
                     // The server was provisioned before, so 'vagrant halt' is needed
-                    Logger.verbose( '${this}: Server start was unsuccessful, stopping server' );
+                    Logger.debug( '${this}: Server start was unsuccessful, stopping server' );
 
                     if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantUpHalt ) )
                         Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
             
                     this._currentAction = ServerAction.Stop( true );
-                    Vagrant.getInstance().getHalt( false, null ).execute( this._serverDir );
+                    Vagrant.getInstance().getHalt( Std.string( this._id ), false, null ).execute( this._serverDir );
 
                 } else {
 
                     // The server wasn't provisioned before, so 'vagrant destroy' is needed
-                    Logger.verbose( '${this}: First start was unsuccessful, destroying server' );
+                    Logger.debug( '${this}: First start was unsuccessful, destroying server' );
                     //_provisioner.deleteWebAddressFile();
 
                     if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
                         Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
 
                     this._currentAction = ServerAction.Destroy( true );
-                    Vagrant.getInstance().getDestroy( true, null ).execute( this._serverDir );
+                    Vagrant.getInstance().getDestroy( Std.string( this._id ), true, null ).execute( this._serverDir );
 
                 }
 
@@ -1072,7 +1072,7 @@ class Server {
 
     function _onVagrantUpDestroy( machine:VagrantMachine ) {
 
-        Logger.verbose( '${this}: Vagrant destroy finished after server\'s first start was unsuccessful' );
+        Logger.debug( '${this}: Vagrant destroy finished after server\'s first start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
@@ -1091,7 +1091,7 @@ class Server {
 
     function _onVagrantUpHalt( machine:VagrantMachine ) {
 
-        Logger.verbose( '${this}: Vagrant halt finished after server start was unsuccessful' );
+        Logger.debug( '${this}: Vagrant halt finished after server start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpHalt );
 
         //if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
@@ -1114,7 +1114,7 @@ class Server {
 
         if ( _refreshingVirtualBoxVMInfo ) return;
 
-        Logger.verbose( '${this}: Refreshing VirtualBox VM Info for id: ${this.virtualBoxId}' );
+        Logger.debug( '${this}: Refreshing VirtualBox VM Info for id: ${this.virtualBoxId}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
         VirtualBox.getInstance().getShowVMInfo( this.virtualBoxId ).execute( this._serverDir );
@@ -1127,7 +1127,7 @@ class Server {
         VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
         _refreshingVirtualBoxVMInfo = false;
 
-        Logger.verbose( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
+        Logger.debug( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
 
         if ( id == this.virtualBoxId ) {
 
@@ -1135,7 +1135,7 @@ class Server {
 
             if ( vbm != null ) {
 
-                Logger.verbose( '${this}: VirtualBox VM: ${this._combinedVirtualMachine.value.virtualBoxMachine}' );
+                Logger.debug( '${this}: VirtualBox VM: ${this._combinedVirtualMachine.value.virtualBoxMachine}' );
                 setVirtualBoxMachine( vbm );
                 _setServerStatus();
                 // calculateDiskSpace();
@@ -1287,7 +1287,7 @@ class Server {
 
     public function toString():String {
 
-        return '[Server:${this._id}]';
+        return '[Server(${this._id})]';
 
     }
 
