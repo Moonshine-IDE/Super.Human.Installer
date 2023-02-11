@@ -46,6 +46,7 @@ import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
 import prominic.logging.Logger;
 import prominic.sys.applications.AbstractApp;
+import prominic.sys.applications.ExecutorManager;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
@@ -121,7 +122,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	];
 
-var _advancedConfigPage:AdvancedConfigPage;
+	var _advancedConfigPage:AdvancedConfigPage;
 	var _appCheckerOverlay:LayoutGroup;
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
@@ -282,6 +283,8 @@ var _advancedConfigPage:AdvancedConfigPage;
 		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
 
 		this._header.logo = GenesisApplicationTheme.getAssetPath( SuperHumanInstallerTheme.IMAGE_ICON );
+
+		ExecutorManager.getInstance().onExecutorListChanged.add( _onExecutorListChanged );
 
 		_loadingPage = new LoadingPage();
 		this.addPage( _loadingPage, 0, PAGE_LOADING );
@@ -1003,6 +1006,13 @@ var _advancedConfigPage:AdvancedConfigPage;
 	public override function toString():String {
 
 		return '[Super.Human.Installer]';
+
+	}
+
+	function _onExecutorListChanged() {
+
+		Logger.verbose( '${this}: Number of executors: ${ExecutorManager.getInstance().count()}' );
+		_header.updateButtonEnabled = ExecutorManager.getInstance().count() == 0;
 
 	}
 
