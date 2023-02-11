@@ -149,6 +149,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _exitCode >= 0 ) return;
 
+        Logger.debug( '${this}: stopped with exit code ${_process.exitCode}' );
+
         _mutexStop.acquire();
         _running = false;
         _exitCode = _process.exitCode;

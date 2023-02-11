@@ -650,7 +650,7 @@ class Vagrant extends AbstractApp {
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         
-        Logger.debug( '${this}: _versionExecutorStopped(): ${executor.exitCode} ${_tempGlobalStatusData}' );
+        Logger.debug( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
 
         for ( f in _onVersion ) f();
 
