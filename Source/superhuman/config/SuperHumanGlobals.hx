@@ -37,6 +37,9 @@ class SuperHumanGlobals {
     // Check Vagrant status for servers if app receives focus
     static public final CHECK_VAGRANT_STATUS_ON_FOCUS:Bool = false;
 
+    // Use of 'vagrant global-status'
+    static public final IGNORE_VAGRANT_STATUS:Bool = false;
+
     // Maximum number of allowed servers. Set to 0 for unlimited
     static public final MAXIMUM_ALLOWED_SERVERS:UInt = 0;
 

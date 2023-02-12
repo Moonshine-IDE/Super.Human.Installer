@@ -360,14 +360,17 @@ class SuperHumanInstaller extends GenesisApplication {
 				Vagrant.getInstance().onGlobalStatus.add( _vagrantGlobalStatusFinished ).onVersion.add( _vagrantVersionUpdated );
 				VirtualBox.getInstance().onVersion.add( _virtualBoxVersionUpdated ).onListVMs.add( _virtualBoxListVMsUpdated );
 
-				ParallelExecutor.create().add( Right( [
+				var pe = ParallelExecutor.create();
+				pe.add( Right( [
 					Vagrant.getInstance().getVersion(),
-					Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ),
+					
 					VirtualBox.getInstance().getBridgedInterfaces(),
 					VirtualBox.getInstance().getHostInfo(),
 					VirtualBox.getInstance().getVersion(),
 					VirtualBox.getInstance().getListVMs( true )
-				] ) ).onStop( _checkPrerequisitesFinished ).execute();
+				] ) );
+				if ( !SuperHumanGlobals.IGNORE_VAGRANT_STATUS ) pe.add( Left( Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ) ) );
+				pe.onStop( _checkPrerequisitesFinished ).execute();
 
 			} else {
 
