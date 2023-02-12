@@ -969,19 +969,11 @@ class Server {
 
     function _vmUnregistered( id:String ) {
 
-        Logger.warning( '${this}: 1' );
-
         if ( id != Std.string( this.virtualBoxId ) ) return;
-
-        Logger.warning( '${this}: 2' );
 
         VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
 
-        Logger.warning( '${this}: 3' );
-
         refreshVirtualBoxInfo();
-
-        Logger.warning( '${this}: 4' );
 
     }
 
