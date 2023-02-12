@@ -77,6 +77,7 @@ class Vagrant extends AbstractApp {
     var _onRSync:ChainedList<(String)->Void, Vagrant>;
     var _onStatus:ChainedList<(String)->Void, Vagrant>;
     var _onStopAll:ChainedList<()->Void, Vagrant>;
+    var _onSuspend:ChainedList<(String)->Void, Vagrant>;
     var _onUp:ChainedList<(String, Float)->Void, Vagrant>;
     var _onVersion:ChainedList<()->Void, Vagrant>;
     var _stopAllFinished:Bool = false;
@@ -119,6 +120,9 @@ class Vagrant extends AbstractApp {
 
     public var onStopAll( get, never ):ChainedList<()->Void, Vagrant>;
     function get_onStopAll() return _onStopAll;
+
+    public var onSuspend( get, never ):ChainedList<(String)->Void, Vagrant>;
+    function get_onSuspend() return _onSuspend;
 
     public var onUp( get, never ):ChainedList<(String, Float)->Void, Vagrant>;
     function get_onUp() return _onUp;
@@ -167,6 +171,7 @@ class Vagrant extends AbstractApp {
         _onRSync = new ChainedList( this );
         _onStatus = new ChainedList( this );
         _onStopAll = new ChainedList( this );
+        _onSuspend = new ChainedList( this );
         _onUp = new ChainedList( this );
         _onVersion = new ChainedList( this );
 
@@ -374,11 +379,30 @@ class Vagrant extends AbstractApp {
         args.push( "--machine-readable" );
 
         var extraArgs:Array<Dynamic> = [];
-        if ( machine != null ) extraArgs.push( machine );
+        if ( id != null ) extraArgs.push( id );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _statusExecutorStopped ).onStdOut( _statusExecutorStandardOutput );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Status}${id}', executor );
+        return executor;
+
+    }
+
+    public function getSuspend( id:String, machine:VagrantMachine ):AbstractExecutor {
+
+        // Return the already running executor for the given machine if it exists
+        if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Suspend}${id}' ) )
+            return ExecutorManager.getInstance().get( '${VagrantExecutorContext.Suspend}${id}' );
+
+        var args:Array<String> = [ "suspend" ];
+        if ( machine != null && machine.vagrantId != null ) args.push( machine.vagrantId );
+
+        var extraArgs:Array<Dynamic> = [];
+        if ( id != null ) extraArgs.push( id );
+
+        final executor = new Executor( this._path + this._executable, args, extraArgs );
+        executor.onStop( _suspendExecutorStopped ).onStdOut( _suspendExecutorStandardOutput );
+        ExecutorManager.getInstance().set( '${VagrantExecutorContext.Suspend}${id}', executor );
         return executor;
 
     }
@@ -756,6 +780,24 @@ class Vagrant extends AbstractApp {
 
     }
 
+    function _suspendExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
+
+
+
+    }
+
+    function _suspendExecutorStopped( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this}: suspendExecutor stopped with exitCode: ${executor.exitCode}' );
+
+        for ( f in _onSuspend ) f( executor.extraParams[ 0 ] );
+
+        ExecutorManager.getInstance().remove( '${VagrantExecutorContext.Suspend}${executor.extraParams[ 0 ]}' );
+
+        executor.dispose();
+
+    }
+
 }
 
 typedef VagrantMetadata = {
@@ -783,6 +825,7 @@ enum abstract VagrantExecutorContext( String ) to String {
     var Provision = "Vagrant_Provision_";
     var RSync = "Vagrant_RSync_";
     var Status = "Vagrant_Status_";
+    var Suspend = "Vagrant_Suspend_";
     var Up = "Vagrant_Up_";
     var Version = "Vagrant_Version";
 

@@ -305,6 +305,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.START_SERVER, _startServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _stopServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _suspendServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _syncServer );
 		this.addPage( _serverPage, PAGE_SERVER );
 
@@ -721,6 +722,12 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _stopServer( e:SuperHumanApplicationEvent ) {
 
 		e.server.stop( e.forced );
+
+	}
+
+	function _suspendServer( e:SuperHumanApplicationEvent ) {
+
+		e.server.suspend();
 
 	}
 

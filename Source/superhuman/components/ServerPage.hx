@@ -212,6 +212,7 @@ class ServerPage extends Page {
         _serverList.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.START_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _forwardEvent );
+        _serverList.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
         #if debug
         _serverList.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );

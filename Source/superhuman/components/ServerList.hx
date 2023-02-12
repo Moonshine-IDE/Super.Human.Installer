@@ -78,6 +78,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.START_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
@@ -147,6 +148,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonSSH:GenesisButton;
     var _buttonStart:GenesisButton;
     var _buttonStop:GenesisButton;
+    var _buttonSuspend:GenesisButton;
     var _buttonSync:GenesisButton;
     var _console:Console;
     var _develKeys:Property<Bool>;
@@ -244,6 +246,13 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonStop.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.stop' );
         _buttonStop.addEventListener( TriggerEvent.TRIGGER, _buttonStopTriggered );
         _buttonGroup.addChild( _buttonStop );
+
+        _buttonSuspend = new GenesisButton();
+        _buttonSuspend.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SUSPEND ) );
+        _buttonSuspend.enabled = _buttonSuspend.visible = _buttonSuspend.includeInLayout = false;
+        _buttonSuspend.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.suspend' );
+        _buttonSuspend.addEventListener( TriggerEvent.TRIGGER, _buttonSuspendTriggered );
+        _buttonGroup.addChild( _buttonSuspend );
 
         _buttonSync = new GenesisButton();
         _buttonSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_UPLOAD ) );
@@ -476,6 +485,14 @@ class ServerItem extends LayoutGroupItemRenderer {
 
     }
 
+    function _buttonSuspendTriggered( e:TriggerEvent ) {
+
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SUSPEND_SERVER );
+        event.server = _server;
+        this.dispatchEvent( event );
+
+    }
+
     function _buttonSyncTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SYNC_SERVER );
@@ -548,7 +565,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
         _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;
-        //_buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
+        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
         _buttonConsole.enabled = _buttonConsole.includeInLayout = _buttonConsole.visible = true;
         _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = false;
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
@@ -557,6 +574,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = false;
         _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = false;
         _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = false;
+        _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = false;
         _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
         _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unavailable' );
         _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = false;
@@ -601,6 +619,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
+                _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = true;
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.runningwitherrors', ( _server.provisioned ) ? '(IP: ${_server.provisioner.ipAddress})' : '' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', ( _server.provisioned ) ? '(IP: ${_server.provisioner.ipAddress})' : '' );
                 
 
@@ -636,6 +655,9 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.suspended' );
+
+            case ServerStatus.Suspending:
+                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.suspending' );
 
             default:
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;

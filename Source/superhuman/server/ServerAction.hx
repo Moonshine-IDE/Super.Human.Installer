@@ -39,5 +39,6 @@ enum ServerAction {
     RSync( hasErrors:Bool );
     Start( hasErrors:Bool );
     Stop( hasErrors:Bool );
+    Suspend( hasErrors:Bool );
 
 }

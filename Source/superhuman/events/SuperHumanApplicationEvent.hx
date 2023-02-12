@@ -64,6 +64,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final SAVE_SERVER_CONFIGURATION:String = "saveServerConfiguration";
     public static final START_SERVER:String = "startServer";
     public static final STOP_SERVER:String = "stopServer";
+    public static final SUSPEND_SERVER:String = "suspendServer";
     public static final SYNC_SERVER:String = "syncServer";
 
     public var console:Console;

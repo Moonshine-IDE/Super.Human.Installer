@@ -213,6 +213,7 @@ class Server {
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
     var _vagrantHaltExecutor:AbstractExecutor;
+    var _vagrantSuspendExecutor:AbstractExecutor;
     var _vagrantUpElapsedTime:Float;
     var _vagrantUpExecutor:AbstractExecutor;
     var _vagrantUpExecutorElapsedTimer:Timer;
@@ -897,6 +898,52 @@ class Server {
         if ( console != null ) console.appendText( data, true );
         Logger.error( '${this}: Vagrant halt error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stopfailed' ), true );
+
+    }
+
+    //
+    // Vagrant suspend
+    //
+
+    public function suspend() {
+
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspend' ) );
+
+        this._busy.value = true;
+        this.status.value = ServerStatus.Suspending;
+        this._currentAction = ServerAction.Suspend( false );
+
+        if ( !Lambda.has( Vagrant.getInstance().onSuspend, _onVagrantSuspend ) )
+            Vagrant.getInstance().onSuspend.add( _onVagrantSuspend );
+
+        _vagrantSuspendExecutor = Vagrant.getInstance()
+            .getSuspend( Std.string( this._id ), null )
+            //.onStdOut( _vagrantHaltStandardOutputData )
+            //.onStdErr( _vagrantHaltStandardErrorData )
+            .execute( this._serverDir );
+
+    }
+
+    function _onVagrantSuspend( id:String ) {
+
+        if ( id != Std.string( this._id ) ) return;
+
+        Vagrant.getInstance().onSuspend.remove( _onVagrantSuspend );
+
+        if ( _vagrantSuspendExecutor.hasErrors || _vagrantSuspendExecutor.exitCode > 0 ) {
+
+            Logger.error( '${this}: Server cannot be suspended' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspendederror' ), true );
+
+        } else {
+
+            Logger.info( '${this}: Server suspended' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspended' ) );
+
+        }
+
+        this._currentAction = ServerAction.Suspend( _vagrantSuspendExecutor.hasErrors || _vagrantSuspendExecutor.exitCode > 0 );
+        refreshVirtualBoxInfo();
 
     }
 

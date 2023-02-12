@@ -45,6 +45,7 @@ enum ServerStatus {
     Stopped( hasError:Bool ); // The server is not running or powered off
     Stopping( forced:Bool ); // The server is stopping
     Suspended; // The server is in suspended state
+    Suspending; // The server is suspending
     Unconfigured; // The server has never been configured
     Unknown; // Used internally for an initial status
     
