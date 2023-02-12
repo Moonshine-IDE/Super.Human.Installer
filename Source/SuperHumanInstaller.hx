@@ -829,14 +829,14 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 	}
 
-	function _vagrantDestroyed( machine:VagrantMachine ) {
+	function _vagrantDestroyed( id:String ) {
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdestroyed' ) );
 		_saveConfig();
 
 	}
 
-	function _vagrantUped( machine:VagrantMachine, exitCode:Float ) {
+	function _vagrantUped( id:String, exitCode:Float ) {
 
 		if ( exitCode == 0 ) {
 

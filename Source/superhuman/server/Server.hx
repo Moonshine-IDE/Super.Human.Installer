@@ -766,11 +766,13 @@ class Server {
 
     }
 
-    function _onVagrantProvision( machine:VagrantMachine ) {
+    function _onVagrantProvision( id:String ) {
+
+        if ( id != Std.string( this._id ) ) return;
 
         Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
 
-        Logger.debug( '${this}: _onVagrantProvision ${machine}' );
+        Logger.debug( '${this}: _onVagrantProvision ${id}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -812,11 +814,13 @@ class Server {
 
     }
 
-    function _onVagrantRSync( machine:VagrantMachine ) {
+    function _onVagrantRSync( id:String ) {
+
+        if ( id != Std.string( this._id ) ) return;
 
         Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
 
-        Logger.debug( '${this}: _onVagrantRSync ${machine}' );
+        Logger.debug( '${this}: _onVagrantRSync ${id}' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -860,7 +864,9 @@ class Server {
 
     }
 
-    function _onVagrantHalt( machine:VagrantMachine ) {
+    function _onVagrantHalt( id:String ) {
+
+        if ( id != Std.string( this._id ) ) return;
 
         Vagrant.getInstance().onHalt.remove( _onVagrantHalt );
 
@@ -903,7 +909,7 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroy' ) );
 
         this._busy.value = true;
-        this._status.value = ServerStatus.Destroying;
+        this._status.value = ServerStatus.Destroying( this._status.value == ServerStatus.Aborted );
 
         _provisioner.deleteWebAddressFile();
 
@@ -932,18 +938,50 @@ class Server {
 
     }
 
-    function _onVagrantDestroy( machine:VagrantMachine ) {
+    function _onVagrantDestroy( id:String ) {
+
+        if ( id != Std.string( this._id ) ) return;
 
         Vagrant.getInstance().onDestroy.remove( _onVagrantDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
-        Logger.debug( '${this}: _onVagrantDestroy ${machine}' );
+        Logger.debug( '${this}: _onVagrantDestroy ${id}' );
 
         this._provisioner.deleteProvisioningProofFile();
+
+        if ( this.status.value.match( ServerStatus.Destroying( true ) ) )
+            _unregisterVM()
+        else
+            refreshVirtualBoxInfo();
+
+    }
+
+    function _unregisterVM() {
+
+        if ( !Lambda.has( VirtualBox.getInstance().onUnregisterVM, _vmUnregistered ) )
+            VirtualBox.getInstance().onUnregisterVM.add( _vmUnregistered );
+
+        final executor = VirtualBox.getInstance().getUnregisterVM( this.virtualBoxId, true );
+        executor.execute( this._serverDir );
+
+    }
+
+    function _vmUnregistered( id:String ) {
+
+        Logger.warning( '${this}: 1' );
+
+        if ( id != Std.string( this.virtualBoxId ) ) return;
+
+        Logger.warning( '${this}: 2' );
+
+        VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
+
+        Logger.warning( '${this}: 3' );
+
         refreshVirtualBoxInfo();
 
-        //this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
+        Logger.warning( '${this}: 4' );
 
     }
 
@@ -1054,6 +1092,8 @@ class Server {
 
         }
 
+        executor.dispose();
+
     }
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
@@ -1071,7 +1111,7 @@ class Server {
 
     }
 
-    function _onVagrantUpDestroy( machine:VagrantMachine ) {
+    function _onVagrantUpDestroy( id:String ) {
 
         Logger.debug( '${this}: Vagrant destroy finished after server\'s first start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpDestroy );
@@ -1090,7 +1130,7 @@ class Server {
 
     }
 
-    function _onVagrantUpHalt( machine:VagrantMachine ) {
+    function _onVagrantUpHalt( id:String ) {
 
         Logger.debug( '${this}: Vagrant halt finished after server start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpHalt );
@@ -1125,25 +1165,30 @@ class Server {
 
     function _onVirtualBoxShowVMInfo( id:String ) {
 
+        if ( id != this.virtualBoxId ) return;
+
         VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
         _refreshingVirtualBoxVMInfo = false;
 
         Logger.debug( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
 
-        if ( id == this.virtualBoxId ) {
+        var vbm = VirtualBox.getInstance().getVirtualMachineById( id );
 
-            var vbm = VirtualBox.getInstance().getVirtualMachineById( id );
+        if ( vbm != null ) {
 
-            if ( vbm != null ) {
+            Logger.debug( '${this}: VirtualBox VM: ${this._combinedVirtualMachine.value.virtualBoxMachine}' );
+            setVirtualBoxMachine( vbm );
+            // calculateDiskSpace();
 
-                Logger.debug( '${this}: VirtualBox VM: ${this._combinedVirtualMachine.value.virtualBoxMachine}' );
-                setVirtualBoxMachine( vbm );
-                _setServerStatus();
-                // calculateDiskSpace();
+        } else {
 
-            }
+            // The virtual machine no longer exists
+            Logger.debug( '${this}: VirtualBox VM no longer exists, resetting object' );
+            setVirtualBoxMachine( {} );
 
         }
+
+        _setServerStatus();
 
         this._busy.value = false;
 

@@ -33,7 +33,7 @@ package superhuman.server;
 enum ServerStatus {
 
     Aborted; // The server is in aborted state
-    Destroying; // The server is about to be destroyed
+    Destroying( unregisterVM:Bool ); // The server is about to be destroyed
     GetStatus; // The server is retrieving its status from Vagrant and/or VirtualBox
     Initializing; // The server is initializing, copying files to server directory
     Invalid; // The server is invalid

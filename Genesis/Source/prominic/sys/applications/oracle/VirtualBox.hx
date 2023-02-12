@@ -582,6 +582,26 @@ class VirtualBox extends AbstractApp {
         if ( executor.exitCode == 0 )
             _processShowVMInfoLongFormatData( executor.extraParams[ 0 ] );
 
+        // ShowVMInfo returned with an error, meaning the server does not exist
+        if ( executor.exitCode == 1 ) {
+
+            var removedVM:VirtualBoxMachine = null;
+
+            for ( m in this._virtualBoxMachines ) {
+
+                if ( m.virtualBoxId == executor.extraParams[ 0 ] ) {
+
+                    // Removing non-existent virtual machine
+                    removedVM = m;
+                    this._virtualBoxMachines.remove( m );
+                    break;
+
+                }
+
+            }
+
+        }
+
         for ( f in _onShowVMInfo ) f( executor.extraParams[ 0 ] );
 
         ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.ShowVMInfo}${executor.extraParams[ 0 ]}' );

@@ -69,15 +69,15 @@ class Vagrant extends AbstractApp {
     var _machines:Array<VagrantMachine>;
     var _metadata:VagrantMetadata;
     var _numExecutors:Int;
-    var _onDestroy:ChainedList<(VagrantMachine)->Void, Vagrant>;
+    var _onDestroy:ChainedList<(String)->Void, Vagrant>;
     var _onGlobalStatus:ChainedList<()->Void, Vagrant>;
-    var _onHalt:ChainedList<(VagrantMachine)->Void, Vagrant>;
+    var _onHalt:ChainedList<(String)->Void, Vagrant>;
     var _onInitMachine:ChainedList<(String)->Void, Vagrant>;
-    var _onProvision:ChainedList<(VagrantMachine)->Void, Vagrant>;
-    var _onRSync:ChainedList<(VagrantMachine)->Void, Vagrant>;
-    var _onStatus:ChainedList<(VagrantMachine)->Void, Vagrant>;
+    var _onProvision:ChainedList<(String)->Void, Vagrant>;
+    var _onRSync:ChainedList<(String)->Void, Vagrant>;
+    var _onStatus:ChainedList<(String)->Void, Vagrant>;
     var _onStopAll:ChainedList<()->Void, Vagrant>;
-    var _onUp:ChainedList<(VagrantMachine, Float)->Void, Vagrant>;
+    var _onUp:ChainedList<(String, Float)->Void, Vagrant>;
     var _onVersion:ChainedList<()->Void, Vagrant>;
     var _stopAllFinished:Bool = false;
     var _tempGlobalStatusData:String;
@@ -96,31 +96,31 @@ class Vagrant extends AbstractApp {
         return _currentWorkingDir;
     }
 
-    public var onDestroy( get, never ):ChainedList<(VagrantMachine)->Void, Vagrant>;
+    public var onDestroy( get, never ):ChainedList<(String)->Void, Vagrant>;
     function get_onDestroy() return _onDestroy;
 
     public var onGlobalStatus( get, never ):ChainedList<()->Void, Vagrant>;
     function get_onGlobalStatus() return _onGlobalStatus;
 
-    public var onHalt( get, never ):ChainedList<(VagrantMachine)->Void, Vagrant>;
+    public var onHalt( get, never ):ChainedList<(String)->Void, Vagrant>;
     function get_onHalt() return _onHalt;
 
     public var onInitMachine( get, never ):ChainedList<(String)->Void, Vagrant>;
     function get_onInitMachine() return _onInitMachine;
 
-    public var onProvision( get, never ):ChainedList<(VagrantMachine)->Void, Vagrant>;
+    public var onProvision( get, never ):ChainedList<(String)->Void, Vagrant>;
     function get_onProvision() return _onProvision;
 
-    public var onRSync( get, never ):ChainedList<(VagrantMachine)->Void, Vagrant>;
+    public var onRSync( get, never ):ChainedList<(String)->Void, Vagrant>;
     function get_onRSync() return _onRSync;
 
-    public var onStatus( get, never ):ChainedList<(VagrantMachine)->Void, Vagrant>;
+    public var onStatus( get, never ):ChainedList<(String)->Void, Vagrant>;
     function get_onStatus() return _onStatus;
 
     public var onStopAll( get, never ):ChainedList<()->Void, Vagrant>;
     function get_onStopAll() return _onStopAll;
 
-    public var onUp( get, never ):ChainedList<(VagrantMachine, Float)->Void, Vagrant>;
+    public var onUp( get, never ):ChainedList<(String, Float)->Void, Vagrant>;
     function get_onUp() return _onUp;
 
     public var onVersion( get, never ):ChainedList<()->Void, Vagrant>;

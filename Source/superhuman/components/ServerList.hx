@@ -625,7 +625,7 @@ class ServerItem extends LayoutGroupItemRenderer {
             case ServerStatus.GetStatus:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.getstatus' );
 
-            case ServerStatus.Destroying:
+            case ServerStatus.Destroying( unregisterVM ):
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.destroying' );
 
             case ServerStatus.Aborted:
