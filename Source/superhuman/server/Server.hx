@@ -1175,7 +1175,7 @@ class Server {
         } else {
 
             // The virtual machine no longer exists
-            Logger.debug( '${this}: VirtualBox VM no longer exists, resetting object' );
+            Logger.warning( '${this}: VirtualBox VM no longer exists, resetting object' );
             setVirtualBoxMachine( {} );
 
         }
