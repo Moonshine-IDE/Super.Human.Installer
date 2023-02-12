@@ -222,7 +222,7 @@ class Vagrant extends AbstractApp {
         args.push( "-f" );
 
         var extraArgs:Array<Dynamic> = [];
-        if ( id != null ) extraArgs.push( machine );
+        if ( id != null ) extraArgs.push( id );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
         executor.onStop( _destroyExecutorStopped );
