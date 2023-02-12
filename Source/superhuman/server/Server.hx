@@ -50,6 +50,7 @@ import prominic.sys.tools.StrTools;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.interfaces.IConsole;
 import superhuman.managers.ProvisionerManager;
+import superhuman.managers.ServerManager;
 import superhuman.server.CombinedVirtualMachine.CombinedVirtualMachineState;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
@@ -1280,7 +1281,7 @@ class Server {
         // Do not change status if server is busy
         if ( !ignoreBusyState && this._busy.value ) return;
 
-        this._status.value = ServerManager.getRealStatus( this );
+        this._status.value = ServerManager.getInstance().getRealStatus( this );
         this._currentAction = ServerAction.None( false );
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 

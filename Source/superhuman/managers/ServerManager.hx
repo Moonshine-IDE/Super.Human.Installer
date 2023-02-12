@@ -30,24 +30,65 @@
 
 package superhuman.managers;
 
+import feathers.data.ArrayCollection;
+import prominic.logging.Logger;
+import prominic.sys.applications.hashicorp.Vagrant;
+import prominic.sys.applications.oracle.VirtualBox;
+import prominic.sys.io.AbstractExecutor;
+import prominic.sys.io.ExecutorManager;
+import prominic.sys.io.ParallelExecutor;
+import superhuman.server.Server;
+import superhuman.server.ServerStatus;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 
 class ServerManager {
 
-    static var _serverRootDirectory:String;
+    static var _instance:ServerManager;
 
-    static public var serverRootDirectory( get, set ):String;
-    static function get_serverRootDirectory() return _serverRootDirectory;
-    static function set_serverRootDirectory( value ) {
+    static public function getInstance():ServerManager {
+
+        if ( _instance == null ) _instance = new ServerManager();
+        return _instance;
+
+    }
+
+    var _onVMInfoRefreshed:List<()->Void>;
+    var _serverRootDirectory:String;
+    var _servers:ArrayCollection<Server>;
+
+    public var onVMInfoRefreshed( get, never ):List<()->Void>;
+    function get_onVMInfoRefreshed() return _onVMInfoRefreshed;
+
+    public var serverRootDirectory( get, set ):String;
+    function get_serverRootDirectory() return _serverRootDirectory;
+    function set_serverRootDirectory( value ) {
         if ( value == _serverRootDirectory ) return _serverRootDirectory;
         _serverRootDirectory = value;
         if ( !FileSystem.exists( _serverRootDirectory ) ) FileSystem.createDirectory( _serverRootDirectory );
         return _serverRootDirectory;
     }
+
+    public var servers( get, never ):ArrayCollection<Server>;
+    function get_servers() return _servers;
     
-    static public function getDefaultServerData( type:ProvisionerType ):ServerData {
+    function new() {
+
+        _onVMInfoRefreshed = new List();
+        _servers = new ArrayCollection();
+
+    }
+
+    public function createServer( serverData:ServerData ):Server {
+
+        var server = Server.create( serverData, serverRootDirectory );
+        _servers.add( server );
+        return server;
+
+    }
+
+    public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
         if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory ) );
 
@@ -55,10 +96,156 @@ class ServerManager {
 
     }
 
-    static public function getServerDirectory( type:ProvisionerType, id:Int ):String {
+    public function getRealStatus( server:Server ):ServerStatus {
+
+        var result = ServerStatus.Unknown;
+
+        Logger.debug( '${server}.combinedVirtualMachine: ${server.combinedVirtualMachine.value}' );
+
+        final hasError = ( server.currentAction != null ) ? server.currentAction.getParameters()[ 0 ] : false;
+
+        switch server.combinedVirtualMachine.value.vagrantMachine.vagrantState {
+            
+            case "aborted":
+                result = ServerStatus.Aborted;
+
+            case "poweroff":
+                result = ServerStatus.Stopped( false );
+
+            case "running":
+                result = ServerStatus.Running( false );
+
+            case "saved":
+                result = ServerStatus.Suspended;
+
+            default:
+
+        }
+
+        switch server.combinedVirtualMachine.value.virtualBoxMachine.virtualBoxState {
+            
+            case "aborted":
+                result = ServerStatus.Aborted;
+
+            case "powered off":
+                result = ServerStatus.Stopped( false );
+
+            case "running":
+                result = ServerStatus.Running( hasError );
+
+            case "saved":
+                result = ServerStatus.Suspended;
+
+            case "starting":
+                result = ServerStatus.Running( false );
+
+            case "stopping":
+                result = ServerStatus.Running( false );
+
+            default:
+                result = ServerStatus.Unknown;
+
+        }
+
+        if ( result == ServerStatus.Unknown ) {
+
+            if ( server.isValid() )
+                result = ServerStatus.Ready
+            else
+                result = ServerStatus.Unconfigured;
+
+        }
+
+        if ( !server.isValid() ) result = ServerStatus.Unconfigured;
+
+        Logger.debug( '${server}: Assumed status: ${result}' );
+
+        return result;
+
+    }
+
+    public function getServerDirectory( type:ProvisionerType, id:Int ):String {
 
         return '${_serverRootDirectory}${type}/${id}';
 
     }
+
+    public function refreshVMInfo( refreshVagrant:Bool, refreshVirtualBox:Bool ) {
+
+        if ( ExecutorManager.getInstance().exists( ServerManagerExecutorContext.RefreshVMInfo ) ) return;
+
+		Logger.debug( '${this}: Refreshing System Info...' );
+
+		var pe = ParallelExecutor.create();
+		if ( refreshVagrant ) pe.add( Left( Vagrant.getInstance().getGlobalStatus() ) );
+		if ( refreshVirtualBox ) pe.add( Left( VirtualBox.getInstance().getListVMs( true ) ) );
+		pe.onStop( _refreshVMInfoStopped );
+		ExecutorManager.getInstance().set( ServerManagerExecutorContext.RefreshVMInfo, pe );
+		pe.execute();
+
+    }
+
+    public function toString():String {
+
+        return '[ServerManager]';
+
+    }
+
+    function _refreshVMInfoStopped( executor:AbstractExecutor ) {
+
+        ExecutorManager.getInstance().remove( ServerManagerExecutorContext.RefreshVMInfo );
+
+		Logger.debug( '${this}: VM Info refreshed' );
+		Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
+		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+
+		for ( s in _servers ) {
+
+			s.combinedVirtualMachine.value.virtualBoxMachine = {};
+			s.combinedVirtualMachine.value.vagrantMachine = {};
+
+		}
+
+		for ( i in Vagrant.getInstance().machines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.path.value == i.home ) s.setVagrantMachine( i );
+
+			}
+
+		}
+
+		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
+
+			for ( s in _servers ) {
+
+				if ( s.virtualBoxId == i.name ) {
+					
+					s.setVirtualBoxMachine( i );
+					s.setServerStatus();
+
+				}
+
+			}
+
+		}
+
+		for ( s in _servers ) {
+
+			// Deleting provisioning proof file if VirtualBox machine does not exist for this server
+			if ( s.combinedVirtualMachine.value.virtualBoxMachine.name == null ) s.deleteProvisioningProof();
+
+		}
+
+		executor.dispose();
+
+    }
+
+}
+
+enum abstract ServerManagerExecutorContext( String ) to String {
+
+    var RefreshVMInfo = "ServerManager_RefreshVMInfo";
 
 }

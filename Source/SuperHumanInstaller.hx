@@ -32,7 +32,6 @@ package;
 
 import feathers.controls.Alert;
 import feathers.controls.LayoutGroup;
-import feathers.data.ArrayCollection;
 import feathers.style.Theme;
 import genesis.application.GenesisApplication;
 import genesis.application.managers.LanguageManager;
@@ -134,7 +133,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _rolePage:RolePage;
 	var _serverPage:ServerPage;
 	var _serverRolesCollection:Array<ServerRoleImpl>;
-	var _servers:ArrayCollection<Server>;
 	var _settingsPage:SettingsPage;
 	var _vagrantFile:String;
 
@@ -161,7 +159,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info( '${this}: Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
-		ServerManager.serverRootDirectory = System.applicationStorageDirectory + "servers/";
+		ServerManager.getInstance().serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
 		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
 
@@ -218,13 +216,10 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		_servers = new ArrayCollection();
-
 		for ( s in _config.servers ) {
 
-			var server = Server.create( s, ServerManager.serverRootDirectory );
+			var server = ServerManager.getInstance().createServer( s );
 			server.onUpdate.add( onServerPropertyChanged );
-			_servers.add( server );
 
 		}
 
@@ -289,7 +284,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_loadingPage = new LoadingPage();
 		this.addPage( _loadingPage, 0, PAGE_LOADING );
 
-		_serverPage = new ServerPage( _servers, SuperHumanGlobals.MAXIMUM_ALLOWED_SERVERS );
+		_serverPage = new ServerPage( ServerManager.getInstance().servers, SuperHumanGlobals.MAXIMUM_ALLOWED_SERVERS );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _configureServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.CREATE_SERVER, _createServer );
@@ -405,7 +400,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		for ( i in Vagrant.getInstance().machines ) {
 
-			for ( s in _servers ) {
+			for ( s in ServerManager.getInstance().servers ) {
 
 				if ( s.path.value == i.home ) s.setVagrantMachine( i );
 
@@ -452,7 +447,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
-		for ( s in _servers ) {
+		for ( s in ServerManager.getInstance().servers ) {
 
 			s.combinedVirtualMachine.value.virtualBoxMachine = {};
 
@@ -460,7 +455,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
 
-			for ( s in _servers ) {
+			for ( s in ServerManager.getInstance().servers ) {
 
 				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
 
@@ -468,7 +463,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		for ( s in _servers ) {
+		for ( s in ServerManager.getInstance().servers ) {
 
 			// Deleting provisioning proof file if VirtualBox machine does not exist for this server
 			if ( s.combinedVirtualMachine.value.virtualBoxMachine.name == null ) s.deleteProvisioningProof();
@@ -558,12 +553,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			// Stop all possibly running executors
 			var vms:Array<CombinedVirtualMachine> = [];
-			for ( s in _servers ) vms.push( s.combinedVirtualMachine.value );
+			for ( s in ServerManager.getInstance().servers ) vms.push( s.combinedVirtualMachine.value );
 			Vagrant.getInstance().stopAll( false );
 
 			while( !_canExit ) {
 
-				for ( server in _servers ) {
+				for ( server in ServerManager.getInstance().servers ) {
 
 					// Shutting down VirtualBox machine
 					var vboxArgs:Array<String> = [ 'controlvm' ];
@@ -643,7 +638,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_config.servers = [];
 
-		for ( server in _servers ) {
+		for ( server in ServerManager.getInstance().servers ) {
 
 			_config.servers.push( server.getData() );
 			server.saveData();
@@ -762,7 +757,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				Logger.debug( '${this}: VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
 				Logger.debug( '${this}: VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
-				for ( s in _servers ) s.setServerStatus();
+				for ( s in ServerManager.getInstance().servers ) s.setServerStatus();
 
 				_loadingPage.stopProgressIndicator();
 				this.selectedPageId = PAGE_SERVER;
@@ -896,10 +891,10 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _deleteServerInstance( server:Server, deleteFiles:Bool = false ) {
 
-		Logger.debug( '${this}: Deleting server ${server.id} deleteFiles:${deleteFiles}' );
+		Logger.info( '${this}: Deleting ${server} deleteFiles:${deleteFiles}' );
 
 		server.dispose();
-		_servers.remove( server );
+		ServerManager.getInstance().servers.remove( server );
 		
 		if ( deleteFiles ) {
 
@@ -915,11 +910,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
 
-		var newServerData:ServerData = ServerManager.getDefaultServerData( e.provisionerType );
+		Logger.info( '${this}: Creating new server...' );
 
-		var server = Server.create( newServerData, ServerManager.serverRootDirectory );
+		var newServerData:ServerData = ServerManager.getInstance().getDefaultServerData( e.provisionerType );
+		var server = ServerManager.getInstance().createServer( newServerData );
 		server.onUpdate.add( onServerPropertyChanged );
-		_servers.add( server );
+
+		Logger.info( '${this}: New ${server} created' );
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.servercreated', 'with id ${server.id}' ) );
 
@@ -974,65 +971,14 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
 
-		if ( ExecutorManager.getInstance().exists( "SuperHumanInstaller_refreshSystemInfo" ) ) return;
-
-		Logger.debug( '${this}: Refreshing System Info...' );
-
-		var pe = ParallelExecutor.create();
-		pe.add( Left( Vagrant.getInstance().getGlobalStatus() ) );
-		pe.add( Left( VirtualBox.getInstance().getListVMs( true ) ) );
-		pe.onStop( _refreshSystemInfoStopped );
-		ExecutorManager.getInstance().set( "SuperHumanInstaller_refreshSystemInfo", pe );
-		pe.execute();
+		ServerManager.getInstance().onVMInfoRefreshed.add( _onVMInfoRefreshed );
+		ServerManager.getInstance().refreshVMInfo( true, true );
 
 	}
 
-	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
+	function _onVMInfoRefreshed() {
 
-		ExecutorManager.getInstance().remove( "SuperHumanInstaller_refreshSystemInfo" );
-
-		Logger.debug( '${this}: System Info refreshed' );
-		Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
-		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
-
-		for ( s in _servers ) {
-
-			s.combinedVirtualMachine.value.virtualBoxMachine = {};
-			s.combinedVirtualMachine.value.vagrantMachine = {};
-
-		}
-
-		for ( i in Vagrant.getInstance().machines ) {
-
-			for ( s in _servers ) {
-
-				if ( s.path.value == i.home ) s.setVagrantMachine( i );
-
-			}
-
-		}
-
-		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
-
-			for ( s in _servers ) {
-
-				if ( s.virtualBoxId == i.name ) {
-					
-					s.setVirtualBoxMachine( i );
-					s.setServerStatus();
-
-				}
-
-			}
-
-		}
-
-		for ( s in _servers ) {
-
-			// Deleting provisioning proof file if VirtualBox machine does not exist for this server
-			if ( s.combinedVirtualMachine.value.virtualBoxMachine.name == null ) s.deleteProvisioningProof();
-
-		}
+		ServerManager.getInstance().onVMInfoRefreshed.remove( _onVMInfoRefreshed );
 
 		if ( _serverPage != null ) {
 
@@ -1040,8 +986,6 @@ class SuperHumanInstaller extends GenesisApplication {
 			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
 
 		}
-
-		executor.dispose();
 
 	}
 
