@@ -96,5 +96,15 @@ enum ServerStatus {
      * The server is about to be destroyed
      */
     Destroying;
+
+    /**
+     * The server is in aborted state
+     */
+    Aborted;
+    
+    /**
+     * The server is in suspended state
+     */
+    Suspended;
     
 }

@@ -46,11 +46,11 @@ import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
 import prominic.logging.Logger;
 import prominic.sys.applications.AbstractApp;
-import prominic.sys.applications.ExecutorManager;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.io.AbstractExecutor;
+import prominic.sys.io.ExecutorManager;
 import prominic.sys.io.FileTools;
 import prominic.sys.io.ParallelExecutor;
 import prominic.sys.tools.StrTools;
@@ -447,6 +447,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
 		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+
+		for ( s in _servers ) {
+
+			s.combinedVirtualMachine.value.virtualBoxMachine = {};
+
+		}
 
 		for ( i in VirtualBox.getInstance().virtualBoxMachines ) {
 
@@ -958,27 +964,39 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _refreshSystemInfo( e:SuperHumanApplicationEvent ) {
 
+		if ( ExecutorManager.getInstance().exists( "SuperHumanInstaller_refreshSystemInfo" ) ) return;
+
 		Logger.debug( '${this}: Refreshing System Info...' );
 
-		ParallelExecutor.create().add( Right( [
-			Vagrant.getInstance().getGlobalStatus(),
-			VirtualBox.getInstance().getListVMs( true )
-		] ) ).onStop( _refreshSystemInfoStopped ).execute();
+		var pe = ParallelExecutor.create();
+		pe.add( Left( Vagrant.getInstance().getGlobalStatus() ) );
+		pe.add( Left( VirtualBox.getInstance().getListVMs( true ) ) );
+		pe.onStop( _refreshSystemInfoStopped );
+		ExecutorManager.getInstance().set( "SuperHumanInstaller_refreshSystemInfo", pe );
+		pe.execute();
 
 	}
 
 	function _refreshSystemInfoStopped( executor:AbstractExecutor ) {
 
+		ExecutorManager.getInstance().remove( "SuperHumanInstaller_refreshSystemInfo" );
+
 		Logger.debug( '${this}: System Info refreshed' );
 		Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
 		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+
+		for ( s in _servers ) {
+
+			s.combinedVirtualMachine.value.virtualBoxMachine = {};
+			s.combinedVirtualMachine.value.vagrantMachine = {};
+
+		}
 
 		for ( i in Vagrant.getInstance().machines ) {
 
 			for ( s in _servers ) {
 
 				if ( s.path.value == i.home ) s.setVagrantMachine( i );
-				// TODO s.updateVagrantMachine();
 
 			}
 
@@ -988,9 +1006,21 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			for ( s in _servers ) {
 
-				if ( s.virtualBoxId == i.name ) s.setVirtualBoxMachine( i );
+				if ( s.virtualBoxId == i.name ) {
+					
+					s.setVirtualBoxMachine( i );
+					s.setServerStatus();
+
+				}
 
 			}
+
+		}
+
+		for ( s in _servers ) {
+
+			// Deleting provisioning proof file if VirtualBox machine does not exist for this server
+			if ( s.combinedVirtualMachine.value.virtualBoxMachine.name == null ) s.deleteProvisioningProof();
 
 		}
 
@@ -1000,6 +1030,8 @@ class SuperHumanInstaller extends GenesisApplication {
 			_serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
 
 		}
+
+		executor.dispose();
 
 	}
 

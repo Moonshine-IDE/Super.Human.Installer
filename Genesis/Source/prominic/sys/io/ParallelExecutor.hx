@@ -32,6 +32,7 @@ package prominic.sys.io;
 
 import haxe.ds.Either;
 import prominic.logging.Logger;
+import prominic.sys.io.process.ProcessTools.KillSignal;
 
 class ParallelExecutor extends AbstractExecutor {
 
@@ -108,6 +109,8 @@ class ParallelExecutor extends AbstractExecutor {
         return this;
 
     }
+
+    public function kill( signal:KillSignal ) {}
 
     function _executorStopped( executor:AbstractExecutor ) {
 

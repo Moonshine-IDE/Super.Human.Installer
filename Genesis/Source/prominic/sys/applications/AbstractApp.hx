@@ -37,6 +37,7 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Which;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
+import prominic.sys.io.ExecutorManager;
 import prominic.sys.tools.SysTools;
 import sys.io.Process;
 
@@ -96,7 +97,7 @@ abstract class AbstractApp {
 
     public function exit( forced:Bool = false ) { }
 
-    public function getInit():Executor {
+    public function getInit():AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( '${_name}_${AbstractAppExecutorContext.Init}' ) )

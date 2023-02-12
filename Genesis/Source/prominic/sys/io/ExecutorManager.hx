@@ -28,9 +28,9 @@
  *  it in the license file.
  */
 
-package prominic.sys.applications;
+package prominic.sys.io;
 
-import prominic.sys.io.Executor;
+import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.process.ProcessTools.KillSignal;
 
 class ExecutorManager {
@@ -44,7 +44,7 @@ class ExecutorManager {
 
     }
 
-    var _executors:Map<String, Executor>;
+    var _executors:Map<String, AbstractExecutor>;
     var _onExecutorListChanged:List<()->Void>;
 
     public var onExecutorListChanged( get, never ):List<()->Void>;
@@ -76,7 +76,7 @@ class ExecutorManager {
 
     }
 
-    public function get( key:String ):Executor {
+    public function get( key:String ):AbstractExecutor {
 
         return _executors.get( key );
 
@@ -96,7 +96,7 @@ class ExecutorManager {
 
     }
 
-    public function set( key:String, value:Executor ) {
+    public function set( key:String, value:AbstractExecutor ) {
 
         _executors.set( key, value );
         for ( f in _onExecutorListChanged ) f();

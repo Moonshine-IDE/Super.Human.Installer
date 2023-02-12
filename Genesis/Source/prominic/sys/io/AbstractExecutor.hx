@@ -30,6 +30,7 @@
 
 package prominic.sys.io;
 
+import prominic.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.tools.StrTools;
 
 abstract class AbstractExecutor {
@@ -137,6 +138,7 @@ abstract class AbstractExecutor {
     }
 
     abstract public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ):AbstractExecutor;
+    abstract public function kill( signal:KillSignal ):Void;
     abstract public function simulateStop():Void;
     abstract public function stop( ?forced:Bool ):Void;
 

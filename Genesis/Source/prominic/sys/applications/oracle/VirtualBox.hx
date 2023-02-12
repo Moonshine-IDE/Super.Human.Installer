@@ -37,6 +37,7 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
+import prominic.sys.io.ExecutorManager;
 import prominic.sys.tools.SysTools;
 
 using Lambda;
@@ -233,7 +234,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getBridgedInterfaces():Executor {
+    public function getBridgedInterfaces():AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.BridgedInterfaces ) )
@@ -248,7 +249,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getHostInfo():Executor {
+    public function getHostInfo():AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.HostInfo ) )
@@ -263,7 +264,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getListVMs( longFormat:Bool = false ):Executor {
+    public function getListVMs( longFormat:Bool = false ):AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.ListVMs ) )
@@ -281,7 +282,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getPowerOffVM( id:String ):Executor {
+    public function getPowerOffVM( id:String ):AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.PowerOffVM}${id}' ) )
@@ -301,7 +302,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getShowVMInfo( id:String, ?machineReadable:Bool ):Executor {
+    public function getShowVMInfo( id:String, ?machineReadable:Bool ):AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' ) )
@@ -323,7 +324,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getUnregisterVM( id:String, delete:Bool = false ):Executor {
+    public function getUnregisterVM( id:String, delete:Bool = false ):AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.UnregisterVM}${id}' ) )
@@ -343,7 +344,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getVersion():Executor {
+    public function getVersion():AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.Version ) )

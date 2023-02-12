@@ -35,6 +35,7 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
+import prominic.sys.io.ExecutorManager;
 import prominic.sys.tools.SysTools;
 import sys.io.File;
 import sys.thread.Mutex;
@@ -211,7 +212,7 @@ class Vagrant extends AbstractApp {
      * @param machine The VagrantMachine
      * @return Executor
      */
-    public function getDestroy( id:String, force:Bool = false, ?machine:VagrantMachine ):Executor {
+    public function getDestroy( id:String, force:Bool = false, ?machine:VagrantMachine ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Destroy}${id}' ) )
@@ -237,7 +238,7 @@ class Vagrant extends AbstractApp {
      * @param machine The VagrantMachine
      * @return Executor
      */
-    public function getHalt( id:String, force:Bool = false, ?machine:VagrantMachine ):Executor {
+    public function getHalt( id:String, force:Bool = false, ?machine:VagrantMachine ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Halt}${id}' ) )
@@ -262,7 +263,7 @@ class Vagrant extends AbstractApp {
      * @param path If defined, the Vagrant machine will be initialized in the given directory, otherwise it will be initialized in the current working directory.
      * @return Executor
      */
-    public function getInitMachine( id:String, ?vagrantFileContent:String, ?path:String ):Executor {
+    public function getInitMachine( id:String, ?vagrantFileContent:String, ?path:String ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Init}${id}' ) )
@@ -287,7 +288,7 @@ class Vagrant extends AbstractApp {
      * Only 1 instance exists, as this is a global command.
      * @return Executor
      */
-    public function getGlobalStatus( prune:Bool = false ):Executor {
+    public function getGlobalStatus( prune:Bool = false ):AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.GlobalStatus ) )
@@ -312,7 +313,7 @@ class Vagrant extends AbstractApp {
      * @param machine The VagrantMachine
      * @return Executor
      */
-    public function getRSync( id:String, ?machine:VagrantMachine ):Executor {
+    public function getRSync( id:String, ?machine:VagrantMachine ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.RSync}${id}' ) )
@@ -337,7 +338,7 @@ class Vagrant extends AbstractApp {
      * @param machine The VagrantMachine
      * @return Executor
      */
-    public function getProvision( id:String, ?machine:VagrantMachine ):Executor {
+    public function getProvision( id:String, ?machine:VagrantMachine ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Provision}${id}' ) )
@@ -362,7 +363,7 @@ class Vagrant extends AbstractApp {
      * @param machine The VagrantMachine
      * @return Executor
      */
-    public function getStatus( id:String, machine:VagrantMachine ):Executor {
+    public function getStatus( id:String, machine:VagrantMachine ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Status}${id}' ) )
@@ -386,7 +387,7 @@ class Vagrant extends AbstractApp {
      * Creates a 'vagrant -v' executor.
      * @return Executor
      */
-    public function getVersion():Executor {
+    public function getVersion():AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.Version ) )
@@ -399,7 +400,7 @@ class Vagrant extends AbstractApp {
 
     }
 
-    public function getUp( id:String, ?machine:VagrantMachine, ?provision:Bool = false, ?args:Array<String> ):Executor {
+    public function getUp( id:String, ?machine:VagrantMachine, ?provision:Bool = false, ?args:Array<String> ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.Up}${id}' ) )

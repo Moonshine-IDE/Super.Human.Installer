@@ -32,7 +32,7 @@ package superhuman.server;
 
 import prominic.logging.Logger;
 
-class ServerStatusManager {
+class ServerManager {
     
     static public function getRealStatus( server:Server ):ServerStatus {
 
@@ -45,13 +45,16 @@ class ServerStatusManager {
         switch server.combinedVirtualMachine.value.vagrantMachine.vagrantState {
             
             case "aborted":
-                result = ServerStatus.Stopped( true );
+                result = ServerStatus.Aborted;
 
             case "poweroff":
                 result = ServerStatus.Stopped( false );
 
             case "running":
                 result = ServerStatus.Running( false );
+
+            case "saved":
+                result = ServerStatus.Suspended;
 
             default:
 
@@ -60,13 +63,16 @@ class ServerStatusManager {
         switch server.combinedVirtualMachine.value.virtualBoxMachine.virtualBoxState {
             
             case "aborted":
-                result = ServerStatus.Stopped( true );
+                result = ServerStatus.Aborted;
 
             case "powered off":
                 result = ServerStatus.Stopped( false );
 
             case "running":
                 result = ServerStatus.Running( hasError );
+
+            case "saved":
+                result = ServerStatus.Suspended;
 
             case "starting":
                 result = ServerStatus.Running( false );

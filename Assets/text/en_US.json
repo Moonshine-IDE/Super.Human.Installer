@@ -315,6 +315,7 @@
             "vagrantssh": "Open Vagrant SSH in terminal",
             "welcomepage": "Open Welcome page",
             "status":{
+                "aborted": "Status: Aborted. Please destroy the server to reinitialize it",
                 "destroying": "Status: Destroying, please wait...",
                 "error": "Status: Error. Please check the server's output, review your server configuration, and try again",
                 "elapsedtime": "(Elapsed time: %1)",
@@ -335,8 +336,10 @@
                 "stoppedwitherrors": "Status: Stopped with errors. Please check the server's output, review your server configuration, and try again",
                 "stopping": "Status: Stopping, please wait...",
                 "stoppingforced": "Status: Forcefully stopping, please wait...",
+                "suspended": "Status: Suspended",
                 "unavailable": "Status: Unavailable",
-                "unconfigured": "Status: Not configured. Please configure your server"
+                "unconfigured": "Status: Not configured. Please configure your server",
+                "unknown": "Status: Unknown. Please delete the server"
             }
         }
     },

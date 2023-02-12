@@ -939,10 +939,11 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
         Logger.debug( '${this}: _onVagrantDestroy ${machine}' );
-        this._busy.value = false;
-        this._status.value = ServerStatus.Ready;
+
         this._provisioner.deleteProvisioningProofFile();
-        this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
+        refreshVirtualBoxInfo();
+
+        //this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
 
     }
 
@@ -1160,13 +1161,12 @@ class Server {
 
     public function setVagrantMachine( machine:VagrantMachine ) {
 
-        this._combinedVirtualMachine.value.vagrantMachine.serverId = this._id;
-
-        var vm:VagrantMachine = _combinedVirtualMachine.value.vagrantMachine;
+        _combinedVirtualMachine.value.vagrantMachine = {};
+        _combinedVirtualMachine.value.vagrantMachine.serverId = this._id;
 
         for( i in Reflect.fields( machine ) ) {
 
-            Reflect.setField( vm, i, Reflect.field( machine, i ) );
+            Reflect.setField( _combinedVirtualMachine.value.vagrantMachine, i, Reflect.field( machine, i ) );
 
         }
 
@@ -1174,17 +1174,16 @@ class Server {
 
     public function setVirtualBoxMachine( machine:VirtualBoxMachine ) {
 
-        this._combinedVirtualMachine.value.virtualBoxMachine.serverId = this._id;
-
-        var vm:VirtualBoxMachine = _combinedVirtualMachine.value.virtualBoxMachine;
+        _combinedVirtualMachine.value.virtualBoxMachine = {};
+        _combinedVirtualMachine.value.virtualBoxMachine.serverId = this._id;
 
         for( i in Reflect.fields( machine ) ) {
 
-            Reflect.setField( vm, i, Reflect.field( machine, i ) );
+            Reflect.setField( _combinedVirtualMachine.value.virtualBoxMachine, i, Reflect.field( machine, i ) );
 
         }
 
-        vm.virtualBoxId = this.virtualBoxId;
+        _combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId = this.virtualBoxId;
 
     }
 
@@ -1197,7 +1196,7 @@ class Server {
         // Do not change status if server is busy
         if ( !ignoreBusyState && this._busy.value ) return;
 
-        this._status.value = ServerStatusManager.getRealStatus( this );
+        this._status.value = ServerManager.getRealStatus( this );
         this._currentAction = ServerAction.None( false );
 
         this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 

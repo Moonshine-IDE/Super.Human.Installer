@@ -548,7 +548,8 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
         _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;
-        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
+        //_buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
+        _buttonConsole.enabled = _buttonConsole.includeInLayout = _buttonConsole.visible = true;
         _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = false;
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
         _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
@@ -627,17 +628,18 @@ class ServerItem extends LayoutGroupItemRenderer {
             case ServerStatus.Destroying:
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.destroying' );
 
+            case ServerStatus.Aborted:
+                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
+                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.aborted' );
+
+            case ServerStatus.Suspended:
+                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
+                _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
+                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.suspended' );
+
             default:
-                _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
-                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
-                _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
-                _buttonProvision.enabled = _buttonProvision.includeInLayout = _buttonProvision.visible = false;
-                _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = false;
-                _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = false;
-                _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = false;
-                _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
-                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.stopped' );
+                _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unknown' );
 
         }
 
