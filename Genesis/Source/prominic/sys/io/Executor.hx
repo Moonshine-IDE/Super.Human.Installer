@@ -35,6 +35,7 @@ import prominic.logging.Logger;
 import prominic.sys.io.process.AbstractProcess;
 import prominic.sys.io.process.CallbackProcess;
 import prominic.sys.io.process.ProcessTools.KillSignal;
+import prominic.sys.tools.StrTools;
 import sys.thread.Mutex;
 
 class Executor extends AbstractExecutor implements IDisposable {
@@ -90,6 +91,8 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _running ) return this;
 
+        _startTime = Sys.time();
+
         _hasErrors = false;
 
         var currentWorkingDirectory = Sys.getCwd();
@@ -109,8 +112,6 @@ class Executor extends AbstractExecutor implements IDisposable {
         _process.start();
         this._pid = _process.pid;
         _running = true;
-
-        _startTime = Date.now();
 
         for ( f in _onStart ) f( this );
 
@@ -150,12 +151,13 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _exitCode >= 0 ) return;
 
-        Logger.debug( '${this}: stopped with exit code ${_process.exitCode}' );
+        _stopTime = Sys.time();
+        var t = _stopTime - _startTime;
+        Logger.debug( '${this}: stopped with exit code ${_process.exitCode}. Execution time:${StrTools.timeToFormattedString(t, true)}' );
 
         _mutexStop.acquire();
         _running = false;
         _exitCode = _process.exitCode;
-        _stopTime = Date.now();
         for ( f in _onStop ) f( this );
         _mutexStop.release();
 
@@ -169,10 +171,10 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _exitCode >= 0 ) return;
 
+        _stopTime = Sys.time();
         _mutexStop.acquire();
         _running = false;
         _exitCode = 0;
-        _stopTime = Date.now();
         for ( f in _onStop ) f( this );
         _mutexStop.release();
 
@@ -206,6 +208,8 @@ class Executor extends AbstractExecutor implements IDisposable {
     }
 
     override public function dispose() {
+
+        if ( _disposed ) return;
 
         Logger.debug( '${this}: Disposing...' );
 

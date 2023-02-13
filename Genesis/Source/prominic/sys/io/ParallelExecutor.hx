@@ -32,6 +32,7 @@ package prominic.sys.io;
 
 import prominic.logging.Logger;
 import prominic.sys.io.process.ProcessTools.KillSignal;
+import prominic.sys.tools.StrTools;
 
 class ParallelExecutor extends AbstractExecutor {
 
@@ -79,14 +80,19 @@ class ParallelExecutor extends AbstractExecutor {
         for ( e in _executors ) a.push( e.id );
         Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
+        _startTime = Sys.time();
+        _running = true;
+        
         if ( _executors.length == 0 ) {
 
+            _running = false;
+            _stopTime = Sys.time();
             for ( f in _onStop ) f( this );
 
         } else {
 
             for ( executor in _executors ) {
-
+                
                 executor.onStop.add( _executorStopped );
                 executor.execute( extraArgs );
 
@@ -105,10 +111,14 @@ class ParallelExecutor extends AbstractExecutor {
         if ( executor.exitCode != 0 ) this._hasError = true;
 
         _executors.remove( executor );
+        executor.dispose();
 
         if ( _executors.length == 0 ) {
 
-            Logger.debug( '${this}: All executors stopped. Errors: ${this._hasError}' );
+            _running = false;
+            _stopTime = Sys.time();
+            var t = _stopTime - _startTime;
+            Logger.debug( '${this}: All executors stopped. Errors: ${this._hasError}. Execution time:${StrTools.timeToFormattedString(t, true)}' );
             for ( f in _onStop ) f( this );
 
         }

@@ -45,8 +45,8 @@ abstract class AbstractExecutor {
     var _onStdOut:ChainedList<( AbstractExecutor, String ) -> Void, AbstractExecutor>;
     var _onStop:ChainedList<( AbstractExecutor ) -> Void, AbstractExecutor>;
     var _running:Bool = false;
-    var _startTime:Date;
-    var _stopTime:Date;
+    var _startTime:Null<Float>;
+    var _stopTime:Null<Float>;
 
     public var exitCode( get, never ):Float;
     function get_exitCode() return _exitCode;
@@ -80,9 +80,9 @@ abstract class AbstractExecutor {
         var result:Null<Float> = null;
         if ( _startTime != null ) {
             if ( _stopTime != null ) {
-                result = _stopTime.getTime() - _startTime.getTime();
+                result = _stopTime - _startTime;
             } else {
-                result = Date.now().getTime() - _startTime.getTime();
+                result = Sys.time() - _startTime;
             }
         }
         return result;

@@ -86,11 +86,17 @@ class StrTools {
 
     }
 
-    static public function timeToFormattedString( timeMs:Float ):String {
+    static public function timeToFormattedString( timeInSeconds:Float, fractions:Bool = false ):String {
 
         var result = "";
 
-        final totalSeconds = Std.int( timeMs / 1000 );
+        final totalFractions = Std.int( ( timeInSeconds * 1000 ) % 1000 );
+        var totalFractionsS = Std.string( totalFractions );
+        if ( totalFractionsS.length == 0 ) totalFractionsS = "000"
+        else if ( totalFractionsS.length == 1 ) totalFractionsS = "00" + totalFractionsS
+        else if ( totalFractionsS.length == 2 ) totalFractionsS = "0" + totalFractionsS;
+
+        final totalSeconds = Std.int( timeInSeconds );
         
         final remainingSeconds = totalSeconds % 60;
         final remainingSecondsS = ( remainingSeconds < 10 ) ? '0${remainingSeconds}' : '${remainingSeconds}';
@@ -102,6 +108,7 @@ class StrTools {
         final totalHoursS:String = ( totalHours < 10 ) ? '0${totalHours}' : '${totalHours}';
 
         result = '${totalHoursS}:${totalMinutesS}:${remainingSecondsS}';
+        if ( fractions ) result += '.${totalFractionsS}';
         return result;
 
     }
