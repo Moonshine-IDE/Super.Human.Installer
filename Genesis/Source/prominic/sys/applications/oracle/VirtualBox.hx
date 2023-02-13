@@ -115,6 +115,7 @@ class VirtualBox extends AbstractApp {
     static final _patternX2APIC2 = ~/^(?:X2APIC:)(?:\s+)(.+)$/gm;
     static final _patternnestedHWVirt2 = ~/^(?:Nested VT-x\/AMD-V:)(?:\s+)(.+)$/gm;
 
+    static final _vboxMSIInstallPath:String = "VBOX_MSI_INSTALL_PATH";
     static final _versionPattern = ~/(\d+\.\d+\.\d+)/;
 
     static var _instance:VirtualBox;
@@ -201,9 +202,11 @@ class VirtualBox extends AbstractApp {
         _virtualBoxMachines = [];
         
         #if windows
-        var p = Sys.environment().get( "ProgramFiles");
+        var p = Sys.environment().get( _vboxMSIInstallPath );
+        if ( p != null ) _pathAdditions.push( '${p}' );
+        var p = Sys.environment().get( "ProgramFiles" );
         if ( p != null ) _pathAdditions.push( '${p}\\Oracle\\VirtualBox' );
-        var p = Sys.environment().get( "ProgramFiles(x86)");
+        var p = Sys.environment().get( "ProgramFiles(x86)" );
         if ( p != null ) _pathAdditions.push( '${p}\\Oracle\\VirtualBox' );
         #end
 
