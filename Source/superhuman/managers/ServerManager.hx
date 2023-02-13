@@ -238,6 +238,8 @@ class ServerManager {
 
 		}
 
+        for ( f in _onVMInfoRefreshed ) f();
+
 		executor.dispose();
 
     }
