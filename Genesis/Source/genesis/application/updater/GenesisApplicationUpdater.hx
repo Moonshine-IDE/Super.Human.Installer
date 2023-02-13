@@ -230,12 +230,18 @@ class GenesisApplicationUpdater extends EventDispatcher {
 
         try {
 
+            var object = Json.parse( data );
+            var versionString:String = "";
             _updaterInfo = Json.parse( data );
             #if debug
             _updaterInfoEntry = _updaterInfo.development;
+            versionString = object.development.version;
             #else
             _updaterInfoEntry = _updaterInfo.production;
+            versionString = object.production.version;
             #end
+
+            _updaterInfoEntry.version = VersionInfo.fromString( versionString );
             
             #if linux
             _updaterInfoEntryURL = _updaterInfoEntry.linux_url;
