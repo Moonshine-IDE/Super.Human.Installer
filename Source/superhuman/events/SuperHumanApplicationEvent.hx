@@ -66,12 +66,14 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final STOP_SERVER:String = "stopServer";
     public static final SUSPEND_SERVER:String = "suspendServer";
     public static final SYNC_SERVER:String = "syncServer";
+    public static final TEXT_LINK:String = "textLink";
 
     public var console:Console;
     public var data:String;
     public var forced:Bool = false;
     public var provisionerType:ProvisionerType;
     public var server:Server;
+    public var text:String;
     
     public function new( type:String ) {
 

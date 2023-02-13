@@ -83,6 +83,13 @@ class SuperHumanInstaller extends GenesisApplication {
 	static final _CONFIG_FILE:String = ".shi-config";
 	static final _DOMINO_VAGRANT_VERSION_FILE:String = "version.rb";
 
+	static final _TEXT_LINK_DEVOPS:String = "DevOps";
+	static final _TEXT_LINK_DOMINO:String = "Domino";
+	static final _TEXT_LINK_GENESIS_DIRECTORY:String = "GenesisDirectory";
+	static final _TEXT_LINK_VAGRANT:String = "Vagrant";
+	static final _TEXT_LINK_VIRTUALBOX:String = "VirtualBox";
+	static final _TEXT_LINK_YAML:String = "YAML";
+
 	static public final PAGE_CONFIG = "page-config";
 	static public final PAGE_CONFIG_ADVANCED = "page-config-advanced";
 	static public final PAGE_HELP = "page-help";
@@ -305,6 +312,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _serverPage, PAGE_SERVER );
 
 		_helpPage = new HelpPage();
+		_helpPage.addEventListener( SuperHumanApplicationEvent.TEXT_LINK, _helpPageTextLink );
 		this.addPage( _helpPage, PAGE_HELP );
 
 		_configPage = new ConfigPage();
@@ -1005,6 +1013,34 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.verbose( '${this}: Number of executors: ${ExecutorManager.getInstance().count()}' );
 		_header.updateButtonEnabled = ExecutorManager.getInstance().count() == 0;
+
+	}
+
+	function _helpPageTextLink( e:SuperHumanApplicationEvent ) {
+
+		switch e.text {
+
+			case _TEXT_LINK_DEVOPS:
+				Shell.getInstance().open( [ SuperHumanGlobals.DEVOPS_WIKI_URL ] );
+
+			case _TEXT_LINK_DOMINO:
+				Shell.getInstance().open( [ SuperHumanGlobals.DOMINO_WIKI_URL ] );
+
+			case _TEXT_LINK_GENESIS_DIRECTORY:
+				Shell.getInstance().open( [ SuperHumanGlobals.GENESIS_DIRECTORY_URL ] );
+
+			case _TEXT_LINK_VAGRANT:
+				Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_URL ] );
+
+			case _TEXT_LINK_VIRTUALBOX:
+				Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_URL ] );
+
+			case _TEXT_LINK_YAML:
+				Shell.getInstance().open( [ SuperHumanGlobals.YAML_WIKI_URL ] );
+
+			default:
+
+		}
 
 	}
 
