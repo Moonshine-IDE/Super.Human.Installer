@@ -132,9 +132,9 @@ class VirtualBox extends AbstractApp {
     var _onBridgedInterfaces:ChainedList<(Array<BridgedInterface>)->Void, VirtualBox>;
     var _onHostInfo:ChainedList<(HostInfo)->Void, VirtualBox>;
     var _onListVMs:ChainedList<()->Void, VirtualBox>;
-    var _onPowerOffVM:ChainedList<(String)->Void, VirtualBox>;
-    var _onShowVMInfo:ChainedList<(String)->Void, VirtualBox>;
-    var _onUnregisterVM:ChainedList<(String)->Void, VirtualBox>;
+    var _onPowerOffVM:ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
+    var _onShowVMInfo:ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
+    var _onUnregisterVM:ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     var _onVersion:ChainedList<()->Void, VirtualBox>;
     var _tempBridgedInterfaceData:String;
     var _tempHostInfoData:String;
@@ -163,13 +163,13 @@ class VirtualBox extends AbstractApp {
     public var onListVMs( get, never ):ChainedList<()->Void, VirtualBox>;
     function get_onListVMs() return _onListVMs;
 
-    public var onPowerOffVM( get, never ):ChainedList<(String)->Void, VirtualBox>;
+    public var onPowerOffVM( get, never ):ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     function get_onPowerOffVM() return _onPowerOffVM;
 
-    public var onShowVMInfo( get, never ):ChainedList<(String)->Void, VirtualBox>;
+    public var onShowVMInfo( get, never ):ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     function get_onShowVMInfo() return _onShowVMInfo;
 
-    public var onUnregisterVM( get, never ):ChainedList<(String)->Void, VirtualBox>;
+    public var onUnregisterVM( get, never ):ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     function get_onUnregisterVM() return _onUnregisterVM;
 
     public var onVersion( get, never ):ChainedList<()->Void, VirtualBox>;
@@ -282,64 +282,64 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getPowerOffVM( id:String ):AbstractExecutor {
+    public function getPowerOffVM( machine:VirtualBoxMachine ):AbstractExecutor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.PowerOffVM}${id}' ) )
-            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.PowerOffVM}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}' );
 
         var args:Array<String> = [ "controlvm" ];
-        args.push( id );
+        args.push( machine.virtualBoxId );
         args.push( "poweroff" );
 
         var extraArgs:Array<Dynamic> = [];
-        extraArgs.push( id );
+        extraArgs.push( machine );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStop( _powerOffVMExecutorStopped );
-        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.PowerOffVM}${id}', executor );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}', executor );
         return executor;
 
     }
 
-    public function getShowVMInfo( id:String, ?machineReadable:Bool ):AbstractExecutor {
+    public function getShowVMInfo( machine:VirtualBoxMachine, ?machineReadable:Bool ):AbstractExecutor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' ) )
-            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.ShowVMInfo}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}' );
 
         _tempShowVMInfoData = "";
 
         var args:Array<String> = [ "showvminfo" ];
-        args.push( id );
+        args.push( machine.virtualBoxId );
         if ( machineReadable ) args.push( "--machinereadable" );
 
         var extraArgs:Array<Dynamic> = [];
-        extraArgs.push( id );
+        extraArgs.push( machine );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStdOut( _showVMInfoExecutorStandardOutput ).onStop( _showVMInfoExecutorStopped );
-        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.ShowVMInfo}${id}', executor );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}', executor );
         return executor;
 
     }
 
-    public function getUnregisterVM( id:String, delete:Bool = false ):AbstractExecutor {
+    public function getUnregisterVM( machine:VirtualBoxMachine, delete:Bool = false ):AbstractExecutor {
 
         // Return the already running executor if it exists
-        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.UnregisterVM}${id}' ) )
-            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.UnregisterVM}${id}' );
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}' );
 
         var args:Array<String> = [ "unregistervm" ];
         if ( delete ) args.push( "--delete" );
-        args.push( id );
+        args.push( machine.virtualBoxId );
 
         var extraArgs:Array<Dynamic> = [];
-        extraArgs.push( id );
+        extraArgs.push( machine );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStop( _unregisterExecutorStopped );
-        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.UnregisterVM}${id}', executor );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}', executor );
         return executor;
 
     }
@@ -563,7 +563,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onPowerOffVM ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.PowerOffVM}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.PowerOffVM}${executor.extraParams[ 0 ].virtualBoxId}' );
 
         executor.dispose();
 
@@ -589,7 +589,7 @@ class VirtualBox extends AbstractApp {
 
             for ( m in this._virtualBoxMachines ) {
 
-                if ( m.virtualBoxId == executor.extraParams[ 0 ] ) {
+                if ( m.virtualBoxId == executor.extraParams[ 0 ].virtualBoxId ) {
 
                     // Removing non-existent virtual machine
                     removedVM = m;
@@ -604,7 +604,7 @@ class VirtualBox extends AbstractApp {
 
         for ( f in _onShowVMInfo ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.ShowVMInfo}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.ShowVMInfo}${executor.extraParams[ 0 ].virtualBoxId}' );
 
         executor.dispose();
 
@@ -616,7 +616,7 @@ class VirtualBox extends AbstractApp {
         
         for ( f in _onUnregisterVM ) f( executor.extraParams[ 0 ] );
 
-        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.UnregisterVM}${executor.extraParams[ 0 ]}' );
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.UnregisterVM}${executor.extraParams[ 0 ].virtualBoxId}' );
 
         executor.dispose();
 
@@ -897,7 +897,7 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    function _processShowVMInfoLongFormatData( id:String ) {
+    function _processShowVMInfoLongFormatData( machine:VirtualBoxMachine ) {
 
         final currentMachine:VirtualBoxMachine = {};
 
@@ -996,7 +996,7 @@ class VirtualBox extends AbstractApp {
 
         for ( m in _virtualBoxMachines ) {
 
-            if ( m.name == id || m.virtualBoxId == id ) {
+            if ( m.name == machine.virtualBoxId ) {
                 
                 _virtualBoxMachines.remove( m );
                 break;

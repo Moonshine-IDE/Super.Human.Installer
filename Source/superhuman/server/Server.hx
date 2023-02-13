@@ -132,7 +132,6 @@ class Server {
         sc._userSafeId.value = data.user_safeid;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
-        //sc._combinedVirtualMachine.value = { home: sc._serverDir, vagrantId: null, virtualBoxId: null, state: CombinedVirtualMachineState.Unknown, serverId: sc._id };
         sc._combinedVirtualMachine.value = { home: sc._serverDir, serverId: sc._id, vagrantMachine: { vagrantId: null, serverId: sc._id }, virtualBoxMachine: { virtualBoxId: null, serverId: sc._id } };
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
@@ -565,6 +564,7 @@ class Server {
 
         _forceVagrantProvisioning = provision;
         this.status.value = ServerStatus.Initializing;
+        this.combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId = this.virtualBoxId;
 
         if ( console != null ) {
 
@@ -761,20 +761,20 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onProvision, _onVagrantProvision ) )
             Vagrant.getInstance().onProvision.add( _onVagrantProvision );
 
-        Vagrant.getInstance().getProvision( Std.string( this._id ), this._combinedVirtualMachine.value.vagrantMachine )
+        Vagrant.getInstance().getProvision( this._combinedVirtualMachine.value.vagrantMachine )
             .onStdOut( _vagrantProvisionStandardOutputData )
             .onStdErr( _vagrantProvisionStandardErrorData )
             .execute( this._serverDir );
 
     }
 
-    function _onVagrantProvision( id:String ) {
+    function _onVagrantProvision( machine:VagrantMachine ) {
 
-        if ( id != Std.string( this._id ) ) return;
+        if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
 
-        Logger.debug( '${this}: _onVagrantProvision ${id}' );
+        Logger.debug( '${this}: _onVagrantProvision' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -809,20 +809,20 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onRSync, _onVagrantRSync ) )
             Vagrant.getInstance().onRSync.add( _onVagrantRSync );
 
-        Vagrant.getInstance().getRSync( Std.string( this._id ), this._combinedVirtualMachine.value.vagrantMachine )
+        Vagrant.getInstance().getRSync( this._combinedVirtualMachine.value.vagrantMachine )
             .onStdOut( _vagrantRSyncStandardOutputData )
             .onStdErr( _vagrantRSyncStandardErrorData )
             .execute( this._serverDir );
 
     }
 
-    function _onVagrantRSync( id:String ) {
+    function _onVagrantRSync( machine:VagrantMachine ) {
 
-        if ( id != Std.string( this._id ) ) return;
+        if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
 
-        Logger.debug( '${this}: _onVagrantRSync ${id}' );
+        Logger.debug( '${this}: _onVagrantRSync' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -859,16 +859,16 @@ class Server {
             Vagrant.getInstance().onHalt.add( _onVagrantHalt );
 
         _vagrantHaltExecutor = Vagrant.getInstance()
-            .getHalt( Std.string( this._id ), forced, null )
+            .getHalt( this._combinedVirtualMachine.value.vagrantMachine, forced )
             .onStdOut( _vagrantHaltStandardOutputData )
             .onStdErr( _vagrantHaltStandardErrorData )
             .execute( this._serverDir );
 
     }
 
-    function _onVagrantHalt( id:String ) {
+    function _onVagrantHalt( machine:VagrantMachine ) {
 
-        if ( id != Std.string( this._id ) ) return;
+        if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onHalt.remove( _onVagrantHalt );
 
@@ -918,16 +918,16 @@ class Server {
             Vagrant.getInstance().onSuspend.add( _onVagrantSuspend );
 
         _vagrantSuspendExecutor = Vagrant.getInstance()
-            .getSuspend( Std.string( this._id ), null )
+            .getSuspend( this._combinedVirtualMachine.value.vagrantMachine )
             //.onStdOut( _vagrantHaltStandardOutputData )
             //.onStdErr( _vagrantHaltStandardErrorData )
             .execute( this._serverDir );
 
     }
 
-    function _onVagrantSuspend( id:String ) {
+    function _onVagrantSuspend( machine:VagrantMachine ) {
 
-        if ( id != Std.string( this._id ) ) return;
+        if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onSuspend.remove( _onVagrantSuspend );
 
@@ -964,7 +964,7 @@ class Server {
         if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantDestroy ) )
             Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
 
-        Vagrant.getInstance().getDestroy( Std.string( this._id ), true, null )
+        Vagrant.getInstance().getDestroy( this._combinedVirtualMachine.value.vagrantMachine, true )
             .onStdOut( _vagrantDestroyStandardOutputData )
             .onStdErr( _vagrantDestroyStandardErrorData )
             .execute( this._serverDir );
@@ -986,15 +986,15 @@ class Server {
 
     }
 
-    function _onVagrantDestroy( id:String ) {
+    function _onVagrantDestroy( machine:VagrantMachine ) {
 
-        if ( id != Std.string( this._id ) ) return;
+        if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onDestroy.remove( _onVagrantDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
 
-        Logger.debug( '${this}: _onVagrantDestroy ${id}' );
+        Logger.info( '${this}: destroyed' );
 
         this._provisioner.deleteProvisioningProofFile();
 
@@ -1010,14 +1010,14 @@ class Server {
         if ( !Lambda.has( VirtualBox.getInstance().onUnregisterVM, _vmUnregistered ) )
             VirtualBox.getInstance().onUnregisterVM.add( _vmUnregistered );
 
-        final executor = VirtualBox.getInstance().getUnregisterVM( this.virtualBoxId, true );
+        final executor = VirtualBox.getInstance().getUnregisterVM( this._combinedVirtualMachine.value.virtualBoxMachine, true );
         executor.execute( this._serverDir );
 
     }
 
-    function _vmUnregistered( id:String ) {
+    function _vmUnregistered( machine:VirtualBoxMachine ) {
 
-        if ( id != Std.string( this.virtualBoxId ) ) return;
+        if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
 
         VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
 
@@ -1043,7 +1043,7 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
-        _vagrantUpExecutor = Vagrant.getInstance().getUp( Std.string( this._id ), _forceVagrantProvisioning, [] )
+        _vagrantUpExecutor = Vagrant.getInstance().getUp( this._combinedVirtualMachine.value.vagrantMachine, _forceVagrantProvisioning, [] )
             .onStart( _vagrantUpStarted )
             .onStop( _vagrantUpStopped )
             .onStdOut( _vagrantUpStandardOutputData )
@@ -1104,7 +1104,7 @@ class Server {
                         Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
             
                     this._currentAction = ServerAction.Stop( true );
-                    Vagrant.getInstance().getHalt( Std.string( this._id ), false, null ).execute( this._serverDir );
+                    Vagrant.getInstance().getHalt( this._combinedVirtualMachine.value.vagrantMachine, false ).execute( this._serverDir );
 
                 } else {
 
@@ -1116,7 +1116,7 @@ class Server {
                         Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
 
                     this._currentAction = ServerAction.Destroy( true );
-                    Vagrant.getInstance().getDestroy( Std.string( this._id ), true, null ).execute( this._serverDir );
+                    Vagrant.getInstance().getDestroy( this._combinedVirtualMachine.value.vagrantMachine, true ).execute( this._serverDir );
 
                 }
 
@@ -1151,14 +1151,16 @@ class Server {
 
     }
 
-    function _onVagrantUpDestroy( id:String ) {
+    function _onVagrantUpDestroy( machine:VagrantMachine ) {
+
+        if ( machine.serverId != this._id ) return;
 
         Logger.debug( '${this}: Vagrant destroy finished after server\'s first start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
 
-        this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } }
+        this._combinedVirtualMachine.value = { home: this._serverDir, serverId: this._id, state: CombinedVirtualMachineState.NotCreated, vagrantMachine: { vagrantId: null, serverId: this._id }, virtualBoxMachine: { virtualBoxId: null, serverId: this._id } };
         this._vagrantUpExecutor = null;
         this._provisioner.stopFileWatcher();
         this._provisioner.onProvisioningFileChanged.clear();
@@ -1170,7 +1172,9 @@ class Server {
 
     }
 
-    function _onVagrantUpHalt( id:String ) {
+    function _onVagrantUpHalt( machine:VagrantMachine ) {
+
+        if ( machine.serverId != this._id ) return;
 
         Logger.debug( '${this}: Vagrant halt finished after server start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpHalt );
@@ -1198,21 +1202,21 @@ class Server {
         Logger.debug( '${this}: Refreshing VirtualBox VM Info for id: ${this.virtualBoxId}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this.virtualBoxId ).execute( this._serverDir );
+        VirtualBox.getInstance().getShowVMInfo( this._combinedVirtualMachine.value.virtualBoxMachine ).execute( this._serverDir );
         _refreshingVirtualBoxVMInfo = true;
 
     }
 
-    function _onVirtualBoxShowVMInfo( id:String ) {
+    function _onVirtualBoxShowVMInfo( machine:VirtualBoxMachine ) {
 
-        if ( id != this.virtualBoxId ) return;
+        if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
 
         VirtualBox.getInstance().onShowVMInfo.remove( _onVirtualBoxShowVMInfo );
         _refreshingVirtualBoxVMInfo = false;
 
         Logger.debug( '${this}: VirtualBox VM Info has been refreshed for id: ${id}' );
 
-        var vbm = VirtualBox.getInstance().getVirtualMachineById( id );
+        var vbm = VirtualBox.getInstance().getVirtualMachineById( this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId );
 
         if ( vbm != null ) {
 
@@ -1238,37 +1242,20 @@ class Server {
     // Combined Virtual Machine
     //
 
-    function _getCombinedVirtualMachine():CombinedVirtualMachine {
-
-        return _combinedVirtualMachine.value;
-
-    }
-
     public function setVagrantMachine( machine:VagrantMachine ) {
 
         _combinedVirtualMachine.value.vagrantMachine = {};
+        _combinedVirtualMachine.value.vagrantMachine.applyObject( machine );
         _combinedVirtualMachine.value.vagrantMachine.serverId = this._id;
-
-        for( i in Reflect.fields( machine ) ) {
-
-            Reflect.setField( _combinedVirtualMachine.value.vagrantMachine, i, Reflect.field( machine, i ) );
-
-        }
 
     }
 
     public function setVirtualBoxMachine( machine:VirtualBoxMachine ) {
 
         _combinedVirtualMachine.value.virtualBoxMachine = {};
-        _combinedVirtualMachine.value.virtualBoxMachine.serverId = this._id;
-
-        for( i in Reflect.fields( machine ) ) {
-
-            Reflect.setField( _combinedVirtualMachine.value.virtualBoxMachine, i, Reflect.field( machine, i ) );
-
-        }
-
+        _combinedVirtualMachine.value.virtualBoxMachine.applyObject( machine );
         _combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId = this.virtualBoxId;
+        _combinedVirtualMachine.value.virtualBoxMachine.serverId = this._id;
 
     }
 
