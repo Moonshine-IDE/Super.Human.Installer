@@ -950,15 +950,22 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._visitSourceCode(e);
 
+		#if linux
+		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_URL ] );
+		#else
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
+		#end
 
 	}
 
 	override function _visitSourceCodeIssues(?e:Dynamic) {
 
 		super._visitSourceCodeIssues(e);
-
+		#if linux
+		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUES_URL ] );
+		#else
 		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUES_URL );
+		#end
 
 	}
 

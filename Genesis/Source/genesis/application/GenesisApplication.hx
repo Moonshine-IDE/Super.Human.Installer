@@ -61,12 +61,12 @@ import lime.system.System;
 import lime.ui.Window;
 import openfl.Lib;
 import openfl.events.Event;
-import openfl.net.URLRequest;
 import openfl.system.Capabilities;
 import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
+import superhuman.config.SuperHumanGlobals;
 import sys.FileSystem;
 
 #if buildmacros
@@ -488,7 +488,11 @@ abstract class GenesisApplication extends Application {
 
     function _visitGenesisDirectory( ?e:Dynamic ) {
 
-        Lib.navigateToURL( new URLRequest( GENESIS_ADDRESS ) );
+        #if linux
+		Shell.getInstance().open( [ GENESIS_ADDRESS ] );
+		#else
+        System.openURL( GENESIS_ADDRESS );
+        #end
 
     }
 
