@@ -117,8 +117,7 @@ class ParallelExecutor extends AbstractExecutor {
 
             _running = false;
             _stopTime = Sys.time();
-            var t = _stopTime - _startTime;
-            Logger.debug( '${this}: All executors stopped. Errors: ${this._hasError}. Execution time:${StrTools.timeToFormattedString(t, true)}' );
+            Logger.debug( '${this}: All executors stopped. Errors: ${this._hasError}. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
 
         }

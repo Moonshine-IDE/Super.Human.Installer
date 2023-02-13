@@ -32,6 +32,7 @@ package prominic.sys.io;
 
 import prominic.logging.Logger;
 import prominic.sys.io.process.ProcessTools.KillSignal;
+import prominic.sys.tools.StrTools;
 
 class SerialExecutor extends AbstractExecutor {
 
@@ -94,17 +95,23 @@ class SerialExecutor extends AbstractExecutor {
         for ( e in _executors ) a.push( e.id );
         Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
-        for ( e in _executors ) {
+        _startTime = Sys.time();
+        _running = true;
 
-            e.onStop.add( _executorStopped );
+        if ( _executors.length == 0 ) {
 
-        }
+            _running = false;
+            _stopTime = Sys.time();
+            for ( f in _onStop ) f( this );
+            return this;
 
-        if ( _executors.length > 0 ) {
+        } else {
+
+            for ( e in _executors ) e.onStop.add( _executorStopped );
 
             _currentExecutor = _executors[ 0 ];
             _currentExecutor.execute( extraArgs );
-            
+
         }
 
         return this;
@@ -120,7 +127,9 @@ class SerialExecutor extends AbstractExecutor {
 
         if ( executor.exitCode != 0 && _stopOnError ) {
 
-            Logger.debug( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}' );
+            _running = false;
+            _stopTime = Sys.time();
+            Logger.debug( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
             return;
 
@@ -133,7 +142,9 @@ class SerialExecutor extends AbstractExecutor {
 
         } else {
 
-            Logger.debug( '${this}: All executors stopped' );
+            _running = false;
+            _stopTime = Sys.time();
+            Logger.debug( '${this}: All executors stopped. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
 
         }
