@@ -231,7 +231,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _destroyExecutorStopped );
+        executor.onStop.add( _destroyExecutorStopped );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Destroy}${machine.serverId}', executor );
         return executor;
 
@@ -257,7 +257,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _haltExecutorStopped );
+        executor.onStop.add( _haltExecutorStopped );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Halt}${machine.serverId}', executor );
         return executor;
 
@@ -282,7 +282,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
         
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _initMachineExecutorStopped );
+        executor.onStop.add( _initMachineExecutorStopped );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Init}${machine.serverId}', executor );
         return executor;
 
@@ -306,7 +306,7 @@ class Vagrant extends AbstractApp {
         if ( prune ) args.push( "--prune" );
 
         final executor = new Executor( this._path + this._executable, args );
-        executor.onStop( _globalStatusExecutorStopped ).onStdOut( _globalStatusExecutorStandardOutput );
+        executor.onStop.add( _globalStatusExecutorStopped ).onStdOut.add( _globalStatusExecutorStandardOutput );
         ExecutorManager.getInstance().set( VagrantExecutorContext.GlobalStatus, executor );
         return executor;
 
@@ -331,7 +331,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _rsyncExecutorStopped );
+        executor.onStop.add( _rsyncExecutorStopped );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.RSync}${machine.serverId}', executor );
         return executor;
 
@@ -356,7 +356,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _provisionExecutorStopped );
+        executor.onStop.add( _provisionExecutorStopped );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Provision}${machine.serverId}', executor );
         return executor;
 
@@ -382,7 +382,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _statusExecutorStopped ).onStdOut( _statusExecutorStandardOutput );
+        executor.onStop.add( _statusExecutorStopped ).onStdOut.add( _statusExecutorStandardOutput );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Status}${machine.serverId}', executor );
         return executor;
 
@@ -401,7 +401,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this._path + this._executable, args, extraArgs );
-        executor.onStop( _suspendExecutorStopped ).onStdOut( _suspendExecutorStandardOutput );
+        executor.onStop.add( _suspendExecutorStopped ).onStdOut.add( _suspendExecutorStandardOutput );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Suspend}${machine.serverId}', executor );
         return executor;
 
@@ -418,7 +418,7 @@ class Vagrant extends AbstractApp {
             return ExecutorManager.getInstance().get( VagrantExecutorContext.Version );
 
         final executor = new Executor( this.path + this._executable, [ "-v" ] );
-        executor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
+        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
         ExecutorManager.getInstance().set( VagrantExecutorContext.Version, executor );
         return executor;
 
@@ -438,7 +438,7 @@ class Vagrant extends AbstractApp {
         extraArgs.push( machine );
 
         final executor:Executor = new Executor( this._path + this._executable, params.concat( args ), extraArgs );
-        executor.onStop( _upExecutorStopped );
+        executor.onStop.add( _upExecutorStopped );
         ExecutorManager.getInstance().set( '${VagrantExecutorContext.Up}${machine.serverId}', executor );
         return executor;
 

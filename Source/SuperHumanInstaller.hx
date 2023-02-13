@@ -343,7 +343,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		Vagrant.getInstance().onDestroy.add( _vagrantDestroyed );
 		Vagrant.getInstance().onUp.add( _vagrantUped );
 		VirtualBox.getInstance().onInit.add( _virtualBoxInitialized );
-		ParallelExecutor.create().add( Right([ Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit() ]) ).onStop( _checkAppsInitialized ).execute();
+		ParallelExecutor.create().add( Right([ Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit() ]) ).onStop.add( _checkAppsInitialized ).execute();
 
 	}
 
@@ -366,7 +366,7 @@ class SuperHumanInstaller extends GenesisApplication {
 					VirtualBox.getInstance().getListVMs( true )
 				] ) );
 				if ( !SuperHumanGlobals.IGNORE_VAGRANT_STATUS ) pe.add( Left( Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ) ) );
-				pe.onStop( _checkPrerequisitesFinished ).execute();
+				pe.onStop.add( _checkPrerequisitesFinished ).execute();
 
 			} else {
 

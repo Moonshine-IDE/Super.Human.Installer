@@ -109,7 +109,7 @@ abstract class AbstractApp {
         for ( p in _pathAdditions ) SysTools.addToPath( p );
 
         final executor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
-        executor.onStdErr( _initStandardError ).onStdOut( _initStandardOutput ).onStop( _initStop );
+        executor.onStdErr.add( _initStandardError ).onStdOut.add( _initStandardOutput ).onStop.add( _initStop );
         ExecutorManager.getInstance().set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
         return executor;
 

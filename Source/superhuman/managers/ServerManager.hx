@@ -179,7 +179,7 @@ class ServerManager {
 		var pe = ParallelExecutor.create();
 		if ( refreshVagrant ) pe.add( Left( Vagrant.getInstance().getGlobalStatus() ) );
 		if ( refreshVirtualBox ) pe.add( Left( VirtualBox.getInstance().getListVMs( true ) ) );
-		pe.onStop( _refreshVMInfoStopped );
+		pe.onStop.add( _refreshVMInfoStopped );
 		ExecutorManager.getInstance().set( ServerManagerExecutorContext.RefreshVMInfo, pe );
 		pe.execute();
 

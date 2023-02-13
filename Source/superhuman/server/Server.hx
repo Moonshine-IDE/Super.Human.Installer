@@ -762,8 +762,8 @@ class Server {
             Vagrant.getInstance().onProvision.add( _onVagrantProvision );
 
         Vagrant.getInstance().getProvision( this._combinedVirtualMachine.value.vagrantMachine )
-            .onStdOut( _vagrantProvisionStandardOutputData )
-            .onStdErr( _vagrantProvisionStandardErrorData )
+            .onStdOut.add( _vagrantProvisionStandardOutputData )
+            .onStdErr.add( _vagrantProvisionStandardErrorData )
             .execute( this._serverDir );
 
     }
@@ -810,8 +810,8 @@ class Server {
             Vagrant.getInstance().onRSync.add( _onVagrantRSync );
 
         Vagrant.getInstance().getRSync( this._combinedVirtualMachine.value.vagrantMachine )
-            .onStdOut( _vagrantRSyncStandardOutputData )
-            .onStdErr( _vagrantRSyncStandardErrorData )
+            .onStdOut.add( _vagrantRSyncStandardOutputData )
+            .onStdErr.add( _vagrantRSyncStandardErrorData )
             .execute( this._serverDir );
 
     }
@@ -860,8 +860,8 @@ class Server {
 
         _vagrantHaltExecutor = Vagrant.getInstance()
             .getHalt( this._combinedVirtualMachine.value.vagrantMachine, forced )
-            .onStdOut( _vagrantHaltStandardOutputData )
-            .onStdErr( _vagrantHaltStandardErrorData )
+            .onStdOut.add( _vagrantHaltStandardOutputData )
+            .onStdErr.add( _vagrantHaltStandardErrorData )
             .execute( this._serverDir );
 
     }
@@ -965,8 +965,8 @@ class Server {
             Vagrant.getInstance().onDestroy.add( _onVagrantDestroy );
 
         Vagrant.getInstance().getDestroy( this._combinedVirtualMachine.value.vagrantMachine, true )
-            .onStdOut( _vagrantDestroyStandardOutputData )
-            .onStdErr( _vagrantDestroyStandardErrorData )
+            .onStdOut.add( _vagrantDestroyStandardOutputData )
+            .onStdErr.add( _vagrantDestroyStandardErrorData )
             .execute( this._serverDir );
 
     }
@@ -1044,10 +1044,10 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
         _vagrantUpExecutor = Vagrant.getInstance().getUp( this._combinedVirtualMachine.value.vagrantMachine, _forceVagrantProvisioning, [] )
-            .onStart( _vagrantUpStarted )
-            .onStop( _vagrantUpStopped )
-            .onStdOut( _vagrantUpStandardOutputData )
-            .onStdErr( _vagrantUpStandardErrorData );
+            .onStart.add( _vagrantUpStarted )
+            .onStop.add( _vagrantUpStopped )
+            .onStdOut.add( _vagrantUpStandardOutputData )
+            .onStdErr.add( _vagrantUpStandardErrorData );
 
         _vagrantUpExecutor.execute( _serverDir );
         _vagrantUpElapsedTime = 0;

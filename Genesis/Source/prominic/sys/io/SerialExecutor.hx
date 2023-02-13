@@ -108,7 +108,7 @@ class SerialExecutor extends AbstractExecutor {
 
         for ( e in _executors ) {
 
-            e.onStop( _executorStopped );
+            e.onStop.add( _executorStopped );
 
         }
 

@@ -243,7 +243,7 @@ class VirtualBox extends AbstractApp {
         _tempBridgedInterfaceData = "";
 
         final executor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
-        executor.onStop( _bridgedInterfaceExecutorStop ).onStdOut( _bridgedInterfaceExecutorStandardOutput );
+        executor.onStop.add( _bridgedInterfaceExecutorStop ).onStdOut.add( _bridgedInterfaceExecutorStandardOutput );
         ExecutorManager.getInstance().set( VirtualBoxExecutorContext.BridgedInterfaces, executor );
         return executor;
 
@@ -258,7 +258,7 @@ class VirtualBox extends AbstractApp {
         _tempHostInfoData = "";
 
         final executor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
-        executor.onStdOut( _hostInfoExecutorExecutorStandardOutput ).onStop( _hostInfoExecutorExecutorStop );
+        executor.onStdOut.add( _hostInfoExecutorExecutorStandardOutput ).onStop.add( _hostInfoExecutorExecutorStop );
         ExecutorManager.getInstance().set( VirtualBoxExecutorContext.HostInfo, executor );
         return executor;
 
@@ -276,7 +276,7 @@ class VirtualBox extends AbstractApp {
         if ( longFormat ) args.push( "--long" );
 
         final executor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
-        executor.onStdOut( _listVMsExecutorStandardOutput ).onStop( _listVMsExecutorStopped );
+        executor.onStdOut.add( _listVMsExecutorStandardOutput ).onStop.add( _listVMsExecutorStopped );
         ExecutorManager.getInstance().set( VirtualBoxExecutorContext.ListVMs, executor );
         return executor;
 
@@ -296,7 +296,7 @@ class VirtualBox extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
-        executor.onStop( _powerOffVMExecutorStopped );
+        executor.onStop.add( _powerOffVMExecutorStopped );
         ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}', executor );
         return executor;
 
@@ -318,7 +318,7 @@ class VirtualBox extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
-        executor.onStdOut( _showVMInfoExecutorStandardOutput ).onStop( _showVMInfoExecutorStopped );
+        executor.onStdOut.add( _showVMInfoExecutorStandardOutput ).onStop.add( _showVMInfoExecutorStopped );
         ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}', executor );
         return executor;
 
@@ -338,7 +338,7 @@ class VirtualBox extends AbstractApp {
         extraArgs.push( machine );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
-        executor.onStop( _unregisterExecutorStopped );
+        executor.onStop.add( _unregisterExecutorStopped );
         ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}', executor );
         return executor;
 
@@ -351,7 +351,7 @@ class VirtualBox extends AbstractApp {
             return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.Version );
 
         final executor = new Executor( this.path + this._executable, [ "-V" ] );
-        executor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
+        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
         ExecutorManager.getInstance().set( VirtualBoxExecutorContext.Version, executor );
         return executor;
 

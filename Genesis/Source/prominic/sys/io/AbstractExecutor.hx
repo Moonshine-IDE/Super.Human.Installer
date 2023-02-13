@@ -30,6 +30,7 @@
 
 package prominic.sys.io;
 
+import prominic.core.ds.ChainedList;
 import prominic.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.tools.StrTools;
 
@@ -39,10 +40,10 @@ abstract class AbstractExecutor {
     var _extraParams:Array<Dynamic>;
     var _hasErrors:Bool = false;
     var _id:String;
-    var _onStart:List<( AbstractExecutor ) -> Void>;
-    var _onStdErr:List<( AbstractExecutor, String ) -> Void>;
-    var _onStdOut:List<( AbstractExecutor, String ) -> Void>;
-    var _onStop:List<( AbstractExecutor ) -> Void>;
+    var _onStart:ChainedList<( AbstractExecutor ) -> Void, AbstractExecutor>;
+    var _onStdErr:ChainedList<( AbstractExecutor, String ) -> Void, AbstractExecutor>;
+    var _onStdOut:ChainedList<( AbstractExecutor, String ) -> Void, AbstractExecutor>;
+    var _onStop:ChainedList<( AbstractExecutor ) -> Void, AbstractExecutor>;
     var _running:Bool = false;
     var _startTime:Date;
     var _stopTime:Date;
@@ -58,6 +59,18 @@ abstract class AbstractExecutor {
 
     public var id( get, never ):String;
     function get_id() return _id;
+
+    public var onStart( get, never ):ChainedList<( AbstractExecutor ) -> Void, AbstractExecutor>;
+    function get_onStart() return _onStart;
+
+    public var onStdErr( get, never ):ChainedList<( AbstractExecutor, String ) -> Void, AbstractExecutor>;
+    function get_onStdErr() return _onStdErr;
+
+    public var onStdOut( get, never ):ChainedList<( AbstractExecutor, String ) -> Void, AbstractExecutor>;
+    function get_onStdOut() return _onStdOut;
+
+    public var onStop( get, never ):ChainedList<( AbstractExecutor ) -> Void, AbstractExecutor>;
+    function get_onStop() return _onStop;
 
     public var running( get, never ):Bool;
     function get_running() return _running;
@@ -80,10 +93,10 @@ abstract class AbstractExecutor {
         _id = StrTools.randomString( StrTools.ALPHANUMERIC, 16 );
         _exitCode = -1;
         _extraParams = extraParams;
-        _onStart = new List();
-        _onStdErr = new List();
-        _onStdOut = new List();
-        _onStop = new List();
+        _onStart = new ChainedList( this );
+        _onStdErr = new ChainedList( this );
+        _onStdOut = new ChainedList( this );
+        _onStop = new ChainedList( this );
 
     }
 
@@ -100,34 +113,6 @@ abstract class AbstractExecutor {
 
         if ( _onStop != null ) _onStop.clear();
         _onStop = null;
-
-    }
-
-    public function onStart( callback:( AbstractExecutor ) -> Void ):AbstractExecutor {
-
-        _onStart.add( callback );
-        return this;
-
-    }
-
-    public function onStdErr( callback:( AbstractExecutor, String ) -> Void ):AbstractExecutor {
-
-        _onStdErr.add( callback );
-        return this;
-
-    }
-
-    public function onStdOut( callback:( AbstractExecutor, String ) -> Void ):AbstractExecutor {
-
-        _onStdOut.add( callback );
-        return this;
-
-    }
-
-    public function onStop( callback:( AbstractExecutor ) -> Void ):AbstractExecutor {
-
-        _onStop.add( callback );
-        return this;
 
     }
 

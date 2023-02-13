@@ -101,7 +101,7 @@ class Shell extends AbstractApp {
         var lsExecutor:Executor = new Executor( "ls", [ path ], null, null, [ callback ] );
         #end
         _stdouts.set( lsExecutor.id, "" );
-        lsExecutor.onStdOut( _lsExecutorOutput ).onStop( _lsExecutorStopped ).execute();
+        lsExecutor.onStdOut.add( _lsExecutorOutput ).onStop.add( _lsExecutorStopped ).execute();
 
     }
 
@@ -156,7 +156,7 @@ class Shell extends AbstractApp {
         #else
         var symlinkExecutor:Executor = new Executor( "ln", [ "-s", "-F", sourcePath, destinationPath ], [ callback ] );
         #end
-        symlinkExecutor.onStop( _symlinkExecutorStopped ).execute();
+        symlinkExecutor.onStop.add( _symlinkExecutorStopped ).execute();
 
     }
 
@@ -192,7 +192,7 @@ class Shell extends AbstractApp {
         //var killExecutor:Executor = new Executor( this._executable, [ "/c", "dir", "/b", path ], null, null, [ callback ] );
         #else
         var killExecutor:Executor = new Executor( "kill", [ Std.string( processId ) ], null, null, [ callback ] );
-        killExecutor.onStop( _killExecutorStopped ).execute();
+        killExecutor.onStop.add( _killExecutorStopped ).execute();
         #end
 
     }
@@ -215,7 +215,7 @@ class Shell extends AbstractApp {
 
         #if mac
         var archExecutor:Executor = new Executor( "arch", null, [ callback ] );
-        archExecutor.onStdOut( ( executor:AbstractExecutor, data:String ) -> {
+        archExecutor.onStdOut.add( ( executor:AbstractExecutor, data:String ) -> {
 
             if ( executor.extraParams != null && executor.extraParams.length > 0 && executor.extraParams[ 0 ] != null ) {
 
@@ -384,7 +384,7 @@ class Shell extends AbstractApp {
         args.push( 'pid,ppid,command' );
 
         var executor:Executor = new Executor( cmd, args, null, null, null, [ filter, pattern, parentPid, callback ] );
-        executor.onStdOut( _findProcessIdStdOut ).onStop( _findProcessIdStop ).execute();
+        executor.onStdOut.add( _findProcessIdStdOut ).onStop.add( _findProcessIdStop ).execute();
 
         #end
 

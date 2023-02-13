@@ -99,7 +99,7 @@ class ParallelExecutor extends AbstractExecutor {
 
             for ( executor in _executors ) {
 
-                executor.onStop( _executorStopped );
+                executor.onStop.add( _executorStopped );
                 executor.execute( extraArgs );
 
             }
