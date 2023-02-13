@@ -177,8 +177,8 @@ class ServerManager {
 		Logger.debug( '${this}: Refreshing System Info...' );
 
 		var pe = ParallelExecutor.create();
-		if ( refreshVagrant ) pe.add( Left( Vagrant.getInstance().getGlobalStatus() ) );
-		if ( refreshVirtualBox ) pe.add( Left( VirtualBox.getInstance().getListVMs( true ) ) );
+		if ( refreshVagrant ) pe.add( Vagrant.getInstance().getGlobalStatus() );
+		if ( refreshVirtualBox ) pe.add( VirtualBox.getInstance().getListVMs( true ) );
 		pe.onStop.add( _refreshVMInfoStopped );
 		ExecutorManager.getInstance().set( ServerManagerExecutorContext.RefreshVMInfo, pe );
 		pe.execute();

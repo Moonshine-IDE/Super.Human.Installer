@@ -30,7 +30,6 @@
 
 package prominic.sys.io;
 
-import haxe.ds.Either;
 import prominic.logging.Logger;
 import prominic.sys.io.process.ProcessTools.KillSignal;
 
@@ -59,20 +58,9 @@ class ParallelExecutor extends AbstractExecutor {
 
     }
 
-    public function add( executor:Either<AbstractExecutor, Array<AbstractExecutor>> ):ParallelExecutor {
+    public function add( ...executors:AbstractExecutor ):ParallelExecutor {
 
-        switch ( executor ) {
-
-            case Left( l ):
-                if ( l != null ) _executors.push( l );
-
-            case Right( r ):
-                for ( e in r ) if ( e != null ) _executors.push( e );
-
-            default:
-                
-        }
-
+        for ( e in executors ) _executors.push( e );
         return this;
 
     }
