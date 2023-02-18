@@ -64,9 +64,10 @@ import openfl.events.Event;
 import openfl.system.Capabilities;
 import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
+import prominic.logging.targets.FileTarget;
+import prominic.logging.targets.SysPrintTarget;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
-import superhuman.config.SuperHumanGlobals;
 import sys.FileSystem;
 
 #if buildmacros
@@ -177,7 +178,10 @@ abstract class GenesisApplication extends Application {
             #if logmr _appConfigUseMachineReadable = true; #end
         #end
 
-        var logFilePath = Logger.init( _appConfigDefaultLogLevel, _appConfigUseTimestamps, System.applicationStorageDirectory + "logs", 9, _appConfigUseColoredOutput, _appConfigUseMachineReadable, true );
+        Logger.init( _appConfigDefaultLogLevel, true );
+        Logger.addTarget( new SysPrintTarget( _appConfigDefaultLogLevel, _appConfigUseTimestamps, _appConfigUseMachineReadable, _appConfigUseColoredOutput ) );
+        var ft = new FileTarget( System.applicationStorageDirectory + "logs", "current.txt", 9, _appConfigDefaultLogLevel, _appConfigUseTimestamps, _appConfigUseMachineReadable );
+        Logger.addTarget( ft );
 
         _hasLogin = hasLogin;
         _showLoginPage = hasLogin && showLoginPage;
@@ -186,10 +190,10 @@ abstract class GenesisApplication extends Application {
         _version = Lib.application.meta.get( "version" );
         _versionInfo = _version;
 
-        if ( FileSystem.exists( logFilePath ) ) 
-            Logger.info( '${this}: Log file created at ${logFilePath}' )
+        if ( FileSystem.exists( ft.currentLogFilePath ) ) 
+            Logger.info( '${this}: Log file created at ${ft.currentLogFilePath}' )
         else
-            Logger.warning( '${this}: Log file creation failed at ${logFilePath}' );
+            Logger.warning( '${this}: Log file creation failed at ${ft.currentLogFilePath}' );
 
         Logger.info( '${this}: Initializing ${_title} v${_version}...' );
 
