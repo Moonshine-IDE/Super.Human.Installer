@@ -127,6 +127,8 @@ class FileTarget extends AbstractLoggerTarget {
 
             } catch ( e ) {}
 
+            File.saveContent( _currentLogFilePath, "" );
+
         }
 
     }
