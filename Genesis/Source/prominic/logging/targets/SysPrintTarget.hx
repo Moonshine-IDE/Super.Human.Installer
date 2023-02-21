@@ -59,6 +59,8 @@ class SysPrintTarget extends AbstractLoggerTarget {
 
     function loggerFunction( message:FormattedMessage ) {
 
+        if ( !enabled ) return;
+
         if ( message.level > _logLevel ) return;
 
         if ( _machineReadable ) {

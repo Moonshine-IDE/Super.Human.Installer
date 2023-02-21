@@ -36,11 +36,9 @@ import prominic.logging.targets.AbstractLoggerTarget;
 
 class Logger {
 
-    static final _FILE_NAME_PATTERN:EReg = ~/^(?:log){1}(?:-){1}(?:[a-zA-Z0-9-]+)(?:.)(?:txt)$/;
-
     static var _initialized:Bool = false;
     static var _logLevel:LogLevel = LogLevel.Info;
-    static var _targets:Array<AbstractLoggerTarget> = [];
+    static var _targets:Array<AbstractLoggerTarget>;
 
     /**
      * Initializes the Logger.
@@ -51,17 +49,75 @@ class Logger {
 
         _logLevel = logLevel;
         if ( captureHaxeTrace ) Log.trace = loggerFunction;
+        _targets = [];
         _initialized = true;
 
     }
 
     /**
-     * Add a log target to the Logger
+     * Adds a log target to the Logger
      * @param target The AbstractLoggerTarget implementation
      */
     public static function addTarget( target:AbstractLoggerTarget ) {
 
-        _targets.push( target );
+        if ( !_initialized ) return -1;
+
+        return _targets.push( target );
+
+    }
+
+    /**
+     * Disables all targets
+     */
+    public static function disableAllTargets() {
+
+        if ( !_initialized ) return;
+
+        for ( t in _targets ) t.enabled = false;
+
+    }
+
+    /**
+     * Enables all targets
+     */
+    public static function enableAllTargets() {
+
+        if ( !_initialized ) return;
+
+        for ( t in _targets ) t.enabled = true;
+
+    }
+
+    /**
+     * Returns an array of targets with the given class
+     * @param targetClass The class of the requested targets
+     * @return Array<AbstractLoggerTarget> The array of targets. Empty if no target was found.
+     */
+    public static function getTargetsByClass( targetClass:Class<AbstractLoggerTarget> ):Array<AbstractLoggerTarget> {
+
+        if ( !_initialized ) return null;
+
+        var result:Array<AbstractLoggerTarget> = [];
+
+        for ( t in _targets ) {
+
+            if ( Type.getClass( t ) == targetClass ) result.push( t );
+
+        }
+
+        return result;
+
+    }
+
+    /**
+     * Removes a logger target
+     * @param target 
+     */
+    public static function removeTarget( target:AbstractLoggerTarget ) {
+
+        if ( !_initialized ) return false;
+
+        return _targets.remove( target );
 
     }
 
@@ -71,6 +127,8 @@ class Logger {
      * @param pos PosInfos when debug is enabled
      */
     public static function debug( v:Dynamic, ?pos:PosInfos ) {
+
+        if ( !_initialized ) return;
 
         log( v, LogLevel.Debug, pos );
 
@@ -83,6 +141,8 @@ class Logger {
      */
     public static function error( v:Dynamic, ?pos:PosInfos ) {
 
+        if ( !_initialized ) return;
+
         log( v, LogLevel.Error, pos );
 
     }
@@ -93,6 +153,8 @@ class Logger {
      * @param pos PosInfos when debug is enabled
      */
     public static function fatal( v:Dynamic, ?pos:PosInfos ) {
+
+        if ( !_initialized ) return;
 
         log( v, LogLevel.Fatal, pos );
 
@@ -105,6 +167,8 @@ class Logger {
      */
     public static function info( v:Dynamic, ?pos:PosInfos ) {
 
+        if ( !_initialized ) return;
+
         log( v, LogLevel.Info, pos );
 
     }
@@ -116,6 +180,8 @@ class Logger {
      */
     public static function verbose( v:Dynamic, ?pos:PosInfos ) {
 
+        if ( !_initialized ) return;
+
         log( v, LogLevel.Verbose, pos );
 
     }
@@ -126,6 +192,8 @@ class Logger {
      * @param pos PosInfos when debug is enabled
      */
     public static function warning( v:Dynamic, ?pos:PosInfos ) {
+
+        if ( !_initialized ) return;
 
         log( v, LogLevel.Warning, pos );
 
@@ -165,15 +233,11 @@ class Logger {
 
         }
 
-        #if debug
-
         if ( pos.customParams != null && Std.isOfType( pos.customParams[ 0 ], Int ) ) {
             
             formattedMessage.level = cast( pos.customParams[ 0 ], Int );
 
         }
-
-        #end
 
         if ( formattedMessage.level > _logLevel ) return;
 
@@ -208,7 +272,9 @@ enum abstract LogLevel( Int ) from Int to Int {
     var Verbose = 6;
 
     @:op(A > B) private static inline function gt(a:LogLevel, b:LogLevel):Bool {
+
         return (a : Int) > (b : Int);
+
     }
 
     @:op(A >= B) private static inline function gte(a:LogLevel, b:LogLevel):Bool {

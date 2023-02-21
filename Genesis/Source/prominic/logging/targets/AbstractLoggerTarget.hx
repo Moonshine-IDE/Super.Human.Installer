@@ -45,6 +45,8 @@ abstract class AbstractLoggerTarget {
     var _machineReadable:Bool;
     var _printTime:Bool;
 
+    public var enabled:Bool = true;
+
     public var logLevel( get, never ):LogLevel;
     function get_logLevel() return _logLevel;
     
