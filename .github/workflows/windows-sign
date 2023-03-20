@@ -1,0 +1,93 @@
+name: Windows Sign
+  
+on:
+  - workflow_dispatch
+  - workflow_call
+  
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: Read version
+        id: readversion
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta/@version'
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install dependencies
+        run: | 
+          haxelib install hxcpp
+          haxelib install openfl
+          haxelib run openfl setup
+          haxelib install feathersui
+          
+      - name: Build project
+        run: |
+          haxelib run openfl build project.xml windows -debug -Dlogverbose -Dlogcolor
+          
+      - name: Create NSIS installer
+        run: |
+          makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
+          
+      - name: Sign installer
+        env:
+          CODESIGN_PWD: ${{ secrets.PASS}}
+          CODESIGN_BASE64: ${{ secrets.CERT}}
+        run: |
+          New-Item -ItemType directory -Path certificate
+          Set-Content -Path certificate\cert.txt -Value $env:CODESIGN_BASE64
+          certutil -decode certificate\cert.txt certificate\cert.pfx
+          Import-PfxCertificate -FilePath certificate\cert.pfx -CertStoreLocation Cert:\CurrentUser\My -Password (ConvertTo-SecureString -String $env:CODESIGN_PWD -Force -AsPlainText)
+          
+          & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/signtool.exe' sign `
+            /debug `
+            /fd SHA256 `
+            /p $env:CODESIGN_PWD `
+            /f certificate\cert.pfx `
+            /td sha256 `
+            Templates/installer/SuperHumanInstallerDev-Setup.exe
+          
+          Remove-Item -Recurse -Force certificate
+          
+      - name: Upload installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: SuperHumanInstallerDev-Setup
+          path: Templates/installer/SuperHumanInstallerDev-Setup.exe
+
+      - name: Copy files to choco
+        run: |
+          cp Templates/installer/SuperHumanInstallerDev-Setup.exe Templates/chocolatey-dev/tools/
+          cp LICENSE.MD Templates/chocolatey-dev/
+          
+      - name: Create chocko package
+        run: |
+          choco pack `
+            --version ${{ steps.readversion.outputs.info }} `
+            --out Templates/chocolatey-dev/ `
+            Templates/chocolatey-dev/SuperHumanInstallerDev.nuspec
+          mv `
+            .\Templates\chocolatey-dev\superhumaninstallerdev*.nupkg `
+            .\Templates\chocolatey-dev\SuperHumanInstallerDev-Choco.nupkg
+            
+      - name: Upload choco package
+        uses: actions/upload-artifact@v3
+        with:
+          name: SuperHumanInstallerDev-Choco
+          path: Templates/chocolatey-dev/SuperHumanInstallerDev-Choco.nupkg
