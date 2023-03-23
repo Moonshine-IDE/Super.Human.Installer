@@ -1,0 +1,55 @@
+name: MacOS Sign
+  
+on:
+  - workflow_dispatch
+  - workflow_call
+  
+jobs:
+  build:
+    name: Build
+    runs-on: macOS-12
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: Read version
+        id: readversion
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        with:
+          xml-file: 'project.xml'
+          xpath: '/project/meta/@version'
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install dependencies
+        run: | 
+          haxelib install hxcpp
+          haxelib install openfl
+          haxelib run openfl setup
+          haxelib install feathersui
+      - name: Build project
+        run: |
+          haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
+      - name: Create package
+        run: |
+          productbuild \
+            --version ${{ steps.readversion.outputs.info }} \
+            --product Templates/installer/SuperHumanInstaller.template.plist \
+            --identifier net.prominic.genesis.superhumaninstallerdev \
+            --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
+            /Applications \
+            ./SuperHumanInstallerDev-Setup.pkg 
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with: 
+          name: SuperHumanInstallerDev-Setup
+          path: ./SuperHumanInstallerDev-Setup.pkg        
