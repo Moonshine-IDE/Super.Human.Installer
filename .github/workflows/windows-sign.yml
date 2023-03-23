@@ -47,8 +47,8 @@ jobs:
           
       - name: Sign installer
         env:
-          CODESIGN_PWD: ${{ secrets.PASS}}
-          CODESIGN_BASE64: ${{ secrets.CERT}}
+          CODESIGN_PWD: ${{ secrets.WIN_PASS}}
+          CODESIGN_BASE64: ${{ secrets.WIN_CERT}}
         run: |
           New-Item -ItemType directory -Path certificate
           Set-Content -Path certificate\cert.txt -Value $env:CODESIGN_BASE64
