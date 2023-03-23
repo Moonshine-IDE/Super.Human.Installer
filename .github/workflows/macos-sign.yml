@@ -36,9 +36,11 @@ jobs:
           haxelib install openfl
           haxelib run openfl setup
           haxelib install feathersui
+          
       - name: Build project
         run: |
           haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
+          
       - name: Create package
         run: |
           productbuild \
@@ -48,8 +50,23 @@ jobs:
             --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
             /Applications \
             ./SuperHumanInstallerDev-Setup.pkg 
+            
+      - name: Codesign app bundle
+        # Extract the secrets we defined earlier as environment variables
+        env: 
+          MAC_ALL_CERTS: ${{ secrets.MAC_ALL_CERTS }}
+          MAC_ALL_KEYS: ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }}
+          MAC_PASS: ${{ secrets.MAC_PASS }}
+        run: |
+          # Turn our base64-encoded certificate back to a regular .p12 file    
+          echo $MAC_ALL_CERTS | base64 --decode > mac-all-certs.p12
+          echo $MAC_ALL_KEYS | base64 --decode > mac-all-keys.p12
+          # Import
+          security import mac-all-keys.p12 -k login.keychain -f pkcs12 -P $MAC_PASS
+          security import mac-all-certs.p12 -k login.keychain -f pkcs12 -P $MAC_PASS
+            
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with: 
           name: SuperHumanInstallerDev-Setup
-          path: ./SuperHumanInstallerDev-Setup.pkg        
+          path: ./SuperHumanInstallerDev-Setup.pkg
