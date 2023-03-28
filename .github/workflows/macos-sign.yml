@@ -52,23 +52,18 @@ jobs:
             ./SuperHumanInstallerDev-Setup.pkg 
             
       - name: Codesign app bundle
-        # Extract the secrets we defined earlier as environment variables
-        env: 
-          MAC_ALL_CERTS: ${{ secrets.MAC_ALL_CERTS }}
-          MAC_ALL_KEYS: ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }}
-          MAC_PASS: ${{ secrets.MAC_PASS }}
-          MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         run: |
           # Turn our base64-encoded certificate back to a regular .p12 file    
-          echo $MAC_ALL_CERTS | base64 --decode > mac-all-certs.p12
-          echo $MAC_ALL_KEYS | base64 --decode > mac-all-keys.p12
+          echo ${{ secrets.MAC_ALL_CERTS }} | base64 --decode > mac-all-certs.p12
+          echo ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }} | base64 --decode > mac-all-keys.p12
           # Create keychain
-          security create-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain 
+          security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain 
           security default-keychain -s build.keychain
-          security unlock-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain
+          security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          echo "Keychain created"
           # Import
-          security import mac-all-keys.p12 -k build.keychain -f pkcs12 -p "$MAC_PASS"
-          security import mac-all-certs.p12 -k build.keychain -f pkcs12 -p "$MAC_PASS"
+          security import mac-all-keys.p12 -k build.keychain -f pkcs12 -p ${{ secrets.MAC_PASS }}
+          security import mac-all-certs.p12 -k build.keychain -f pkcs12 -p ${{ secrets.MAC_PASS }}
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
