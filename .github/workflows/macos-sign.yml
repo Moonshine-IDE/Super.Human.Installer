@@ -57,6 +57,7 @@ jobs:
           MAC_ALL_CERTS: ${{ secrets.MAC_ALL_CERTS }}
           MAC_ALL_KEYS: ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }}
           MAC_PASS: ${{ secrets.MAC_PASS }}
+          MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         run: |
           # Turn our base64-encoded certificate back to a regular .p12 file    
           echo $MAC_ALL_CERTS | base64 --decode > mac-all-certs.p12
