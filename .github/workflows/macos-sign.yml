@@ -62,8 +62,8 @@ jobs:
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           echo "Keychain created"
           # Import
-          security import ./mac-all-keys.p12 -P ${{ secrets.MAC_KEYCHAIN_PASS }} -k build.keychain -f pkcs12
-          security import ./mac-all-certs.p12 -P ${{ secrets.MAC_KEYCHAIN_PASS }} -k build.keychain -f pkcs12
+          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
+          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
