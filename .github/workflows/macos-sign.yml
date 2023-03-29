@@ -40,16 +40,6 @@ jobs:
       - name: Build project
         run: |
           haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
-          
-      - name: Create package
-        run: |
-          productbuild \
-            --version ${{ steps.readversion.outputs.info }} \
-            --product Templates/installer/SuperHumanInstaller.template.plist \
-            --identifier net.prominic.genesis.superhumaninstallerdev \
-            --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
-            /Applications \
-            ./SuperHumanInstallerDev-Setup.pkg 
             
       - name: Codesign app bundle
         run: |
@@ -64,6 +54,18 @@ jobs:
           # Import
           security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
+          # Sign
+          /usr/bin/codesign Export/Development/macos/bin/SuperHumanInstallerDev.app -v
+
+      - name: Create package
+        run: |
+          productbuild \
+            --version ${{ steps.readversion.outputs.info }} \
+            --product Templates/installer/SuperHumanInstaller.template.plist \
+            --identifier net.prominic.genesis.superhumaninstallerdev \
+            --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
+            /Applications \
+            ./SuperHumanInstallerDev-Setup.pkg 
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
