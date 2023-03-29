@@ -41,7 +41,7 @@ jobs:
         run: |
           haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
             
-      - name: Codesign app bundle
+      - name: Import certs
         run: |
           # Turn our base64-encoded certificate back to a regular .p12 file    
           echo ${{ secrets.MAC_ALL_CERTS }} | base64 --decode > mac-all-certs.p12
@@ -54,7 +54,9 @@ jobs:
           # Import
           security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
-          # Sign
+
+      - name: Sign
+        run: |
           /usr/bin/codesign Export/Development/macos/bin/SuperHumanInstallerDev.app -v
 
       - name: Create package
