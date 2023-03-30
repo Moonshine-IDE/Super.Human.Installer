@@ -57,7 +57,7 @@ jobs:
 
       - name: Sign
         run: |
-          /usr/bin/codesign Export/Development/macos/bin/SuperHumanInstallerDev.app -v
+          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_NAME }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app -v
 
       - name: Create package
         run: |
