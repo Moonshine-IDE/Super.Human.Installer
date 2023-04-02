@@ -55,10 +55,6 @@ jobs:
           security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
 
-      - name: Sign
-        run: |
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_NAME }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app -v
-
       - name: Create package
         run: |
           productbuild \
@@ -68,6 +64,10 @@ jobs:
             --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
             /Applications \
             ./SuperHumanInstallerDev-Setup.pkg 
+
+      - name: Sign
+        run: |
+          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_NAME }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app -v
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
