@@ -48,6 +48,7 @@ jobs:
           echo ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }} | base64 --decode > mac-all-keys.p12
           # Create keychain
           security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           echo "Keychain created"
