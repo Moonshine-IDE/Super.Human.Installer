@@ -47,7 +47,7 @@ jobs:
           echo ${{ secrets.MAC_ALL_CERTS }} | base64 --decode > mac-all-certs.p12
           echo ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }} | base64 --decode > mac-all-keys.p12
           # Create keychain
-          security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain 
+          security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain -t 3600
           security default-keychain -s build.keychain
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           echo "Keychain created"
@@ -72,6 +72,10 @@ jobs:
             --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
             /Applications \
             ./SuperHumanInstallerDev-Setup.pkg
+            
+      - name: Delete keychain
+        run: |
+          security delete-keychain build.keychain
             
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
