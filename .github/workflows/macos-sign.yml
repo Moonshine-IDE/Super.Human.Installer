@@ -53,10 +53,11 @@ jobs:
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           echo "Keychain created"
           # Import
-          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
-          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
+          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
+          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
-          echo ${{ secrets.MAC_KEYCHAIN_PASS }} | /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Entitlements.plist -v
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Entitlements.plist -v
           # /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Info.plist -v
           # /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/lime.ndll -v
           # /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/SuperHumanInstallerDev -v
