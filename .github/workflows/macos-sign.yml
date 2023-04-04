@@ -56,7 +56,7 @@ jobs:
           security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }}
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Entitlements.plist -v <<< ${{ secrets.MAC_KEYCHAIN_PASS }}
+          echo ${{ secrets.MAC_KEYCHAIN_PASS }} | /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Entitlements.plist -v
           # /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Info.plist -v
           # /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/lime.ndll -v
           # /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/SuperHumanInstallerDev -v
