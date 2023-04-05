@@ -56,7 +56,7 @@ jobs:
           security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           
       - name: Sign contents
         run: |
