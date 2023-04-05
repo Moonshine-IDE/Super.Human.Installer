@@ -59,7 +59,7 @@ import superhuman.server.provisioners.DemoTasks;
 import sys.FileSystem;
 import sys.io.File;
 
-using prominic.tools.ObjectTools;
+using champaign.core.tools.ObjectTools;
 
 class Server {
 

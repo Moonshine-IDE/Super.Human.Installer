@@ -45,7 +45,7 @@ import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
-using prominic.tools.ObjectTools;
+using champaign.core.tools.ObjectTools;
 
 @:allow( superhuman.server.provisioners.HostsFileGenerator )
 class DemoTasks extends AbstractProvisioner {

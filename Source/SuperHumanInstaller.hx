@@ -76,7 +76,7 @@ import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
 import sys.io.File;
 
-using prominic.tools.ObjectTools;
+using champaign.core.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
 
