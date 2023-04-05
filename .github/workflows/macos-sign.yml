@@ -78,7 +78,7 @@ jobs:
             
       - name: Sign package
         run: |
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime ./SuperHumanInstallerDev-Setup.pkg -v
+          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_INSTALLER_ID }} --options runtime ./SuperHumanInstallerDev-Setup.pkg -v
             
       - name: Delete keychain
         run: |
