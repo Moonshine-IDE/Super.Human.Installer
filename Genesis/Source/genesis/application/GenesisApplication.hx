@@ -61,6 +61,7 @@ import genesis.application.updater.GenesisApplicationUpdater;
 import genesis.application.updater.GenesisApplicationUpdaterEvent;
 import genesis.remote.GenesisRemote;
 import genesis.remote.events.AuthEvent;
+import haxe.Exception;
 import lime.system.System;
 import lime.ui.Window;
 import openfl.Lib;
@@ -209,6 +210,8 @@ abstract class GenesisApplication extends Application {
 		Logger.info( '${this}: SysInfo: DevideModel: ${System.deviceModel} DeviceVendor: ${System.deviceVendor} Endianness: ${System.endianness} PlatformLabel: ${System.platformLabel} PlatformName: ${System.platformName} PlatformVersion: ${System.platformVersion}' );
         Logger.info( #if debug '${this}: Debug build: true' #else '${this}: Debug build: false' #end );
         Logger.debug( '${this}: Application storage directory: ${System.applicationStorageDirectory}' );
+
+        ApplicationMain.onException.add( _onHaxeException );
 
         this.disabledAlpha = .5;
 
@@ -523,5 +526,19 @@ abstract class GenesisApplication extends Application {
     }
 
     function _pageChanged() { }
+
+    function _onHaxeException( e:Dynamic ):Void {
+
+        if ( Std.isOfType( e, Exception ) ) {
+
+            Logger.fatal( 'Fatal exception : ${e}\nDetails : ${e.details()}\nNative : ${e.native}\nStack : ${e.stack}' );
+            
+        } else {
+
+            Logger.fatal( 'Fatal error: ${e}' );
+            
+        }
+
+    }
 
 }
