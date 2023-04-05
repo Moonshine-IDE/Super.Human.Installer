@@ -85,7 +85,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     public static function getAssetPath( id:String ):String {
         
-        return System.applicationDirectory + Assets.getPath( id );
+        return Assets.getPath( id );
 
     }
 
