@@ -53,8 +53,8 @@ jobs:
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           echo "Keychain created"
           # Import
-          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
-          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
+          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/productsign -T /usr/bin/codesign
+          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/productsign -T /usr/bin/codesign
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           
@@ -83,7 +83,7 @@ jobs:
             
       - name: Sign installer
         run: |
-          productsign --timestamp --sign ${{ secrets.MAC_CERT_INSTALLER_ID }} ./SuperHumanInstallerDev-Setup-Unsigned.pkg ./SuperHumanInstallerDev-Setup.pkg
+          /usr/bin/productsign --timestamp --sign ${{ secrets.MAC_CERT_INSTALLER_ID }} ./SuperHumanInstallerDev-Setup-Unsigned.pkg ./SuperHumanInstallerDev-Setup.pkg
           
       - name: Verify installer signature
         run: |
