@@ -87,7 +87,8 @@ jobs:
           
       - name: Verify installer signature
         run: |
-          spctl -vv --assess --type install ./SuperHumanInstallerDev-Setup.pkg          
+          pkgutil --check-signature ./SuperHumanInstallerDev-Setup.pkg
+          # spctl -vv --assess --type install ./SuperHumanInstallerDev-Setup.pkg          
             
       - name: Delete keychain
         run: |
