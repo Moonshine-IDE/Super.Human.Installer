@@ -31,7 +31,7 @@
 package prominic.sys.io;
 
 import champaign.core.logging.Logger;
-import prominic.sys.io.process.ProcessTools.KillSignal;
+import champaign.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.tools.StrTools;
 
 class SerialExecutor extends AbstractExecutor {
