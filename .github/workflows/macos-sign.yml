@@ -41,7 +41,7 @@ jobs:
         run: |
           haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
             
-      - name: Import certs
+      - name: Create keychain and import certs
         run: |
           # Turn our base64-encoded certificate back to a regular .p12 file    
           echo ${{ secrets.MAC_ALL_CERTS }} | base64 --decode > mac-all-certs.p12
@@ -57,6 +57,9 @@ jobs:
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/codesign
           security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          
+      - name: Sign contents
+        run: |
           /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Entitlements.plist -v
           /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Info.plist -v
           /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/lime.ndll -v
@@ -72,6 +75,10 @@ jobs:
             --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
             /Applications \
             ./SuperHumanInstallerDev-Setup.pkg
+            
+      - name: Sign package
+        run: |
+          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime ./SuperHumanInstallerDev-Setup.pkg -v
             
       - name: Delete keychain
         run: |
