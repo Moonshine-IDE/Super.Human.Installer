@@ -30,7 +30,7 @@
 
 package prominic.sys.io;
 
-import prominic.logging.Logger;
+import champaign.core.logging.Logger;
 import prominic.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.tools.StrTools;
 

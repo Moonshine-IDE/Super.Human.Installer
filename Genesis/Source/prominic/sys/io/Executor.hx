@@ -30,8 +30,8 @@
 
 package prominic.sys.io;
 
-import prominic.core.interfaces.IDisposable;
-import prominic.logging.Logger;
+import champaign.core.interfaces.IDisposable;
+import champaign.core.logging.Logger;
 import prominic.sys.io.process.AbstractProcess;
 import prominic.sys.io.process.CallbackProcess;
 import prominic.sys.io.process.ProcessTools.KillSignal;

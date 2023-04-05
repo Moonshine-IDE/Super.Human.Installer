@@ -30,7 +30,7 @@
 
 package superhuman.config;
 
-import prominic.core.primitives.VersionInfo;
+import champaign.core.primitives.VersionInfo;
 
 class SuperHumanGlobals {
     

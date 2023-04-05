@@ -11,6 +11,7 @@
 	<haxelib name="openfl" />
 	<haxelib name="feathersui" />
 	<haxelib name="actuate" />
+	<haxelib name="champaign" />
 	
 	<haxedef name="no-deprecation-warnings" />
 

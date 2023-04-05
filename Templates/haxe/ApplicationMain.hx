@@ -1,7 +1,7 @@
 package;
 
 import haxe.Exception;
-import prominic.logging.Logger;
+import champaign.core.logging.Logger;
 #if macro
 import haxe.macro.Compiler;
 import haxe.macro.Context;

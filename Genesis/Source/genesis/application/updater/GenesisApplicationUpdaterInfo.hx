@@ -30,7 +30,7 @@
 
 package genesis.application.updater;
 
-import prominic.core.primitives.VersionInfo;
+import champaign.core.primitives.VersionInfo;
 
 typedef GenesisApplicationUpdaterInfo = {
 

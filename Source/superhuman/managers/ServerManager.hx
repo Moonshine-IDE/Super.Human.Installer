@@ -31,7 +31,7 @@
 package superhuman.managers;
 
 import feathers.data.ArrayCollection;
-import prominic.logging.Logger;
+import champaign.core.logging.Logger;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.io.AbstractExecutor;

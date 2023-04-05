@@ -30,10 +30,10 @@
 
 package prominic.sys.applications;
 
+import champaign.core.ds.ChainedList;
+import champaign.core.logging.Logger;
+import champaign.core.primitives.VersionInfo;
 import haxe.io.Path;
-import prominic.core.ds.ChainedList;
-import prominic.core.primitives.VersionInfo;
-import prominic.logging.Logger;
 import prominic.sys.applications.bin.Which;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;

@@ -30,6 +30,7 @@
 
 package;
 
+import champaign.core.logging.Logger;
 import feathers.controls.Alert;
 import feathers.controls.LayoutGroup;
 import feathers.style.Theme;
@@ -43,7 +44,6 @@ import openfl.Lib;
 import openfl.events.Event;
 import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
-import prominic.logging.Logger;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;

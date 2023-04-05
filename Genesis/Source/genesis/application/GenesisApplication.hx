@@ -30,6 +30,10 @@
 
 package genesis.application;
 
+import champaign.core.logging.Logger;
+import champaign.core.primitives.VersionInfo;
+import champaign.sys.logging.targets.FileTarget;
+import champaign.sys.logging.targets.SysPrintTarget;
 import feathers.controls.Application;
 import feathers.controls.LayoutGroup;
 import feathers.controls.navigators.PageItem;
@@ -62,10 +66,6 @@ import lime.ui.Window;
 import openfl.Lib;
 import openfl.events.Event;
 import openfl.system.Capabilities;
-import prominic.core.primitives.VersionInfo;
-import prominic.logging.Logger;
-import prominic.logging.targets.FileTarget;
-import prominic.logging.targets.SysPrintTarget;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
 import sys.FileSystem;

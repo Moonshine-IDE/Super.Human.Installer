@@ -30,13 +30,13 @@
 
 package superhuman.server.provisioners;
 
+import champaign.core.logging.Logger;
+import champaign.core.primitives.VersionInfo;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.Template;
 import haxe.io.Path;
 import lime.system.System;
-import prominic.core.primitives.VersionInfo;
-import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.RoleData;

@@ -30,7 +30,7 @@
 
 package superhuman.server.data;
 
-import prominic.core.primitives.VersionInfo;
+import champaign.core.primitives.VersionInfo;
 import superhuman.server.provisioners.ProvisionerType;
 
 typedef ProvisionerData = {

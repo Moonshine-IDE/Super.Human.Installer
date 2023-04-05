@@ -30,10 +30,10 @@
 
 package superhuman.managers;
 
+import champaign.core.primitives.VersionInfo;
 import feathers.data.ArrayCollection;
 import haxe.io.Path;
 import lime.system.System;
-import prominic.core.primitives.VersionInfo;
 import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
 

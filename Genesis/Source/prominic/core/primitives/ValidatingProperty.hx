@@ -30,6 +30,8 @@
 
 package prominic.core.primitives;
 
+import champaign.core.primitives.Property;
+
 class ValidatingProperty extends Property<String> {
 
     var _isEmptyValid:Bool;
