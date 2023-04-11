@@ -95,7 +95,7 @@ jobs:
           # Store the notarization credentials so that we can prevent a UI password dialog
           # from blocking the CI
           echo "Create keychain profile"
-          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$MAC_NOTARIZATION_APPLE_ID" --team-id "$MACNOTARIZATION_TEAM_ID" --password "$MAC_NOTARIZATION_PASS"
+          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$MAC_NOTARIZATION_APPLE_ID" --team-id "$MAC_NOTARIZATION_TEAM_ID" --password "$MAC_NOTARIZATION_PASS"
           
           echo "Notarize app"
           xcrun notarytool submit ./SuperHumanInstallerDev-Setup.pkg --keychain-profile "notarytool-profile" --wait
