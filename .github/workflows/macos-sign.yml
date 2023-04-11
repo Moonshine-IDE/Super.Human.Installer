@@ -69,7 +69,7 @@ jobs:
       - name: Verify singature
         run: |
           codesign -dv -r- Export/Development/macos/bin/SuperHumanInstallerDev.app
-          codesign -vv Export/Development/macos/bin/SuperHumanInstallerDev.app          
+          codesign -vv Export/Development/macos/bin/SuperHumanInstallerDev.app
 
       - name: Create package
         run: |
@@ -85,10 +85,28 @@ jobs:
         run: |
           /usr/bin/productsign --timestamp --sign ${{ secrets.MAC_CERT_INSTALLER_ID }} ./SuperHumanInstallerDev-Setup-Unsigned.pkg ./SuperHumanInstallerDev-Setup.pkg
           
+      - name: "Notarize app bundle"
+        # Extract the secrets we defined earlier as environment variables
+        env:
+          MAC_NOTARIZATION_APPLE_ID: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
+          MAC_NOTARIZATION_TEAM_ID: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
+          MAC_NOTARIZATION_PASS: ${{ secrets.MAC_NOTARIZATION_PASS }}
+        run: |
+          # Store the notarization credentials so that we can prevent a UI password dialog
+          # from blocking the CI
+          echo "Create keychain profile"
+          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$MAC_NOTARIZATION_APPLE_ID" --team-id "$MACNOTARIZATION_TEAM_ID" --password "$MAC_NOTARIZATION_PASS"
+          
+          echo "Notarize app"
+          xcrun notarytool submit ./SuperHumanInstallerDev-Setup.pkg --keychain-profile "notarytool-profile" --wait
+          
+          echo "Attach staple"
+          xcrun stapler staple ./SuperHumanInstallerDev-Setup.pkg
+          
       - name: Verify installer signature
         run: |
           pkgutil --check-signature ./SuperHumanInstallerDev-Setup.pkg
-          # spctl -vv --assess --type install ./SuperHumanInstallerDev-Setup.pkg          
+          spctl -vv --assess --type install ./SuperHumanInstallerDev-Setup.pkg          
             
       - name: Delete keychain
         run: |
