@@ -99,7 +99,7 @@ jobs:
           
       - name: Verify singature
         run: |
-          codesignExport/Development/macos/bin/SuperHumanInstallerDev.app \
+          codesign Export/Development/macos/bin/SuperHumanInstallerDev.app \
             --display \
             --verbose \
             --requirements-
