@@ -73,11 +73,7 @@ jobs:
           
       - name: Sign contents
         run: |
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Entitlements.plist -v
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/Info.plist -v
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/lime.ndll -v
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app/Contents/MacOS/SuperHumanInstallerDev -v
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app -v
+          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app -v --deep
           
       - name: Verify singature
         run: |
