@@ -83,8 +83,9 @@ jobs:
         run: |
           security set-key-partition-list \
             -S apple-tool:,apple:,codesign:,productsign: \
-            -k "$MAC_KEYCHAIN_PASS" build.keychain \
-            -s
+            -s \
+            -k "$MAC_KEYCHAIN_PASS" \
+            build.keychain
           
       - name: Sign contents
         run: |
