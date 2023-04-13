@@ -88,9 +88,11 @@ jobs:
             build.keychain
           
       - name: Sign contents
+        env:
+          MAC_CERT_ID: ${{ secrets.MAC_CERT_ID }}
         run: |
           codesign Export/Development/macos/bin/SuperHumanInstallerDev.app \
-            --sign ${{ secrets.MAC_CERT_ID }} \
+            --sign "$MAC_CERT_ID" \
             --options runtime \
             --force \
             --timestamp \
@@ -109,9 +111,11 @@ jobs:
             --verbose
 
       - name: Create package
+        env:
+          VERSION: ${{ steps.readversion.outputs.info }}
         run: |
           productbuild \
-            --version ${{ steps.readversion.outputs.info }} \
+            --version "$VERSION" \
             --product Templates/installer/SuperHumanInstaller.template.plist \
             --identifier net.prominic.genesis.superhumaninstallerdev \
             --component Export/Development/macos/bin/SuperHumanInstallerDev.app \
@@ -119,8 +123,14 @@ jobs:
             ./SuperHumanInstallerDev-Setup-Unsigned.pkg
             
       - name: Sign installer
+        env:
+          MAC_CERT_INSTALLER_ID: ${{ secrets.MAC_CERT_INSTALLER_ID }}
         run: |
-          /usr/bin/productsign --timestamp --sign ${{ secrets.MAC_CERT_INSTALLER_ID }} ./SuperHumanInstallerDev-Setup-Unsigned.pkg ./SuperHumanInstallerDev-Setup.pkg
+          productsign \
+            --timestamp \
+            --sign "$MAC_CERT_INSTALLER_ID" \
+            ./SuperHumanInstallerDev-Setup-Unsigned.pkg \
+            ./SuperHumanInstallerDev-Setup.pkg
           
       - name: "Notarize app bundle"
         # Extract the secrets we defined earlier as environment variables
