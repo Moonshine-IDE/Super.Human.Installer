@@ -81,9 +81,9 @@ jobs:
         env:
           MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         run: |
-          security set-key-partition-list build.keychain \
+          security set-key-partition-list \
             -S apple-tool:,apple:,codesign:,productsign: \
-            -k "$MAC_KEYCHAIN_PASS" \
+            -k "$MAC_KEYCHAIN_PASS" build.keychain \
             -s
           
       - name: Sign contents
