@@ -52,9 +52,7 @@ jobs:
           security default-keychain -s build.keychain
           echo "Keychain made default"
           security unlock-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain  
-          echo "Keychain unlocked"        
-          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$MAC_KEYCHAIN_PASS" build.keychain
-          echo "Codesign and productsign allowed to use keychain"
+          echo "Keychain unlocked"
 
       - name: Import certificates
         env:
@@ -66,6 +64,12 @@ jobs:
           echo "$MAC_ALL_KEYS" | base64 --decode > mac-all-keys.p12
           security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P "$MAC_PASS" -T /usr/bin/productsign -T /usr/bin/codesign
           security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P "$MAC_PASS" -T /usr/bin/productsign -T /usr/bin/codesign
+
+      # - name: Allow codesign and productsign to use keychain
+      #   env:
+      #     MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
+      #   run: |
+      #     security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$MAC_KEYCHAIN_PASS" build.keychain
           
       - name: Sign contents
         run: |
