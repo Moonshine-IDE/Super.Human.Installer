@@ -133,7 +133,6 @@ jobs:
             ./SuperHumanInstallerDev-Setup.pkg
           
       - name: "Notarize app bundle"
-        # Extract the secrets we defined earlier as environment variables
         env:
           MAC_NOTARIZATION_APPLE_ID: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
           MAC_NOTARIZATION_TEAM_ID: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
@@ -142,18 +141,31 @@ jobs:
           # Store the notarization credentials so that we can prevent a UI password dialog
           # from blocking the CI
           echo "Create keychain profile"
-          xcrun notarytool store-credentials "notarytool-profile" --apple-id "$MAC_NOTARIZATION_APPLE_ID" --team-id "$MAC_NOTARIZATION_TEAM_ID" --password "$MAC_NOTARIZATION_PASS"
+          xcrun notarytool \
+            store-credentials "notarytool-profile" \
+            --apple-id "$MAC_NOTARIZATION_APPLE_ID" \
+            --team-id "$MAC_NOTARIZATION_TEAM_ID" \
+            --password "$MAC_NOTARIZATION_PASS"
           
           echo "Notarize app"
-          xcrun notarytool submit ./SuperHumanInstallerDev-Setup.pkg --keychain-profile "notarytool-profile" --wait
+          xcrun notarytool \
+            submit ./SuperHumanInstallerDev-Setup.pkg \
+            --keychain-profile "notarytool-profile" \
+            --wait
           
           echo "Attach staple"
-          xcrun stapler staple ./SuperHumanInstallerDev-Setup.pkg
+          xcrun stapler \
+            staple ./SuperHumanInstallerDev-Setup.pkg
           
       - name: Verify installer signature
         run: |
           pkgutil --check-signature ./SuperHumanInstallerDev-Setup.pkg
-          spctl -vv --assess --type install ./SuperHumanInstallerDev-Setup.pkg          
+          spctl \
+            --assess \
+            --type install \
+            --verbose \
+            --verbose \
+            ./SuperHumanInstallerDev-Setup.pkg
             
       - name: Delete keychain
         run: |
