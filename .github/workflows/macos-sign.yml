@@ -42,21 +42,25 @@ jobs:
           haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor
             
       - name: Create keychain and import certs
+        env:
+          MAC_ALL_CERTS: ${{ secrets.MAC_ALL_CERTS }}
+          MAC_ALL_KEYS: ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }}
+          MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
+          MAC_PASS: ${{ secrets.MAC_PASS }}
         run: |
           # Turn our base64-encoded certificate back to a regular .p12 file    
-          echo ${{ secrets.MAC_ALL_CERTS }} | base64 --decode > mac-all-certs.p12
-          echo ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }} | base64 --decode > mac-all-keys.p12
+          echo "$MAC_ALL_CERTS" | base64 --decode > mac-all-certs.p12
+          echo "$MAC_ALL_KEYS" | base64 --decode > mac-all-keys.p12
           # Create keychain
-          security create-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          security create-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain
           security set-keychain-settings -lut 21600 build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain
           echo "Keychain created"
           # Import
-          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/productsign -T /usr/bin/codesign
-          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P ${{ secrets.MAC_PASS }} -T /usr/bin/productsign -T /usr/bin/codesign
-          security unlock-keychain -p ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
-          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k ${{ secrets.MAC_KEYCHAIN_PASS }} build.keychain
+          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P "$MAC_PASS" -T /usr/bin/productsign -T /usr/bin/codesign
+          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P "$MAC_PASS" -T /usr/bin/productsign -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$MAC_KEYCHAIN_PASS" build.keychain
           
       - name: Sign contents
         run: |
