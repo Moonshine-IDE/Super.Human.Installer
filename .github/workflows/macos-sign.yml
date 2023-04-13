@@ -99,8 +99,14 @@ jobs:
           
       - name: Verify singature
         run: |
-          codesign -dv -r- Export/Development/macos/bin/SuperHumanInstallerDev.app
-          codesign -vv Export/Development/macos/bin/SuperHumanInstallerDev.app
+          codesignExport/Development/macos/bin/SuperHumanInstallerDev.app \
+            --display \
+            --verbose \
+            --requirements-
+
+          codesign Export/Development/macos/bin/SuperHumanInstallerDev.app \
+            --verify \
+            --verbose
 
       - name: Create package
         run: |
