@@ -93,8 +93,7 @@ jobs:
             --sign ${{ secrets.MAC_CERT_ID }} \
             --options runtime \
             --force \
-            --timestamp  \
-            --verify \
+            --timestamp \
             --verbose \
             --deep
           
