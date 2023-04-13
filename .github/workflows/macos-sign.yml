@@ -46,10 +46,15 @@ jobs:
           MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         run: |
           security create-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain
+          echo "Keychain created"
           security set-keychain-settings -lut 21600 build.keychain
+          echo "Keychain settings set"
           security default-keychain -s build.keychain
-          security unlock-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain          
+          echo "Keychain made default"
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain  
+          echo "Keychain unlocked"        
           security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$MAC_KEYCHAIN_PASS" build.keychain
+          echo "Codesign and productsign allowed to use keychain"
 
       - name: Import certificates
         env:
