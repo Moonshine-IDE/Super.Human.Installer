@@ -62,8 +62,20 @@ jobs:
         run: |
           echo "$MAC_ALL_CERTS" | base64 --decode > mac-all-certs.p12
           echo "$MAC_ALL_KEYS" | base64 --decode > mac-all-keys.p12
-          security import ./mac-all-keys.p12 -k build.keychain -f pkcs12 -P "$MAC_PASS" -T /usr/bin/productsign -T /usr/bin/codesign
-          security import ./mac-all-certs.p12 -k build.keychain -f pkcs12 -P "$MAC_PASS" -T /usr/bin/productsign -T /usr/bin/codesign
+          
+          security import ./mac-all-keys.p12 \
+            -k build.keychain \       # keychain
+            -f pkcs12 \               # format
+            -P "$MAC_PASS" \          # passphrase
+            -T /usr/bin/productsign \ # authorize app
+            -T /usr/bin/codesign      # authorize app
+
+          security import ./mac-all-certs.p12 \
+            -k build.keychain \       # keychain
+            -f pkcs12 \               # format
+            -P "$MAC_PASS" \          # passphrase
+            -T /usr/bin/productsign \ # authorize app
+            -T /usr/bin/codesign      # authorize app
 
       - name: Allow codesign and productsign to use keychain
         env:
