@@ -88,7 +88,14 @@ jobs:
           
       - name: Sign contents
         run: |
-          /usr/bin/codesign --force -s ${{ secrets.MAC_CERT_ID }} --options runtime --timestamp Export/Development/macos/bin/SuperHumanInstallerDev.app -v --deep
+          codesign Export/Development/macos/bin/SuperHumanInstallerDev.app \
+            --sign ${{ secrets.MAC_CERT_ID }} \
+            --options runtime \
+            --force \
+            --timestamp  \
+            --verify \
+            --verbose \
+            --deep
           
       - name: Verify singature
         run: |
