@@ -62,7 +62,7 @@ jobs:
         run: |
           echo "$MAC_ALL_CERTS" | base64 --decode > mac-all-certs.p12
           echo "$MAC_ALL_KEYS" | base64 --decode > mac-all-keys.p12
-          
+
           security import ./mac-all-keys.p12 \
             -k build.keychain \       # keychain
             -f pkcs12 \               # format
@@ -81,7 +81,10 @@ jobs:
         env:
           MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
         run: |
-          security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign: -s -k "$MAC_KEYCHAIN_PASS" build.keychain
+          security set-key-partition-list build.keychain \
+            -S apple-tool:,apple:,codesign:,productsign: \
+            -k "$MAC_KEYCHAIN_PASS" \
+            -s
           
       - name: Sign contents
         run: |
