@@ -102,7 +102,7 @@ jobs:
           codesign Export/Development/macos/bin/SuperHumanInstallerDev.app \
             --display \
             --verbose \
-            --requirements-
+            -r-
 
           codesign Export/Development/macos/bin/SuperHumanInstallerDev.app \
             --verify \
