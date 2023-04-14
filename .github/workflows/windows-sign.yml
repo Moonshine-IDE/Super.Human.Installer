@@ -69,6 +69,10 @@ jobs:
             Templates/installer/SuperHumanInstallerDev-Setup.exe
           
           Remove-Item -Recurse -Force certificate
+
+      - name: Verify signature
+        run: |
+          & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/signtool.exe' verify
           
       - name: Upload installer
         uses: actions/upload-artifact@v3
