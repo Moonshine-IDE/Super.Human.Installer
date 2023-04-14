@@ -72,7 +72,8 @@ jobs:
 
       - name: Verify signature
         run: |
-          & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/signtool.exe' verify
+          & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/signtool.exe' `
+            verify Templates/installer/SuperHumanInstallerDev-Setup.exe
           
       - name: Upload installer
         uses: actions/upload-artifact@v3
