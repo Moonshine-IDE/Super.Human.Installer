@@ -40,8 +40,7 @@ jobs:
       - name: Build project
         run: |
           haxelib run openfl build project.xml windows `
-            -debug -Dlogverbose -Dlogcolor `
-            -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+            -debug -Dlogverbose -Dlogcolor
 
       - name: Create NSIS installer
         run: |
