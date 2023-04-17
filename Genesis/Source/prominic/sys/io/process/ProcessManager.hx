@@ -28,18 +28,31 @@
  *  it in the license file.
  */
 
-package superhuman.config;
+package prominic.sys.io.process;
 
-typedef SuperHumanPreferences = {
+class ProcessManager {
+    
+    static public final runningProcesses:List<AbstractProcess> = new List();
 
-    ?disablevagrantlogging:Bool,
-    ?keepfailedserversrunning:Bool,
-    ?keepserversrunning:Bool,
-    ?provisionserversonstart:Bool,
-    ?savewindowposition:Bool,
-    ?windowheight:Int,
-    ?windowwidth:Int,
-    ?windowx:Int,
-    ?windowy:Int,
+    static public function kill( process:AbstractProcess ) {
+
+        if ( process != null ) process.kill();
+
+    }
+
+    static public function killByPid( pid:Int ) {
+        
+        for ( p in runningProcesses ) {
+
+            if ( p.pid == pid ) {
+
+                p.kill();
+                return;
+
+            }
+
+        }
+
+    }
 
 }

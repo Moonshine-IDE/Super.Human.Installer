@@ -28,18 +28,25 @@
  *  it in the license file.
  */
 
-package superhuman.config;
+package prominic.core.primitives;
 
-typedef SuperHumanPreferences = {
+class Wrapped<T> {
 
-    ?disablevagrantlogging:Bool,
-    ?keepfailedserversrunning:Bool,
-    ?keepserversrunning:Bool,
-    ?provisionserversonstart:Bool,
-    ?savewindowposition:Bool,
-    ?windowheight:Int,
-    ?windowwidth:Int,
-    ?windowx:Int,
-    ?windowy:Int,
+    static public inline function wrap<T>( object:T ):Wrapped<T> {
+
+        return new Wrapped( object );
+
+    }
+
+    var _value:T;
+
+    public var value( get, never ):T;
+    function get_value() return _value;
+
+    public function new( value:T ) {
+
+        this._value = value;
+
+    }
 
 }

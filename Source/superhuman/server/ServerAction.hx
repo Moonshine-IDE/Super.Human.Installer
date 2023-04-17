@@ -32,8 +32,13 @@ package superhuman.server;
 
 enum ServerAction {
     
-    Check;
-    Start;
-    Stop;
+    Destroy( hasErrors:Bool );
+    GetStatus( hasErrors:Bool );
+    None( hasErrors:Bool );
+    Provision( hasErrors:Bool );
+    RSync( hasErrors:Bool );
+    Start( hasErrors:Bool );
+    Stop( hasErrors:Bool );
+    Suspend( hasErrors:Bool );
 
 }

@@ -31,6 +31,16 @@
 package prominic.tools;
 
 class ObjectTools {
+
+    static public function applyObject<T>( original:T, toApply:T ) {
+
+        for( i in Reflect.fields( toApply ) ) {
+
+            Reflect.setField( original, i, Reflect.field( toApply, i ) );
+
+        }
+
+    }
     
     static public function copyObject<T>( input:T ):T {
 

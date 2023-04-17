@@ -34,6 +34,8 @@ import prominic.core.interfaces.IDisposable;
 import prominic.logging.Logger;
 import prominic.sys.io.process.AbstractProcess;
 import prominic.sys.io.process.CallbackProcess;
+import prominic.sys.io.process.ProcessTools.KillSignal;
+import prominic.sys.tools.StrTools;
 import sys.thread.Mutex;
 
 class Executor extends AbstractExecutor implements IDisposable {
@@ -89,6 +91,10 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _running ) return this;
 
+        _startTime = Sys.time();
+
+        _hasErrors = false;
+
         var currentWorkingDirectory = Sys.getCwd();
 
         if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
@@ -109,7 +115,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         for ( f in _onStart ) f( this );
 
-        Logger.verbose( '${this} execute' );
+        Logger.debug( '${this}: execute() in ${Sys.getCwd()}' );
 
         Sys.setCwd( currentWorkingDirectory );
 
@@ -119,15 +125,20 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _processOnStdErr( ?process:AbstractProcess ) {
 
+        if ( _exitCode >= 0 ) return;
+
         _mutexStderr.acquire();
         var s = process.stderrBuffer.getAll();
         Logger.error( '${this} stderr: ${s}' );
+        _hasErrors = true;
         for ( f in _onStdErr ) f( this, s );
         _mutexStderr.release();
 
     }
 
     function _processOnStdOut( ?process:AbstractProcess ) {
+
+        if ( _exitCode >= 0 ) return;
 
         _mutexStdout.acquire();
         var s = process.stdoutBuffer.getAll();
@@ -138,9 +149,32 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     function _processOnStop( ?process:AbstractProcess ) {
 
+        if ( _exitCode >= 0 ) return;
+
+        _stopTime = Sys.time();
+        var t = _stopTime - _startTime;
+        Logger.debug( '${this}: stopped with exit code ${_process.exitCode}. Execution time:${StrTools.timeToFormattedString(t, true)}' );
+
         _mutexStop.acquire();
         _running = false;
         _exitCode = _process.exitCode;
+        for ( f in _onStop ) f( this );
+        _mutexStop.release();
+
+    }
+
+    /**
+     * This function is implemented because in specific circumstances the spawned process
+     * never exits, so the exit code cannot be received, and the callbacks cannot be called.
+     */
+    public function simulateStop() {
+
+        if ( _exitCode >= 0 ) return;
+
+        _stopTime = Sys.time();
+        _mutexStop.acquire();
+        _running = false;
+        _exitCode = 0;
         for ( f in _onStop ) f( this );
         _mutexStop.release();
 
@@ -150,7 +184,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _process != null ) {
 
-            Logger.verbose( '${this} stop( forced:${forced} )' );
+            Logger.debug( '${this}: stop( forced:${forced} )' );
             _process.stop( forced );
 
         }
@@ -165,7 +199,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _process.stop( true );
         #elseif mac
         var e = Sys.command( "kill", [ "-" + Std.string( Std.int( signal ) ), Std.string( this._pid ) ] );
-        Logger.verbose( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
+        Logger.debug( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
         #elseif linux
         // Not implemented yet
         _process.stop( true );
@@ -175,8 +209,10 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     override public function dispose() {
 
-        //if ( _advancedProcess != null ) _advancedProcess.dispose();
-        //_advancedProcess = null;
+        if ( _disposed ) return;
+
+        Logger.debug( '${this}: Disposing...' );
+
         _command = null;
         _args = null;
         _workingDirectory = null;
@@ -187,28 +223,16 @@ class Executor extends AbstractExecutor implements IDisposable {
 
     }
 
-    public function toString():String {
+    public override function toString():String {
 
         if ( _process != null ) {
 
-            return 'Executor: ${_command} ${_args} PID: ${this._pid}';
+            return '[Executor(${this._id}: ${_command} ${_args}, PID: ${this._pid})]';
 
         }
 
-        return 'Executor: ${_command} ${_args} PID: null';
+        return '[Executor(${this._id}: ${_command} ${_args} PID: null)]';
 
     }
-
-}
-
-enum abstract KillSignal( Int ) from Int to Int  {
-    
-    var HangUp = 1;
-    var Interrupt = 2;
-    var Quit = 3;
-    var Abort = 6;
-    var Kill = 9;
-    var Alarm = 14;
-    var Terminate = 15;
 
 }

@@ -130,6 +130,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final ICON_DESTROY_SMALL:String = "assets/images/common/destroy_small.png";
     public static final ICON_ERROR:String = "assets/images/common/error.png";
     public static final ICON_FOLDER:String = "assets/images/common/folder.png";
+    public static final ICON_GITHUB:String = "assets/images/common/github.png";
     public static final ICON_HELP:String = "assets/images/common/help.png";
     public static final ICON_LOCATE_FILE:String = "assets/images/common/locatefile.png";
     public static final ICON_OK:String = "assets/images/common/ok.png";
@@ -141,15 +142,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final ICON_SETTINGS_WARNING:String = "assets/images/common/settings_warning.png";
     public static final ICON_START:String = "assets/images/common/start.png";
     public static final ICON_STOP:String = "assets/images/common/stop.png";
+    public static final ICON_SUSPEND:String = "assets/images/common/suspend.png";
     public static final ICON_UPLOAD:String = "assets/images/common/upload.png";
     public static final ICON_WARNING:String = "assets/images/common/warning.png";
     public static final ICON_WEB:String = "assets/images/common/web.png";
-
-    public static final DARK_ICON_CHECKBOX:String = "assets/images/dark/checkbox.png";
-    public static final DARK_ICON_CHECKBOX_SELECTED:String = "assets/images/dark/checkbox_selected.png";
-
-    public static final LIGHT_ICON_CHECKBOX:String = "assets/images/light/checkbox.png";
-    public static final LIGHT_ICON_CHECKBOX_SELECTED:String = "assets/images/light/checkbox_selected.png";
 
     public static final IMAGE_GENESIS_DIRECTORY:String = "assets/images/genesisdirectory.png";
     public static final IMAGE_HELP:String = "assets/images/help.png";

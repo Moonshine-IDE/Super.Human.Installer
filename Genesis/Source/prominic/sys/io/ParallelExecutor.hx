@@ -30,7 +30,9 @@
 
 package prominic.sys.io;
 
-import haxe.ds.Either;
+import prominic.logging.Logger;
+import prominic.sys.io.process.ProcessTools.KillSignal;
+import prominic.sys.tools.StrTools;
 
 class ParallelExecutor extends AbstractExecutor {
 
@@ -57,41 +59,41 @@ class ParallelExecutor extends AbstractExecutor {
 
     }
 
-    public function add( executor:Either<AbstractExecutor, Array<AbstractExecutor>> ):ParallelExecutor {
+    public function add( ...executors:AbstractExecutor ):ParallelExecutor {
 
-        switch ( executor ) {
-
-            case Left( l ):
-                if ( l != null ) _executors.push( l );
-
-            case Right( r ):
-                for ( e in r ) if ( e != null ) _executors.push( e );
-
-            default:
-                
-        }
-
+        for ( e in executors ) _executors.push( e );
         return this;
 
     }
 
     override public function dispose() {
 
+        Logger.debug( '${this}: Disposing...' );
+        
         super.dispose();
 
     }
 
     public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
+        var a:Array<String> = [];
+        for ( e in _executors ) a.push( e.id );
+        Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+
+        _startTime = Sys.time();
+        _running = true;
+        
         if ( _executors.length == 0 ) {
 
+            _running = false;
+            _stopTime = Sys.time();
             for ( f in _onStop ) f( this );
 
         } else {
 
             for ( executor in _executors ) {
-
-                executor.onStop( _executorStopped );
+                
+                executor.onStop.add( _executorStopped );
                 executor.execute( extraArgs );
 
             }
@@ -102,14 +104,20 @@ class ParallelExecutor extends AbstractExecutor {
 
     }
 
+    public function kill( signal:KillSignal ) {}
+
     function _executorStopped( executor:AbstractExecutor ) {
 
         if ( executor.exitCode != 0 ) this._hasError = true;
 
         _executors.remove( executor );
+        executor.dispose();
 
         if ( _executors.length == 0 ) {
 
+            _running = false;
+            _stopTime = Sys.time();
+            Logger.debug( '${this}: All executors stopped. Errors: ${this._hasError}. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
 
         }
@@ -118,5 +126,14 @@ class ParallelExecutor extends AbstractExecutor {
 
     @:keep
     public function stop( ?forced:Bool ) { }
+
+    @:keep
+    public function simulateStop() {}
+
+    public override function toString():String {
+
+        return '[ParallelExecutor(${this._id})]';
+
+    }
     
 }

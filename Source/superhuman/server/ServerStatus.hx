@@ -31,80 +31,22 @@
 package superhuman.server;
 
 enum ServerStatus {
-    
-    /**
-     * The server is invalid
-     */
-    Invalid;
 
-    /**
-     * The server is not running
-     */
-    Stopped;
-
-    /**
-     * The server is stopping
-     */
-    Stopping;
-
-    /**
-     * The server has never been configured
-     */
-    Unconfigured;
-
-    /**
-     * The server is initializing, copying files to server directory
-     */
-    Initializing;
-
-    /**
-     * The server is starting for the first time, previously 'vagrant up' was unsuccessful
-     */
-    FirstStart;
-
-    /**
-     * The server is starting
-     */
-    Start;
-
-    /**
-     * The server is configured, ready for first launch
-     */
-    Ready;
-
-    /**
-     * The server is running
-     */
-    Running;
-
-    /**
-     * The server is finished with an error
-     */
-    Error;
-
-    /**
-     * The server is finished with an error but still running
-     */
-    RunningWithError;
-
-    /**
-     * The server is provisioning
-     */
-    Provisioning;
-    
-    /**
-     * The server is RSyncing
-     */
-    RSyncing;
-
-    /**
-     * The server is retrieving status
-     */
-    GetStatus;
-
-    /**
-     * The server is about to be destroyed
-     */
-    Destroying;
+    Aborted; // The server is in aborted state
+    Destroying( unregisterVM:Bool ); // The server is about to be destroyed
+    GetStatus; // The server is retrieving its status from Vagrant and/or VirtualBox
+    Initializing; // The server is initializing, copying files to server directory
+    Invalid; // The server is invalid
+    Provisioning; // The server is provisioning
+    RSyncing; // The server is RSyncing
+    Ready; // The server is configured, ready for first launch
+    Running( hasError:Bool ); // The server is running
+    Start( provisionedBefore:Bool ); // The server is starting
+    Stopped( hasError:Bool ); // The server is not running or powered off
+    Stopping( forced:Bool ); // The server is stopping
+    Suspended; // The server is in suspended state
+    Suspending; // The server is suspending
+    Unconfigured; // The server has never been configured
+    Unknown; // Used internally for an initial status
     
 }

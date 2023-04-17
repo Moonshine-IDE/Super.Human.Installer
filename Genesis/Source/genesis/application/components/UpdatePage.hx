@@ -65,7 +65,7 @@ class UpdatePage extends Page {
         _title.variant = GenesisApplicationTheme.LABEL_LARGE;
         this.addChild( _title );
 
-        _description = new Label( LanguageManager.getInstance().getString( 'updatepage.text', GenesisApplication.getInstance().updater.updaterInfo.version ) );
+        _description = new Label( LanguageManager.getInstance().getString( 'updatepage.text', GenesisApplication.getInstance().updater.updaterInfoEntry.version ) );
         _description.wordWrap = true;
         _description.width = GenesisApplicationTheme.GRID * 80;
         _description.variant = GenesisApplicationTheme.LABEL_CENTERED;

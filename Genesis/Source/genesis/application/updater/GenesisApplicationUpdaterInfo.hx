@@ -33,9 +33,19 @@ package genesis.application.updater;
 import prominic.core.primitives.VersionInfo;
 
 typedef GenesisApplicationUpdaterInfo = {
+
+    ?development:GenesisApplicationUpdaterEntry,
+    ?production:GenesisApplicationUpdaterEntry,
     
+}
+
+typedef GenesisApplicationUpdaterEntry = {
+
+    ?build_date:String,
+    ?commit_sha:String,
+    ?linux_url:String,
+    ?macos_url:String,
     ?version:VersionInfo,
-    ?url:String,
-    ?description:String,
+    ?windows_url:String,
 
 }

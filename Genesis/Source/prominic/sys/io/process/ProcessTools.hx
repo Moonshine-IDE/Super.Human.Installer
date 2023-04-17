@@ -70,7 +70,7 @@ class ProcessTools {
 
 }
 
-enum abstract KillSignal( Int ) to Int {
+enum abstract KillSignal( Int ) from Int to Int {
 
     var Abort = 6;
     var Alarm = 14;

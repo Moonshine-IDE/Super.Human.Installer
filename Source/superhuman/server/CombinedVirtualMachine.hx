@@ -31,46 +31,35 @@
 package superhuman.server;
 
 import prominic.sys.applications.hashicorp.Vagrant.VagrantMachine;
-import prominic.sys.applications.hashicorp.Vagrant.VagrantMachineState;
+import prominic.sys.applications.oracle.VirtualBoxMachine;
 
-class ServerStatusManager {
-    
-    static public function getStatus( action:ServerAction, vagrantMachine:VagrantMachine, isValid:Bool, vagrantUpSuccessful:Bool ):ServerStatus {
+typedef CombinedVirtualMachine = {
 
-        var result = ServerStatus.Unconfigured;
+    ?home:String,
+    ?serverId:Int,
+    ?state:CombinedVirtualMachineState,
+    ?vagrantMachine:VagrantMachine,
+    ?virtualBoxMachine:VirtualBoxMachine,
 
-        switch ( action ) {
+}
 
-            case ServerAction.Check:
-                result = ( isValid ) ? ServerStatus.Ready : ServerStatus.Unconfigured;
+enum abstract CombinedVirtualMachineState( String ) to String {
 
-            case ServerAction.Start:
-                result = _getStatusFor_Start( vagrantMachine.state, vagrantUpSuccessful );
+    // states with 'list vms' command:
+    // starting
+    // running
+    // powered off
 
-            default:
+    // vagrant states
+    // aborted
+    // running
+    // poweroff
 
-        }
-
-        return result;
-
-    }
-
-    static function _getStatusFor_Start( vagrantState:VagrantMachineState, vagrantUpSuccessful:Bool ):ServerStatus {
-        
-        var result = ServerStatus.Unconfigured;
-
-        if ( vagrantUpSuccessful ) {
-
-            result = ServerStatus.Start;
-
-        } else {
-
-            result = ServerStatus.FirstStart;
-
-        }
-
-        return result;
-
-    }
+    var Aborted = "aborted";
+    var NotCreated = "not_created";
+    var PowerOff = "powered off";
+    var Running = "running";
+    var Starting = "starting";
+    var Unknown = "unknown";
 
 }

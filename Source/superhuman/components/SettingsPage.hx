@@ -56,12 +56,14 @@ class SettingsPage extends Page {
     var _buttonSave:GenesisFormButton;
     var _cbApplicationWindow:GenesisFormCheckBox;
     var _cbDisableVagrantLogging:GenesisFormCheckBox;
+    var _cbKeepFailedServersRunning:GenesisFormCheckBox;
     var _cbKeepServersRunning:GenesisFormCheckBox;
     var _cbProvision:GenesisFormCheckBox;
     var _form:GenesisForm;
     var _label:Label;
     var _rowAdvanced:GenesisFormRow;
     var _rowApplicationWindow:GenesisFormRow;
+    var _rowKeepFailedServersRunning:GenesisFormRow;
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
     var _titleGroup:LayoutGroup;
@@ -119,19 +121,18 @@ class SettingsPage extends Page {
         _rowKeepServersRunning = new GenesisFormRow();
         _cbKeepServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.servers.keeprunning' ) );
         _rowProvision.content.addChild( _cbKeepServersRunning );
-
         _form.addChild( _rowKeepServersRunning );
-
-        var spacer = new LayoutGroup();
-        spacer.height = GenesisApplicationTheme.GRID * 4;
-        _form.addChild( spacer );
 
         _rowAdvanced = new GenesisFormRow();
         _rowAdvanced.text = LanguageManager.getInstance().getString( 'settingspage.advanced.title' );
         _cbDisableVagrantLogging = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.disablevagrantlogging' ) );
         _rowAdvanced.content.addChild( _cbDisableVagrantLogging );
-
         _form.addChild( _rowAdvanced );
+
+        _rowKeepFailedServersRunning = new GenesisFormRow();
+        _cbKeepFailedServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.keepfailedserversrunning' ) );
+        _rowKeepFailedServersRunning.content.addChild( _cbKeepFailedServersRunning );
+        _form.addChild( _rowKeepFailedServersRunning );
 
         var line = new HLine();
         line.width = _w;
@@ -164,6 +165,7 @@ class SettingsPage extends Page {
             _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
             _cbKeepServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepserversrunning;
             _cbDisableVagrantLogging.selected = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
+            _cbKeepFailedServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning;
 
         }
 
@@ -175,6 +177,7 @@ class SettingsPage extends Page {
         SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart = _cbProvision.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepserversrunning = _cbKeepServersRunning.selected;
         SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
+        SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning = _cbKeepFailedServersRunning.selected;
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 

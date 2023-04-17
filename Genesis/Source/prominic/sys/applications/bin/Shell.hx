@@ -30,15 +30,16 @@
 
 package prominic.sys.applications.bin;
 
-#if windows
-import lime.system.System;
-#end
 import haxe.io.Path;
+import prominic.logging.Logger;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
+#if windows
+import lime.system.System;
+#end
 #if ( windows || linux )
 import haxe.exceptions.NotImplementedException;
 #end
@@ -100,7 +101,7 @@ class Shell extends AbstractApp {
         var lsExecutor:Executor = new Executor( "ls", [ path ], null, null, [ callback ] );
         #end
         _stdouts.set( lsExecutor.id, "" );
-        lsExecutor.onStdOut( _lsExecutorOutput ).onStop( _lsExecutorStopped ).execute();
+        lsExecutor.onStdOut.add( _lsExecutorOutput ).onStop.add( _lsExecutorStopped ).execute();
 
     }
 
@@ -155,7 +156,7 @@ class Shell extends AbstractApp {
         #else
         var symlinkExecutor:Executor = new Executor( "ln", [ "-s", "-F", sourcePath, destinationPath ], [ callback ] );
         #end
-        symlinkExecutor.onStop( _symlinkExecutorStopped ).execute();
+        symlinkExecutor.onStop.add( _symlinkExecutorStopped ).execute();
 
     }
 
@@ -191,7 +192,7 @@ class Shell extends AbstractApp {
         //var killExecutor:Executor = new Executor( this._executable, [ "/c", "dir", "/b", path ], null, null, [ callback ] );
         #else
         var killExecutor:Executor = new Executor( "kill", [ Std.string( processId ) ], null, null, [ callback ] );
-        killExecutor.onStop( _killExecutorStopped ).execute();
+        killExecutor.onStop.add( _killExecutorStopped ).execute();
         #end
 
     }
@@ -214,7 +215,7 @@ class Shell extends AbstractApp {
 
         #if mac
         var archExecutor:Executor = new Executor( "arch", null, [ callback ] );
-        archExecutor.onStdOut( ( executor:AbstractExecutor, data:String ) -> {
+        archExecutor.onStdOut.add( ( executor:AbstractExecutor, data:String ) -> {
 
             if ( executor.extraParams != null && executor.extraParams.length > 0 && executor.extraParams[ 0 ] != null ) {
 
@@ -256,6 +257,7 @@ class Shell extends AbstractApp {
         #if windows
         return null;
         #else
+        Logger.verbose( '${this}: uname' );
         var p = new Process( "uname", [ "-m" ] );
         var b = p.stdout.readAll();
         var e = p.exitCode();
@@ -269,6 +271,8 @@ class Shell extends AbstractApp {
      */
     public function open( args:Array<String> ) {
 
+        Logger.verbose( '${this}: Open:${args}' );
+
         #if linux
         Sys.command( "/usr/bin/xdg-open", args );
         #elseif mac
@@ -281,6 +285,7 @@ class Shell extends AbstractApp {
 
     public function exec( path:String ) {
 
+        Logger.verbose( '${this}: Exec:${path}' );
         Sys.command( 'exec ${path} &' );
 
     }
@@ -293,6 +298,8 @@ class Shell extends AbstractApp {
     public function md5( path:String ):String {
 
         if ( !FileSystem.exists( path ) ) return null;
+
+        Logger.verbose( '${this}: Checking MD5 at:${path}' );
 
         #if mac
         var p = new Process( "md5", [ "-q", path ] );
@@ -327,7 +334,9 @@ class Shell extends AbstractApp {
 
     }
 
-    public function openTerminal( ?path:String ) {
+    public function openTerminal( ?path:String, launchFileAtPath:Bool = true ) {
+
+        Logger.verbose( '${this}: Opening Terminal at:${path}' );
 
         #if mac
         Sys.command( "open", [ "-a", "Terminal", path ] );
@@ -336,7 +345,10 @@ class Shell extends AbstractApp {
         #if windows
         var cwd = Sys.getCwd();
         Sys.setCwd( path );
-        System.openFile( "cmd.exe" );
+        if ( launchFileAtPath )
+            System.openFile( path )
+        else
+            System.openFile( "cmd.exe" );
         Sys.setCwd( cwd );
         #end
 
@@ -344,6 +356,7 @@ class Shell extends AbstractApp {
 
     public function runShellScript( path:String, ?content:String ) {
 
+        Logger.verbose( '${this}: Running shell script at:${path} content:${content}' );
         var cwd = Sys.getCwd();
         if ( content != null ) File.saveContent( path, content );
         var dir = Path.directory( path );
@@ -371,7 +384,7 @@ class Shell extends AbstractApp {
         args.push( 'pid,ppid,command' );
 
         var executor:Executor = new Executor( cmd, args, null, null, null, [ filter, pattern, parentPid, callback ] );
-        executor.onStdOut( _findProcessIdStdOut ).onStop( _findProcessIdStop ).execute();
+        executor.onStdOut.add( _findProcessIdStdOut ).onStop.add( _findProcessIdStop ).execute();
 
         #end
 
@@ -511,6 +524,12 @@ class Shell extends AbstractApp {
         #else
             throw new NotImplementedException( "Shell.du() is not implemented on this platform" );
         #end
+
+    }
+
+    public override function toString():String {
+
+        return '[Shell]';
 
     }
 

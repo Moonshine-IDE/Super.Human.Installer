@@ -32,6 +32,7 @@ package superhuman.server.provisioners;
 
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
+import haxe.Template;
 import haxe.io.Path;
 import lime.system.System;
 import prominic.core.primitives.VersionInfo;
@@ -46,17 +47,32 @@ import sys.io.File;
 
 using prominic.tools.ObjectTools;
 
+@:allow( superhuman.server.provisioners.HostsFileGenerator )
 class DemoTasks extends AbstractProvisioner {
 
-    static final _IP_ADDRESS_PATTERN:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    static final _CURRENT_TASK_IDENTIFIER_PATTERN:EReg = ~/(?:TASK \x{5b})(\S+)(?:.+)(?:\x{3a})(?:.*)/m;
+    static final _IP_ADDRESS_PATTERN:EReg = ~/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
     static final _SAFE_ID_FILE:String = "safe.ids";
     static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
+    static final _TASK_IDENTIFIER_PATTERN:EReg = ~/(?:\s{6})(?:- name: )(\S+)/;
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
-    static final _WEB_ADDRESS_PATTERN:EReg = ~/^(?:https:\/\/)(.*)(?::\d{3})(?:\/.*)$/gm;
+    static final _WEB_ADDRESS_PATTERN:EReg = ~/(?:https:\/\/)(.*)(?::\d{1,5}\/welcome.html)/;
+
+    // Additional templates for version 0.1.18+
+    static final _TEMPLATE_DOMINO_INSTALL:String = "domino_install.template.yml";
+    static final _TEMPLATE_DOMINO_LEAP:String = "domino_leap.template.yml";
+    static final _TEMPLATE_DOMINO_NOMADWEB:String = "domino_nomadweb.template.yml";
+    static final _TEMPLATE_DOMINO_TRAVELER:String = "domino_traveler.template.yml";
+    static final _TEMPLATE_DOMINO_VAGRANT_REST_API:String = "domino_vagrant_rest_api.template.yml";
+    static final _TEMPLATE_DOMINO_VERSE:String = "domino_verse.template.yml";
+    static final _TEMPLATE_STARTCLOUD_HAPROXY:String = "startcloud_haproxy.template.yml";
+    static final _TEMPLATE_STARTCLOUD_QUICK_START:String = "startcloud_quick_start.template.yml";
+    static final _TEMPLATE_STARTCLOUD_VAGRANT_README:String = "startcloud_vagrant_readme.template.yml";
 
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
     static public final PROVISIONER_TYPE:ProvisionerType = ProvisionerType.DemoTasks;
+    static public final PROVISIONING_PROOF_FILE:String = ".vagrant/provisioned-briged-ip.txt";
     static public final WEB_ADDRESS_FILE:String = ".vagrant/done.txt";
 
     static public function getDefaultProvisionerRoles():Map<String, RoleData> {
@@ -144,26 +160,91 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    var _hostsTemplate:String;
+    var _onProvisioningFileChanged:List<()->Void>;
+    var _startedTasks:Array<String>;
+    var _tasks:Array<String>;
+
     public var hostFileExists( get, never ):Bool;
     function get_hostFileExists() return this.fileExists( HOSTS_FILE );
 
+    public var ipAddress( get, never ):String;
+    function get_ipAddress() {
+        var result:String = null;
+        var wa = _getWebAddress();
+        if ( wa == null ) return result;
+        try {
+            if ( _IP_ADDRESS_PATTERN.match( wa ) ) return _IP_ADDRESS_PATTERN.matched( 0 );
+        } catch ( e ) {};
+        return result;
+    }
+
+    public var numberOfStartedTasks( get, never ):Int;
+    function get_numberOfStartedTasks() return _startedTasks.length;
+
+    public var numberOfTasks( get, never ):Int;
+    function get_numberOfTasks() return _tasks.length;
+
+    public var onProvisioningFileChanged( get, never ):List<()->Void>;
+    function get_onProvisioningFileChanged() return _onProvisioningFileChanged;
+
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _getWebAddress() != null;
+    function get_provisioned() return _provisioningProofFileExists();
+
+    public var provisionSuccessful( get, never ):Bool;
+    function get_provisionSuccessful() return _webAddressValid();
 
     public var safeIdExists( get, never ):Bool;
     function get_safeIdExists() return this.fileExists( Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
 
+    public var server( get, never ):Server;
+    function get_server() return _server;
+
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
     
-    public function new( sourcePath:String, targetPath:String ) {
+    public function new( sourcePath:String, targetPath:String, server:Server ) {
 
-        super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath );
+        super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath, server );
 
         _versionFile = "version.rb";
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
 
         if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
+
+        _onProvisioningFileChanged = new List();
+
+    }
+
+    public function calculateTotalNumberOfTasks() {
+
+        _tasks = [];
+        _startedTasks = [];
+
+        try {
+
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE );
+
+            while ( true ) {
+
+                if ( _TASK_IDENTIFIER_PATTERN.match( c ) ) {
+
+                    var s = _TASK_IDENTIFIER_PATTERN.matched( 1 );
+                    _tasks.push( s );
+                    c = _TASK_IDENTIFIER_PATTERN.replace( c, "" );
+
+                } else {
+
+                    break;
+
+                }
+
+            }
+
+        } catch ( e ) {};
+
+        Logger.debug( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
+        Logger.debug( '[${this._type} v${this._version}]: Total tasks: ${_tasks}' );
 
     }
 
@@ -174,9 +255,33 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    public function deleteProvisioningProofFile() {
+
+        this.deleteFileInTargetDirectory( PROVISIONING_PROOF_FILE );
+
+    }
+
     public function deleteWebAddressFile() {
 
         this.deleteFileInTargetDirectory( WEB_ADDRESS_FILE );
+
+    }
+
+    override function dispose() {
+
+        if ( _onProvisioningFileChanged != null ) _onProvisioningFileChanged.clear();
+        _onProvisioningFileChanged = null;
+
+        super.dispose();
+
+    }
+
+    public function generateHostsFileContent():String {
+
+        _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
+
+        if ( _version >= "0.1.18" ) return HostsFileGenerator.generateContentForV18( _hostsTemplate, this );
+        return HostsFileGenerator.generateContentForV17( _hostsTemplate, this );
 
     }
 
@@ -192,6 +297,14 @@ class DemoTasks extends AbstractProvisioner {
 
         _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
         if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
+
+        Logger.debug( '${this}: Reinitialized' );
+
+    }
+
+    public function saveHostsFile() {
+
+        if ( _server.isValid() ) this._saveHostsFile();
 
     }
 
@@ -212,19 +325,49 @@ class DemoTasks extends AbstractProvisioner {
 
             } catch ( e:Exception ) {
 
-                Logger.error( 'Notes Safe ID at ${safeIdPath} cannot be copied to ${safeIdDir + _SAFE_ID_FILE}. Details: ${e.details()} Message: ${e.message}' );
+                Logger.error( '${this}: Notes Safe ID at ${safeIdPath} cannot be copied to ${safeIdDir + _SAFE_ID_FILE}. Details: ${e.details()} Message: ${e.message}' );
                 if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copysafeidfailed', '${e.details()} Message: ${e.message}' ), true );
 
             }
 
         } else {
 
-            Logger.error( 'Notes Safe ID does not exist at ${safeIdPath}' );
+            Logger.error( '${this}: Notes Safe ID does not exist at ${safeIdPath}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.safeidnonexistent', safeIdPath ), true );
 
         }
 
         return false;
+
+    }
+
+    public override function toString():String {
+
+        return '[DemoTasks(v${this._version})]';
+
+    }
+
+    public function updateTaskProgress( input:String ) {
+
+        try {
+
+            while ( true ) {
+
+                if ( _CURRENT_TASK_IDENTIFIER_PATTERN.match( input ) ) {
+
+                    var s = _CURRENT_TASK_IDENTIFIER_PATTERN.matched( 1 );
+                    if ( !_startedTasks.contains( s ) && _tasks.contains( s ) ) _startedTasks.push( s );
+                    input = _CURRENT_TASK_IDENTIFIER_PATTERN.replace( input, "" );
+
+                } else {
+
+                    break;
+
+                }
+
+            }
+
+        } catch ( e ) {};
 
     }
 
@@ -248,9 +391,14 @@ class DemoTasks extends AbstractProvisioner {
 
     function _getWebAddress():String {
 
-        Logger.verbose( 'Reading web address file from ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE}' );
-        var e = FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-        if ( !e ) return null;
+        var e = _webAddressFileExists();
+
+        if ( !e ) {
+
+            Logger.error( '${this}: File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
+            return null;
+
+        }
 
         try {
 
@@ -265,25 +413,481 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
-    function _saveHostsFile( content:String ) {
+    override function _onFileWatcherFileAdded( path:String ) {
+
+        super._onFileWatcherFileAdded( path );
+
+        if ( path.indexOf( WEB_ADDRESS_FILE ) >= 0 ) {
+
+            if ( _onProvisioningFileChanged != null ) for ( f in _onProvisioningFileChanged ) f();
+
+        }
+
+    }
+
+    override function _onFileWatcherFileDeleted( path:String ) {
+
+        super._onFileWatcherFileDeleted( path );
+
+        if ( path.indexOf( WEB_ADDRESS_FILE ) >= 0 ) {
+
+            if ( _onProvisioningFileChanged != null ) for ( f in _onProvisioningFileChanged ) f();
+
+        }
+
+    }
+
+    function _provisioningProofFileExists():Bool {
+
+        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PROVISIONING_PROOF_FILE );
+
+    }
+
+    function _saveHostsFile() {
 
         createTargetDirectory();
+
+        var content = generateHostsFileContent();
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', content ) );
 
         try {
 
             File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
-            Logger.debug( 'Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
+            Logger.debug( '${this}: Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
 
         } catch ( e:Exception ) {
 
-            Logger.error( 'Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
+            Logger.error( '${this}: Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
             return;
 
         }
+
+    }
+
+    function _webAddressFileExists():Bool {
+
+        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
+
+    }
+
+    function _webAddressValid():Bool {
+
+        if ( !_webAddressFileExists() ) return false;
+
+        try {
+
+            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
+            if ( c == null || c.length == 0 ) return false;
+
+            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return true;
+
+        } catch( e ) {}
+
+        return false;
+
+    }
+
+}
+
+class HostsFileGenerator {
+
+    static public function generateContentForV17( sourceTemplate:String, provisioner:DemoTasks ):String {
+
+        var output:String = null;
+
+        var replace = {
+
+            USER_EMAIL: provisioner.server.userEmail.value,
+            USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
+
+            SERVER_ID: provisioner.server.id,
+            SERVER_HOSTNAME: provisioner.server.url.hostname,
+            SERVER_DOMAIN: provisioner.server.url.domainName,
+            SERVER_ORGANIZATION: provisioner.server.organization.value,
+
+            NETWORK_BRIDGE: provisioner.server.networkBridge.value,
+
+            // Always true, never false
+            NETWORK_DHCP4: true,
+            NETWORK_DNS_NAMESERVER_1: ( provisioner.server.dhcp4.value ) ? "1.1.1.1" : provisioner.server.nameServer1.value,
+            NETWORK_DNS_NAMESERVER_2: ( provisioner.server.dhcp4.value ) ? "1.0.0.1" : provisioner.server.nameServer2.value,
+            NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
+            NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
+            NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
+
+            ENV_OPEN_BROWSER: false,
+            ENV_SETUP_WAIT: provisioner.server.setupWait.value,
+
+            RESOURCES_CPU: provisioner.server.numCPUs.value,
+            RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
+
+            ROLE_LEAP: "",
+            ROLE_NOMADWEB: "",
+            ROLE_TRAVELER: "",
+            ROLE_TRAVELER_HTMO: "",
+            ROLE_VERSE: "",
+            ROLE_APPDEVPACK: "",
+            ROLE_STARTCLOUD_QUICK_START: "",
+            ROLE_STARTCLOUD_HAPROXY: "",
+            ROLE_STARTCLOUD_VAGRANT_README: "",
+            ROLE_RESTAPI: "",
+            ROLE_DOMINO_INSTALL: "",
+            ROLE_DOMINO_VAGRANT_REST_API: "",
+
+            CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
+
+        };
+
+        for ( r in provisioner.server.roles.value ) {
+
+            var replaceWith:String = "";
+
+            if ( r.value == "leap" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-leap";
+
+                } else {
+
+                    replaceWith = "#- name: domino-leap";
+
+                }
+
+                replace.ROLE_LEAP = replaceWith;
+
+            }
+
+            if ( r.value == "nomadweb" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-nomadweb";
+
+                } else {
+
+                    replaceWith = "#- name: domino-nomadweb";
+
+                }
+
+                replace.ROLE_NOMADWEB = replaceWith;
+
+            }
+
+            if ( r.value == "traveler" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-traveler";
+
+                } else {
+
+                    replaceWith = "#- name: domino-traveler";
+
+                }
+
+                replace.ROLE_TRAVELER = replaceWith;
+
+            }
+
+            if ( r.value == "traveler" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-traveler-htmo";
+
+                } else {
+
+                    replaceWith = "#- name: domino-traveler-htmo";
+
+                }
+
+                replace.ROLE_TRAVELER_HTMO = replaceWith;
+
+            }
+
+            if ( r.value == "verse" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-verse";
+
+                } else {
+
+                    replaceWith = "#- name: domino-verse";
+
+                }
+
+                replace.ROLE_VERSE = replaceWith;
+
+            }
+
+            if ( r.value == "appdevpack" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-appdevpack";
+
+                } else {
+
+                    replaceWith = "#- name: domino-appdevpack";
+
+                }
+
+                replace.ROLE_APPDEVPACK = replaceWith;
+
+            }
+
+            if ( r.value == "domino-rest-api" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino-rest-api";
+
+                } else {
+
+                    replaceWith = "#- name: domino-rest-api";
+
+                }
+
+                replace.ROLE_RESTAPI = replaceWith;
+
+            }
+
+            replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud-quick-start";
+            replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud-haproxy";
+            replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud-vagrant-readme";
+            replace.ROLE_DOMINO_INSTALL = "- name: domino-install";
+            replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino-vagrant-rest_api";
+
+        }
+
+        var template = new Template( sourceTemplate );
+		output = template.execute( replace );
+
+        if ( provisioner.server.disableBridgeAdapter.value ) {
+
+            // Remove the contents of networks yaml tag
+            var r:EReg = ~/(?:networks:)((.|\n)*)(?:vbox:)/;
+            
+            if ( r.match( output ) ) {
+
+                output = r.replace( output, "vbox:" );
+
+            }
+
+        }
+
+        return output;
+
+    }
+
+    static public function generateContentForV18( sourceTemplate:String, provisioner:DemoTasks ):String {
+
+        var output:String = null;
+
+        var replace = {
+
+            USER_EMAIL: provisioner.server.userEmail.value,
+            USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
+
+            SERVER_ID: provisioner.server.id,
+            SERVER_HOSTNAME: provisioner.server.url.hostname,
+            SERVER_DOMAIN: provisioner.server.url.domainName,
+            SERVER_ORGANIZATION: provisioner.server.organization.value,
+
+            NETWORK_BRIDGE: provisioner.server.networkBridge.value,
+
+            // Always true, never false
+            NETWORK_DHCP4: true,
+            NETWORK_DNS_NAMESERVER_1: ( provisioner.server.dhcp4.value ) ? "1.1.1.1" : provisioner.server.nameServer1.value,
+            NETWORK_DNS_NAMESERVER_2: ( provisioner.server.dhcp4.value ) ? "1.0.0.1" : provisioner.server.nameServer2.value,
+            NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
+            NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
+            NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
+
+            ENV_SETUP_WAIT: provisioner.server.setupWait.value,
+
+            RESOURCES_CPU: provisioner.server.numCPUs.value,
+            RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
+
+            ROLE_LEAP: "",
+            ROLE_NOMADWEB: "",
+            ROLE_TRAVELER: "",
+            ROLE_TRAVELER_HTMO: "",
+            ROLE_VERSE: "",
+            ROLE_APPDEVPACK: "",
+            ROLE_STARTCLOUD_QUICK_START: "",
+            ROLE_STARTCLOUD_HAPROXY: "",
+            ROLE_STARTCLOUD_VAGRANT_README: "",
+            ROLE_RESTAPI: "",
+            ROLE_DOMINO_INSTALL: "",
+            ROLE_DOMINO_VAGRANT_REST_API: "",
+
+            CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
+
+        };
+
+        for ( r in provisioner.server.roles.value ) {
+
+            var replaceWith:String = "";
+
+            if ( r.value == "leap" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_leap";
+                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_LEAP );
+
+                } else {
+
+                    replaceWith = "#- name: domino_leap";
+
+                }
+
+                replace.ROLE_LEAP = replaceWith;
+
+            }
+
+            if ( r.value == "nomadweb" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_nomadweb";
+                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_NOMADWEB );
+
+                } else {
+
+                    replaceWith = "#- name: domino_nomadweb";
+
+                }
+
+                replace.ROLE_NOMADWEB = replaceWith;
+
+            }
+
+            if ( r.value == "traveler" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_traveler";
+                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_TRAVELER );
+
+                } else {
+
+                    replaceWith = "#- name: domino_traveler";
+
+                }
+
+                replace.ROLE_TRAVELER = replaceWith;
+
+            }
+
+            if ( r.value == "traveler" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_traveler_htmo";
+
+                } else {
+
+                    replaceWith = "#- name: domino_traveler_htmo";
+
+                }
+
+                replace.ROLE_TRAVELER_HTMO = replaceWith;
+
+            }
+
+            if ( r.value == "verse" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_verse";
+                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_VERSE );
+
+                } else {
+
+                    replaceWith = "#- name: domino_verse";
+
+                }
+
+                replace.ROLE_VERSE = replaceWith;
+
+            }
+
+            if ( r.value == "appdevpack" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_appdevpack";
+
+                } else {
+
+                    replaceWith = "#- name: domino_appdevpack";
+
+                }
+
+                replace.ROLE_APPDEVPACK = replaceWith;
+
+            }
+
+            if ( r.value == "domino-rest-api" ) {
+
+                if ( r.enabled ) {
+
+                    replaceWith = "- name: domino_rest_api";
+
+                } else {
+
+                    replaceWith = "#- name: domino_rest_api";
+
+                }
+
+                replace.ROLE_RESTAPI = replaceWith;
+
+            }
+
+            if ( provisioner.server.disableBridgeAdapter.value ) {
+
+                replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud_quick_start\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_STARTCLOUD_QUICK_START );
+                replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud_haproxy\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_STARTCLOUD_HAPROXY );
+                replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud_vagrant_readme\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_STARTCLOUD_VAGRANT_README );
+                replace.ROLE_DOMINO_INSTALL = "- name: domino_install\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_INSTALL );
+                replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino_vagrant_rest_api\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_VAGRANT_REST_API );
+
+            } else {
+
+                replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud_quick_start";
+                replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud_haproxy";
+                replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud_vagrant_readme";
+                replace.ROLE_DOMINO_INSTALL = "- name: domino_install";
+                replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino_vagrant_rest_api";
+
+            }
+
+        }
+
+        var template = new Template( sourceTemplate );
+		output = template.execute( replace );
+
+        if ( provisioner.server.disableBridgeAdapter.value ) {
+
+            // Remove the contents of networks yaml tag
+            var r:EReg = ~/(?:networks:)((.|\n)*)(?: For later)/;
+
+            if ( r.match( output ) ) {
+
+                output = r.replace( output, "## For later" );
+
+            }
+
+        }
+
+        return output;
 
     }
 

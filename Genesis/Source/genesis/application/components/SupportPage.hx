@@ -40,10 +40,12 @@ import genesis.application.theme.GenesisApplicationTheme;
 
 class SupportPage extends Page {
 
+    var _githubLabel:Label;
     var _image:AdvancedAssetLoader;
     var _infoLabel:Label;
     var _label:Label;
     var _openLogsButton:Button;
+    var _visitGitHubButton:Button;
     
     public function new() {
 
@@ -73,11 +75,28 @@ class SupportPage extends Page {
         _openLogsButton.addEventListener( TriggerEvent.TRIGGER, _openLogsButtonTriggered );
         this.addChild( _openLogsButton );
 
+        _githubLabel = new Label( LanguageManager.getInstance().getString( 'supportpage.visitgithubtext' ) );
+        _githubLabel.variant = GenesisApplicationTheme.LABEL_CENTERED;
+        _githubLabel.wordWrap = true;
+        _githubLabel.maxWidth = GenesisApplicationTheme.GRID * 80;
+        this.addChild( _githubLabel );
+
+        _visitGitHubButton = new Button( LanguageManager.getInstance().getString( 'supportpage.visitgithub' ) );
+        _visitGitHubButton.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_GITHUB ) );
+        _visitGitHubButton.addEventListener( TriggerEvent.TRIGGER, _visitGitHubButtonTriggered );
+        this.addChild( _visitGitHubButton );
+
     }
 
     function _openLogsButtonTriggered( e:TriggerEvent ) {
 
         this.dispatchEvent( new GenesisApplicationEvent( GenesisApplicationEvent.OPEN_LOGS_DIRECTORY ) );
+
+    }
+
+    function _visitGitHubButtonTriggered( e:TriggerEvent ) {
+
+        this.dispatchEvent( new GenesisApplicationEvent( GenesisApplicationEvent.VISIT_SOURCE_CODE_ISSUES ) );
 
     }
 

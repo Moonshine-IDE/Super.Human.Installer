@@ -37,6 +37,7 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Which;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
+import prominic.sys.io.ExecutorManager;
 import prominic.sys.tools.SysTools;
 import sys.io.Process;
 
@@ -49,7 +50,6 @@ abstract class AbstractApp {
 
     var _env:Map<String, String>;
     var _executable:String;
-    var _initExecutor:Executor;
     var _initialized:Bool = false;
     var _name:String;
     var _onInit:ChainedList<(AbstractApp) -> Void, AbstractApp>;
@@ -81,6 +81,7 @@ abstract class AbstractApp {
 
     public function new() {
 
+        _name = "AbstractApp";
         _onInit = new ChainedList( this );
 
     }
@@ -96,22 +97,21 @@ abstract class AbstractApp {
 
     public function exit( forced:Bool = false ) { }
 
-    public function getInit():Executor {
+    public function getInit():AbstractExecutor {
 
-        if ( _initialized ) {
-
-            return _initExecutor;
-
-        }
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( '${_name}_${AbstractAppExecutorContext.Init}' ) )
+            return ExecutorManager.getInstance().get( '${_name}_${AbstractAppExecutorContext.Init}' );
 
         //
         // Setting up system path
         //
         for ( p in _pathAdditions ) SysTools.addToPath( p );
 
-        _initExecutor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
-        _initExecutor.onStdErr( _initStandardError ).onStdOut( _initStandardOutput ).onStop( _initStop );
-        return _initExecutor;
+        final executor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
+        executor.onStdErr.add( _initStandardError ).onStdOut.add( _initStandardOutput ).onStop.add( _initStop );
+        ExecutorManager.getInstance().set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
+        return executor;
 
     }
 
@@ -139,35 +139,46 @@ abstract class AbstractApp {
 
     }
 
+    public function toString():String {
+
+        return '[AbstractApp]';
+
+    }
+
     function _initStandardOutput( executor:AbstractExecutor, data:String ) {
 
-        Logger.verbose( '_initStandardOutput ${data}' );
         var a = data.split( SysTools.lineEnd );
         if ( data.length > 0 && a.length > 0 && StringTools.trim( a[ 0 ] ).length > 0 ) this._path = Path.addTrailingSlash( Path.directory( a[ 0 ] ) );
-        Logger.verbose( '_path ${this._path}' );
 
     }
 
     function _initStandardError( executor:AbstractExecutor, data:String ) {
 
-        Logger.verbose( '_initStandardError ${data}' );
+        Logger.verbose( '${this}: _initStandardError ${data}' );
         
     }
 
     function _initStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_initStop ${executor.exitCode}' );
-
-        _initExecutor.dispose();
+        Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
 
         _initialized = true;
-        
-        _initializationComplete();
 
         for ( f in _onInit ) f( this );
+
+        ExecutorManager.getInstance().remove( '${_name}_${AbstractAppExecutorContext.Init}' );
+
+        executor.dispose();
+        _initializationComplete();
         
     }
 
     function _initializationComplete():Void {}
+
+}
+
+enum abstract AbstractAppExecutorContext( String ) to String {
+
+    var Init = "AbstractApp_Init";
 
 }

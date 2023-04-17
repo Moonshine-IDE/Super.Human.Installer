@@ -37,7 +37,10 @@ import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
+import prominic.sys.io.ExecutorManager;
 import prominic.sys.tools.SysTools;
+
+using Lambda;
 
 @:allow( prominic.sys )
 @:allow( prominic.sys.applications )
@@ -50,6 +53,7 @@ class VirtualBox extends AbstractApp {
     static final _patternIPV6Address = new EReg( "(^IPV6Address:\\h+)", "" );
     static final _patternIPV6NetworkMaskPrefixLength = new EReg( "(^IPV6NetworkMaskPrefixLength:\\h+)", "" );
     static final _patternListVMs = ~/^(?:")(.+)(?:").(?:{)(\S+)(?:})$/gm;
+    static final _patternListVMsLong = ~/^Name:(?s:.+?)(?=Name:)/gms;
     static final _patternMByte = new EReg( "(\\hMByte)", "" );
     static final _patternMediumType = new EReg( "(^MediumType:\\h+)", "" );
     static final _patternMemoryAvailable = new EReg( "(^Memory available:\\h+)", "" );
@@ -87,6 +91,31 @@ class VirtualBox extends AbstractApp {
     static final _patternX2APIC = ~/^(?:x2apic=")(.+)(?:")$/gm;
     static final _patternnestedHWVirt = ~/^(?:nested-hw-virt=")(.+)(?:")$/gm;
 
+    static final _patternName2 = ~/^(?:Name:)(?:\s+)(.+)$/gm;
+    static final _patternVMEncryption2 = ~/^(?:Encryption:)(?:\s+)(\S+)$/gm;
+    static final _patternVMMemory2 = ~/^(?:Memory size:)(?:\s)*(\d+)(?:..)$/gm;
+    static final _patternVMVRam2 = ~/^(?:VRAM size:)(?:\s*)(\d+)(?:..)$/gm;
+    static final _patternCPUExecutionCap2 = ~/^(?:CPU exec cap:)(?:\s)*(\d+)(?:%)$/gm;
+    static final _patternCPUs2 = ~/^(?:Number of CPUs:)(?:\s)*(\d+)$/gm;
+    static final _patternVMState2 = ~/^(?:State:)(?:\s)*(.+)(?:.\(since.)(.+)(?:\))$/gm;
+    static final _patternCFGFile2 = ~/^(?:Config file:)(?:\s+)(.+)$/gm;
+    static final _patternSnapFldr2 = ~/^(?:Snapshot folder:)(?:\s+)(.+)$/gm;
+    static final _patternLogFldr2 = ~/^(?:Log folder:)(?:\s+)(.+)$/gm;
+    static final _patternHardwareUUID2 = ~/^(?:Hardware UUID:)(?:\s+)(.+)$/gm;
+    static final _patternOSType2 = ~/^(?:Guest OS:)(?:\s+)(.+)$/gm;
+    static final _patternPageFusion2 = ~/^(?:Page Fusion:)(?:\s+)(.+)$/gm;
+    static final _patternHPET2 = ~/^(?:HPET:)(?:\s+)(.+)$/gm;
+    static final _patternCPUProfile2 = ~/^(?:CPUProfile:)(?:\s+)(.+)$/gm;
+    static final _patternChipset2 = ~/^(?:Chipset:)(?:\s+)(.+)$/gm;
+    static final _patternFirmware2 = ~/^(?:Firmware:)(?:\s+)(.+)$/gm;
+    static final _patternPAE2 = ~/^(?:PAE:)(?:\s+)(.+)$/gm;
+    static final _patternLongmode2 = ~/^(?:Long Mode:)(?:\s+)(.+)$/gm;
+    static final _patternTripleFaultReset2 = ~/^(?:Triple Fault Reset:)(?:\s+)(.+)$/gm;
+    static final _patternAPIC2 = ~/^(?:APIC:)(?:\s+)(.+)$/gm;
+    static final _patternX2APIC2 = ~/^(?:X2APIC:)(?:\s+)(.+)$/gm;
+    static final _patternnestedHWVirt2 = ~/^(?:Nested VT-x\/AMD-V:)(?:\s+)(.+)$/gm;
+
+    static final _vboxMSIInstallPath:String = "VBOX_MSI_INSTALL_PATH";
     static final _versionPattern = ~/(\d+\.\d+\.\d+)/;
 
     static var _instance:VirtualBox;
@@ -104,15 +133,15 @@ class VirtualBox extends AbstractApp {
     var _onBridgedInterfaces:ChainedList<(Array<BridgedInterface>)->Void, VirtualBox>;
     var _onHostInfo:ChainedList<(HostInfo)->Void, VirtualBox>;
     var _onListVMs:ChainedList<()->Void, VirtualBox>;
-    var _onPowerOffVM:ChainedList<(String)->Void, VirtualBox>;
-    var _onShowVMInfo:ChainedList<(String)->Void, VirtualBox>;
+    var _onPowerOffVM:ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
+    var _onShowVMInfo:ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
+    var _onUnregisterVM:ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     var _onVersion:ChainedList<()->Void, VirtualBox>;
-    var _showVMInfoExecutors:Map<String, Executor>;
     var _tempBridgedInterfaceData:String;
     var _tempHostInfoData:String;
     var _tempListVMsData:String;
     var _tempShowVMInfoData:String;
-    var _virtualMachines:Array<VirtualMachine>;
+    var _virtualBoxMachines:Array<VirtualBoxMachine>;
 
     public var hostInfo( get, never ):HostInfo;
     function get_hostInfo() return _hostInfo;
@@ -135,17 +164,20 @@ class VirtualBox extends AbstractApp {
     public var onListVMs( get, never ):ChainedList<()->Void, VirtualBox>;
     function get_onListVMs() return _onListVMs;
 
-    public var onPowerOffVM( get, never ):ChainedList<(String)->Void, VirtualBox>;
+    public var onPowerOffVM( get, never ):ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     function get_onPowerOffVM() return _onPowerOffVM;
 
-    public var onShowVMInfo( get, never ):ChainedList<(String)->Void, VirtualBox>;
+    public var onShowVMInfo( get, never ):ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
     function get_onShowVMInfo() return _onShowVMInfo;
+
+    public var onUnregisterVM( get, never ):ChainedList<(VirtualBoxMachine)->Void, VirtualBox>;
+    function get_onUnregisterVM() return _onUnregisterVM;
 
     public var onVersion( get, never ):ChainedList<()->Void, VirtualBox>;
     function get_onVersion() return _onVersion;
 
-    public var virtualMachines( get, never ):Array<VirtualMachine>;
-    function get_virtualMachines() return _virtualMachines;
+    public var virtualBoxMachines( get, never ):Array<VirtualBoxMachine>;
+    function get_virtualBoxMachines() return _virtualBoxMachines;
 
     function new() {
 
@@ -164,15 +196,17 @@ class VirtualBox extends AbstractApp {
         _onListVMs = new ChainedList( this );
         _onPowerOffVM = new ChainedList( this );
         _onShowVMInfo = new ChainedList( this );
+        _onUnregisterVM = new ChainedList( this );
         _onVersion = new ChainedList( this );
 
-        _virtualMachines = [];
-        _showVMInfoExecutors = [];
+        _virtualBoxMachines = [];
         
         #if windows
-        var p = Sys.environment().get( "ProgramFiles");
+        var p = Sys.environment().get( _vboxMSIInstallPath );
+        if ( p != null ) _pathAdditions.push( '${p}' );
+        var p = Sys.environment().get( "ProgramFiles" );
         if ( p != null ) _pathAdditions.push( '${p}\\Oracle\\VirtualBox' );
-        var p = Sys.environment().get( "ProgramFiles(x86)");
+        var p = Sys.environment().get( "ProgramFiles(x86)" );
         if ( p != null ) _pathAdditions.push( '${p}\\Oracle\\VirtualBox' );
         #end
 
@@ -203,88 +237,139 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    public function getBridgedInterfaces():Executor {
+    public function getBridgedInterfaces():AbstractExecutor {
+
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.BridgedInterfaces ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.BridgedInterfaces );
 
         _tempBridgedInterfaceData = "";
-        var _bridgedInterfaceExecutor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
-        _bridgedInterfaceExecutor.onStop( _bridgedInterfaceExecutorStop ).onStdOut( _bridgedInterfaceExecutorStandardOutput );
-        return _bridgedInterfaceExecutor;
+
+        final executor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
+        executor.onStop.add( _bridgedInterfaceExecutorStop ).onStdOut.add( _bridgedInterfaceExecutorStandardOutput );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.BridgedInterfaces, executor );
+        return executor;
 
     }
 
-    public function getHostInfo():Executor {
+    public function getHostInfo():AbstractExecutor {
+
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.HostInfo ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.HostInfo );
 
         _tempHostInfoData = "";
-        var _hostInfoExecutor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
-        _hostInfoExecutor.onStdOut( _hostInfoExecutorExecutorStandardOutput ).onStop( _hostInfoExecutorExecutorStop );
-        return _hostInfoExecutor;
+
+        final executor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
+        executor.onStdOut.add( _hostInfoExecutorExecutorStandardOutput ).onStop.add( _hostInfoExecutorExecutorStop );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.HostInfo, executor );
+        return executor;
 
     }
 
-    public function getListVMs():Executor {
+    public function getListVMs( longFormat:Bool = false ):AbstractExecutor {
+
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.ListVMs ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.ListVMs );
 
         _tempListVMsData = "";
-        _virtualMachines = [];
-        var _listVMsExecutor = new Executor( this.path + this._executable, [ "list", "vms" ]);
-        _listVMsExecutor.onStdOut( _listVMsExecutorStandardOutput ).onStop( _listVMsExecutorStop );
-        return _listVMsExecutor;
+        _virtualBoxMachines = [];
+        var args:Array<String> = [ "list", "vms" ];
+        if ( longFormat ) args.push( "--long" );
+
+        final executor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
+        executor.onStdOut.add( _listVMsExecutorStandardOutput ).onStop.add( _listVMsExecutorStopped );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.ListVMs, executor );
+        return executor;
 
     }
 
-    public function getPowerOffVM( id:String ):Executor {
+    public function getPowerOffVM( machine:VirtualBoxMachine ):AbstractExecutor {
+
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}' );
 
         var args:Array<String> = [ "controlvm" ];
-        args.push( id );
+        args.push( machine.virtualBoxId );
         args.push( "poweroff" );
 
         var extraArgs:Array<Dynamic> = [];
-        extraArgs.push( id );
+        extraArgs.push( machine );
 
-        var _powerOffExecutor = new Executor( this.path + this._executable, args, extraArgs );
-        _powerOffExecutor.onStop( _powerOffVMExecutorStopped );
-        return _powerOffExecutor;
+        final executor = new Executor( this.path + this._executable, args, extraArgs );
+        executor.onStop.add( _powerOffVMExecutorStopped );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}', executor );
+        return executor;
 
     }
 
-    public function getShowVMInfo( id:String ):Executor {
+    public function getShowVMInfo( machine:VirtualBoxMachine, ?machineReadable:Bool ):AbstractExecutor {
 
-        //if ( _showVMInfoExecutors.exists( id ) ) return _showVMInfoExecutors.get( id );
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}' );
 
         _tempShowVMInfoData = "";
 
         var args:Array<String> = [ "showvminfo" ];
-        args.push( id );
-        args.push( "--machinereadable" );
+        args.push( machine.virtualBoxId );
+        if ( machineReadable ) args.push( "--machinereadable" );
 
         var extraArgs:Array<Dynamic> = [];
-        extraArgs.push( id );
+        extraArgs.push( machine );
 
-        var _showVMInfoExecutor = new Executor( this.path + this._executable, args, extraArgs );
-        _showVMInfoExecutor.onStdOut( _showVMInfoExecutorStandardOutput ).onStop( _showVMInfoExecutorStopped );
-        _showVMInfoExecutors.set( id, _showVMInfoExecutor );
-        return _showVMInfoExecutor;
+        final executor = new Executor( this.path + this._executable, args, extraArgs );
+        executor.onStdOut.add( _showVMInfoExecutorStandardOutput ).onStop.add( _showVMInfoExecutorStopped );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.ShowVMInfo}${machine.virtualBoxId}', executor );
+        return executor;
 
     }
 
-    public function getUnregisterVM( id:String, delete:Bool = false ):Executor {
+    public function getUnregisterVM( machine:VirtualBoxMachine, delete:Bool = false ):AbstractExecutor {
+
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}' ) )
+            return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}' );
 
         var args:Array<String> = [ "unregistervm" ];
         if ( delete ) args.push( "--delete" );
-        args.push( id );
-        var _unregisterExecutor = new Executor( this.path + this._executable, args );
-        return _unregisterExecutor;
+        args.push( machine.virtualBoxId );
+
+        var extraArgs:Array<Dynamic> = [];
+        extraArgs.push( machine );
+
+        final executor = new Executor( this.path + this._executable, args, extraArgs );
+        executor.onStop.add( _unregisterExecutorStopped );
+        ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}', executor );
+        return executor;
 
     }
 
-    public function getVersion():Executor {
+    public function getVersion():AbstractExecutor {
 
-        var _versionExecutor = new Executor( this.path + this._executable, [ "-V" ] );
-        _versionExecutor.onStop( _versionExecutorStopped ).onStdOut( _versionExecutorStandardOutput );
-        return _versionExecutor;
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.Version ) )
+            return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.Version );
+
+        final executor = new Executor( this.path + this._executable, [ "-V" ] );
+        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
+        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.Version, executor );
+        return executor;
+
+    }
+
+    public function getVirtualMachineById( id:String ):VirtualBoxMachine {
+
+        for ( m in _virtualBoxMachines ) if ( m.virtualBoxId == id ) return m;
+        return null;
 
     }
 
     public function openGUI() {
+
+        Logger.debug( '${this}: Opening GUI' );
 
         #if mac
         Shell.getInstance().open( [ "-a", "VirtualBox" ] );
@@ -296,6 +381,12 @@ class VirtualBox extends AbstractApp {
 
     }
 
+    public override function toString():String {
+
+        return '[VirtualBox]';
+
+    }
+
     function _bridgedInterfaceExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
 
         _tempBridgedInterfaceData += data;
@@ -304,9 +395,16 @@ class VirtualBox extends AbstractApp {
 
     function _bridgedInterfaceExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_bridgedInterfaceExecutorStop(): ${executor.exitCode} ${_tempBridgedInterfaceData}' );
+        Logger.debug( '${this}: bridgedInterfaceExecutor stopped with exit code: ${executor.exitCode}, data:${_tempBridgedInterfaceData}' );
+
         if ( executor.exitCode == 0 )
             _processBridgedInterfacesData();
+
+        for ( f in _onBridgedInterfaces ) f( _bridgedInterfaces );
+
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.BridgedInterfaces );
+
+        executor.dispose();
 
     }
 
@@ -318,9 +416,16 @@ class VirtualBox extends AbstractApp {
 
     function _hostInfoExecutorExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_hostInfoExecutorExecutorStop(): ${executor.exitCode} ${_tempHostInfoData}' );
+        Logger.debug( '${this}: hostInfoExecutor stopped with exit code: ${executor.exitCode}, data: ${_tempHostInfoData}' );
+
         if ( executor.exitCode == 0 )
             _processHostInfoData();
+
+        for ( f in _onHostInfo ) f( _hostInfo );
+
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.HostInfo );
+
+        executor.dispose();
 
     }
 
@@ -375,8 +480,6 @@ class VirtualBox extends AbstractApp {
 
             }
 
-            for ( f in _onBridgedInterfaces ) f( _bridgedInterfaces );
-
         }
 
     }
@@ -425,8 +528,6 @@ class VirtualBox extends AbstractApp {
 
             }
                 
-            for ( f in _onHostInfo ) f( _hostInfo );
-
         }
 
     }
@@ -441,8 +542,6 @@ class VirtualBox extends AbstractApp {
 
                 this._version = _versionPattern.matched( 0 );
 
-                for ( f in _onVersion ) f();
-
             }
 
         }
@@ -451,13 +550,25 @@ class VirtualBox extends AbstractApp {
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         
+        Logger.debug( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
+
+        for ( f in _onVersion ) f();
+
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.Version );
+
         executor.dispose();
 
     }
 
     function _powerOffVMExecutorStopped( executor:AbstractExecutor ) {
 
+        Logger.debug( '${this}: powerOffVMExecutor stopped with exitCode: ${executor.exitCode}' );
+
         for ( f in _onPowerOffVM ) f( executor.extraParams[ 0 ] );
+
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.PowerOffVM}${executor.extraParams[ 0 ].virtualBoxId}' );
+
+        executor.dispose();
 
     }
 
@@ -469,11 +580,48 @@ class VirtualBox extends AbstractApp {
 
     function _showVMInfoExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_showVMInfoExecutorStopped(): ${executor.exitCode} ${_tempHostInfoData}' );
+        Logger.debug( '${this}: showVMInfoExecutor stopped with exit code: ${executor.exitCode}' );
+        
         if ( executor.exitCode == 0 )
-            _processShowVMInfoData( executor.extraParams[ 0 ] );
+            _processShowVMInfoLongFormatData( executor.extraParams[ 0 ] );
 
-        _showVMInfoExecutors.remove( executor.extraParams[ 0 ] );
+        // ShowVMInfo returned with an error, meaning the server does not exist
+        if ( executor.exitCode == 1 ) {
+
+            var removedVM:VirtualBoxMachine = null;
+
+            for ( m in this._virtualBoxMachines ) {
+
+                if ( m.virtualBoxId == executor.extraParams[ 0 ].virtualBoxId ) {
+
+                    // Removing non-existent virtual machine
+                    removedVM = m;
+                    this._virtualBoxMachines.remove( m );
+                    break;
+
+                }
+
+            }
+
+        }
+
+        for ( f in _onShowVMInfo ) f( executor.extraParams[ 0 ] );
+
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.ShowVMInfo}${executor.extraParams[ 0 ].virtualBoxId}' );
+
+        executor.dispose();
+
+    }
+
+    function _unregisterExecutorStopped( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this}: unregisterExecutor stopped with exit code: ${executor.exitCode}' );
+        
+        for ( f in _onUnregisterVM ) f( executor.extraParams[ 0 ] );
+
+        ExecutorManager.getInstance().remove( '${VirtualBoxExecutorContext.UnregisterVM}${executor.extraParams[ 0 ].virtualBoxId}' );
+
+        executor.dispose();
 
     }
 
@@ -483,12 +631,32 @@ class VirtualBox extends AbstractApp {
 
     }
 
-    function _listVMsExecutorStop( executor:AbstractExecutor ) {
+    function _listVMsExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.verbose( '_listVMsExecutorStop(): ${executor.exitCode} ${_tempListVMsData}' );
-        if ( executor.exitCode == 0 )
-            _processListVMsData();
-        
+        Logger.debug( '${this}: listVMsExecutor stopped with exit code: ${executor.exitCode}' );
+
+        if ( executor.exitCode == 0 ) {
+
+            _virtualBoxMachines = [];
+
+            if ( ( executor.extraParams[ 0 ] != null && executor.extraParams[ 0 ] == true ) ) {
+
+                _processListVMsLongFormatData();
+
+            } else {
+
+                _processListVMsData();
+
+            }
+
+        }
+
+        for ( f in _onListVMs ) f();
+
+        ExecutorManager.getInstance().remove( VirtualBoxExecutorContext.ListVMs );
+
+        executor.dispose();
+
     }
 
     function _processListVMsData() {
@@ -503,10 +671,10 @@ class VirtualBox extends AbstractApp {
 
                     if ( _patternListVMs.match( l ) ) {
 
-                        var vm:VirtualMachine = {};
+                        var vm:VirtualBoxMachine = {};
                         vm.name = _patternListVMs.matched( 1 );
-                        vm.id = _patternListVMs.matched( 2 );
-                        _virtualMachines.push( vm );
+                        vm.virtualBoxId = _patternListVMs.matched( 2 );
+                        _virtualBoxMachines.push( vm );
 
                     }
 
@@ -520,14 +688,123 @@ class VirtualBox extends AbstractApp {
 
         }
 
-        for ( f in _onListVMs ) f();
+    }
+
+    function _processListVMsLongFormatData() {
+
+        var machineBlocks = _tempListVMsData.split( SysTools.lineEnd + SysTools.lineEnd );
+
+        if ( machineBlocks != null && machineBlocks.length > 0 ) {
+
+            for ( block in machineBlocks ) {
+
+                if ( block.length > 0 ) {
+
+                    var currentMachine:VirtualBoxMachine = {};
+
+                    var lines = block.split( SysTools.lineEnd );
+
+                    if ( lines != null && lines.length > 0 ) {
+
+                        for ( l in lines ) {
+
+                            try {
+
+                                if ( _patternName2.match( l ) )
+                                    currentMachine.name = _patternName2.matched( 1 );
+            
+                                if ( _patternVMEncryption2.match( l ) )
+                                    currentMachine.encryption = _patternVMEncryption2.matched( 1 ).toLowerCase() == "enabled";
+            
+                                if ( _patternVMMemory2.match( l ) )
+                                    currentMachine.memory = Std.parseInt( _patternVMMemory2.matched( 1 ) );
+            
+                                if ( _patternVMVRam2.match( l ) )
+                                    currentMachine.vram = Std.parseInt( _patternVMVRam2.matched( 1 ) );
+            
+                                if ( _patternCPUExecutionCap2.match( l ) )
+                                    currentMachine.cpuexecutioncap = Std.parseInt( _patternCPUExecutionCap2.matched( 1 ) );
+            
+                                if ( _patternCPUs2.match( l ) )
+                                    currentMachine.cpus = Std.parseInt( _patternCPUs2.matched( 1 ) );
+            
+                                if ( _patternVMState2.match( l ) )
+                                    currentMachine.virtualBoxState = _patternVMState2.matched( 1 );
+            
+                                if ( _patternCFGFile2.match( l ) ) {
+                                    currentMachine.CfgFile = Path.normalize( _patternCFGFile2.matched( 1 ) );
+                                    currentMachine.root = Path.directory( currentMachine.CfgFile );
+                                }
+            
+                                if ( _patternSnapFldr2.match( l ) )
+                                    currentMachine.SnapFldr = Path.normalize( _patternSnapFldr2.matched( 1 ) );
+            
+                                if ( _patternLogFldr2.match( l ) )
+                                    currentMachine.LogFldr = Path.normalize( _patternLogFldr2.matched( 1 ) );
+            
+                                if ( _patternHardwareUUID2.match( l ) )
+                                    currentMachine.hardwareuuid = _patternHardwareUUID2.matched( 1 );
+            
+                                if ( _patternOSType2.match( l ) )
+                                    currentMachine.ostype = _patternOSType2.matched( 1 );
+            
+                                if ( _patternPageFusion2.match( l ) )
+                                    currentMachine.pagefusion = _patternPageFusion2.matched( 1 );
+            
+                                if ( _patternHPET2.match( l ) )
+                                    currentMachine.hpet = _patternHPET2.matched( 1 );
+            
+                                if ( _patternCPUProfile2.match( l ) )
+                                    currentMachine.cpuprofile = _patternCPUProfile2.matched( 1 );
+            
+                                if ( _patternChipset2.match( l ) )
+                                    currentMachine.chipset = _patternChipset2.matched( 1 );
+            
+                                if ( _patternFirmware2.match( l ) )
+                                    currentMachine.firmware = _patternFirmware2.matched( 1 );
+            
+                                if ( _patternPAE2.match( l ) )
+                                    currentMachine.pae = _patternPAE2.matched( 1 );
+            
+                                if ( _patternLongmode2.match( l ) )
+                                    currentMachine.longmode = _patternLongmode2.matched( 1 );
+            
+                                if ( _patternTripleFaultReset2.match( l ) )
+                                    currentMachine.triplefaultreset = _patternTripleFaultReset2.matched( 1 );
+            
+                                if ( _patternAPIC2.match( l ) )
+                                    currentMachine.apic = _patternAPIC2.matched( 1 );
+            
+                                if ( _patternX2APIC2.match( l ) )
+                                    currentMachine.x2apic = _patternX2APIC2.matched( 1 );
+            
+                                if ( _patternnestedHWVirt2.match( l ) )
+                                    currentMachine.nestedhwvirt = _patternnestedHWVirt2.matched( 1 );
+            
+                            } catch( e ) {
+            
+                                Logger.error( 'RegExp processing failed with ${l}' );
+            
+                            }
+
+                        }
+
+                        _virtualBoxMachines.push( currentMachine );
+
+                    }
+
+                }
+                
+            }
+
+        }
 
     }
 
     function _processShowVMInfoData( id:String ) {
 
-        var currentMachine:VirtualMachine = null;
-        for ( m in _virtualMachines ) if ( m.name == id || m.id == id ) currentMachine = m;
+        var currentMachine:VirtualBoxMachine = null;
+        for ( m in _virtualBoxMachines ) if ( m.name == id || m.virtualBoxId == id ) currentMachine = m;
 
         var a = _tempShowVMInfoData.split( SysTools.lineEnd );
 
@@ -536,6 +813,9 @@ class VirtualBox extends AbstractApp {
             for ( l in a ) {
 
                 try {
+
+                    if ( _patternName.match( l ) )
+                        currentMachine.name = currentMachine.virtualBoxId = _patternName.matched( 1 );
 
                     if ( _patternVMEncryption.match( l ) )
                         currentMachine.encryption = _patternVMEncryption.matched( 1 ).toLowerCase() == "enabled";
@@ -553,7 +833,7 @@ class VirtualBox extends AbstractApp {
                         currentMachine.cpus = Std.parseInt( _patternCPUs.matched( 1 ) );
 
                     if ( _patternVMState.match( l ) )
-                        currentMachine.VMState = _patternVMState.matched( 1 );
+                        currentMachine.virtualBoxState = _patternVMState.matched( 1 );
 
                     if ( _patternCFGFile.match( l ) ) {
                         currentMachine.CfgFile = Path.normalize( _patternCFGFile.matched( 1 ) );
@@ -618,8 +898,131 @@ class VirtualBox extends AbstractApp {
 
         }
 
-        for ( f in _onShowVMInfo ) f( id );
+    }
+
+    function _processShowVMInfoLongFormatData( machine:VirtualBoxMachine ) {
+
+        final currentMachine:VirtualBoxMachine = {};
+
+        if ( currentMachine != null && _tempShowVMInfoData.length > 0 ) {
+
+            var lines = _tempShowVMInfoData.split( SysTools.lineEnd );
+
+            if ( lines != null && lines.length > 0 ) {
+
+                for ( l in lines ) {
+
+                    try {
+
+                        if ( _patternName2.match( l ) )
+                            currentMachine.name = currentMachine.virtualBoxId = _patternName2.matched( 1 );
+    
+                        if ( _patternVMEncryption2.match( l ) )
+                            currentMachine.encryption = _patternVMEncryption2.matched( 1 ).toLowerCase() == "enabled";
+    
+                        if ( _patternVMMemory2.match( l ) )
+                            currentMachine.memory = Std.parseInt( _patternVMMemory2.matched( 1 ) );
+    
+                        if ( _patternVMVRam2.match( l ) )
+                            currentMachine.vram = Std.parseInt( _patternVMVRam2.matched( 1 ) );
+    
+                        if ( _patternCPUExecutionCap2.match( l ) )
+                            currentMachine.cpuexecutioncap = Std.parseInt( _patternCPUExecutionCap2.matched( 1 ) );
+    
+                        if ( _patternCPUs2.match( l ) )
+                            currentMachine.cpus = Std.parseInt( _patternCPUs2.matched( 1 ) );
+    
+                        if ( _patternVMState2.match( l ) )
+                            currentMachine.virtualBoxState = _patternVMState2.matched( 1 );
+    
+                        if ( _patternCFGFile2.match( l ) ) {
+                            currentMachine.CfgFile = Path.normalize( _patternCFGFile2.matched( 1 ) );
+                            currentMachine.root = Path.directory( currentMachine.CfgFile );
+                        }
+    
+                        if ( _patternSnapFldr2.match( l ) )
+                            currentMachine.SnapFldr = Path.normalize( _patternSnapFldr2.matched( 1 ) );
+    
+                        if ( _patternLogFldr2.match( l ) )
+                            currentMachine.LogFldr = Path.normalize( _patternLogFldr2.matched( 1 ) );
+    
+                        if ( _patternHardwareUUID2.match( l ) )
+                            currentMachine.hardwareuuid = _patternHardwareUUID2.matched( 1 );
+    
+                        if ( _patternOSType2.match( l ) )
+                            currentMachine.ostype = _patternOSType2.matched( 1 );
+    
+                        if ( _patternPageFusion2.match( l ) )
+                            currentMachine.pagefusion = _patternPageFusion2.matched( 1 );
+    
+                        if ( _patternHPET2.match( l ) )
+                            currentMachine.hpet = _patternHPET2.matched( 1 );
+    
+                        if ( _patternCPUProfile2.match( l ) )
+                            currentMachine.cpuprofile = _patternCPUProfile2.matched( 1 );
+    
+                        if ( _patternChipset2.match( l ) )
+                            currentMachine.chipset = _patternChipset2.matched( 1 );
+    
+                        if ( _patternFirmware2.match( l ) )
+                            currentMachine.firmware = _patternFirmware2.matched( 1 );
+    
+                        if ( _patternPAE2.match( l ) )
+                            currentMachine.pae = _patternPAE2.matched( 1 );
+    
+                        if ( _patternLongmode2.match( l ) )
+                            currentMachine.longmode = _patternLongmode2.matched( 1 );
+    
+                        if ( _patternTripleFaultReset2.match( l ) )
+                            currentMachine.triplefaultreset = _patternTripleFaultReset2.matched( 1 );
+    
+                        if ( _patternAPIC2.match( l ) )
+                            currentMachine.apic = _patternAPIC2.matched( 1 );
+    
+                        if ( _patternX2APIC2.match( l ) )
+                            currentMachine.x2apic = _patternX2APIC2.matched( 1 );
+    
+                        if ( _patternnestedHWVirt2.match( l ) )
+                            currentMachine.nestedhwvirt = _patternnestedHWVirt2.matched( 1 );
+    
+                    } catch( e ) {
+    
+                        Logger.error( 'RegExp processing failed with ${l}' );
+    
+                    }
+
+                }
+
+            }
+
+        }
+
+        for ( m in _virtualBoxMachines ) {
+
+            if ( m.name == machine.virtualBoxId ) {
+                
+                _virtualBoxMachines.remove( m );
+                break;
+
+            }
+
+        }
+
+        _virtualBoxMachines.push( currentMachine );
 
     }
+
+}
+
+enum abstract VirtualBoxExecutorContext( String ) to String {
+
+    var BridgedInterfaces = "VirtualBox_BridgedInterfaces";
+    var HostInfo = "VirtualBox_HostInfo";
+    var ListVMs = "VirtualBox_ListVMs";
+    var PowerOffVM = "VirtualBox_PowerOffVM_";
+    var ShowVMInfo = "VirtualBox_ShowVMInfo_";
+    var Version = "VirtualBox_Version";
+    var VMInfo = "VirtualBox_VMInfo_";
+    var UnregisterVM = "VirtualBox_UnregisterVM_";
 
 }

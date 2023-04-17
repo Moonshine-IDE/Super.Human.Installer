@@ -61,13 +61,17 @@ import lime.system.System;
 import lime.ui.Window;
 import openfl.Lib;
 import openfl.events.Event;
-import openfl.net.URLRequest;
 import openfl.system.Capabilities;
 import prominic.core.primitives.VersionInfo;
 import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
+import superhuman.config.SuperHumanGlobals;
 import sys.FileSystem;
+
+#if buildmacros
+@:build( BuildMacro.createGitInfo() )
+#end
 
 abstract class GenesisApplication extends Application {
 
@@ -77,11 +81,6 @@ abstract class GenesisApplication extends Application {
     static public final PAGE_LOGIN:String = "page-login";
     static public final PAGE_SUPPORT:String = "page-support";
     static public final PAGE_UPDATE:String = "page-update";
-    #if debug
-    static public final UPDATER_ADDRESS:String = "https://static.moonshine-ide.com/downloads/superhumaninstaller/updater-dev.xml";
-    #else
-    static public final UPDATER_ADDRESS:String = "https://static.moonshine-ide.com/downloads/superhumaninstaller/updater.xml";
-    #end
 
     static var _instance:GenesisApplication;
 
@@ -115,6 +114,7 @@ abstract class GenesisApplication extends Application {
     var _toastGroup:LayoutGroup;
     var _updatePage:UpdatePage;
     var _updater:GenesisApplicationUpdater;
+    var _updaterAddress:String;
     var _version:String;
     var _versionInfo:VersionInfo;
     var _window:Window;
@@ -187,24 +187,24 @@ abstract class GenesisApplication extends Application {
         _versionInfo = _version;
 
         if ( FileSystem.exists( logFilePath ) ) 
-            Logger.info( 'Log file created at ${logFilePath}' )
+            Logger.info( '${this}: Log file created at ${logFilePath}' )
         else
-            Logger.warning( 'Log file creation failed at ${logFilePath}' );
+            Logger.warning( '${this}: Log file creation failed at ${logFilePath}' );
 
-        Logger.info( 'Initializing ${_title} v${_version}...' );
+        Logger.info( '${this}: Initializing ${_title} v${_version}...' );
 
         _cpuArchitecture = prominic.sys.tools.SysTools.getCPUArchitecture();
 
         #if cpp
-        Logger.info( 'Platform: Native(C++), OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
+        Logger.info( '${this}: Platform: Native(C++), OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
         #elseif neko
-        Logger.info( 'Platform: Neko, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
+        Logger.info( '${this}: Platform: Neko, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
         #else
-        Logger.info( 'Platform: Unknown, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
+        Logger.info( '${this}: Platform: Unknown, OS: ${Capabilities.os} (${Capabilities.version}), CPU: ${_cpuArchitecture}' );
         #end
-		Logger.info( 'SysInfo: DevideModel: ${System.deviceModel} DeviceVendor: ${System.deviceVendor} Endianness: ${System.endianness} PlatformLabel: ${System.platformLabel} PlatformName: ${System.platformName} PlatformVersion: ${System.platformVersion}' );
-        Logger.info( #if debug 'Debug build: true' #else 'Debug build: false' #end );
-        Logger.debug( 'Application storage directory: ${System.applicationStorageDirectory}' );
+		Logger.info( '${this}: SysInfo: DevideModel: ${System.deviceModel} DeviceVendor: ${System.deviceVendor} Endianness: ${System.endianness} PlatformLabel: ${System.platformLabel} PlatformName: ${System.platformName} PlatformVersion: ${System.platformVersion}' );
+        Logger.info( #if debug '${this}: Debug build: true' #else '${this}: Debug build: false' #end );
+        Logger.debug( '${this}: Application storage directory: ${System.applicationStorageDirectory}' );
 
         this.disabledAlpha = .5;
 
@@ -339,6 +339,7 @@ abstract class GenesisApplication extends Application {
 
         _supportPage = new SupportPage();
         _supportPage.addEventListener( GenesisApplicationEvent.OPEN_LOGS_DIRECTORY, _openLogsDirectory );
+        _supportPage.addEventListener( GenesisApplicationEvent.VISIT_SOURCE_CODE_ISSUES, _visitSourceCodeIssues );
         addPage( _supportPage, PAGE_SUPPORT );
 
         _updatePage = new UpdatePage();
@@ -352,18 +353,20 @@ abstract class GenesisApplication extends Application {
         
         ToastManager.getInstance().container = _toastGroup;
 
+        #if !neko
         _updater.addEventListener( GenesisApplicationUpdaterEvent.UPDATE_FOUND, _updateFound );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.EXIT_APP, _exitApp );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_START, _downloadStart );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_CANCELLED, _downloadCancelled );
         _updater.addEventListener( GenesisApplicationUpdaterEvent.DOWNLOAD_FAILED, _downloadCancelled );
-        _updater.checkUpdates( UPDATER_ADDRESS );
+        if ( _updaterAddress != null ) _updater.checkUpdates( _updaterAddress );
+        #end
 
     }
 
     function _updateFound( e:Event ) {
 
-        Logger.debug( 'Update found: ${ _updater.updaterInfo }' );
+        Logger.debug( '${this}: Update found: ${ _updater.updaterInfoEntry }' );
         _header.updateFound();
         
     }
@@ -417,6 +420,12 @@ abstract class GenesisApplication extends Application {
             }
 
         }
+
+    }
+
+    public override function toString():String {
+
+        return '[GenesisApplication]';
 
     }
 
@@ -479,11 +488,17 @@ abstract class GenesisApplication extends Application {
 
     function _visitGenesisDirectory( ?e:Dynamic ) {
 
-        Lib.navigateToURL( new URLRequest( GENESIS_ADDRESS ) );
+        #if linux
+		Shell.getInstance().open( [ GENESIS_ADDRESS ] );
+		#else
+        System.openURL( GENESIS_ADDRESS );
+        #end
 
     }
 
     function _visitSourceCode( ?e:Dynamic ) {}
+
+    function _visitSourceCodeIssues( ?e:Dynamic ) {}
 
     function _menuSelected( e:GenesisApplicationEvent ) {
 

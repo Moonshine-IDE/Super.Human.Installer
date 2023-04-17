@@ -30,7 +30,9 @@
 
 package prominic.sys.io;
 
-import haxe.ds.Either;
+import prominic.logging.Logger;
+import prominic.sys.io.process.ProcessTools.KillSignal;
+import prominic.sys.tools.StrTools;
 
 class SerialExecutor extends AbstractExecutor {
 
@@ -63,26 +65,17 @@ class SerialExecutor extends AbstractExecutor {
 
     }
 
-    public function add( executor:Either<AbstractExecutor, Array<AbstractExecutor>> ):SerialExecutor {
+    public function add( ...executors:AbstractExecutor ):SerialExecutor {
 
-        switch ( executor ) {
-
-            case Left( l ):
-                if ( l != null ) _executors.push( l );
-
-            case Right( r ):
-                for ( e in r ) if ( e != null ) _executors.push( e );
-
-            default:
-                
-        }
-        
+        for ( e in executors ) _executors.push( e );
         return this;
 
     }
 
     override public function dispose() {
 
+        Logger.debug( '${this}: Disposing...' );
+        
         for ( e in _executors ) {
 
             e.dispose();
@@ -98,22 +91,34 @@ class SerialExecutor extends AbstractExecutor {
 
     public function execute( ?extraArgs:Array<String>, ?workingDirectory:String ) {
 
-        for ( e in _executors ) {
+        var a:Array<String> = [];
+        for ( e in _executors ) a.push( e.id );
+        Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
-            e.onStop( _executorStopped );
+        _startTime = Sys.time();
+        _running = true;
 
-        }
+        if ( _executors.length == 0 ) {
 
-        if ( _executors.length > 0 ) {
+            _running = false;
+            _stopTime = Sys.time();
+            for ( f in _onStop ) f( this );
+            return this;
+
+        } else {
+
+            for ( e in _executors ) e.onStop.add( _executorStopped );
 
             _currentExecutor = _executors[ 0 ];
             _currentExecutor.execute( extraArgs );
-            
+
         }
 
         return this;
 
     }
+
+    public function kill( signal:KillSignal ) {}
 
     function _executorStopped( executor:AbstractExecutor ) {
 
@@ -122,6 +127,9 @@ class SerialExecutor extends AbstractExecutor {
 
         if ( executor.exitCode != 0 && _stopOnError ) {
 
+            _running = false;
+            _stopTime = Sys.time();
+            Logger.debug( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
             return;
 
@@ -134,6 +142,9 @@ class SerialExecutor extends AbstractExecutor {
 
         } else {
 
+            _running = false;
+            _stopTime = Sys.time();
+            Logger.debug( '${this}: All executors stopped. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
 
         }
@@ -142,5 +153,14 @@ class SerialExecutor extends AbstractExecutor {
 
     @:keep
     public function stop( ?forced:Bool ) { }
+
+    @:keep
+    public function simulateStop() {}
+
+    public override function toString():String {
+
+        return '[SerialExecutor(${this._id})]';
+
+    }
 
 }

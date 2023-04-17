@@ -37,6 +37,8 @@ import genesis.application.components.AdvancedAssetLoader;
 import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
+import openfl.events.TextEvent;
+import superhuman.events.SuperHumanApplicationEvent;
 
 class HelpPage extends Page {
 
@@ -70,12 +72,21 @@ class HelpPage extends Page {
         _infoLabel.htmlText = LanguageManager.getInstance().getString( 'helppage.text', GenesisApplication.getInstance().title );
         _infoLabel.wordWrap = true;
         _infoLabel.layoutData = new VerticalLayoutData( 100 );
+        _infoLabel.addEventListener( TextEvent.LINK, _infoLabelLink );
         this.addChild( _infoLabel );
 
         _disclaimerLabel = new Label( LanguageManager.getInstance().getString( 'helppage.disclaimer' ) );
         _disclaimerLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
         _disclaimerLabel.paddingTop = GenesisApplicationTheme.GRID * 2;
         this.addChild( _disclaimerLabel );
+
+    }
+
+    function _infoLabelLink( e:TextEvent ) {
+
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.TEXT_LINK );
+        evt.text = e.text;
+        this.dispatchEvent( evt );
 
     }
 

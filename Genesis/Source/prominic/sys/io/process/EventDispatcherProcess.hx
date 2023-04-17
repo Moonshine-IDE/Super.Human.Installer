@@ -77,10 +77,15 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
 
     /**
      * Starts the process and sets up the relevant threads or event listeners for stream processing.
+     * @param inlineExecution If true, the process launches without additional output listener threads,
+     * waiting for exit code in the current thread, therefore it's a thread blocking function. Stdout,
+     * stderr data, pid, exit code, and events are only available after the process finishes
      */
-    override function start() {
+    override function start( ?inlineExecution:Bool ) {
 
-        super.start();
+        super.start( inlineExecution );
+
+        if ( inlineExecution ) return;
 
         if ( _enterFrameEventDispatcher != null ) {
 
@@ -171,6 +176,36 @@ class EventDispatcherProcess extends BufferedProcess implements IEventDispatcher
             evt.process = this;
             this.dispatchEvent( evt );
             _eventDispatcherMutex.release();
+
+        }
+
+    }
+
+    override function _startInline() {
+
+        super._startInline();
+
+        if ( this._stdoutBuffer.length > 0 ) {
+
+            var evt = new ProcessEvent( ProcessEvent.STDOUT_DATA );
+            evt.process = this;
+            this.dispatchEvent( evt );
+
+        }
+
+        if ( this._stderrBuffer.length > 0 ) {
+
+            var evt = new ProcessEvent( ProcessEvent.STDERR_DATA );
+            evt.process = this;
+            this.dispatchEvent( evt );
+
+        }
+
+        if ( _exited ) {
+
+            var evt = new ProcessEvent( ProcessEvent.PROCESS_EXIT );
+            evt.process = this;
+            this.dispatchEvent( evt );
 
         }
 
