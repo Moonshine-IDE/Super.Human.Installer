@@ -35,8 +35,13 @@ jobs:
           haxelib run openfl build project.xml linux -debug -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
 
       - name: Compress artifacts
-        run: |
-          tar czfv SuperHumanInstallerDev.tar.gz Export/Development/linux/bin/
+        uses: a7ul/tar-action@v1.1.0
+        id: compress
+        with:
+          command: c
+          files: |
+            Export/Development/linux/bin/*
+          outPath: SuperHumanInstallerDev.tar.gz
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
