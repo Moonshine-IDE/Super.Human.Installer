@@ -43,4 +43,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with: 
           name: SuperHumanInstallerDev
-          path: ./SuperHumanInstallerDev.tar.gz
+          path: Export/Development/linux/bin/SuperHumanInstallerDev.tar.gz
