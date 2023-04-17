@@ -5,14 +5,17 @@ jobs:
   build-linux:
     name: Build on Linux
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/linux-dev.yml@master
+    secrets: inherit
     
   build-windows:
     name: Build on Windows
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/windows-dev.yml@master
+    secrets: inherit
     
   build-macos:
     name: Build on MacOS
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-dev.yml@master
+    secrets: inherit
     
   release:
     name: Draft Development Release
