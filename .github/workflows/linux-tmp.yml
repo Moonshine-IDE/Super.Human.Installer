@@ -1,0 +1,43 @@
+name: Linux Tmp Dev
+  
+on:
+  - workflow_dispatch
+  - workflow_call
+  
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+
+      - name: Install dependencies
+        run: | 
+          haxelib install hxcpp
+          haxelib install openfl
+          haxelib run openfl setup
+          haxelib install feathersui
+
+      - name: Build project
+        run: |
+          haxelib run openfl build project.xml linux -debug -Dlogverbose -Dlogcolor
+
+      - name: Create AppImage
+        run: |
+          mkdir Templates/SuperHumanInstallerDev.AppDir/usr
+          mv Export/Development/linux/bin Templates/SuperHumanInstallerDev.AppDir/usr/
+          mkdir Templates/SuperHumanInstallerDev.AppDir/usr/lib
+          appimagetool Templates/SuperHumanInstallerDev.AppDir/
+          ls -R
