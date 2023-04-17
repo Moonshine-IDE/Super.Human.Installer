@@ -32,5 +32,4 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml linux `
-            -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+          haxelib run openfl build project.xml linux
