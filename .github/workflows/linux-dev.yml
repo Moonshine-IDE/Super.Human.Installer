@@ -33,5 +33,4 @@ jobs:
       - name: Build project
         run: |
           haxelib run openfl build project.xml linux `
-            -debug -Dlogverbose -Dlogcolor `
-            -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+            -debug -Dlogverbose -Dlogcolor
