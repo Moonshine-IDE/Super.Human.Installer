@@ -52,6 +52,11 @@ jobs:
         with:
           name: SuperHumanInstallerDev-Choco
 
+      - name: Download linux installer
+        uses: actions/download-artifact@v3
+        with:
+          name: SuperHumanInstallerDev
+
       - name: json-to-file
         uses: devops-actions/json-to-file@v1.0.1
         with:
@@ -78,6 +83,7 @@ jobs:
           files: |
             SuperHumanInstallerDev-Setup.pkg
             SuperHumanInstallerDev-Setup.exe
+            SuperHumanInstallerDev.tar.gz
             SuperHumanInstallerDev-Choco.nupkg
             buildinfo.json
           fail_on_unmatched_files: true
