@@ -42,5 +42,5 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with: 
-          name: SuperHumanInstallerDev
+          name: SuperHumanInstaller
           path: Export/Production/linux/bin/SuperHumanInstaller.tar.gz
