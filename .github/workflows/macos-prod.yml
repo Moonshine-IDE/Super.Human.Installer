@@ -118,7 +118,7 @@ jobs:
             --identifier net.prominic.genesis.superhumaninstaller \
             --component Export/Production/macos/bin/SuperHumanInstaller.app \
             /Applications \
-            ./SuperHumanInstaller-Setup.pkg 
+            ./SuperHumanInstaller-Setup-Unsigned.pkg 
 
       - name: Sign installer
         env:
