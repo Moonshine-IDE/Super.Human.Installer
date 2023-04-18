@@ -33,3 +33,14 @@ jobs:
       - name: Build project
         run: |
           haxelib run openfl build project.xml linux -debug -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+
+      - name: Compress artifacts
+        run: |
+          cd Export/Development/linux/bin/
+          tar czfv SuperHumanInstallerDev.tar.gz *
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with: 
+          name: SuperHumanInstallerDev
+          path: Export/Development/linux/bin/SuperHumanInstallerDev.tar.gz

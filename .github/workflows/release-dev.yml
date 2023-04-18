@@ -5,14 +5,17 @@ jobs:
   build-linux:
     name: Build on Linux
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/linux-dev.yml@master
+    secrets: inherit
     
   build-windows:
     name: Build on Windows
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/windows-dev.yml@master
+    secrets: inherit
     
   build-macos:
     name: Build on MacOS
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/macos-dev.yml@master
+    secrets: inherit
     
   release:
     name: Draft Development Release
@@ -49,6 +52,11 @@ jobs:
         with:
           name: SuperHumanInstallerDev-Choco
 
+      - name: Download linux installer
+        uses: actions/download-artifact@v3
+        with:
+          name: SuperHumanInstallerDev
+
       - name: json-to-file
         uses: devops-actions/json-to-file@v1.0.1
         with:
@@ -75,6 +83,7 @@ jobs:
           files: |
             SuperHumanInstallerDev-Setup.pkg
             SuperHumanInstallerDev-Setup.exe
+            SuperHumanInstallerDev.tar.gz
             SuperHumanInstallerDev-Choco.nupkg
             buildinfo.json
           fail_on_unmatched_files: true
