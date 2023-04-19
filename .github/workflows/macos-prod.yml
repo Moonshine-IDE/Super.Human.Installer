@@ -39,8 +39,76 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml mac `
-            -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+          haxelib run openfl build project.xml mac -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+
+      - name: Create keychain
+        env:
+          MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
+        run: |
+          security create-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain
+          echo "Keychain created"
+          security set-keychain-settings -lut 21600 build.keychain
+          echo "Keychain settings set"
+          security default-keychain -s build.keychain
+          echo "Keychain made default"
+          security unlock-keychain -p "$MAC_KEYCHAIN_PASS" build.keychain  
+          echo "Keychain unlocked"
+
+      - name: Import certificates
+        env:
+          MAC_ALL_CERTS: ${{ secrets.MAC_ALL_CERTS }}
+          MAC_ALL_KEYS: ${{ secrets.MAC_KEYS_1 }}${{ secrets.MAC_KEYS_2 }}
+          MAC_PASS: ${{ secrets.MAC_PASS }}
+        run: |
+          echo "$MAC_ALL_CERTS" | base64 --decode > mac-all-certs.p12
+          echo "$MAC_ALL_KEYS" | base64 --decode > mac-all-keys.p12
+
+          security import ./mac-all-keys.p12 \
+            -k build.keychain \
+            -f pkcs12 \
+            -P "$MAC_PASS" \
+            -T /usr/bin/productsign \
+            -T /usr/bin/codesign
+
+          security import ./mac-all-certs.p12 \
+            -k build.keychain \
+            -f pkcs12 \
+            -P "$MAC_PASS" \
+            -T /usr/bin/productsign \
+            -T /usr/bin/codesign
+
+      - name: Allow codesign and productsign to use keychain
+        env:
+          MAC_KEYCHAIN_PASS: ${{ secrets.MAC_KEYCHAIN_PASS }}
+        run: |
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign:,productsign: \
+            -s \
+            -k "$MAC_KEYCHAIN_PASS" \
+            build.keychain
+          
+      - name: Sign contents
+        env:
+          MAC_CERT_ID: ${{ secrets.MAC_CERT_ID }}
+        run: |
+          codesign Export/Production/macos/bin/SuperHumanInstaller.app \
+            --sign "$MAC_CERT_ID" \
+            --options runtime \
+            --force \
+            --timestamp \
+            --verbose \
+            --deep
+          
+      - name: Verify singature
+        run: |
+          codesign Export/Production/macos/bin/SuperHumanInstaller.app \
+            --display \
+            --verbose \
+            -r-
+
+          codesign Export/Production/macos/bin/SuperHumanInstaller.app \
+            --verify \
+            --verbose
 
       - name: Create package
         run: |
@@ -50,7 +118,52 @@ jobs:
             --identifier net.prominic.genesis.superhumaninstaller \
             --component Export/Production/macos/bin/SuperHumanInstaller.app \
             /Applications \
-            ./SuperHumanInstaller-Setup.pkg 
+            ./SuperHumanInstaller-Setup-Unsigned.pkg 
+
+      - name: Sign installer
+        env:
+          MAC_CERT_INSTALLER_ID: ${{ secrets.MAC_CERT_INSTALLER_ID }}
+        run: |
+          productsign \
+            --timestamp \
+            --sign "$MAC_CERT_INSTALLER_ID" \
+            ./SuperHumanInstaller-Setup-Unsigned.pkg \
+            ./SuperHumanInstaller-Setup.pkg
+          
+      - name: "Notarize app bundle"
+        env:
+          MAC_NOTARIZATION_APPLE_ID: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
+          MAC_NOTARIZATION_TEAM_ID: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
+          MAC_NOTARIZATION_PASS: ${{ secrets.MAC_NOTARIZATION_PASS }}
+        run: |
+          # Store the notarization credentials so that we can prevent a UI password dialog
+          # from blocking the CI
+          echo "Create keychain profile"
+          xcrun notarytool \
+            store-credentials "notarytool-profile" \
+            --apple-id "$MAC_NOTARIZATION_APPLE_ID" \
+            --team-id "$MAC_NOTARIZATION_TEAM_ID" \
+            --password "$MAC_NOTARIZATION_PASS"
+          
+          echo "Notarize app"
+          xcrun notarytool \
+            submit ./SuperHumanInstaller-Setup.pkg \
+            --keychain-profile "notarytool-profile" \
+            --wait
+          
+          echo "Attach staple"
+          xcrun stapler \
+            staple ./SuperHumanInstaller-Setup.pkg
+          
+      - name: Verify installer signature
+        run: |
+          pkgutil --check-signature ./SuperHumanInstaller-Setup.pkg
+          spctl \
+            --assess \
+            --type install \
+            --verbose \
+            --verbose \
+            ./SuperHumanInstaller-Setup.pkg
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
