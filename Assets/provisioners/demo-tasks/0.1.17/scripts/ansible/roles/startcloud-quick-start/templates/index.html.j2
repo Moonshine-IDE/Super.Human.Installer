@@ -27,7 +27,7 @@
                 <span class="tooltiptext">Open an Issue for Demo-Tasks</span>
             </div>
             <div class="tooltip">
-                <a href="https://github.com/Moonshine-IDE/Genesis-Super.Human.Installer/issues" target="_blank" class="menu">Super.Human.Installer<i class="fa fa-bug" aria-hidden="true"></i></a>
+                <a href="https://github.com/Moonshine-IDE/Super.Human.Installer/issues" target="_blank" class="menu">Super.Human.Installer<i class="fa fa-bug" aria-hidden="true"></i></a>
                 <span class="tooltiptext">Open an Issue for SHI</span>
             </div>
             <div class="tooltip">
@@ -66,13 +66,14 @@
             <p>1) The existing Notes Client on your desktop by using File --> Application --> Open then using this server name:</p>
             <p>&emsp;{{ settings.hostname }}.{{ settings.domain }}/{{ domino_organization }}</p>
             <p>2) Your browser by accessing:</p>
-            <p>&emsp;<a href="https://domino.{{ settings.hostname }}.{{ settings.domain }}/portal.nsf" target="_blank">Portal -- https://domino.{{ settings.hostname }}.{{ settings.domain }}/portal.nsf</a></p>
+            <p>&emsp;<a href="https://domino.{{ settings.hostname }}.{{ settings.domain }}/Super.Human.Portal/js-release/index.html" target="_blank">Portal -- https://domino.{{ settings.hostname }}.{{ settings.domain }}/Super.Human.Portal/js-release/index.html</a></p>
             <p>3) via Console:</p>
             <p>&emsp;a) Press the Terminal button in the Super.Human.Installer application</p>
             <p>&emsp;or</p>
-            <p>&emsp;b) Open the <a href="https://console.{{ settings.hostname }}.{{ settings.domain }}/system/terminal" target="_blank">Web Console</a> and login with the linux user credentials below</p>
+            <p>&emsp;b) Open the <a href="https://console.{{ settings.hostname }}.{{ settings.domain }}/system/" target="_blank">Web Console</a> and login with the linux user credentials below</p>
             <p>&emsp;then</p>
             <p>&emsp;To open the Domino console run <a href="#" onclick="CopyToClipboard('dom-console');return false;"><code id="dom-console">sudo domino console</code></a> </p>
+            <p>&emsp;For more advanced domino commands, visit Daniel Nash's Domino Script page here: <a href="https://www.nashcom.de/nshweb/pages/startscript.htm"</>
         </div>
         <hr>
         <div class="section">
@@ -149,7 +150,7 @@
                 </li>
                 {% endif %}
                 <li>
-                    <a href="https://console.{{ settings.hostname }}.{{ settings.domain }}/system/terminal" target="_blank">Web Console</a>
+                    <a href="https://console.{{ settings.hostname }}.{{ settings.domain }}/system" target="_blank">Web Console</a>
                 </li>
             </ul>
         </div>
