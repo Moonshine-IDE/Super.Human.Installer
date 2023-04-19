@@ -1,4 +1,4 @@
-name: Linux Dev
+name: Linux Tmp Dev
   
 on:
   - workflow_dispatch
@@ -32,15 +32,12 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml linux -debug -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+          haxelib run openfl build project.xml linux -debug -Dlogverbose -Dlogcolor
 
-      - name: Compress artifacts
+      - name: Create AppImage
         run: |
-          cd Export/Development/linux/bin/
-          tar czfv SuperHumanInstallerDev.tar.gz *
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
-        with: 
-          name: SuperHumanInstallerDev
-          path: Export/Development/linux/bin/SuperHumanInstallerDev.tar.gz
+          mkdir Templates/SuperHumanInstallerDev.AppDir/usr
+          mv Export/Development/linux/bin Templates/SuperHumanInstallerDev.AppDir/usr/
+          mkdir Templates/SuperHumanInstallerDev.AppDir/usr/lib
+          appimagetool Templates/SuperHumanInstallerDev.AppDir/
+          ls -R
