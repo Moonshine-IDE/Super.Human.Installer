@@ -597,7 +597,7 @@ abstract class GenesisApplication extends Application {
         
         if ( _crashLogTarget == null ) {
 
-            _crashLogTarget = new FileTarget( System.applicationStorageDirectory + "logs", "crash.txt", 0, LogLevel.Fatal, true, false );
+            _crashLogTarget = new FileTarget( System.applicationStorageDirectory + "logs", "crash.txt", 0, LogLevel.Fatal, true, false, false );
             Logger.addTarget( _crashLogTarget );
 
         }
