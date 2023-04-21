@@ -165,8 +165,8 @@ class Server {
             for ( i in 1...a.length ) s += a[i].toLowerCase() + ".";
             result.domainName = s;
             */
-            result.hostname = "invalid";
-            result.domainName = "domain.name";
+            result.hostname = "configure";
+            result.domainName = "host.name";
 
         }
 
