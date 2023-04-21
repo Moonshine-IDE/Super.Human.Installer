@@ -1,0 +1,16 @@
+        port_forwards:
+          - guest: 443
+            host: 6443
+            ip: 127.0.0.1
+            proxied: false
+            url: haproxy
+          - guest: 80
+            host: 6080
+            ip: 127.0.0.1
+            proxied: false
+            url: haproxy
+          - guest: 444
+            host: 6444
+            ip: 127.0.0.1
+            proxied: false
+            url: haproxy

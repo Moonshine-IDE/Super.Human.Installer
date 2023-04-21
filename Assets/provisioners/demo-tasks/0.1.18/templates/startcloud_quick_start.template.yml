@@ -1,0 +1,6 @@
+        port_forwards:
+          - guest: 8000
+            host: 8000
+            ip: 127.0.0.1
+            proxied: true
+            url: welcome

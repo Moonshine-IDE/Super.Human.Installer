@@ -1,0 +1,6 @@
+---
+show_help: true
+installer_dir: /vagrant/installers
+completed_dir: /vagrant/completed
+timezone: 'America/Chicago'
+debug_all: false
