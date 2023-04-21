@@ -1078,8 +1078,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 				}
 
-				_createCrashLog();
-
 			}
 
 		);
