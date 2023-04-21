@@ -970,9 +970,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._visitSourceCodeIssues(e);
 		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUES_URL ] );
+		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
 		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUES_URL );
+		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
 		#end
 
 	}
@@ -1077,8 +1077,6 @@ class SuperHumanInstaller extends GenesisApplication {
 					default:
 
 				}
-
-				_createCrashLog();
 
 			}
 

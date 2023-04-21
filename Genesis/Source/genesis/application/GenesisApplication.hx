@@ -555,6 +555,8 @@ abstract class GenesisApplication extends Application {
 
     function _onHaxeException( e:Dynamic ):Void {
 
+        _createCrashLog();
+
         if ( Std.isOfType( e, Exception ) ) {
 
             Logger.fatal( 'Fatal exception : ${e}\nDetails : ${e.details()}\nNative : ${e.native}\nStack : ${e.stack}' );
@@ -597,7 +599,7 @@ abstract class GenesisApplication extends Application {
         
         if ( _crashLogTarget == null ) {
 
-            _crashLogTarget = new FileTarget( System.applicationStorageDirectory + "logs", "crash.txt", 0, LogLevel.Fatal, true, false );
+            _crashLogTarget = new FileTarget( System.applicationStorageDirectory + "logs", "crash.txt", 0, LogLevel.Fatal, true, false, true );
             Logger.addTarget( _crashLogTarget );
 
         }

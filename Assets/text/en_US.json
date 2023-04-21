@@ -84,7 +84,7 @@
         "title":"Issues, problems, errors? Send us your log files",
         "text":"<font color=\"#bbbbbb\">If you run into issues, experience errors using %1, you can email us your log files. Click the button below to locate %1's logs, and attach <font color=\"#ffffff\"><b>current.txt</b></font> and <font color=\"#ffffff\"><b>last.txt</b></font> to the email you'll be sending to <a href=\"mailto:support@prominic.net?subject=Problems using %1\"><font color=\"#4e84ff\"><b>support@prominic.net</b></font></a>. By sending us your log files, you accept %2's <a href=\"https://moonshine-ide.com/privacy-policy/\"><font color=\"#4e84ff\"><b>Privacy Policy</b></font></a></font>",
         "button":"Open log file folder",
-        "visitgithub": "Open an issue on GitHub",
+        "visitgithub": "Create a new issue on GitHub",
         "visitgithubtext": "Alternatively you can open a new issue in our public code repository"
     },
     "helppage":{
