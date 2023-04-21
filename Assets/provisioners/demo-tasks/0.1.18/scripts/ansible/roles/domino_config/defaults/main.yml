@@ -1,7 +1,0 @@
----
-show_help: true
-debug_autoconfigure: false
-existing_server_id: "server.id"
-use_existing_server_id: false
-existing_server: ""
-existing_server_ip: ""
