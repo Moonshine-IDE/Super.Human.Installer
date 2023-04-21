@@ -70,6 +70,7 @@ import openfl.system.Capabilities;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
 import sys.FileSystem;
+import sys.io.File;
 
 #if buildmacros
 @:build( BuildMacro.createGitInfo() )
@@ -97,6 +98,7 @@ abstract class GenesisApplication extends Application {
     var _company:String;
     var _content:LayoutGroup;
     var _cpuArchitecture:CPUArchitecture;
+    var _crashLogTarget:FileTarget;
     var _footer:Footer;
     var _hasLogin:Bool;
     var _header:Header;
@@ -120,6 +122,8 @@ abstract class GenesisApplication extends Application {
     var _version:String;
     var _versionInfo:VersionInfo;
     var _window:Window;
+    var _startFilePath:String;
+    var _crashLogFilePath:String;
 
     var _appConfigUseColoredOutput:Bool = false;
     var _appConfigUseTimestamps:Bool = true;
@@ -183,6 +187,10 @@ abstract class GenesisApplication extends Application {
         Logger.addTarget( new SysPrintTarget( _appConfigDefaultLogLevel, _appConfigUseTimestamps, _appConfigUseMachineReadable, _appConfigUseColoredOutput ) );
         var ft = new FileTarget( System.applicationStorageDirectory + "logs", "current.txt", 9, _appConfigDefaultLogLevel, _appConfigUseTimestamps, _appConfigUseMachineReadable );
         Logger.addTarget( ft );
+
+        // Crash related features
+        _startFilePath = System.applicationStorageDirectory + "start";
+        _crashLogFilePath = System.applicationStorageDirectory + "logs/crash.txt";
 
         _hasLogin = hasLogin;
         _showLoginPage = hasLogin && showLoginPage;
@@ -369,6 +377,18 @@ abstract class GenesisApplication extends Application {
         if ( _updaterAddress != null ) _updater.checkUpdates( _updaterAddress );
         #end
 
+        if ( _startFileExists() ) {
+            
+            _showCrashAlert();
+
+        } else {
+
+            _createCrashLog();
+
+        }
+
+        _createStartFile();
+
     }
 
     function _updateFound( e:Event ) {
@@ -475,7 +495,11 @@ abstract class GenesisApplication extends Application {
 
     }
 
-    function _onExit( exitCode:Int ) {}
+    function _onExit( exitCode:Int ) {
+
+        _deleteStartFile();
+
+    }
 
     function _onWindowClose() {}
 
@@ -506,6 +530,8 @@ abstract class GenesisApplication extends Application {
     function _visitSourceCode( ?e:Dynamic ) {}
 
     function _visitSourceCodeIssues( ?e:Dynamic ) {}
+
+    function _visitSourceCodeNewIssue( ?e:Dynamic ) {}
 
     function _menuSelected( e:GenesisApplicationEvent ) {
 
@@ -538,6 +564,49 @@ abstract class GenesisApplication extends Application {
             Logger.fatal( 'Fatal error: ${e}' );
             
         }
+
+    }
+
+    function _createStartFile() {
+
+        try {
+            File.saveContent( _startFilePath, Date.now().toString() );
+        } catch ( e ) {}
+
+    }
+
+    function _deleteStartFile() {
+
+        try {
+
+            FileSystem.deleteFile( _startFilePath );
+
+        } catch ( e ) {}
+
+    }
+
+    function _startFileExists() {
+
+        return FileSystem.exists( _startFilePath ) && !FileSystem.isDirectory( _startFilePath );
+
+    }
+
+    function _showCrashAlert() {}
+
+    function _createCrashLog() {
+        
+        if ( _crashLogTarget == null ) {
+
+            _crashLogTarget = new FileTarget( System.applicationStorageDirectory + "logs", "crash.txt", 0, LogLevel.Fatal, true, false );
+            Logger.addTarget( _crashLogTarget );
+
+        }
+
+    }
+
+    function _openCrashLog() {
+
+        Shell.getInstance().open( [ _crashLogFilePath ] );
 
     }
 

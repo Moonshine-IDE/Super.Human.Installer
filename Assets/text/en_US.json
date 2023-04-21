@@ -57,6 +57,13 @@
             "title":"Unsupported CPU",
             "text":"The CPU architecture (%1) of this computer is currently not supported. We're constantly updating the application, please check back later for support for your CPU. Thank you",
             "buttonok":"OK"
+        },
+        "crash":{
+            "title":"Crash Detected",
+            "text":"Super.Human.Installer crashed during the previous session. You can open and ispect the crash log, or you can create an issue on GitHub.",
+            "buttonopen":"Open Crash Log",
+            "buttongithub":"Create an issue on GitHub",
+            "buttonclose":"Close"
         }
     },
     "console":{
