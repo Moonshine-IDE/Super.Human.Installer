@@ -68,7 +68,7 @@ class SuperHumanGlobals {
     static public final SOURCE_CODE_ISSUES_URL:String = "https://github.com/Moonshine-IDE/Super.Human.Installer/issues";
 
     // New GitHub issue url
-    static public final SOURCE_CODE_ISSUE_NEW_URL:String = "https://github.com/Moonshine-IDE/Super.Human.Installer/issues/new";
+    static public final SOURCE_CODE_ISSUE_NEW_URL:String = "https://github.com/Moonshine-IDE/Super.Human.Installer/issues/new/choose";
 
     // Updater versioninfo file address
     static public final UPDATER_ADDRESS:String = "https://moonshine-ide.github.io/Super.Human.Installer/versioninfo.json";
