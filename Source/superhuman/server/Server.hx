@@ -1125,6 +1125,11 @@ class Server {
         } else {
 
             // Vagrant up successfully finished without errors
+            if ( this._openBrowser.value ) {
+
+                if ( _provisioner != null ) _provisioner.openWelcomePage();
+
+            }
 
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );
