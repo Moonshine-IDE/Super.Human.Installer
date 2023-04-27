@@ -57,6 +57,13 @@
             "title":"Unsupported CPU",
             "text":"The CPU architecture (%1) of this computer is currently not supported. We're constantly updating the application, please check back later for support for your CPU. Thank you",
             "buttonok":"OK"
+        },
+        "crash":{
+            "title":"Crash Detected",
+            "text":"Super.Human.Installer crashed during the previous session. You can open and ispect the crash log, or you can create an issue on GitHub.",
+            "buttonopen":"Open Crash Log",
+            "buttongithub":"Create an issue on GitHub",
+            "buttonclose":"Close"
         }
     },
     "console":{
@@ -77,7 +84,7 @@
         "title":"Issues, problems, errors? Send us your log files",
         "text":"<font color=\"#bbbbbb\">If you run into issues, experience errors using %1, you can email us your log files. Click the button below to locate %1's logs, and attach <font color=\"#ffffff\"><b>current.txt</b></font> and <font color=\"#ffffff\"><b>last.txt</b></font> to the email you'll be sending to <a href=\"mailto:support@prominic.net?subject=Problems using %1\"><font color=\"#4e84ff\"><b>support@prominic.net</b></font></a>. By sending us your log files, you accept %2's <a href=\"https://moonshine-ide.com/privacy-policy/\"><font color=\"#4e84ff\"><b>Privacy Policy</b></font></a></font>",
         "button":"Open log file folder",
-        "visitgithub": "Open an issue on GitHub",
+        "visitgithub": "Create a new issue on GitHub",
         "visitgithubtext": "Alternatively you can open a new issue in our public code repository"
     },
     "helppage":{

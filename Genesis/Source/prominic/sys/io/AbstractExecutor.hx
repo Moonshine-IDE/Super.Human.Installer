@@ -30,8 +30,8 @@
 
 package prominic.sys.io;
 
-import prominic.core.ds.ChainedList;
-import prominic.sys.io.process.ProcessTools.KillSignal;
+import champaign.core.ds.ChainedList;
+import champaign.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.tools.StrTools;
 
 abstract class AbstractExecutor {

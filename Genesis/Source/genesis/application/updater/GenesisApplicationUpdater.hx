@@ -30,6 +30,8 @@
 
 package genesis.application.updater;
 
+import champaign.core.logging.Logger;
+import champaign.core.primitives.VersionInfo;
 import genesis.application.updater.GenesisApplicationUpdaterInfo;
 import haxe.Json;
 import haxe.io.Path;
@@ -46,8 +48,6 @@ import openfl.net.URLLoader;
 import openfl.net.URLLoaderDataFormat;
 import openfl.net.URLRequest;
 import openfl.utils.ByteArray;
-import prominic.core.primitives.VersionInfo;
-import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import sys.FileSystem;
 

@@ -30,8 +30,8 @@
 
 package prominic.sys.io;
 
+import champaign.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.io.AbstractExecutor;
-import prominic.sys.io.process.ProcessTools.KillSignal;
 
 class ExecutorManager {
 

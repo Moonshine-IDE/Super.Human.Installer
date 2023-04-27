@@ -30,10 +30,10 @@
 
 package superhuman.managers;
 
+import champaign.core.primitives.VersionInfo;
 import feathers.data.ArrayCollection;
 import haxe.io.Path;
 import lime.system.System;
-import prominic.core.primitives.VersionInfo;
 import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
 
@@ -45,7 +45,8 @@ class ProvisionerManager {
         
         // Generate array of available provisioners, newest always at the top
         return [
-            /* Demo-tasks v0.1.18 has been disabled because of current bugs on Windows
+            // Demo-tasks v0.1.18 has been disabled because of current bugs on Windows
+            /*
             {
                 name: "Demo-tasks v0.1.18",
                 data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.18" ) },

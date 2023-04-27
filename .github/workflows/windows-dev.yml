@@ -47,23 +47,20 @@ jobs:
           makensis /DPRODUCT_VERSION=${{ steps.readversion.outputs.info }} Templates/installer/windows-installer-dev.nsi
 
       - name: Sign installer
-        env:
-          CODESIGN_PWD: ${{ secrets.WIN_PASS}}
-          CODESIGN_BASE64: ${{ secrets.WIN_CERT}}
         run: |
           New-Item -ItemType directory -Path certificate
-          Set-Content -Path certificate\cert.txt -Value $env:CODESIGN_BASE64
+          Set-Content -Path certificate\cert.txt -Value ${{ secrets.WIN_CERT }}
           certutil -decode certificate\cert.txt certificate\cert.pfx
           
           Import-PfxCertificate `
             -FilePath certificate\cert.pfx `
             -CertStoreLocation Cert:\CurrentUser\My `
-            -Password (ConvertTo-SecureString -String $env:CODESIGN_PWD -Force -AsPlainText)
+            -Password (ConvertTo-SecureString -String ${{ secrets.WIN_PASS }} -Force -AsPlainText)
           
           & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.22621.0/x86/signtool.exe' sign `
             /debug `
             /fd SHA256 `
-            /p $env:CODESIGN_PWD `
+            /p ${{ secrets.WIN_PASS }} `
             /f certificate\cert.pfx `
             /td sha256 `
             /tr 'http://timestamp.digicert.com' `

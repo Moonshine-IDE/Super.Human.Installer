@@ -32,7 +32,7 @@ package prominic.sys.io;
 
 import haxe.io.Bytes;
 import haxe.io.Path;
-import prominic.logging.Logger;
+import champaign.core.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import sys.FileSystem;
 import sys.io.File;

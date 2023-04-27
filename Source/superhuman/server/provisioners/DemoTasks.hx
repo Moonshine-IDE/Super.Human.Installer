@@ -30,13 +30,13 @@
 
 package superhuman.server.provisioners;
 
+import champaign.core.logging.Logger;
+import champaign.core.primitives.VersionInfo;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.Template;
 import haxe.io.Path;
 import lime.system.System;
-import prominic.core.primitives.VersionInfo;
-import prominic.logging.Logger;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.RoleData;
@@ -45,7 +45,7 @@ import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
-using prominic.tools.ObjectTools;
+using champaign.core.tools.ObjectTools;
 
 @:allow( superhuman.server.provisioners.HostsFileGenerator )
 class DemoTasks extends AbstractProvisioner {
@@ -113,7 +113,7 @@ class DemoTasks extends AbstractProvisioner {
 
 			network_bridge: "",
 			resources_cpu: 2,
-			resources_ram: 4.0,
+			resources_ram: 8.0,
 			roles: [ for ( r in getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
 			server_hostname: "",
 			server_id: id,

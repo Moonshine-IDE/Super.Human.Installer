@@ -34,6 +34,7 @@ Required and properly pre-configured Haxelibs:
 - [OpenFL 9.2.0](https://www.openfl.org/download/) - Installing and setting up OpenFL 9.2.0 will install Lime 8.0.0 as well
 - [FeathersUI 1.0](https://feathersui.com/learn/haxe-openfl/installation/)
 - Actuate 1.9.0 - Will be installed with FeathersUI 1.0
+- [Champaign](https://github.com/Moonshine-IDE/Champaign)
 
 C++ Compilers
 

@@ -30,8 +30,8 @@
 
 package prominic.sys.applications.bin;
 
+import champaign.core.logging.Logger;
 import haxe.io.Path;
-import prominic.logging.Logger;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.Executor;
 import sys.FileSystem;

@@ -30,6 +30,7 @@
 
 package;
 
+import champaign.core.logging.Logger;
 import feathers.controls.Alert;
 import feathers.controls.LayoutGroup;
 import feathers.style.Theme;
@@ -43,7 +44,6 @@ import openfl.Lib;
 import openfl.events.Event;
 import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
-import prominic.logging.Logger;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;
@@ -76,7 +76,7 @@ import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
 import sys.io.File;
 
-using prominic.tools.ObjectTools;
+using champaign.core.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
 
@@ -543,8 +543,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	override function _onExit( exitCode:Int ) {
 
-		super._onExit( exitCode );
-
 		_config.preferences.windowx = this._window.x;
 		_config.preferences.windowy = this._window.y;
 		_config.preferences.windowwidth = this._window.width;
@@ -591,6 +589,8 @@ class SuperHumanInstaller extends GenesisApplication {
 			}
 
 		}
+
+		super._onExit( exitCode );
 
 	}
 
@@ -970,9 +970,20 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._visitSourceCodeIssues(e);
 		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUES_URL ] );
+		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
 		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUES_URL );
+		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
+		#end
+
+	}
+
+	override function _visitSourceCodeNewIssue(?e:Dynamic) {
+
+		super._visitSourceCodeNewIssue(e);
+		#if linux
+		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
+		#else
+		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
 		#end
 
 	}
@@ -1041,6 +1052,35 @@ class SuperHumanInstaller extends GenesisApplication {
 			default:
 
 		}
+
+	}
+
+	override function _showCrashAlert() {
+
+		super._showCrashAlert();
+
+		Alert.show(
+
+			LanguageManager.getInstance().getString( 'alert.crash.text' ),
+			LanguageManager.getInstance().getString( 'alert.crash.title' ),
+			[ LanguageManager.getInstance().getString( 'alert.crash.buttonopen' ), LanguageManager.getInstance().getString( 'alert.crash.buttongithub' ), LanguageManager.getInstance().getString( 'alert.crash.buttonclose' ) ],
+			( state ) -> {
+
+				switch ( state.index ) {
+
+					case 0:
+						_openCrashLog();
+						
+					case 1:
+						_visitSourceCodeNewIssue();
+
+					default:
+
+				}
+
+			}
+
+		);
 
 	}
 

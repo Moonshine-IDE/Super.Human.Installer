@@ -37,9 +37,9 @@ import haxe.io.Path;
 import lime.system.System;
 import lime.ui.FileDialog;
 import lime.ui.FileDialogType;
-import prominic.core.primitives.Property;
+import champaign.core.primitives.Property;
 import prominic.core.primitives.ValidatingProperty;
-import prominic.logging.Logger;
+import champaign.core.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
@@ -59,7 +59,7 @@ import superhuman.server.provisioners.DemoTasks;
 import sys.FileSystem;
 import sys.io.File;
 
-using prominic.tools.ObjectTools;
+using champaign.core.tools.ObjectTools;
 
 class Server {
 
@@ -165,8 +165,8 @@ class Server {
             for ( i in 1...a.length ) s += a[i].toLowerCase() + ".";
             result.domainName = s;
             */
-            result.hostname = "invalid";
-            result.domainName = "domain.name";
+            result.hostname = "configure";
+            result.domainName = "host.name";
 
         }
 
@@ -1125,6 +1125,11 @@ class Server {
         } else {
 
             // Vagrant up successfully finished without errors
+            if ( this._openBrowser.value ) {
+
+                if ( _provisioner != null ) _provisioner.openWelcomePage();
+
+            }
 
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );

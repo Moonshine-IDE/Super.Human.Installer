@@ -1,7 +1,5 @@
 package;
 
-import haxe.Exception;
-import prominic.logging.Logger;
 #if macro
 import haxe.macro.Compiler;
 import haxe.macro.Context;
@@ -16,6 +14,9 @@ import haxe.macro.Expr;
 class ApplicationMain
 {
 	#if !macro
+
+	public static final onException:List<(Dynamic)->Void> = new List();
+
 	public static function main()
 	{
 		lime.system.System.__registerEntryPoint("::APP_FILE::", create);
@@ -27,10 +28,8 @@ class ApplicationMain
 		#else
 		try {
 			create(null);
-		} catch ( e:Exception ) {
-			Logger.fatal( 'Fatal error : ${e}}' );
-			Logger.fatal( '\tDetails : ${e.details()}' );
-			Logger.fatal( '\tNative : ${e.native}' );
+		} catch ( e ) {
+			for ( f in onException ) f( e );
 		}
 		#end
 	}

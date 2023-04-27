@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import champaign.core.primitives.Property;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.controls.ListView;
@@ -48,7 +49,6 @@ import genesis.application.components.ProgressIndicator;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.Event;
-import prominic.core.primitives.Property;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.tools.StrTools;

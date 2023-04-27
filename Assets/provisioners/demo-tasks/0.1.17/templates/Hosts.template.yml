@@ -104,6 +104,9 @@ hosts:
       domino_organization: ::SERVER_ORGANIZATION:: #Default or Provide user option
       safe_notes_id: ::USER_SAFE_ID:: #Variable or Provide user option
       domino_admin_notes_id_password: "password"
+      genesis_packages:
+        - netmonitor
+        - SuperHumanPortal
 
       ## When using the default: demo.startcloud.com as the hostname and domain, we use the default-signed.crt certificates to provide a valid SSL
       ## If the hostname and domain, ie demo.startcloud.com do not match the certificate we provide (ie demo.startcloud.com in default-signed.crt), some services may not start (ie nomadweb)

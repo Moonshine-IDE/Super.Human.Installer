@@ -30,6 +30,10 @@
 
 package genesis.application;
 
+import champaign.core.logging.Logger;
+import champaign.core.primitives.VersionInfo;
+import champaign.sys.logging.targets.FileTarget;
+import champaign.sys.logging.targets.SysPrintTarget;
 import feathers.controls.Application;
 import feathers.controls.LayoutGroup;
 import feathers.controls.navigators.PageItem;
@@ -57,17 +61,16 @@ import genesis.application.updater.GenesisApplicationUpdater;
 import genesis.application.updater.GenesisApplicationUpdaterEvent;
 import genesis.remote.GenesisRemote;
 import genesis.remote.events.AuthEvent;
+import haxe.Exception;
 import lime.system.System;
 import lime.ui.Window;
 import openfl.Lib;
 import openfl.events.Event;
 import openfl.system.Capabilities;
-import prominic.core.primitives.VersionInfo;
-import prominic.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.tools.SysTools;
-import superhuman.config.SuperHumanGlobals;
 import sys.FileSystem;
+import sys.io.File;
 
 #if buildmacros
 @:build( BuildMacro.createGitInfo() )
@@ -95,6 +98,7 @@ abstract class GenesisApplication extends Application {
     var _company:String;
     var _content:LayoutGroup;
     var _cpuArchitecture:CPUArchitecture;
+    var _crashLogTarget:FileTarget;
     var _footer:Footer;
     var _hasLogin:Bool;
     var _header:Header;
@@ -118,6 +122,8 @@ abstract class GenesisApplication extends Application {
     var _version:String;
     var _versionInfo:VersionInfo;
     var _window:Window;
+    var _startFilePath:String;
+    var _crashLogFilePath:String;
 
     var _appConfigUseColoredOutput:Bool = false;
     var _appConfigUseTimestamps:Bool = true;
@@ -177,7 +183,14 @@ abstract class GenesisApplication extends Application {
             #if logmr _appConfigUseMachineReadable = true; #end
         #end
 
-        var logFilePath = Logger.init( _appConfigDefaultLogLevel, _appConfigUseTimestamps, System.applicationStorageDirectory + "logs", 9, _appConfigUseColoredOutput, _appConfigUseMachineReadable, true );
+        Logger.init( _appConfigDefaultLogLevel, true );
+        Logger.addTarget( new SysPrintTarget( _appConfigDefaultLogLevel, _appConfigUseTimestamps, _appConfigUseMachineReadable, _appConfigUseColoredOutput ) );
+        var ft = new FileTarget( System.applicationStorageDirectory + "logs", "current.txt", 9, _appConfigDefaultLogLevel, _appConfigUseTimestamps, _appConfigUseMachineReadable );
+        Logger.addTarget( ft );
+
+        // Crash related features
+        _startFilePath = System.applicationStorageDirectory + "start";
+        _crashLogFilePath = System.applicationStorageDirectory + "logs/crash.txt";
 
         _hasLogin = hasLogin;
         _showLoginPage = hasLogin && showLoginPage;
@@ -186,10 +199,10 @@ abstract class GenesisApplication extends Application {
         _version = Lib.application.meta.get( "version" );
         _versionInfo = _version;
 
-        if ( FileSystem.exists( logFilePath ) ) 
-            Logger.info( '${this}: Log file created at ${logFilePath}' )
+        if ( FileSystem.exists( ft.currentLogFilePath ) ) 
+            Logger.info( '${this}: Log file created at ${ft.currentLogFilePath}' )
         else
-            Logger.warning( '${this}: Log file creation failed at ${logFilePath}' );
+            Logger.warning( '${this}: Log file creation failed at ${ft.currentLogFilePath}' );
 
         Logger.info( '${this}: Initializing ${_title} v${_version}...' );
 
@@ -205,6 +218,8 @@ abstract class GenesisApplication extends Application {
 		Logger.info( '${this}: SysInfo: DevideModel: ${System.deviceModel} DeviceVendor: ${System.deviceVendor} Endianness: ${System.endianness} PlatformLabel: ${System.platformLabel} PlatformName: ${System.platformName} PlatformVersion: ${System.platformVersion}' );
         Logger.info( #if debug '${this}: Debug build: true' #else '${this}: Debug build: false' #end );
         Logger.debug( '${this}: Application storage directory: ${System.applicationStorageDirectory}' );
+
+        ApplicationMain.onException.add( _onHaxeException );
 
         this.disabledAlpha = .5;
 
@@ -362,6 +377,18 @@ abstract class GenesisApplication extends Application {
         if ( _updaterAddress != null ) _updater.checkUpdates( _updaterAddress );
         #end
 
+        if ( _startFileExists() ) {
+            
+            _showCrashAlert();
+
+        } else {
+
+            _createCrashLog();
+
+        }
+
+        _createStartFile();
+
     }
 
     function _updateFound( e:Event ) {
@@ -468,7 +495,11 @@ abstract class GenesisApplication extends Application {
 
     }
 
-    function _onExit( exitCode:Int ) {}
+    function _onExit( exitCode:Int ) {
+
+        _deleteStartFile();
+
+    }
 
     function _onWindowClose() {}
 
@@ -500,6 +531,8 @@ abstract class GenesisApplication extends Application {
 
     function _visitSourceCodeIssues( ?e:Dynamic ) {}
 
+    function _visitSourceCodeNewIssue( ?e:Dynamic ) {}
+
     function _menuSelected( e:GenesisApplicationEvent ) {
 
         this.selectedPageId = e.pageId;
@@ -519,5 +552,64 @@ abstract class GenesisApplication extends Application {
     }
 
     function _pageChanged() { }
+
+    function _onHaxeException( e:Dynamic ):Void {
+
+        _createCrashLog();
+
+        if ( Std.isOfType( e, Exception ) ) {
+
+            Logger.fatal( 'Fatal exception : ${e}\nDetails : ${e.details()}\nNative : ${e.native}\nStack : ${e.stack}' );
+            
+        } else {
+
+            Logger.fatal( 'Fatal error: ${e}' );
+            
+        }
+
+    }
+
+    function _createStartFile() {
+
+        try {
+            File.saveContent( _startFilePath, Date.now().toString() );
+        } catch ( e ) {}
+
+    }
+
+    function _deleteStartFile() {
+
+        try {
+
+            FileSystem.deleteFile( _startFilePath );
+
+        } catch ( e ) {}
+
+    }
+
+    function _startFileExists() {
+
+        return FileSystem.exists( _startFilePath ) && !FileSystem.isDirectory( _startFilePath );
+
+    }
+
+    function _showCrashAlert() {}
+
+    function _createCrashLog() {
+        
+        if ( _crashLogTarget == null ) {
+
+            _crashLogTarget = new FileTarget( System.applicationStorageDirectory + "logs", "crash.txt", 0, LogLevel.Fatal, true, false, true );
+            Logger.addTarget( _crashLogTarget );
+
+        }
+
+    }
+
+    function _openCrashLog() {
+
+        Shell.getInstance().open( [ _crashLogFilePath ] );
+
+    }
 
 }

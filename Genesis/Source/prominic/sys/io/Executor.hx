@@ -30,11 +30,11 @@
 
 package prominic.sys.io;
 
-import prominic.core.interfaces.IDisposable;
-import prominic.logging.Logger;
-import prominic.sys.io.process.AbstractProcess;
-import prominic.sys.io.process.CallbackProcess;
-import prominic.sys.io.process.ProcessTools.KillSignal;
+import champaign.core.interfaces.IDisposable;
+import champaign.core.logging.Logger;
+import champaign.sys.io.process.AbstractProcess;
+import champaign.sys.io.process.CallbackProcess;
+import champaign.sys.io.process.ProcessTools.KillSignal;
 import prominic.sys.tools.StrTools;
 import sys.thread.Mutex;
 
