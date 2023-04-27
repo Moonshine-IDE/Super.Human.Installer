@@ -73,7 +73,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          name: Production: Super.Human.Installer v${{ steps.readversion.outputs.info }}
+          name: "Production: Super.Human.Installer v${{ steps.readversion.outputs.info }}"
           tag_name: ${{ steps.readversion.outputs.info }}
           body: |
             This is a Production Release of Super.Human.Installer.
