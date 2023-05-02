@@ -7,6 +7,10 @@
     <title>superhumaninstaller (Install)</title>
 	<authors>Prominic.NET</authors>
 	<description>Super.Human.Installer helps you install the latest and greatest HCL Domino technologies easily. </description>
+     <dependencies>
+      <dependency id="vagrant" version="2.3.4" />
+      <dependency id="virtualbox" version="7.0.8" />
+    </dependencies>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
