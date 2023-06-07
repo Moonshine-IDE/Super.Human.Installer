@@ -108,7 +108,8 @@ abstract class AbstractApp {
         //
         for ( p in _pathAdditions ) SysTools.addToPath( p );
 
-        final executor = new Executor( Which.getInstance().path + Which.getInstance().executable, [ this._executable ] );
+        var executablePath = Which.getInstance().path + Which.getInstance().executable;
+        final executor = new Executor( executablePath, [ this._executable ] );
         executor.onStdErr.add( _initStandardError ).onStdOut.add( _initStandardOutput ).onStop.add( _initStop );
         ExecutorManager.getInstance().set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
         return executor;
@@ -154,13 +155,13 @@ abstract class AbstractApp {
 
     function _initStandardError( executor:AbstractExecutor, data:String ) {
 
-        Logger.verbose( '${this}: _initStandardError ${data}' );
+        //Logger.verbose( '${this}: _initStandardError ${data}' );
         
     }
 
     function _initStop( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
+       // Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
 
         _initialized = true;
 
