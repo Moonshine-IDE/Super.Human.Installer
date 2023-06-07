@@ -9,7 +9,7 @@ jobs:
     name: Build
     runs-on: windows-latest
     
-    steps
+    steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
