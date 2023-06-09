@@ -148,6 +148,7 @@ abstract class AbstractApp {
 
     function _initStandardOutput( executor:AbstractExecutor, data:String ) {
 
+    		Logger.verbose( '${this}: _initStandardOutput ${data}' );
         var a = data.split( SysTools.lineEnd );
         if ( data.length > 0 && a.length > 0 && StringTools.trim( a[ 0 ] ).length > 0 ) this._path = Path.addTrailingSlash( Path.directory( a[ 0 ] ) );
 
@@ -155,13 +156,13 @@ abstract class AbstractApp {
 
     function _initStandardError( executor:AbstractExecutor, data:String ) {
 
-        //Logger.verbose( '${this}: _initStandardError ${data}' );
+        Logger.verbose( '${this}: _initStandardError ${data}' );
         
     }
 
     function _initStop( executor:AbstractExecutor ) {
 
-       // Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
+        Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
 
         _initialized = true;
 

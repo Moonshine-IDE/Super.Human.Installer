@@ -96,23 +96,41 @@ class Executor extends AbstractExecutor implements IDisposable {
         _hasErrors = false;
 
         var currentWorkingDirectory = Sys.getCwd();
+		Logger.debug( '${this}: Inside execute(): Sys.getCwd() local ->  ${currentWorkingDirectory}');
 
-        if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
-        if ( workingDirectory != null ) Sys.setCwd( workingDirectory );
-        if ( _env != null ) for ( k in _env.keys() ) Sys.putEnv( k, _env.get( k ) );
+        if ( _workingDirectory != null ) 
+        {
+        		Sys.setCwd( _workingDirectory );
+    		}
+    		
+        if ( workingDirectory != null ) 
+        {
+        		Sys.setCwd( workingDirectory );
+    		}
+    		
+        if ( _env != null ) 
+        {
+        		Logger.debug( '${this}: Inside execute(): Sys.putEnv Iteration' );
+        		for ( k in _env.keys() ) 
+        		{
+        			Sys.putEnv( k, _env.get( k ) );
+    			}
+    		}
 
         _validExitCodes = null;
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        _process = new CallbackProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
+        var finalArgs = extraArgs != null ? _args.concat( extraArgs ) : _args;
+       	Logger.debug( '${this}: Inside execute(): Create CallbackProcess with args -> ${finalArgs} ');
+        _process = new CallbackProcess(_command,  finalArgs);
         _process.onStdErr = _processOnStdErr;
         _process.onStdOut = _processOnStdOut;
         _process.onStop = _processOnStop;
         _process.start();
         this._pid = _process.pid;
         _running = true;
-
+		Logger.debug( '${this}: Inside execute(): After start CallbackProcess');
         for ( f in _onStart ) f( this );
 
         Logger.debug( '${this}: execute() in ${Sys.getCwd()}' );
