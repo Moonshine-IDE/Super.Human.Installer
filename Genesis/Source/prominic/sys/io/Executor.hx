@@ -96,8 +96,6 @@ class Executor extends AbstractExecutor implements IDisposable {
         _hasErrors = false;
 
         var currentWorkingDirectory = Sys.getCwd();
-		Logger.debug( '${this}: Inside execute(): Sys.getCwd() local ->  ${currentWorkingDirectory}');
-
         if ( _workingDirectory != null ) 
         {
         		Sys.setCwd( _workingDirectory );
@@ -110,7 +108,6 @@ class Executor extends AbstractExecutor implements IDisposable {
     		
         if ( _env != null ) 
         {
-        		Logger.debug( '${this}: Inside execute(): Sys.putEnv Iteration' );
         		for ( k in _env.keys() ) 
         		{
         			Sys.putEnv( k, _env.get( k ) );
@@ -122,7 +119,6 @@ class Executor extends AbstractExecutor implements IDisposable {
         _currentExecutionNumber = 1;
 
         var finalArgs = extraArgs != null ? _args.concat( extraArgs ) : _args;
-       	Logger.debug( '${this}: Inside execute(): Create CallbackProcess with args -> ${finalArgs} ');
         _process = new CallbackProcess(_command,  finalArgs);
         _process.onStdErr = _processOnStdErr;
         _process.onStdOut = _processOnStdOut;
@@ -130,7 +126,6 @@ class Executor extends AbstractExecutor implements IDisposable {
         _process.start();
         this._pid = _process.pid;
         _running = true;
-		Logger.debug( '${this}: Inside execute(): After start CallbackProcess');
         for ( f in _onStart ) f( this );
 
         Logger.debug( '${this}: execute() in ${Sys.getCwd()}' );
@@ -250,7 +245,6 @@ class Executor extends AbstractExecutor implements IDisposable {
         }
 
         return '[Executor(${this._id}: ${_command} ${_args} PID: null)]';
-
     }
 
 }
