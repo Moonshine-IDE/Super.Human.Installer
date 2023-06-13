@@ -28,7 +28,7 @@ jobs:
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1.5.1
         with:
-          haxe-version: 4.3.1
+          haxe-version: 4.2.5
 
       - name: Install dependencies
         run: | 
@@ -40,7 +40,7 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml windows -debug -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+          haxelib run openfl build project.xml windows -debug -Dlogverbose -Dlogcolor -Dverbose_process_logs -DCHAMPAIGN_DEBUG=true -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
 
       - name: Create NSIS installer
         run: |

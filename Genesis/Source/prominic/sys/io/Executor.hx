@@ -96,23 +96,36 @@ class Executor extends AbstractExecutor implements IDisposable {
         _hasErrors = false;
 
         var currentWorkingDirectory = Sys.getCwd();
-
-        if ( _workingDirectory != null ) Sys.setCwd( _workingDirectory );
-        if ( workingDirectory != null ) Sys.setCwd( workingDirectory );
-        if ( _env != null ) for ( k in _env.keys() ) Sys.putEnv( k, _env.get( k ) );
+        if ( _workingDirectory != null ) 
+        {
+        		Sys.setCwd( _workingDirectory );
+    		}
+    		
+        if ( workingDirectory != null ) 
+        {
+        		Sys.setCwd( workingDirectory );
+    		}
+    		
+        if ( _env != null ) 
+        {
+        		for ( k in _env.keys() ) 
+        		{
+        			Sys.putEnv( k, _env.get( k ) );
+    			}
+    		}
 
         _validExitCodes = null;
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        _process = new CallbackProcess( _command, ( extraArgs != null ) ? _args.concat( extraArgs ) : _args );
+        var finalArgs = extraArgs != null ? _args.concat( extraArgs ) : _args;
+        _process = new CallbackProcess(_command,  finalArgs);
         _process.onStdErr = _processOnStdErr;
         _process.onStdOut = _processOnStdOut;
         _process.onStop = _processOnStop;
         _process.start();
         this._pid = _process.pid;
         _running = true;
-
         for ( f in _onStart ) f( this );
 
         Logger.debug( '${this}: execute() in ${Sys.getCwd()}' );
@@ -232,7 +245,6 @@ class Executor extends AbstractExecutor implements IDisposable {
         }
 
         return '[Executor(${this._id}: ${_command} ${_args} PID: null)]';
-
     }
 
 }

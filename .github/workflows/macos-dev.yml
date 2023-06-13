@@ -40,7 +40,7 @@ jobs:
 
       - name: Build project
         run: |
-          haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
+          haxelib run openfl build project.xml mac -debug -Dlogverbose -Dlogcolor -Dverbose_process_logs -DCHAMPAIGN_DEBUG=true -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
             
       - name: Create keychain
         env:
