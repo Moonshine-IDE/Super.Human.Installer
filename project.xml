@@ -57,4 +57,8 @@
 	<haxeflag value="include('genesis.application')" name="--macro"/>
 	<haxeflag value="include('superhuman')" name="--macro"/>
 
+	<haxedef name="HXCPP_STACK_LINE" />
+	<haxedef name="HXCPP_STACK_TRACE"/>
+	<haxedef name="HXCPP_CHECK_POINTER"/>
+
 </project>
