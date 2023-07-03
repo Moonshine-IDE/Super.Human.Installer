@@ -108,6 +108,8 @@ hosts:
         - netmonitor
         - SuperHumanPortal
       domino_server_installer_tar: ::DOMINO_INSTALLER::
+      domino_installer_fixpack_install: ::DOMINO_INSTALLER_FIXPACK_INSTALL::
+      domino_server_fixpack_tar: ::DOMINO_INSTALLER_FIXPACK::
       nomadweb_archive: ::NOMAD_INSTALLER::
       nomadweb_version: '1.0.6'
       leap_archive: ::LEAP_INSTALLER::

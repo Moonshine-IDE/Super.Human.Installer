@@ -538,6 +538,9 @@ class HostsFileGenerator {
             ROLE_DOMINO_VAGRANT_REST_API: "",
 			
             DOMINO_INSTALLER: "",
+            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
+            DOMINO_INSTALLER_FIXPACK: "",
+            
 		    NOMAD_INSTALLER: "",
 		    NOMAD_VERSION: "",
 		    LEAP_INSTALLER: "",
@@ -558,6 +561,14 @@ class HostsFileGenerator {
 			if (r.value == "domino")
 			{
 				replace.DOMINO_INSTALLER = r.files.installerFileName;
+				
+				if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
+				{
+					var fixPacksPath = new Path(r.files.fixpacks[0]);
+					
+					replace.DOMINO_INSTALLER_FIXPACK_INSTALL = true;
+					replace.DOMINO_INSTALLER_FIXPACK = fixPacksPath.file + "." + fixPacksPath.ext;
+				}
 			}
 			
             if ( r.value == "leap" ) {
