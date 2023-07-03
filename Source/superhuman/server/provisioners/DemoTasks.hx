@@ -557,10 +557,11 @@ class HostsFileGenerator {
 
 			var roleValue = r.value;
 			var replaceWith:String = "";
-
+			var installerName:String = r.files.installerFileName == null ? "" : r.files.installerFileName;
+			
 			if (r.value == "domino")
 			{
-				replace.DOMINO_INSTALLER = r.files.installerFileName;
+				replace.DOMINO_INSTALLER = installerName;
 				
 				if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
 				{
@@ -583,7 +584,7 @@ class HostsFileGenerator {
 
                 }
 				
-                replace.LEAP_INSTALLER = r.files.installerFileName;
+                replace.LEAP_INSTALLER = installerName;
                 replace.ROLE_LEAP = replaceWith;
              }
 
@@ -599,7 +600,7 @@ class HostsFileGenerator {
 
                 }
 				
-                replace.NOMAD_INSTALLER = r.files.installerFileName;
+                replace.NOMAD_INSTALLER = installerName;
                 replace.ROLE_NOMADWEB = replaceWith;
             }
 
@@ -615,7 +616,7 @@ class HostsFileGenerator {
 
                 }
 				
-                replace.TRAVELER_INSTALLER = r.files.installerFileName;
+                replace.TRAVELER_INSTALLER = installerName;
                 replace.ROLE_TRAVELER = replaceWith;
             }
 
@@ -647,7 +648,7 @@ class HostsFileGenerator {
 
                 }
 
-                replace.VERSE_INSTALLER = r.files.installerFileName;
+                replace.VERSE_INSTALLER = installerName;
                 replace.ROLE_VERSE = replaceWith;
             }
 
@@ -663,7 +664,7 @@ class HostsFileGenerator {
 
                 }
 				
-                replace.APPDEVPACK_INSTALLER = r.files.installerFileName;
+                replace.APPDEVPACK_INSTALLER = installerName;
                 replace.ROLE_APPDEVPACK = replaceWith;
             }
 
@@ -679,7 +680,7 @@ class HostsFileGenerator {
 
                 }
 				
-                replace.DOMINO_REST_API_INSTALLER = r.files.installerFileName;
+                replace.DOMINO_REST_API_INSTALLER = installerName;
                 replace.ROLE_RESTAPI = replaceWith;
             }
 
