@@ -107,7 +107,15 @@ hosts:
       genesis_packages:
         - netmonitor
         - SuperHumanPortal
-
+      domino_server_installer_tar: ::DOMINO_INSTALLER::
+      nomadweb_archive: ::NOMAD_INSTALLER::
+      nomadweb_version: '1.0.6'
+      leap_archive: ::LEAP_INSTALLER::
+      traveler_archive: ::TRAVELER_INSTALLER::
+      verse_archive: ::VERSE_INSTALLER::
+      appdevpack_archive: ::APPDEVPACK_INSTALLER::
+      domino_rest_api_archive: ::DOMINO_REST_API_INSTALLER::
+      
       ## When using the default: demo.startcloud.com as the hostname and domain, we use the default-signed.crt certificates to provide a valid SSL
       ## If the hostname and domain, ie demo.startcloud.com do not match the certificate we provide (ie demo.startcloud.com in default-signed.crt), some services may not start (ie nomadweb)
       ## If a user does not mind using a self signed certificate for their development testing for their own domain  or are unable to replace the default-signed.crt files
