@@ -292,7 +292,11 @@ class VirtualBox extends AbstractApp {
             return ExecutorManager.getInstance().get( '${VirtualBoxExecutorContext.PowerOffVM}${machine.virtualBoxId}' );
 
         var args:Array<String> = [ "controlvm" ];
-        args.push( machine.virtualBoxId );
+        if (machine.virtualBoxId != null)
+        {
+        		args.push( machine.virtualBoxId );
+    		}
+    		
         args.push( "poweroff" );
 
         var extraArgs:Array<Dynamic> = [];
@@ -314,11 +318,20 @@ class VirtualBox extends AbstractApp {
         _tempShowVMInfoData = "";
 
         var args:Array<String> = [ "showvminfo" ];
-        args.push( machine.virtualBoxId );
-        if ( machineReadable ) args.push( "--machinereadable" );
+        if (machine.virtualBoxId != null)
+        {
+        		args.push( machine.virtualBoxId );
+    		}
+    		
+        if ( machineReadable ) 
+        {
+        		args.push( "--machinereadable" );
+    		}
 
         var extraArgs:Array<Dynamic> = [];
         extraArgs.push( machine );
+
+        Logger.debug( '${this}: getShowVMInfo with args ${args} and extraArgs ${extraArgs}' );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStdOut.add( _showVMInfoExecutorStandardOutput ).onStop.add( _showVMInfoExecutorStopped );
@@ -335,11 +348,15 @@ class VirtualBox extends AbstractApp {
 
         var args:Array<String> = [ "unregistervm" ];
         if ( delete ) args.push( "--delete" );
-        args.push( machine.virtualBoxId );
-
+        
+        if (machine.virtualBoxId != null)
+        {
+        		args.push( machine.virtualBoxId );
+		}
+		
         var extraArgs:Array<Dynamic> = [];
         extraArgs.push( machine );
-
+		
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStop.add( _unregisterExecutorStopped );
         ExecutorManager.getInstance().set( '${VirtualBoxExecutorContext.UnregisterVM}${machine.virtualBoxId}', executor );

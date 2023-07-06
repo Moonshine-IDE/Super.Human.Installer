@@ -354,8 +354,12 @@ class RolePickerItem extends LayoutGroup {
         var currentDir:String;
 
         fd.onSelect.add( path -> {
-
+			
+            var currentPath = new Path(path);
+            var fullFileName = currentPath.file + "." + currentPath.ext;
+            
             currentDir = Path.directory( path );
+            
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
             var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "installers" ) );
@@ -363,6 +367,8 @@ class RolePickerItem extends LayoutGroup {
             if ( v ) {
 
                 _roleImpl.role.files.installer = path;
+                _roleImpl.role.files.installerFileName = fullFileName;
+                
                 updateData();
                 
             } else {
@@ -377,6 +383,7 @@ class RolePickerItem extends LayoutGroup {
 
                         case 0:
                             _roleImpl.role.files.installer = path;
+                            _roleImpl.role.files.installerFileName = fullFileName;
                             updateData();
 
                         default:
@@ -403,6 +410,7 @@ class RolePickerItem extends LayoutGroup {
         fd.onSelect.add( path -> {
 
             currentDir = Path.directory( path );
+            
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
             var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "hotfixes" ) );

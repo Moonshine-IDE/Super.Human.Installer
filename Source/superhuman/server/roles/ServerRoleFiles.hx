@@ -33,6 +33,7 @@ package superhuman.server.roles;
 typedef ServerRoleFiles = {
 
     ?installer:String,
+    ?installerFileName:String,
     ?hotfixes:Array<String>,
     ?fixpacks:Array<String>,
 

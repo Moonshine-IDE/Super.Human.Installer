@@ -5,7 +5,7 @@
 	<include path="Genesis/GenesisApplication.xml"/>
 	<!-- Override properties, add new ones below -->
 
-	<meta version="0.8.15"/>
+	<meta version="0.8.16"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
 	<meta title="Super.Human.Installer Development" if="debug"/>
 
@@ -56,5 +56,9 @@
 	<haxeflag value="include('prominic')" name="--macro"/>
 	<haxeflag value="include('genesis.application')" name="--macro"/>
 	<haxeflag value="include('superhuman')" name="--macro"/>
+
+	<haxedef name="HXCPP_STACK_LINE" />
+	<haxedef name="HXCPP_STACK_TRACE"/>
+	<haxedef name="HXCPP_CHECK_POINTER"/>
 
 </project>

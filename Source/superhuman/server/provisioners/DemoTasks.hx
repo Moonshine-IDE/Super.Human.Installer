@@ -536,15 +536,42 @@ class HostsFileGenerator {
             ROLE_RESTAPI: "",
             ROLE_DOMINO_INSTALL: "",
             ROLE_DOMINO_VAGRANT_REST_API: "",
-
+			
+            DOMINO_INSTALLER: "",
+            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
+            DOMINO_INSTALLER_FIXPACK: "",
+            
+		    NOMAD_INSTALLER: "",
+		    NOMAD_VERSION: "",
+		    LEAP_INSTALLER: "",
+      		TRAVELER_INSTALLER: "",
+      		VERSE_INSTALLER: "",
+      		APPDEVPACK_INSTALLER: "",
+     		DOMINO_REST_API_INSTALLER: "",
+     		
             CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
 
         };
 
         for ( r in provisioner.server.roles.value ) {
 
-            var replaceWith:String = "";
-
+			var roleValue = r.value;
+			var replaceWith:String = "";
+			var installerName:String = r.files.installerFileName == null ? "" : r.files.installerFileName;
+			
+			if (r.value == "domino")
+			{
+				replace.DOMINO_INSTALLER = installerName;
+				
+				if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
+				{
+					var fixPacksPath = new Path(r.files.fixpacks[0]);
+					
+					replace.DOMINO_INSTALLER_FIXPACK_INSTALL = true;
+					replace.DOMINO_INSTALLER_FIXPACK = fixPacksPath.file + "." + fixPacksPath.ext;
+				}
+			}
+			
             if ( r.value == "leap" ) {
 
                 if ( r.enabled ) {
@@ -556,10 +583,10 @@ class HostsFileGenerator {
                     replaceWith = "#- name: domino-leap";
 
                 }
-
+				
+                replace.LEAP_INSTALLER = installerName;
                 replace.ROLE_LEAP = replaceWith;
-
-            }
+             }
 
             if ( r.value == "nomadweb" ) {
 
@@ -572,9 +599,9 @@ class HostsFileGenerator {
                     replaceWith = "#- name: domino-nomadweb";
 
                 }
-
+				
+                replace.NOMAD_INSTALLER = installerName;
                 replace.ROLE_NOMADWEB = replaceWith;
-
             }
 
             if ( r.value == "traveler" ) {
@@ -588,9 +615,9 @@ class HostsFileGenerator {
                     replaceWith = "#- name: domino-traveler";
 
                 }
-
+				
+                replace.TRAVELER_INSTALLER = installerName;
                 replace.ROLE_TRAVELER = replaceWith;
-
             }
 
             if ( r.value == "traveler" ) {
@@ -621,8 +648,8 @@ class HostsFileGenerator {
 
                 }
 
+                replace.VERSE_INSTALLER = installerName;
                 replace.ROLE_VERSE = replaceWith;
-
             }
 
             if ( r.value == "appdevpack" ) {
@@ -636,9 +663,9 @@ class HostsFileGenerator {
                     replaceWith = "#- name: domino-appdevpack";
 
                 }
-
+				
+                replace.APPDEVPACK_INSTALLER = installerName;
                 replace.ROLE_APPDEVPACK = replaceWith;
-
             }
 
             if ( r.value == "domino-rest-api" ) {
@@ -652,9 +679,9 @@ class HostsFileGenerator {
                     replaceWith = "#- name: domino-rest-api";
 
                 }
-
+				
+                replace.DOMINO_REST_API_INSTALLER = installerName;
                 replace.ROLE_RESTAPI = replaceWith;
-
             }
 
             replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud-quick-start";
