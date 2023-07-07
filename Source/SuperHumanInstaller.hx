@@ -30,6 +30,7 @@
 
 package;
 
+import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
 import feathers.controls.Alert;
 import feathers.controls.LayoutGroup;
@@ -109,24 +110,11 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 	
 	final _defaultConfig:SuperHumanConfig = {
-
+		
 		servers : [],
 		user: {},
 		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
-
 	}
-
-	final _validHashes:Map<String, Map<String, Array<String>>> = [
-		
-		"domino" => [ "installers" => [ "4153dfbb571b1284ac424824aa0e25e4" ], "hotfixes" => [], "fixpacks" => [] ],
-		"appdevpack" => [ "installers" => [ "b84248ae22a57efe19dac360bd2aafc2" ] ],
-		"leap" => [ "installers" => [ "080235c0f0cce7cc3446e01ffccf0046" ] ],
-		"nomadweb" => [ "installers" => [ "044c7a71598f41cd3ddb88c5b4c9b403", "8f3e42f4f5105467c99cfd56b8b4a755" ] ],
-		"traveler" => [ "installers" => [ "4a195e3282536de175a2979def40527d", "4118ee30d590289070f2d29ecf1b34cb" ] ],
-		"verse" => [ "installers" => [ "dfad6854171e964427550454c5f006ee" ] ],
-		"domino-rest-api" => [ "installers" => [ "fa990f9bac800726f917cd0ca857f220" ] ],
-
-	];
 
 	var _advancedConfigPage:AdvancedConfigPage;
 	var _appCheckerOverlay:LayoutGroup;
@@ -152,9 +140,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
 
-	public var validHashes( get, never ):Map<String, Map<String, Array<String>>>;
-	function get_validHashes() return _validHashes;
-
 	public function new() {
 
 		super( #if showlogin true #end );
@@ -170,15 +155,25 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
 
+		var dominoHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino");
+		var dominoHotFixHashes:Array<String> = SuperHumanHashes.getHotFixesHashes("domino");
+		var dominoFixPacksHashes:Array<String> = SuperHumanHashes.getFixPacksHashes("domino");
+		var nomadWebHashes:Array<String> = SuperHumanHashes.getInstallersHashes("nomadweb");
+		var leapHashes:Array<String> = SuperHumanHashes.getInstallersHashes("leap");
+		var travelerHashes:Array<String> = SuperHumanHashes.getInstallersHashes("traveler");
+		var verseHashes:Array<String> = SuperHumanHashes.getInstallersHashes("verse");
+		var appdevpackHashes:Array<String> = SuperHumanHashes.getInstallersHashes("appdevpack");
+		var restApiHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino-rest-api");
+		
 		_serverRolesCollection = [
 
-			new ServerRoleImpl( "Domino", LanguageManager.getInstance().getString( 'rolepage.roles.domino.desc' ), _defaultRoles.get( "domino" ), _validHashes.get( "domino" ).get( "installers" ), _validHashes.get( "domino" ).get( "hotfixes" ), _validHashes.get( "domino" ).get( "fixpacks" ), "(Domino_12.0.2_Linux_English.tar)" ),
-			new ServerRoleImpl( "NomadWeb", LanguageManager.getInstance().getString( 'rolepage.roles.nomadweb.desc' ), _defaultRoles.get( "nomadweb" ), _validHashes.get( "nomadweb" ).get( "installers" ), "(nomad-server-1.0.6-for-domino-1202-linux.tgz)" ),
-			new ServerRoleImpl( "Leap (formerly Volt)", LanguageManager.getInstance().getString( 'rolepage.roles.leap.desc' ), _defaultRoles.get( "leap" ), _validHashes.get( "leap" ).get( "installers" ), "(Leap-1.0.5.zip)" ),
-			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), _validHashes.get( "traveler" ).get( "installers" ), "(Traveler_12.0.2_Linux_ML.tar.gz)" ),
-			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), _validHashes.get( "verse" ).get( "installers" ), "(HCL_Verse_3.0.0.zip)" ),
-			new ServerRoleImpl( "AppDev Pack for Node.js", LanguageManager.getInstance().getString( 'rolepage.roles.appdevpack.desc' ), _defaultRoles.get( "appdevpack" ), _validHashes.get( "appdevpack" ).get( "installers" ), "(domino-appdev-pack-1.0.15.tgz)" ),
-			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), _validHashes.get( "domino-rest-api" ).get( "installers" ), "(Domino_REST_API_V1_Installer.tar.gz)" ),
+			new ServerRoleImpl( "Domino", LanguageManager.getInstance().getString( 'rolepage.roles.domino.desc' ), _defaultRoles.get( "domino" ), dominoHashes, dominoHotFixHashes, dominoFixPacksHashes, "(Domino_12.0.2_Linux_English.tar)" ),
+			new ServerRoleImpl( "NomadWeb", LanguageManager.getInstance().getString( 'rolepage.roles.nomadweb.desc' ), _defaultRoles.get( "nomadweb" ), nomadWebHashes, "(nomad-server-1.0.6-for-domino-1202-linux.tgz)" ),
+			new ServerRoleImpl( "Leap (formerly Volt)", LanguageManager.getInstance().getString( 'rolepage.roles.leap.desc' ), _defaultRoles.get( "leap" ), leapHashes, "(Leap-1.0.5.zip)" ),
+			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), travelerHashes, "(Traveler_12.0.2_Linux_ML.tar.gz)" ),
+			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), verseHashes, "(HCL_Verse_3.0.0.zip)" ),
+			new ServerRoleImpl( "AppDev Pack for Node.js", LanguageManager.getInstance().getString( 'rolepage.roles.appdevpack.desc' ), _defaultRoles.get( "appdevpack" ), appdevpackHashes, "(domino-appdev-pack-1.0.15.tgz)" ),
+			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), restApiHashes, "(Domino_REST_API_V1_Installer.tar.gz)" ),
 
 		];
 

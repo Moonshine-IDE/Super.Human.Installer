@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import superhuman.config.SuperHumanHashes;
 import feathers.controls.Alert;
 import feathers.controls.Button;
 import feathers.controls.Label;
@@ -362,7 +363,8 @@ class RolePickerItem extends LayoutGroup {
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "installers" ) );
+            var hashes:Array<String> = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
+            var v = FileTools.checkMD5( path, hashes);
 
             if ( v ) {
 
@@ -413,7 +415,8 @@ class RolePickerItem extends LayoutGroup {
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "hotfixes" ) );
+            var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
+            var v = FileTools.checkMD5( path, hashes);
 
             if ( v ) {
 
@@ -459,7 +462,8 @@ class RolePickerItem extends LayoutGroup {
             currentDir = Path.directory( path );
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "fixpacks" ) );
+            var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
+            var v = FileTools.checkMD5( path, hashes);
 
             if ( v ) {
 

@@ -342,10 +342,13 @@ class FileTools {
 
         if ( md5 == null || md5.length != 32 ) return valid;
 
-        for ( m in md5s ) {
+        for ( m in md5s ) 
+        	{
 
-            if ( m.toLowerCase() == md5.toLowerCase() ) valid = true;
-
+            if ( m.toLowerCase() == md5.toLowerCase() ) 
+            {
+            		valid = true;
+        		}
         }
 
         return valid;
