@@ -1,0 +1,66 @@
+---
+-
+  name: "Creating Domino installation directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    recurse: true
+  with_items:
+    - "{{ installer_dir }}/chrome/archives"
+
+-
+  name: "Adding Chrome source Apt signing key"
+  ansible.builtin.apt_key:
+    state: present
+    url: "{{ chrome_signing_key_url }}"
+
+-
+  name: "Adding Chrome repository for {{ ansible_distribution_release }}"
+  ansible.builtin.lineinfile:
+    mode: "0755"
+    create: true
+    dest: "/etc/apt/sources.list.d/google-chrome.list"
+    line: "deb [arch=amd64]  http://dl.google.com/linux/chrome/deb/ stable main"
+    state: present
+
+-
+  name: "Ensuring apt cache is updated"
+  ansible.builtin.apt:
+    cache_valid_time: 3600
+    update_cache: true
+  when: "ansible_os_family == 'Debian'"
+
+-
+  name: "Upgrading all apt packages"
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: true
+  when: "ansible_os_family == 'Debian'"
+
+-
+  name: "Installing Chrome"
+  ansible.builtin.apt:
+    name:
+      - google-chrome-stable
+    update_cache: true
+
+-
+  name: "Downloading Chromedriver from {{ chrome_driver_url }}"
+  register: domlsresult
+  until: "domlsresult is not failed"
+  retries: 3
+  ansible.builtin.get_url:
+    mode: "0755"
+    url: "{{ chrome_driver_url }}{{ chrome_driver_version }}/{{ chrome_driver_server_installer_tar }}"
+    dest: "{{ installer_dir }}/chrome/archives/{{ chrome_driver_server_installer_tar }}"
+
+-
+  name: "Extracting Chrome Driver version: {{ chrome_driver_version }} "
+  ansible.builtin.unarchive:
+    src: "{{ installer_dir }}/chrome/archives/{{ chrome_driver_server_installer_tar }}"
+    dest: "/tmp/"
+    creates: "/usr/bin/chromedriver"
+    remote_src: true
+    mode: "a+x"
+    owner: root
+    group: root

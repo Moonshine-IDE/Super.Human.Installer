@@ -280,7 +280,7 @@ class DemoTasks extends AbstractProvisioner {
 
         _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
 
-        if ( _version >= "0.1.18" ) return HostsFileGenerator.generateContentForV18( _hostsTemplate, this );
+        //if ( _version >= "0.1.18" ) return HostsFileGenerator.generateContentForV18( _hostsTemplate, this );
         return HostsFileGenerator.generateContentForV17( _hostsTemplate, this );
 
     }
@@ -501,56 +501,85 @@ class HostsFileGenerator {
         var replace = {
 
             USER_EMAIL: provisioner.server.userEmail.value,
-            USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
-
-            SERVER_ID: provisioner.server.id,
-            SERVER_HOSTNAME: provisioner.server.url.hostname,
-            SERVER_DOMAIN: provisioner.server.url.domainName,
-            SERVER_ORGANIZATION: provisioner.server.organization.value,
-
-            NETWORK_BRIDGE: provisioner.server.networkBridge.value,
-
+            
+            //settings
+         	SERVER_HOSTNAME: provisioner.server.url.hostname,
+         	SERVER_DOMAIN: provisioner.server.url.domainName,
+         	SERVER_ID: provisioner.server.id,
+         	RESOURCES_CPU: provisioner.server.numCPUs.value,
+         	RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
+         	
+         	//network
+         	NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
+         	NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
+         	NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
             // Always true, never false
-            NETWORK_DHCP4: true,
-            NETWORK_DNS_NAMESERVER_1: ( provisioner.server.dhcp4.value ) ? "1.1.1.1" : provisioner.server.nameServer1.value,
-            NETWORK_DNS_NAMESERVER_2: ( provisioner.server.dhcp4.value ) ? "1.0.0.1" : provisioner.server.nameServer2.value,
-            NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
-            NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
-            NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
+         	NETWORK_DHCP4: true,
+         	NETWORK_BRIDGE: provisioner.server.networkBridge.value,
+         	
+         	//dns
+         	NETWORK_DNS_NAMESERVER_1: ( provisioner.server.dhcp4.value ) ? "1.1.1.1" : provisioner.server.nameServer1.value,
+         	NETWORK_DNS_NAMESERVER_2: ( provisioner.server.dhcp4.value ) ? "1.0.0.1" : provisioner.server.nameServer2.value,
+           
+            //vars
+            SERVER_ORGANIZATION: provisioner.server.organization.value,
+            USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
+            DOMINO_SERVER_CLUSTERMATES: 0,
+            CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
 
-            ENV_OPEN_BROWSER: false,
-            ENV_SETUP_WAIT: provisioner.server.setupWait.value,
-
-            RESOURCES_CPU: provisioner.server.numCPUs.value,
-            RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
-
+            //Domino Variables
+            DOMINO_INSTALLER: "",
+                        
+            //Domino fixpack Variables
+            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
+            DOMINO_INSTALLER_FIXPACK_VERSION: "",
+            DOMINO_INSTALLER_FIXPACK: "",
+            
+            //Domino Hotfix Variables
+            DOMINO_INSTALLER_HOTFIX_INSTALL: false,
+            DOMINO_INSTALLER_HOTFIX_VERSION: "",
+            DOMINO_INSTALLER_HOTFIX: "",
+            
+            //Leap Variables
+            LEAP_INSTALLER: "",
+            LEAP_INSTALLER_VERSION: "",
+		    
+            //Nomad Web Variables
+            NOMADWEB_INSTALLER: "",
+            NOMADWEB_VERSION: "",
+            
+            //Traveler Variables
+            TRAVELER_INSTALLER: "",
+            TRAVELER_INSTALLER_VERSION: "",
+            TRAVELER_FP_INSTALLER: "",
+            TRAVELER_FP_INSTALLER_VERSION: "",
+            
+            //Verse Variables
+            VERSE_INSTALLER: "",
+            VERSE_INSTALLER_VERSION: "",
+      		
+            //AppDev Web Pack Variables
+            APPDEVPACK_INSTALLER: "",
+            APPDEVPACK_INSTALLER_VERSION: "",
+            
+            //Domino Rest API Variables
+            DOMINO_REST_API_INSTALLER_VERSION: "",
+            DOMINO_REST_API_INSTALLER: "",
+            
+            //roles
             ROLE_LEAP: "",
             ROLE_NOMADWEB: "",
             ROLE_TRAVELER: "",
             ROLE_TRAVELER_HTMO: "",
             ROLE_VERSE: "",
             ROLE_APPDEVPACK: "",
+            ROLE_RESTAPI: "",
             ROLE_STARTCLOUD_QUICK_START: "",
             ROLE_STARTCLOUD_HAPROXY: "",
             ROLE_STARTCLOUD_VAGRANT_README: "",
-            ROLE_RESTAPI: "",
-            ROLE_DOMINO_INSTALL: "",
-            ROLE_DOMINO_VAGRANT_REST_API: "",
-			
-            DOMINO_INSTALLER: "",
-            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
-            DOMINO_INSTALLER_FIXPACK: "",
             
-		    NOMAD_INSTALLER: "",
-		    NOMAD_VERSION: "",
-		    LEAP_INSTALLER: "",
-      		TRAVELER_INSTALLER: "",
-      		VERSE_INSTALLER: "",
-      		APPDEVPACK_INSTALLER: "",
-     		DOMINO_REST_API_INSTALLER: "",
-     		
-            CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
-
+            ENV_OPEN_BROWSER: false,
+            ENV_SETUP_WAIT: provisioner.server.setupWait.value,
         };
 
         for ( r in provisioner.server.roles.value ) {
@@ -558,6 +587,7 @@ class HostsFileGenerator {
 			var roleValue = r.value;
 			var replaceWith:String = "";
 			var installerName:String = r.files.installerFileName == null ? "" : r.files.installerFileName;
+			var installerVersion:Dynamic = r.files.installerVersion;
 			
 			if (r.value == "domino")
 			{
@@ -576,15 +606,16 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-leap";
+                    replaceWith = "- name: domino_leap";
 
                 } else {
 
-                    replaceWith = "#- name: domino-leap";
+                    replaceWith = "#- name: domino_leap";
 
                 }
 				
                 replace.LEAP_INSTALLER = installerName;
+                replace.LEAP_INSTALLER_VERSION = installerVersion.fullVersion;
                 replace.ROLE_LEAP = replaceWith;
              }
 
@@ -592,15 +623,16 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-nomadweb";
+                    replaceWith = "- name: domino_nomadweb";
 
                 } else {
 
-                    replaceWith = "#- name: domino-nomadweb";
+                    replaceWith = "#- name: domino_nomadweb";
 
                 }
 				
-                replace.NOMAD_INSTALLER = installerName;
+                replace.NOMADWEB_INSTALLER = installerName;
+                replace.NOMADWEB_VERSION = installerVersion.fullVersion;
                 replace.ROLE_NOMADWEB = replaceWith;
             }
 
@@ -608,15 +640,16 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-traveler";
+                    replaceWith = "- name: domino_traveler";
 
                 } else {
 
-                    replaceWith = "#- name: domino-traveler";
+                    replaceWith = "#- name: domino_traveler";
 
                 }
 				
                 replace.TRAVELER_INSTALLER = installerName;
+                replace.TRAVELER_INSTALLER_VERSION = installerVersion.fullVersion;
                 replace.ROLE_TRAVELER = replaceWith;
             }
 
@@ -624,11 +657,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-traveler-htmo";
+                    replaceWith = "- name: domino_traveler_htmo";
 
                 } else {
 
-                    replaceWith = "#- name: domino-traveler-htmo";
+                    replaceWith = "#- name: domino_traveler_htmo";
 
                 }
 
@@ -640,15 +673,16 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-verse";
+                    replaceWith = "- name: domino_verse";
 
                 } else {
 
-                    replaceWith = "#- name: domino-verse";
+                    replaceWith = "#- name: domino_verse";
 
                 }
 
                 replace.VERSE_INSTALLER = installerName;
+                replace.VERSE_INSTALLER_VERSION = installerVersion.fullVersion;
                 replace.ROLE_VERSE = replaceWith;
             }
 
@@ -656,15 +690,16 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-appdevpack";
+                    replaceWith = "- name: domino_appdevpack";
 
                 } else {
 
-                    replaceWith = "#- name: domino-appdevpack";
+                    replaceWith = "#- name: domino_appdevpack";
 
                 }
 				
                 replace.APPDEVPACK_INSTALLER = installerName;
+                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion.fullVersion;
                 replace.ROLE_APPDEVPACK = replaceWith;
             }
 
@@ -672,24 +707,22 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino-rest-api";
+                    replaceWith = "- name: domino_rest_api";
 
                 } else {
 
-                    replaceWith = "#- name: domino-rest-api";
+                    replaceWith = "#- name: domino_rest_api";
 
                 }
 				
                 replace.DOMINO_REST_API_INSTALLER = installerName;
+                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion.fullVersion;
                 replace.ROLE_RESTAPI = replaceWith;
             }
 
-            replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud-quick-start";
-            replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud-haproxy";
-            replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud-vagrant-readme";
-            replace.ROLE_DOMINO_INSTALL = "- name: domino-install";
-            replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino-vagrant-rest_api";
-
+            replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud_quick_start";
+            replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud_haproxy";
+            replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud_vagrant_readme";
         }
 
         var template = new Template( sourceTemplate );

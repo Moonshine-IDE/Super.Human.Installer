@@ -4,7 +4,9 @@ class SuperHumanHashes
 {
 	public static final validHashes:Map<String, Map<String, Array<{}>>> = [
 		
-		"domino" => [ "installers" => [ { hash: "4153dfbb571b1284ac424824aa0e25e4", version: {majorVersion: "12", minorVersion: "02", fullVersion: "12.02"} } ], "hotfixes" => [], "fixpacks" => []],
+		"domino" => [ "installers" => [ { hash: "4153dfbb571b1284ac424824aa0e25e4", version: {majorVersion: "12", minorVersion: "02", fullVersion: "12.02"} } ], 
+					  "hotfixes" => [], 
+					  "fixpacks" => [ {hash: "30803d849e3eb46f35242a72372548fd", version: { fullVersion: "FP1"}} ]],
 		"appdevpack" => [ "installers" => [ { hash: "b84248ae22a57efe19dac360bd2aafc2", version: { majorVersion: "1", minorVersion: "0", patch: "15", fullVersion: "1.0.15"} }]],
 		"leap" => [ "installers" => [ { hash: "080235c0f0cce7cc3446e01ffccf0046", version: { majorVersion: "1", minorVersion: "0", patch: "5", fullVersion: "1.0.5" } } ]],
 		"nomadweb" => [ "installers" => [ { hash: "044c7a71598f41cd3ddb88c5b4c9b403" }, 
@@ -45,5 +47,22 @@ class SuperHumanHashes
 		});
 		
 		return hashes;
+	}
+	
+	public static function getInstallerVersion(installerType:String, hash:String):{}
+	{
+		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "installers" );
+		var version:{} = null;
+		
+		installersHashes = installersHashes.filter(function(item:Dynamic):Bool {
+			return item.hash == hash;
+		});
+		
+		if (installersHashes.length > 0)
+		{
+			version = installersHashes[0].version;
+		}
+		
+		return version;
 	}
 }
