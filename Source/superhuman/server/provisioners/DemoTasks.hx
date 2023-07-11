@@ -615,7 +615,7 @@ class HostsFileGenerator {
                 }
 				
                 replace.LEAP_INSTALLER = installerName;
-                replace.LEAP_INSTALLER_VERSION = installerVersion.fullVersion;
+                replace.LEAP_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_LEAP = replaceWith;
              }
 
@@ -632,7 +632,7 @@ class HostsFileGenerator {
                 }
 				
                 replace.NOMADWEB_INSTALLER = installerName;
-                replace.NOMADWEB_VERSION = installerVersion.fullVersion;
+                replace.NOMADWEB_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_NOMADWEB = replaceWith;
             }
 
@@ -649,7 +649,7 @@ class HostsFileGenerator {
                 }
 				
                 replace.TRAVELER_INSTALLER = installerName;
-                replace.TRAVELER_INSTALLER_VERSION = installerVersion.fullVersion;
+                replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_TRAVELER = replaceWith;
             }
 
@@ -682,7 +682,7 @@ class HostsFileGenerator {
                 }
 
                 replace.VERSE_INSTALLER = installerName;
-                replace.VERSE_INSTALLER_VERSION = installerVersion.fullVersion;
+                replace.VERSE_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_VERSE = replaceWith;
             }
 
@@ -699,7 +699,7 @@ class HostsFileGenerator {
                 }
 				
                 replace.APPDEVPACK_INSTALLER = installerName;
-                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion.fullVersion;
+                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_APPDEVPACK = replaceWith;
             }
 
@@ -716,7 +716,7 @@ class HostsFileGenerator {
                 }
 				
                 replace.DOMINO_REST_API_INSTALLER = installerName;
-                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion.fullVersion;
+                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_RESTAPI = replaceWith;
             }
 
