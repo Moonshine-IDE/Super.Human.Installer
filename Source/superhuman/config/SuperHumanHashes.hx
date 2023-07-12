@@ -52,15 +52,38 @@ class SuperHumanHashes
 	public static function getInstallerVersion(installerType:String, hash:String):{}
 	{
 		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "installers" );
+		var version:{} = getVersion(installersHashes, hash);
+		
+		return version;
+	}
+	
+	public static function getHotfixesVersion(installerType:String, hash:String):{}
+	{
+		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "hotfixes" );
+		var version:{} = getVersion(installersHashes, hash);
+		
+		return version;
+	}
+	
+	public static function getFixpacksVersion(installerType:String, hash:String):{}
+	{
+		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "fixpacks" );
+		var version:{} = getVersion(installersHashes, hash);
+		
+		return version;
+	}
+	
+	private static function getVersion(installerHashes:Array<Dynamic>, hash:String):{}
+	{
 		var version:{} = null;
 		
-		installersHashes = installersHashes.filter(function(item:Dynamic):Bool {
+		var filteredHashes:Array<Dynamic> = installerHashes.filter(function(item:Dynamic):Bool {
 			return item.hash == hash;
 		});
 		
-		if (installersHashes.length > 0)
+		if (filteredHashes.length > 0)
 		{
-			version = installersHashes[0].version;
+			version = filteredHashes[0].version;
 		}
 		
 		return version;

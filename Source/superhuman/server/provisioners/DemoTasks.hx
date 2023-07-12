@@ -588,17 +588,29 @@ class HostsFileGenerator {
 			var replaceWith:String = "";
 			var installerName:String = r.files.installerFileName == null ? "" : r.files.installerFileName;
 			var installerVersion:Dynamic = r.files.installerVersion;
+			var hotfixVersion:Dynamic = r.files.installerHotFixVersion;
+			var fixpackVersion:Dynamic = r.files.installerFixpackVersion;
 			
 			if (r.value == "domino")
 			{
 				replace.DOMINO_INSTALLER = installerName;
-				
+	
+				if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
+				{
+					var hotfixesPath = new Path(r.files.hotfixes[0]);
+					
+					replace.DOMINO_INSTALLER_HOTFIX_INSTALL = true;
+					replace.DOMINO_INSTALLER_HOTFIX = hotfixesPath.file + "." + hotfixesPath.ext;
+					replace.DOMINO_INSTALLER_HOTFIX_VERSION = hotfixVersion == null ? "" : hotfixVersion.fullVersion;
+				}
+					
 				if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
 				{
 					var fixPacksPath = new Path(r.files.fixpacks[0]);
 					
 					replace.DOMINO_INSTALLER_FIXPACK_INSTALL = true;
 					replace.DOMINO_INSTALLER_FIXPACK = fixPacksPath.file + "." + fixPacksPath.ext;
+					replace.DOMINO_INSTALLER_FIXPACK_VERSION = fixpackVersion == null ? "" : fixpackVersion.fullVersion;
 				}
 			}
 			

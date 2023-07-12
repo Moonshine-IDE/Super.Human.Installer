@@ -432,6 +432,9 @@ class RolePickerItem extends LayoutGroup {
 
                 if ( !_roleImpl.role.files.hotfixes.contains( path ) ) 
                 {	
+                		//Only latest added hotfix will be taken into account 
+    		            _roleImpl.role.files.installerHotFixVersion = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, v);
+                		
                 		_roleImpl.role.files.hotfixes.push( path );
         			}
     
@@ -448,7 +451,10 @@ class RolePickerItem extends LayoutGroup {
                     switch state.index {
 
                         case 0:
-                            if ( !_roleImpl.role.files.hotfixes.contains( path ) ) _roleImpl.role.files.hotfixes.push( path );
+                            if ( !_roleImpl.role.files.hotfixes.contains( path ) ) 
+                            {
+                            		_roleImpl.role.files.hotfixes.push( path );
+                        		}
                             updateData();
 
                         default:
@@ -481,7 +487,11 @@ class RolePickerItem extends LayoutGroup {
 
             if ( v != null ) {
 
-                if ( !_roleImpl.role.files.fixpacks.contains( path ) ) _roleImpl.role.files.fixpacks.push( path );
+                if ( !_roleImpl.role.files.fixpacks.contains( path ) ) 
+                {
+                		_roleImpl.role.files.installerFixpackVersion = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, v);
+                		_roleImpl.role.files.fixpacks.push( path );
+            		}
                 updateData();
 
             } else {

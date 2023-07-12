@@ -36,6 +36,8 @@ typedef ServerRoleFiles = {
     ?installerFileName:String,
     ?installerHash:String,
     ?installerVersion:{},
+    ?installerHotFixVersion:{},
+    ?installerFixpackVersion:{},
     ?hotfixes:Array<String>,
     ?fixpacks:Array<String>,
 
