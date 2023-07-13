@@ -1,0 +1,6 @@
+---
+-
+  name: "Restart tomcat"
+  ansible.builtin.service:
+    name: "tomcat{{ tomcat_version }}"
+    state: restarted

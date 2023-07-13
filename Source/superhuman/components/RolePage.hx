@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import superhuman.config.SuperHumanHashes;
 import feathers.controls.Alert;
 import feathers.controls.Button;
 import feathers.controls.Label;
@@ -362,16 +363,22 @@ class RolePickerItem extends LayoutGroup {
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "installers" ) );
+            var hashes:Array<String> = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
+            var v = FileTools.checkMD5( path, hashes);
 
-            if ( v ) {
+            if ( v != null) 
+            	{
 
                 _roleImpl.role.files.installer = path;
                 _roleImpl.role.files.installerFileName = fullFileName;
+                _roleImpl.role.files.installerHash = v;
+                _roleImpl.role.files.installerVersion = SuperHumanHashes.getInstallerVersion(_roleImpl.role.value, v);
                 
                 updateData();
                 
-            } else {
+            } 
+            	else 
+            	{
 
                 Alert.show(
                     LanguageManager.getInstance().getString( 'alert.installerhash.text', _roleImpl.name ),
@@ -384,6 +391,7 @@ class RolePickerItem extends LayoutGroup {
                         case 0:
                             _roleImpl.role.files.installer = path;
                             _roleImpl.role.files.installerFileName = fullFileName;
+                            
                             updateData();
 
                         default:
@@ -409,15 +417,27 @@ class RolePickerItem extends LayoutGroup {
 
         fd.onSelect.add( path -> {
 
+        		var currentPath = new Path(path);
+            var fullFileName = currentPath.file + "." + currentPath.ext;
+            
             currentDir = Path.directory( path );
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "hotfixes" ) );
+            var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
+            var v = FileTools.checkMD5( path, hashes);
 
-            if ( v ) {
+            if ( v != null ) 
+            	{
 
-                if ( !_roleImpl.role.files.hotfixes.contains( path ) ) _roleImpl.role.files.hotfixes.push( path );
+                if ( !_roleImpl.role.files.hotfixes.contains( path ) ) 
+                {	
+                		//Only latest added hotfix will be taken into account 
+    		            _roleImpl.role.files.installerHotFixVersion = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, v);
+                		
+                		_roleImpl.role.files.hotfixes.push( path );
+        			}
+    
                 updateData();
 
             } else {
@@ -431,7 +451,10 @@ class RolePickerItem extends LayoutGroup {
                     switch state.index {
 
                         case 0:
-                            if ( !_roleImpl.role.files.hotfixes.contains( path ) ) _roleImpl.role.files.hotfixes.push( path );
+                            if ( !_roleImpl.role.files.hotfixes.contains( path ) ) 
+                            {
+                            		_roleImpl.role.files.hotfixes.push( path );
+                        		}
                             updateData();
 
                         default:
@@ -459,11 +482,16 @@ class RolePickerItem extends LayoutGroup {
             currentDir = Path.directory( path );
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var v = FileTools.checkMD5( path, SuperHumanInstaller.getInstance().validHashes.get( _roleImpl.role.value ).get( "fixpacks" ) );
+            var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
+            var v = FileTools.checkMD5( path, hashes);
 
-            if ( v ) {
+            if ( v != null ) {
 
-                if ( !_roleImpl.role.files.fixpacks.contains( path ) ) _roleImpl.role.files.fixpacks.push( path );
+                if ( !_roleImpl.role.files.fixpacks.contains( path ) ) 
+                {
+                		_roleImpl.role.files.installerFixpackVersion = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, v);
+                		_roleImpl.role.files.fixpacks.push( path );
+            		}
                 updateData();
 
             } else {

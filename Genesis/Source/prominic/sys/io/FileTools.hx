@@ -323,12 +323,18 @@ class FileTools {
 
     }
 
-    static public function checkMD5( path:String, md5s:Array<String> ):Bool {
+    /**
+     * Method returns hash if exists in Array, otherwise null
+     **/
+    static public function checkMD5( path:String, md5s:Array<String> ):String {
 
-        var valid:Bool = false;
+        var hash:String = null;
 
-        if ( !FileSystem.exists( path ) ) return valid;
-
+        if ( !FileSystem.exists( path ) ) 
+        {	
+        		return hash;
+		}
+		
         var s = Shell;
 
         #if neko
@@ -340,16 +346,20 @@ class FileTools {
         //var md5:String = Md5.make( File.getBytes( path ) ).toHex();
         #end
 
-        if ( md5 == null || md5.length != 32 ) return valid;
-
-        for ( m in md5s ) {
-
-            if ( m.toLowerCase() == md5.toLowerCase() ) valid = true;
-
+        if ( md5 == null || md5.length != 32 ) 
+        {	
+        		return hash;
+		}
+		
+        for ( m in md5s ) 
+        	{
+            if ( m.toLowerCase() == md5.toLowerCase() ) 
+            {
+            		hash = m.toLowerCase();
+        		}
         }
 
-        return valid;
-
+        return hash;
     }
 
     /**
