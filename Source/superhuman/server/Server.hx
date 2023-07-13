@@ -592,7 +592,7 @@ class Server {
 
     function _prepareFiles() {
 
-        _provisioner.copyFiles( _prepareFilesComplete );
+        _provisioner.copyFiles(_prepareFilesComplete);
 
     }
 
@@ -1019,6 +1019,7 @@ class Server {
 
         if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
 
+        Logger.info('${this}: unregistered VM Id ' + machine.virtualBoxId);
         VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
 
         refreshVirtualBoxInfo();
@@ -1143,7 +1144,8 @@ class Server {
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
-        if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( new String( data ) );
+    		var vagrantLogging:Bool = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
+        if ( console != null && !vagrantLogging ) console.appendText( new String( data ) );
         Logger.debug( '${this}: Vagrant up: ${data}' );
         _provisioner.updateTaskProgress( data );
         
@@ -1201,17 +1203,42 @@ class Server {
     //
 
     public function refreshVirtualBoxInfo() {
+        if ( _refreshingVirtualBoxVMInfo) return;
 
-        if ( _refreshingVirtualBoxVMInfo ) return;
-
-        Logger.debug( '${this}: Refreshing VirtualBox VM Info for id: ${this.virtualBoxId}' );
+        Logger.debug( '${this}: Refreshing combined VM ${this._combinedVirtualMachine.value.virtualBoxMachine} and execute at ${this._serverDir}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
-        VirtualBox.getInstance().getShowVMInfo( this._combinedVirtualMachine.value.virtualBoxMachine ).execute( this._serverDir );
+        
+        var combinedVMExecutor:AbstractExecutor = VirtualBox.getInstance().getShowVMInfo( this._combinedVirtualMachine.value.virtualBoxMachine );
+        		combinedVMExecutor.onStart.add( _virtualMachineStarted );
+            combinedVMExecutor.onStop.add( _virtualMachineStopped );
+            combinedVMExecutor.onStdOut.add( _virtualMachineStandardOutputData );
+            combinedVMExecutor.onStdErr.add( _virtualMachineStandardErrorData );
+            
+        combinedVMExecutor.execute( this._serverDir );
         _refreshingVirtualBoxVMInfo = true;
-
     }
 
+    function _virtualMachineStarted( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this}: Refreshed Virtual Machine started ' + executor.id );
+    }
+    
+    function _virtualMachineStopped( executor:AbstractExecutor ) {
+
+        Logger.debug( '${this}: Refreshed Virtual Machine stopped ' + executor.id );
+    }
+    
+    function _virtualMachineStandardOutputData( executor:AbstractExecutor, data:String ) {
+
+        Logger.debug( '${this}: Refreshed Virtual Machine standard output: ${data}');
+    }
+    
+    function _virtualMachineStandardErrorData( executor:AbstractExecutor, data:String ) {
+
+    		Logger.debug( '${this}: Refreshed Virtual Machine error: ${data}');
+    }
+    
     function _onVirtualBoxShowVMInfo( machine:VirtualBoxMachine ) {
 
         if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
