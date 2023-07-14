@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import champaign.core.logging.Logger;
 import champaign.core.primitives.Property;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
@@ -299,13 +300,13 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonOpenDir.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_FOLDER ) );
         _buttonOpenDir.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.directory' );
         _buttonOpenDir.addEventListener( TriggerEvent.TRIGGER, _buttonOpenDirTriggered );
-        #if debug _buttonGroup.addChild( _buttonOpenDir ); #end
+        _buttonGroup.addChild( _buttonOpenDir );
 
         _buttonDelete = new GenesisButton();
         _buttonDelete.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DELETE ) );
         _buttonDelete.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.delete' );
         _buttonDelete.addEventListener( TriggerEvent.TRIGGER, _buttonDeleteTriggered );
-        #if debug _buttonGroup.addChild( _buttonDelete ); #end
+        _buttonGroup.addChild( _buttonDelete );
 
         _spacer = new LayoutGroup();
         _spacer.layoutData = new HorizontalLayoutData( 100 );
@@ -429,15 +430,11 @@ class ServerItem extends LayoutGroupItemRenderer {
     }
 
     function _buttonOpenDirTriggered( e:TriggerEvent ) {
-
-        #if debug
-
+    	
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY );
         event.server = _server;
         this.dispatchEvent( event );
-
-        #end
-
+        
     }
 
     function _buttonProvisionTriggered( e:TriggerEvent ) {
@@ -570,6 +567,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = false;
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
         _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
+        _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = false;
         _buttonProvision.enabled = _buttonProvision.includeInLayout = _buttonProvision.visible = false;
         _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = false;
         _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = false;
@@ -584,6 +582,8 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         if ( !Vagrant.getInstance().exists || !VirtualBox.getInstance().exists ) return;
 
+        Logger.info('${this}: _updateServer Server status: ${_server.status.value}');
+        Logger.info('${this}: _updateServer Server provisioned: ${_server.provisioned}');
         switch ( _server.status.value ) {
 
             case ServerStatus.Stopped( hasError ):
@@ -591,13 +591,14 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = !_server.provisioned;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
+                _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
                 _statusLabel.text = ( forced ) ?  LanguageManager.getInstance().getString( 'serverpage.server.status.stoppingforced' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopping' );
 
             case ServerStatus.Start( provisionedBefore ):
-
+            		_buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 if ( provisionedBefore ) {
 
                     _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
@@ -616,6 +617,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.initializing' );
 
             case ServerStatus.Running( hasError ):
+            	    _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
