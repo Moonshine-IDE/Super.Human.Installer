@@ -30,6 +30,7 @@
 
 package superhuman.config;
 
+import superhuman.browser.BrowserData;
 import superhuman.config.SuperHumanPreferences;
 import superhuman.config.SuperHumanUserConfig;
 import superhuman.server.data.ServerData;
@@ -39,5 +40,5 @@ typedef SuperHumanConfig = {
     preferences:SuperHumanPreferences,
     servers:Array<ServerData>,
     user:SuperHumanUserConfig,
-
+	browsers:Array<BrowserData>
 }

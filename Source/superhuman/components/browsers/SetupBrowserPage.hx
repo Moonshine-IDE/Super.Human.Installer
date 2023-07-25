@@ -135,6 +135,7 @@ class SetupBrowserPage extends Page {
 		_labelTitle.text = LanguageManager.getInstance().getString( 'settingspage.browser.titlebrowserpath', data.browserName );
 		_textInputBrowserName.text = data.browserName;
 		_textInputPath.text = data.executablePath;
+		_checkDefaultBrowser.selected = data.isDefault;
 	}
 	
 	function _saveButtonTriggered(e:TriggerEvent) {

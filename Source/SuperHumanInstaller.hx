@@ -120,6 +120,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		servers : [],
 		user: {},
 		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
+		browsers: []
 	}
 
 	var _advancedConfigPage:AdvancedConfigPage;
@@ -138,7 +139,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _vagrantFile:String;
 	var _browsersPage:BrowsersPage;
 	var _setupBrowserPage:SetupBrowserPage;
-	var _browsersCollection:Array<BrowserData>;
+	//var _browsersCollection:Array<BrowserData>;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
@@ -149,8 +150,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
 
-	public var browsersCollection( get, never ):Array<BrowserData>;
-	function get_browsersCollection() return _browsersCollection;
+	/*public var browsersCollection( get, never ):Array<BrowserData>;
+	function get_browsersCollection() return _browsersCollection;*/
 	
 	public function new() {
 
@@ -189,8 +190,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		];
 
-		_browsersCollection = [
-			new BrowserData(Browsers.Mozilla_Firefox),
+		_defaultConfig.browsers = [
+			new BrowserData(Browsers.Mozilla_Firefox, true),
 			new BrowserData(Browsers.Google_Chrome),
 			new BrowserData(Browsers.Brave),
 			new BrowserData(Browsers.Safari)
@@ -351,13 +352,13 @@ class SuperHumanInstaller extends GenesisApplication {
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
 		this.addPage( _rolePage, PAGE_ROLES );
 
-		_browsersPage = new BrowsersPage(_browsersCollection);
+		_browsersPage = new BrowsersPage(_defaultConfig.browsers);
 		_browsersPage.addEventListener(SuperHumanApplicationEvent.SETUP_BROWSER, _setBrowserPage);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
 		this.addPage( _browsersPage, PAGE_BROWSERS );
 		
 		_setupBrowserPage = new SetupBrowserPage();
-		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeBrowsersPage );
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
 		
 		_navigator.validateNow();
@@ -544,13 +545,21 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 	
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		this.selectedPageId = PAGE_SERVER;
+		if (this.previousPageId != PAGE_BROWSERS) {
+			this.selectedPageId = this.previousPageId;
+		} else {
+			this.selectedPageId = PAGE_SERVER;
+		}
 	}
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		this.selectedPageId = this.previousPageId;
+		if (this.previousPageId != PAGE_BROWSERS) {
+			this.selectedPageId = this.previousPageId;
+		} else {
+			this.selectedPageId = PAGE_SERVER;
+		}
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.settingssaved' ) );
 
 	}
@@ -678,8 +687,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+		if (_config.browsers == null) {
+			_config.browsers = _defaultConfig.browsers;	
+		}
+		
 		try {
 
+			var conf = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
 			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
 			Logger.debug( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 
@@ -721,8 +735,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.setBrowserData(e.browserData);
 	}
 	
-	function _closeBrowsersPage(e:SuperHumanApplicationEvent) {
+	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
 		this.selectedPageId = this.previousPageId;	
+	}
+	
+	function _closeBrowsersPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = PAGE_SETTINGS;
 	}
 	
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
