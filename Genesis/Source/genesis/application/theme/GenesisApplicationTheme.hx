@@ -249,6 +249,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
             Button : new TextFormat( "_sans", 14, _themeColors.BtnText ),
             ButtonWarning : new TextFormat( "_sans", 14, _themeColors.BtnWarningText ),
+            Check: new TextFormat( "_sans", 14, White),
             ConsoleText:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             ConsoleTextError:  new TextFormat( "_typewriter", 14, _themeColors.Error ),
             ConsoleTextSelected:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
@@ -970,6 +971,7 @@ typedef Typography = {
 
     var Button:TextFormat;
     var ButtonWarning:TextFormat;
+    var Check:TextFormat;
     var ConsoleText:TextFormat;
     var ConsoleTextError:TextFormat;
     var ConsoleTextSelected:TextFormat;

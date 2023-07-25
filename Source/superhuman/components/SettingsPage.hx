@@ -48,7 +48,7 @@ import superhuman.events.SuperHumanApplicationEvent;
 
 class SettingsPage extends Page {
 
-    final _w:Float = GenesisApplicationTheme.GRID * 100;
+    final _width:Float = GenesisApplicationTheme.GRID * 100;
 
     var _buttonCancel:GenesisFormButton;
     var _buttonGroup:LayoutGroup;
@@ -66,6 +66,10 @@ class SettingsPage extends Page {
     var _rowKeepFailedServersRunning:GenesisFormRow;
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
+    var _rowBrowsers:GenesisFormRow;
+    var _rowBrowsersDefault:GenesisFormRow;
+    var _buttonDefaultBrowser:GenesisFormButton;
+    var _labelDefaultBrowser:Label;
     var _titleGroup:LayoutGroup;
     
     public function new() {
@@ -83,7 +87,7 @@ class SettingsPage extends Page {
         _titleGroupLayout.horizontalAlign = HorizontalAlign.LEFT;
         _titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
         _titleGroup.layout = _titleGroupLayout;
-        _titleGroup.width = _w;
+        _titleGroup.width = _width;
         this.addChild( _titleGroup );
 
         _label = new Label();
@@ -93,7 +97,7 @@ class SettingsPage extends Page {
         _titleGroup.addChild( _label );
 
         var line = new HLine();
-        line.width = _w;
+        line.width = _width;
         this.addChild( line );
 
         _form = new GenesisForm();
@@ -108,7 +112,7 @@ class SettingsPage extends Page {
         _form.addChild( _rowApplicationWindow );
 
         var spacer = new LayoutGroup();
-        spacer.height = GenesisApplicationTheme.GRID * 4;
+        spacer.height = GenesisApplicationTheme.GRID * 2;
         _form.addChild( spacer );
 
         _rowProvision = new GenesisFormRow();
@@ -133,9 +137,25 @@ class SettingsPage extends Page {
         _cbKeepFailedServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.keepfailedserversrunning' ) );
         _rowKeepFailedServersRunning.content.addChild( _cbKeepFailedServersRunning );
         _form.addChild( _rowKeepFailedServersRunning );
+        
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.GRID * 2;
+        _form.addChild( spacer );
+        
+        _rowBrowsersDefault = new GenesisFormRow();
+        _rowBrowsersDefault.text = LanguageManager.getInstance().getString( 'settingspage.browser.title' );
+        _labelDefaultBrowser = new Label(LanguageManager.getInstance().getString( 'settingspage.browser.currentdefaultbrowser' ) + "Firefox");
+        _rowBrowsersDefault.content.addChild(_labelDefaultBrowser);
+        _form.addChild(_rowBrowsersDefault);
+        
+        _rowBrowsers = new GenesisFormRow();
+        _buttonDefaultBrowser = new GenesisFormButton( LanguageManager.getInstance().getString( 'settingspage.browser.defaultbrowser' ) );
+        _buttonDefaultBrowser.addEventListener( TriggerEvent.TRIGGER, _setDefaultBrowserButtonTrigger );
+        _rowBrowsers.content.addChild(_buttonDefaultBrowser);
+        _form.addChild(_rowBrowsers);
 
         var line = new HLine();
-        line.width = _w;
+        line.width = _width;
         this.addChild( line );
 
         _buttonGroup = new LayoutGroup();
@@ -181,6 +201,10 @@ class SettingsPage extends Page {
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
+    }
+    
+    function _setDefaultBrowserButtonTrigger(e:TriggerEvent) {
+    		 this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_BROWSERS_SETUP ) );
     }
 
 }

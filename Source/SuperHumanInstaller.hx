@@ -30,6 +30,9 @@
 
 package;
 
+import superhuman.components.browsers.SetupBrowserPage;
+import superhuman.browser.Browsers;
+import superhuman.components.browsers.BrowsersPage;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
 import feathers.controls.Alert;
@@ -71,6 +74,7 @@ import superhuman.server.CombinedVirtualMachine;
 import superhuman.server.Server;
 import superhuman.server.ServerStatus;
 import superhuman.server.data.RoleData;
+import superhuman.browser.BrowserData;
 import superhuman.server.data.ServerData;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -98,6 +102,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_ROLES = "page-roles";
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
+	static public final PAGE_BROWSERS = "page-browsers";
+	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 
 	static public final DEMO_TASKS_PATH:String = "assets/vagrant/demo-tasks/";
 
@@ -130,6 +136,9 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _settingsPage:SettingsPage;
 	var _vagrantFile:String;
+	var _browsersPage:BrowsersPage;
+	var _setupBrowserPage:SetupBrowserPage;
+	var _browsersCollection:Array<BrowserData>;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
@@ -140,6 +149,9 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
 
+	public var browsersCollection( get, never ):Array<BrowserData>;
+	function get_browsersCollection() return _browsersCollection;
+	
 	public function new() {
 
 		super( #if showlogin true #end );
@@ -177,6 +189,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		];
 
+		_browsersCollection = [
+			new BrowserData(Browsers.Mozilla_Firefox),
+			new BrowserData(Browsers.Google_Chrome),
+			new BrowserData(Browsers.Brave),
+			new BrowserData(Browsers.Safari)
+		];
+		
 		if ( FileSystem.exists( '${System.applicationStorageDirectory}${_CONFIG_FILE}' ) ) {
 
 			try {
@@ -323,6 +342,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
 		_settingsPage = new SettingsPage();
+		_settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSERS_SETUP, _openBrowsersSetup );
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
 		this.addPage( _settingsPage, PAGE_SETTINGS );
@@ -331,6 +351,15 @@ class SuperHumanInstaller extends GenesisApplication {
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
 		this.addPage( _rolePage, PAGE_ROLES );
 
+		_browsersPage = new BrowsersPage(_browsersCollection);
+		_browsersPage.addEventListener(SuperHumanApplicationEvent.SETUP_BROWSER, _setBrowserPage);
+		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
+		this.addPage( _browsersPage, PAGE_BROWSERS );
+		
+		_setupBrowserPage = new SetupBrowserPage();
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeBrowsersPage );
+		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
+		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
 
@@ -510,10 +539,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	function _openBrowsersSetup(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = PAGE_BROWSERS;
+	}
+	
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-
-		this.selectedPageId = this.previousPageId;
-
+		this.selectedPageId = PAGE_SERVER;
 	}
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
@@ -523,7 +554,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.settingssaved' ) );
 
 	}
-
+	
 	function _downloadVagrant( e:SuperHumanApplicationEvent ) {
 
 		Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_DOWNLOAD_URL ] );
@@ -685,6 +716,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	function _setBrowserPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = PAGE_SETUP_BROWSERS;	
+		_setupBrowserPage.setBrowserData(e.browserData);
+	}
+	
+	function _closeBrowsersPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = this.previousPageId;	
+	}
+	
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
 
 		e.server.saveHostsFile();
@@ -794,6 +834,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _openServerDir( e:SuperHumanApplicationEvent ) {
 
+		Logger.info('${this}: _openServerDir path: ${e.server.path.value}');
 		Shell.getInstance().open( [ e.server.path.value ] );
 		Shell.getInstance().openTerminal( e.server.path.value, false );
 

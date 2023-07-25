@@ -30,6 +30,7 @@
 
 package superhuman.events;
 
+import superhuman.browser.BrowserData;
 import genesis.application.events.GenesisApplicationEvent;
 import superhuman.components.Console;
 import superhuman.server.Server;
@@ -43,6 +44,9 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final CANCEL_PAGE:String = "cancelPage";
     public static final CLOSE_CONSOLE:String = "closeConsole";
     public static final CLOSE_ROLES:String = "closeRoles";
+    public static final CLOSE_BROWSERS:String = "closeBrowsers";
+    public static final SETUP_BROWSER:String = "setupBrowser";
+    public static final CLOSE_BROWSERS_SETUP:String = "closeBrowsersSetup";
     public static final CONFIGURE_ROLES:String = "configureRoles";
     public static final CONFIGURE_SERVER:String = "configureServer";
     public static final COPY_TO_CLIPBOARD:String = "copyToClipboard";
@@ -52,6 +56,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final DOWNLOAD_VAGRANT:String = "downloadVagrant";
     public static final DOWNLOAD_VIRTUALBOX:String = "downloadVirtualBox";
     public static final OPEN_BROWSER:String = "openBrowser";
+    public static final OPEN_BROWSERS_SETUP:String = "openBrowsersSetup";
     public static final OPEN_CONSOLE:String = "openConsole";
     public static final OPEN_SERVER_DIRECTORY:String = "openServerDirectory";
     public static final OPEN_VAGRANT_SSH:String = "openVagrantSSH";
@@ -61,6 +66,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final RESET_SERVER:String = "resetServer";
     public static final SAVE_ADVANCED_SERVER_CONFIGURATION:String = "saveAdvancedServerConfiguration";
     public static final SAVE_APP_CONFIGURATION:String = "saveAppConfiguration";
+    public static final SAVE_APP_BROWSERS_CONFIGURATION:String = "saveAppBrowsersConfiguration";
     public static final SAVE_SERVER_CONFIGURATION:String = "saveServerConfiguration";
     public static final START_SERVER:String = "startServer";
     public static final STOP_SERVER:String = "stopServer";
@@ -74,6 +80,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var provisionerType:ProvisionerType;
     public var server:Server;
     public var text:String;
+    public var browserData:BrowserData;
     
     public function new( type:String ) {
 
