@@ -673,17 +673,23 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _openBrowser( e:SuperHumanApplicationEvent ) {
 
-		var a = e.server.webAddress;
+		var defaultBrowser = Browsers.getDefaultBrowser();
+		var a = [e.server.webAddress];
+		#if mac
+		a = ["-a" + defaultBrowser.executablePath, e.server.webAddress];
+		#elseif windows
+		a = [defaultBrowser.executablePath + " " + e.server.webAddress];
+		#end
+		
+		if ( e.server.webAddress == null || e.server.webAddress.length == 0 ) {
 
-		if ( a == null || a.length == 0 ) {
-
-			if ( e.server.console != null ) e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${a}]' ), true );
-			Logger.error( '${this}: Web address is invalid: \"${a}\"' );
+			if ( e.server.console != null ) e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${e.server.webAddress}]' ), true );
+			Logger.error( '${this}: Web address is invalid: \"${e.server.webAddress}\"' );
 			return;
 
 		}
 
-		Shell.getInstance().open( [ '${a}' ] );
+		Shell.getInstance().open( a );
 
 	}
 
