@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import superhuman.browser.Browsers;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -141,10 +142,10 @@ class SettingsPage extends Page {
         spacer = new LayoutGroup();
         spacer.height = GenesisApplicationTheme.GRID * 2;
         _form.addChild( spacer );
-        
+      
         _rowBrowsersDefault = new GenesisFormRow();
         _rowBrowsersDefault.text = LanguageManager.getInstance().getString( 'settingspage.browser.title' );
-        _labelDefaultBrowser = new Label(LanguageManager.getInstance().getString( 'settingspage.browser.currentdefaultbrowser' ) + "Firefox");
+        _labelDefaultBrowser = new Label();
         _rowBrowsersDefault.content.addChild(_labelDefaultBrowser);
         _form.addChild(_rowBrowsersDefault);
         
@@ -188,7 +189,11 @@ class SettingsPage extends Page {
             _cbKeepFailedServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning;
 
         }
-
+		
+        if (_labelDefaultBrowser != null) {
+        		var defaultBrowser = Browsers.getDefaultBrowser();
+        		_labelDefaultBrowser.text = LanguageManager.getInstance().getString( 'settingspage.browser.currentdefaultbrowser', defaultBrowser.browserName);
+    		}
     }
 
     function _saveButtonTriggered( e:TriggerEvent ) {

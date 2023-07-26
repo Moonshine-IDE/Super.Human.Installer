@@ -378,13 +378,14 @@
         "browser": {
         		"title": "Browser",
         		"defaultbrowser": "Setup default Browser",
-        		"currentdefaultbrowser": "Current default Browser:",
+        		"currentdefaultbrowser": "Current default Browser: %1",
         		"titlesetupbrowser": "Browsers",
         		"titlebrowserpath": "Setup %1 path",
         		"browsername": "Browser name",
         		"executablebrowserpath": "Executable Browser path",
         		"locatebrowser": "Locate Browser",
-        		"defaultbrowser": "Default Browser"
+        		"defaultbrowser": "Default Browser",
+        		"doubleclickhint": "Double click to open any row for more details"
         }
     }
 }

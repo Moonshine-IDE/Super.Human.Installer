@@ -56,7 +56,7 @@ class BrowsersList extends ListView {
         super( dataProvider );
 		
         this.layout = new VerticalListLayout();
-        
+
         var recycler = DisplayObjectRecycler.withFunction( () -> {
 
             var item = new BrowserItem();
@@ -69,9 +69,7 @@ class BrowsersList extends ListView {
         };
 
         recycler.reset = ( item:BrowserItem, state:ListViewItemState) -> {
-
-        
-
+        		item.updateBroswer(state.data);
         };
 
         recycler.destroy = ( item:BrowserItem ) -> {
@@ -87,7 +85,6 @@ class BrowsersList extends ListView {
     function _forwardEvent( e:SuperHumanApplicationEvent ) {
 
         this.dispatchEvent( e );
-
     }
 
 }
@@ -125,11 +122,20 @@ class BrowserItem extends LayoutGroupItemRenderer {
         this.addChild(_labelBrowserName);
         
         _checkBrowserStatus = new Check();
+        _checkBrowserStatus.iconPosition = RIGHT;
+        _checkBrowserStatus.variant = GenesisApplicationTheme.CHECK_MEDIUM;
         _checkBrowserStatus.enabled = false;
         this.addChild(_checkBrowserStatus);
     }
     
     public function updateBroswer(browserData:BrowserData) {
     		_labelBrowserName.text = browserData.browserName;
+    		if (browserData.isDefault) {
+    			_checkBrowserStatus.text = "Default Browser";
+    			_checkBrowserStatus.selected = true;
+    		} else {
+    			_checkBrowserStatus.text = "";
+    			_checkBrowserStatus.selected = false;
+    		}
     }
 }

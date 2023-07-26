@@ -137,8 +137,10 @@ class SetupBrowserPage extends Page {
 		_textInputPath.text = data.executablePath;
 		_checkDefaultBrowser.selected = data.isDefault;
 	}
-	
+
 	function _saveButtonTriggered(e:TriggerEvent) {
+		_browserData.isDefault = _checkDefaultBrowser.selected;
+		
 		var superHumanAppEvent:SuperHumanApplicationEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION);
 			superHumanAppEvent.browserData = _browserData;
 			

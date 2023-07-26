@@ -53,7 +53,10 @@ class BrowsersPage extends Page {
 	
 	final _width:Float = GenesisApplicationTheme.GRID * 100;
 	var _titleGroup:LayoutGroup;
-	var _labelTitle:Label;
+	var _titleLabel:Label;
+	
+	var _hintGroup:LayoutGroup;
+	var _hintLabel:Label;
 	
     var _browsersList:BrowsersList;
     
@@ -78,8 +81,8 @@ class BrowsersPage extends Page {
 			skin.border = SolidColor(1.0, 0x999999);
 			skin.fill = SolidColor(0xcccccc);
 			
-        var titleGroupLayout = new HorizontalLayout();
-        		titleGroupLayout.horizontalAlign = HorizontalAlign.RIGHT;
+        var titleGroupLayout = new VerticalLayout();
+        		titleGroupLayout.horizontalAlign = HorizontalAlign.LEFT;
         		titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
         		
         _titleGroup = new LayoutGroup();
@@ -87,16 +90,30 @@ class BrowsersPage extends Page {
         _titleGroup.width = _width;
         this.addChild( _titleGroup );
 
-        _labelTitle = new Label();
-        _labelTitle.text = LanguageManager.getInstance().getString( 'settingspage.browser.titlesetupbrowser' );
-        _labelTitle.variant = GenesisApplicationTheme.LABEL_LARGE;
-        _labelTitle.layoutData = new HorizontalLayoutData( 100 );
-        _titleGroup.addChild( _labelTitle );
+        _titleLabel = new Label();
+        _titleLabel.text = LanguageManager.getInstance().getString( 'settingspage.browser.titlesetupbrowser' );
+        _titleLabel.variant = GenesisApplicationTheme.LABEL_LARGE;
+        _titleLabel.layoutData = new HorizontalLayoutData( 100 );
+        _titleGroup.addChild( _titleLabel );
         
         var line = new HLine();
             line.width = _width;
     	    this.addChild( line );
     	    
+    	    titleGroupLayout = new VerticalLayout();
+        titleGroupLayout.horizontalAlign = HorizontalAlign.RIGHT;
+    		titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
+        		
+        _hintGroup = new LayoutGroup();
+        _hintGroup.layout = titleGroupLayout;
+        _hintGroup.width = _width;
+        this.addChild(_hintGroup);
+        
+        _hintLabel = new Label();
+        _hintLabel.text = LanguageManager.getInstance().getString('settingspage.browser.doubleclickhint');
+        _hintLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+        _hintGroup.addChild(_hintLabel);
+        
   		_browsersList = new BrowsersList(_browsers);
   		_browsersList.addEventListener( Event.CHANGE, _browserListChanged );
   		_browsersList.width = _width;
@@ -118,8 +135,14 @@ class BrowsersPage extends Page {
         _buttonGroup.addChild( _buttonClose );
     }
     
+    public function refreshBrowsers() {
+    		_browsersList.dataProvider.updateAll();
+    }
+    
     function _browserListChanged(e:Event) {
     		var browserData:BrowserData = _browsersList.selectedItem;	
+    		if (browserData == null) return;
+    		
     		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SETUP_BROWSER);
     			setupBrowserEvent.browserData = browserData;
     		
