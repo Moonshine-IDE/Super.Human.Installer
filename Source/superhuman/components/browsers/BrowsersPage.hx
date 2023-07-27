@@ -29,6 +29,8 @@
  */
 package superhuman.components.browsers;
 
+import openfl.events.MouseEvent;
+import superhuman.components.browsers.BrowsersList.BrowserItem;
 import openfl.events.Event;
 import feathers.layout.VerticalAlign;
 import feathers.controls.Label;
@@ -115,7 +117,9 @@ class BrowsersPage extends Page {
         _hintGroup.addChild(_hintLabel);
         
   		_browsersList = new BrowsersList(_browsers);
-  		_browsersList.addEventListener( Event.CHANGE, _browserListChanged );
+  		_browsersList.doubleClickEnabled = true;
+  		_browsersList.addEventListener( MouseEvent.DOUBLE_CLICK, _browserListChanged );
+  		_browsersList.addEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
   		_browsersList.width = _width;
   		this.addChild(_browsersList);
 
@@ -147,6 +151,13 @@ class BrowsersPage extends Page {
     			setupBrowserEvent.browserData = browserData;
     		
     		this.dispatchEvent( setupBrowserEvent );
+    }
+    
+    function _browserItemChange(e:SuperHumanApplicationEvent) {
+    		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION);
+    			setupBrowserEvent.browserData = e.browserData;
+    		
+    		this.dispatchEvent( setupBrowserEvent );	
     }
     
     function _buttonCloseTriggered( e:TriggerEvent ) {

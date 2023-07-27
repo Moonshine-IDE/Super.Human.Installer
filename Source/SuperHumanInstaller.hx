@@ -369,6 +369,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_browsersPage = new BrowsersPage(_config.browsers != null ? _config.browsers : _defaultConfig.browsers);
 		_browsersPage.addEventListener(SuperHumanApplicationEvent.SETUP_BROWSER, _setBrowserPage);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
+		_browsersPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION, _saveSetupBrowserPage);
 		this.addPage( _browsersPage, PAGE_BROWSERS );
 		
 		_setupBrowserPage = new SetupBrowserPage();

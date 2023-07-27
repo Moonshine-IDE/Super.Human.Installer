@@ -30,6 +30,8 @@
 
 package superhuman.components.browsers;
 
+import feathers.events.TriggerEvent;
+import openfl.events.Event;
 import feathers.layout.VerticalListLayout;
 import feathers.layout.VerticalLayout;
 import feathers.layout.HorizontalLayoutData;
@@ -60,6 +62,7 @@ class BrowsersList extends ListView {
         var recycler = DisplayObjectRecycler.withFunction( () -> {
 
             var item = new BrowserItem();
+            		item.addEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
             return item;
 
         } );
@@ -73,9 +76,7 @@ class BrowsersList extends ListView {
         };
 
         recycler.destroy = ( item:BrowserItem ) -> {
-
-            
-
+			item.removeEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
         };
 
         this.itemRendererRecycler = recycler;
@@ -86,18 +87,25 @@ class BrowsersList extends ListView {
 
         this.dispatchEvent( e );
     }
-
+    
+    function _browserItemChange(e:SuperHumanApplicationEvent) {
+    		_forwardEvent(e);
+    }
 }
 
 @:styleContext
 class BrowserItem extends LayoutGroupItemRenderer {
 
+	public static final BROWSER_ITEM_CHANGE:String = "browserItemChange";
+	
     var _labelBrowserGroupLayout:HorizontalLayout;
 	var _labelBrowserGroup:LayoutGroup;
     var _labelBrowserName:Label;
 
     var _checkBrowserStatus:Check;
-
+    
+    var _browserData:BrowserData;
+    
     public function new() {
 
         super();
@@ -124,11 +132,12 @@ class BrowserItem extends LayoutGroupItemRenderer {
         _checkBrowserStatus = new Check();
         _checkBrowserStatus.iconPosition = RIGHT;
         _checkBrowserStatus.variant = GenesisApplicationTheme.CHECK_MEDIUM;
-        _checkBrowserStatus.enabled = false;
+        _checkBrowserStatus.addEventListener(TriggerEvent.TRIGGER, _checkBrowserStatusChange);
         this.addChild(_checkBrowserStatus);
     }
     
     public function updateBroswer(browserData:BrowserData) {
+    		_browserData = browserData;
     		_labelBrowserName.text = browserData.browserName;
     		if (browserData.isDefault) {
     			_checkBrowserStatus.text = "Default Browser";
@@ -137,5 +146,14 @@ class BrowserItem extends LayoutGroupItemRenderer {
     			_checkBrowserStatus.text = "";
     			_checkBrowserStatus.selected = false;
     		}
+    }
+    
+    function _checkBrowserStatusChange(event:Event) {
+    		_browserData.isDefault = _checkBrowserStatus.selected;
+    		
+		var browserItemEvent = new SuperHumanApplicationEvent(BrowserItem.BROWSER_ITEM_CHANGE);
+    			browserItemEvent.browserData = _browserData;
+    			
+    		this.dispatchEvent(browserItemEvent);
     }
 }
