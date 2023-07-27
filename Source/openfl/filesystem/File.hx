@@ -1772,7 +1772,7 @@ class File extends FileReference
 		return name;
 	}
 
-	@:noCompletion override private function get_size():Float
+	@:noCompletion override private function get_size():Int
 	{
 		if (__fileStatsDirty)
 		{
