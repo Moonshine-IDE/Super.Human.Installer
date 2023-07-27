@@ -30,6 +30,8 @@
 
 package;
 
+import cpp.NativeSys;
+import haxe.io.Path;
 import superhuman.components.browsers.SetupBrowserPage;
 import superhuman.browser.Browsers;
 import superhuman.components.browsers.BrowsersPage;
@@ -678,7 +680,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		#if mac
 		a = ["-a" + defaultBrowser.executablePath, e.server.webAddress];
 		#elseif windows
-		a = [defaultBrowser.executablePath + " " + e.server.webAddress];
+		a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${e.server.webAddress}"'];
 		#end
 		
 		if ( e.server.webAddress == null || e.server.webAddress.length == 0 ) {
@@ -688,9 +690,13 @@ class SuperHumanInstaller extends GenesisApplication {
 			return;
 
 		}
-
+		
+		#if windows
+		var trim = StringTools.trim( a.join( " " ));
+		NativeSys.sys_command(trim);
+		#else
 		Shell.getInstance().open( a );
-
+		#end
 	}
 
 	function _saveConfig() {
