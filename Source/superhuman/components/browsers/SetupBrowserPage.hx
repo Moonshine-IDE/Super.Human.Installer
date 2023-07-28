@@ -141,7 +141,7 @@ class SetupBrowserPage extends Page {
 	function _saveButtonTriggered(e:TriggerEvent) {
 		_browserData.isDefault = _checkDefaultBrowser.selected;
 		
-		var superHumanAppEvent:SuperHumanApplicationEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION);
+		var superHumanAppEvent:SuperHumanApplicationEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE);
 			superHumanAppEvent.browserData = _browserData;
 			
 		this.dispatchEvent(superHumanAppEvent);

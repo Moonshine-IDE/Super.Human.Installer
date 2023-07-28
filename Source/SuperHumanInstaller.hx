@@ -122,7 +122,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		servers : [],
 		user: {},
 		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
-		browsers: []
+		browsers: [
+			new BrowserData(Browsers.MOZILLA_FIREFOX, true),
+			new BrowserData(Browsers.GOOGLE_CHROME),
+			new BrowserData(Browsers.BRAVE),
+			new BrowserData(Browsers.SAFARI)
+		]
 	}
 
 	var _advancedConfigPage:AdvancedConfigPage;
@@ -141,7 +146,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _vagrantFile:String;
 	var _browsersPage:BrowsersPage;
 	var _setupBrowserPage:SetupBrowserPage;
-	//var _browsersCollection:Array<BrowserData>;
+	var _browsersCollection:Array<BrowserData>;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
@@ -152,9 +157,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	public var serverRolesCollection( get, never ):Array<ServerRoleImpl>;
 	function get_serverRolesCollection() return _serverRolesCollection;
 
-	/*public var browsersCollection( get, never ):Array<BrowserData>;
-	function get_browsersCollection() return _browsersCollection;*/
-	
 	public function new() {
 
 		super( #if showlogin true #end );
@@ -192,13 +194,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		];
 
-		_defaultConfig.browsers = [
-			new BrowserData(Browsers.MOZILLA_FIREFOX, true),
-			new BrowserData(Browsers.GOOGLE_CHROME),
-			new BrowserData(Browsers.BRAVE),
-			new BrowserData(Browsers.SAFARI)
-		];
-		
 		if ( FileSystem.exists( '${System.applicationStorageDirectory}${_CONFIG_FILE}' ) ) {
 
 			try {
@@ -235,14 +230,6 @@ class SuperHumanInstaller extends GenesisApplication {
 			
 			if (_config.browsers == null) {
 				_config.browsers = _defaultConfig.browsers;
-			} else {
-				var bdBrowsers = new Array<BrowserData>();
-				for (index => element in _config.browsers) {
-					var bd:Dynamic = _config.browsers[index];
-					var newBd = new BrowserData(bd.browserType, bd.isDefault, bd.browserName, bd.executablePath);
-					bdBrowsers.push(newBd);
-				}
-				_config.browsers = bdBrowsers.length == 0 ? _defaultConfig.browsers : bdBrowsers;
 			}
 			
 		} else {
@@ -366,14 +353,14 @@ class SuperHumanInstaller extends GenesisApplication {
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
 		this.addPage( _rolePage, PAGE_ROLES );
 
-		_browsersPage = new BrowsersPage(_config.browsers != null ? _config.browsers : _defaultConfig.browsers);
+		_browsersPage = new BrowsersPage();
 		_browsersPage.addEventListener(SuperHumanApplicationEvent.SETUP_BROWSER, _setBrowserPage);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
-		_browsersPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION, _saveSetupBrowserPage);
+		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
 		this.addPage( _browsersPage, PAGE_BROWSERS );
 		
 		_setupBrowserPage = new SetupBrowserPage();
-		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION, _saveSetupBrowserPage);
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
 		
@@ -713,9 +700,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
-		if (_config.browsers == null) {
+		if (_config.browsers == null) 
+		{
 			_config.browsers = _defaultConfig.browsers;	
+		} 
+		else if (_browsersCollection != null) 
+		{
+			_config.browsers = _browsersCollection;
 		}
+		_browsersCollection = null;
 		
 		try {
 
@@ -761,8 +754,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.setBrowserData(e.browserData);
 	}
 	
-	function _saveSetupBrowserPage(e:SuperHumanApplicationEvent) {
-		for (b in _config.browsers) {
+	function _refreshBrowsersPage(e:SuperHumanApplicationEvent) {
+		for (b in _browsersCollection) {
 			if (b != e.browserData) {
 				b.isDefault = false;
 			}
@@ -770,7 +763,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		this.selectedPageId = PAGE_BROWSERS;
 		_browsersPage.refreshBrowsers();
-		_saveConfig();
+		_settingsPage.updateDefaultBrowser(e.browserData);
 	}
 	
 	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
@@ -779,6 +772,23 @@ class SuperHumanInstaller extends GenesisApplication {
 	
 	function _closeBrowsersPage(e:SuperHumanApplicationEvent) {
 		this.selectedPageId = PAGE_SETTINGS;
+	}
+	
+	function _initializeBrowsersCollection() {
+		if (this.previousPageId != PAGE_BROWSERS && this.previousPageId != PAGE_SETUP_BROWSERS) {
+			_browsersCollection = new Array<BrowserData>();
+			for (index => element in _config.browsers) 
+			{
+				var bd:Dynamic = _config.browsers[index];
+				var newBd = new BrowserData(bd.browserType, bd.isDefault, bd.browserName, bd.executablePath);
+				_browsersCollection.push(newBd);
+			}	
+			
+			if (_settingsPage != null) {
+				var defaultBrowser = Browsers.getDefaultBrowser();
+				_settingsPage.updateDefaultBrowser(defaultBrowser);
+			}
+		}
 	}
 	
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
@@ -955,8 +965,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._pageChanged();
 
-		if ( _selectedPageId == PAGE_SETTINGS ) _settingsPage.updateData();
-
+		if ( _selectedPageId == PAGE_SETTINGS ) 
+		{
+			_initializeBrowsersCollection();
+			_browsersPage.setBrowsers(_browsersCollection);
+			_settingsPage.updateData();
+		}
 	}
 
 	function _deleteServer( e:SuperHumanApplicationEvent ) {

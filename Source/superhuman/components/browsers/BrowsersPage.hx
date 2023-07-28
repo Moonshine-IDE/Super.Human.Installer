@@ -68,11 +68,9 @@ class BrowsersPage extends Page {
     
     var _browsers:ArrayCollection<BrowserData>;
    
-    public function new( browsers:Array<BrowserData> ) {
+    public function new() {
 
         super();
-
-        _browsers = new ArrayCollection(browsers);
     }
 
     override function initialize() {
@@ -139,6 +137,13 @@ class BrowsersPage extends Page {
         _buttonGroup.addChild( _buttonClose );
     }
     
+    public function setBrowsers(browsers:Array<BrowserData>) {
+    		_browsers = new ArrayCollection(browsers);	
+    		if (_browsersList != null) {
+    			_browsersList.dataProvider = _browsers;
+    		}
+    }
+    
     public function refreshBrowsers() {
     		_browsersList.dataProvider.updateAll();
     }
@@ -154,7 +159,7 @@ class BrowsersPage extends Page {
     }
     
     function _browserItemChange(e:SuperHumanApplicationEvent) {
-    		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_APP_BROWSERS_CONFIGURATION);
+    		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE);
     			setupBrowserEvent.browserData = e.browserData;
     		
     		this.dispatchEvent( setupBrowserEvent );	

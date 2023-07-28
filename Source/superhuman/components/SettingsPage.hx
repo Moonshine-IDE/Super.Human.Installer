@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import superhuman.browser.BrowserData;
 import superhuman.browser.Browsers;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
@@ -175,7 +176,9 @@ class SettingsPage extends Page {
         this.addChild( _buttonGroup );
 
         updateData();
-
+        
+        var defaultBrowser = Browsers.getDefaultBrowser();
+		updateDefaultBrowser(defaultBrowser);
     }
 
     public function updateData() {
@@ -189,13 +192,14 @@ class SettingsPage extends Page {
             _cbKeepFailedServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning;
 
         }
-		
-        if (_labelDefaultBrowser != null) {
-        		var defaultBrowser = Browsers.getDefaultBrowser();
-        		_labelDefaultBrowser.text = LanguageManager.getInstance().getString( 'settingspage.browser.currentdefaultbrowser', defaultBrowser.browserName);
-    		}
     }
 
+    public function updateDefaultBrowser(browserData:Dynamic) {
+    		if (_labelDefaultBrowser != null) {
+    			_labelDefaultBrowser.text = LanguageManager.getInstance().getString('settingspage.browser.currentdefaultbrowser', browserData.browserName);
+    		}
+    }
+    
     function _saveButtonTriggered( e:TriggerEvent ) {
 
         SuperHumanInstaller.getInstance().config.preferences.savewindowposition = _cbApplicationWindow.selected;

@@ -45,6 +45,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final CLOSE_CONSOLE:String = "closeConsole";
     public static final CLOSE_ROLES:String = "closeRoles";
     public static final CLOSE_BROWSERS:String = "closeBrowsers";
+    public static final REFRESH_BROWSERS_PAGE:String = "refreshBrowsersPage";
     public static final SETUP_BROWSER:String = "setupBrowser";
     public static final CLOSE_BROWSERS_SETUP:String = "closeBrowsersSetup";
     public static final CONFIGURE_ROLES:String = "configureRoles";
@@ -66,7 +67,6 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final RESET_SERVER:String = "resetServer";
     public static final SAVE_ADVANCED_SERVER_CONFIGURATION:String = "saveAdvancedServerConfiguration";
     public static final SAVE_APP_CONFIGURATION:String = "saveAppConfiguration";
-    public static final SAVE_APP_BROWSERS_CONFIGURATION:String = "saveAppBrowsersConfiguration";
     public static final SAVE_SERVER_CONFIGURATION:String = "saveServerConfiguration";
     public static final START_SERVER:String = "startServer";
     public static final STOP_SERVER:String = "stopServer";

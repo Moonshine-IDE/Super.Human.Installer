@@ -13,6 +13,15 @@ class Browsers
     
     public static function getDefaultBrowser():BrowserData {
     		var config = SuperHumanInstaller.getInstance().config;
+    		if (config.browsers == null)
+    		{
+    			config.browsers = [
+				new BrowserData(Browsers.MOZILLA_FIREFOX, true),
+				new BrowserData(Browsers.GOOGLE_CHROME),
+				new BrowserData(Browsers.BRAVE),
+				new BrowserData(Browsers.SAFARI)
+			];	
+    		}
     		
     		var defaultBrowser = config.browsers.filter(b -> b.isDefault);
     		
