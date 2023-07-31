@@ -1,7 +1,7 @@
 package superhuman.browser;
 
 import prominic.sys.tools.SysTools;
-import haxe.io.Path;
+import sys.FileSystem;
 
 class BrowserData {
 	
@@ -9,12 +9,14 @@ class BrowserData {
 	public var browserName:String;    
     	public var executablePath:String;
     public var isDefault:Bool;
+    public var exists:Bool;
     
-	public function new(browserType:String, isDefault:Bool = false, browserName:String = "", executablePath:String = "") {
+	public function new(browserType:String, isDefault:Bool = false, browserName:String = "", executablePath:String = "", exists:Bool = false) {
 		this.browserType = browserType;
 		this.isDefault = isDefault;
 		this.browserName = browserName;
 		this.executablePath = executablePath;
+		this.exists = exists;
 		
 		_setDefaultValues(browserType);
 	}
@@ -69,5 +71,7 @@ class BrowserData {
 					 #end
 			}
 		}
+		
+		this.exists = FileSystem.exists(this.executablePath);
 	}
 }

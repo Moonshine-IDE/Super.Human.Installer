@@ -30,6 +30,8 @@
 
 package superhuman.components.browsers;
 
+import genesis.application.components.AdvancedAssetLoader;
+import feathers.controls.Button;
 import openfl.events.Event;
 import feathers.layout.VerticalListLayout;
 import feathers.layout.VerticalLayout;
@@ -97,11 +99,12 @@ class BrowserItem extends LayoutGroupItemRenderer {
 
 	public static final BROWSER_ITEM_CHANGE:String = "browserItemChange";
 	
-    var _labelBrowserGroupLayout:HorizontalLayout;
-	var _labelBrowserGroup:LayoutGroup;
     var _labelBrowserName:Label;
 
     var _checkBrowserStatus:Check;
+    
+    var _statusGroup:LayoutGroup;
+    var _buttonIconExists:Button;
     
     var _browserData:BrowserData;
     
@@ -128,17 +131,31 @@ class BrowserItem extends LayoutGroupItemRenderer {
         _labelBrowserName.layoutData = new HorizontalLayoutData(100);
         this.addChild(_labelBrowserName);
         
+        horizontalLayout = new HorizontalLayout();
+        horizontalLayout.verticalAlign = VerticalAlign.MIDDLE;
+        	   
+        _statusGroup = new LayoutGroup();
+        _statusGroup.layout = horizontalLayout;
+        this.addChild(_statusGroup);
+        
         _checkBrowserStatus = new Check();
         _checkBrowserStatus.iconPosition = RIGHT;
         _checkBrowserStatus.variant = GenesisApplicationTheme.CHECK_MEDIUM;
         _checkBrowserStatus.addEventListener(Event.CHANGE, _checkBrowserStatusChange);
-        this.addChild(_checkBrowserStatus);
+        _statusGroup.addChild(_checkBrowserStatus);
+        
+        _buttonIconExists = new Button();
+        _buttonIconExists.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
+        _buttonIconExists.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _buttonIconExists.visible = _buttonIconExists.includeInLayout = false;
+        _statusGroup.addChild(_buttonIconExists);
     }
     
     public function updateBrowser(browserData:BrowserData) {
     		_checkBrowserStatus.removeEventListener(Event.CHANGE, _checkBrowserStatusChange);
     		
     		_browserData = browserData;
+    		_buttonIconExists.visible = _buttonIconExists.includeInLayout = browserData.exists == false;
     		_labelBrowserName.text = browserData.browserName;
     		if (browserData.isDefault) {
     			_checkBrowserStatus.text = "Default Browser";

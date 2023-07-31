@@ -97,6 +97,7 @@ class SetupBrowserPage extends Page {
 		
 		_locatePath = new Button(LanguageManager.getInstance().getString('settingspage.browser.locatebrowser'));
 		_locatePath.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+		_locatePath.visible = _locatePath.includeInLayout = false;
 		_execPathGroup.addChild(_locatePath);
 		
 		horizontalGroupLayout = new HorizontalLayout();

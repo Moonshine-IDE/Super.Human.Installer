@@ -95,6 +95,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_SMALL:String = "button-small";
     public static final BUTTON_TINY:String = "button-tiny";
     public static final BUTTON_WARNING:String = "button-warning";
+    public static final BUTTON_BROWSER_WARNING:String = "button-browser-warning";
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
     public static final INVALID:String = "invalid";
@@ -277,6 +278,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Button, BUTTON_SMALL, _setButtonSmallStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_TINY, _setButtonTinyStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_WARNING, _setButtonWarningStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_BROWSER_WARNING, _setButtonNoBackgrounIconStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON_INVALID, _setPopUpListViewInvalidButtonStyles );
         this.styleProvider.setStyleFunction( Button, PopUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
@@ -406,6 +408,11 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         button.setSkinForState( ButtonState.DISABLED, disabledSkin );
 
     }
+    
+    function _setButtonNoBackgrounIconStyles( button:Button ) {
+    		var defaultSkin = new RectangleSkin( FillStyle.SolidColor( _themeColors.BtnWarning, 0 ) );
+        button.backgroundSkin = defaultSkin;
+	}
 
     function _setButtonSelectFileStyles( button:Button ) {
 
