@@ -123,12 +123,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		servers : [],
 		user: {},
 		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
-		browsers: [
-			new BrowserData(Browsers.MOZILLA_FIREFOX, true),
-			new BrowserData(Browsers.GOOGLE_CHROME),
-			new BrowserData(Browsers.BRAVE),
-			new BrowserData(Browsers.SAFARI)
-		]
+		browsers: Browsers.DEFAULT_BROWSERS_LIST
 	}
 
 	var _advancedConfigPage:AdvancedConfigPage;

@@ -109,6 +109,17 @@ class SysTools {
 
     }
 
+    public static function getWindowsUserName() {
+    		var envs = Sys.environment();
+		if (envs.exists("USERNAME")) {
+			return envs["USERNAME"];
+		}
+		
+		if (envs.exists("USER")) {
+			return envs["USER"];
+		}    
+		return null;
+    }
 }
 
 enum CPUArchitecture {

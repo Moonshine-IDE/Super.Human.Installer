@@ -1,5 +1,6 @@
 package superhuman.browser;
 
+import prominic.sys.tools.SysTools;
 import haxe.io.Path;
 
 class BrowserData {
@@ -41,10 +42,22 @@ class BrowserData {
 					 #elseif windows
 					 this.executablePath = "C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe";
 					 #end
+				case Browsers.OPERA:
+					#if linux
+					 
+					 #elseif mac
+					 this.executablePath = "/Applications/Opera.app";
+					 #elseif windows
+					 var userName = SysTools.getWindowsUserName();
+					 this.executablePath = "C:/Users/${userName}/AppData/Local/Programs/Opera/launcher.exe";
+					 #end
+				case Browsers.MICROSOFT_EDGE:
+					 #if windows
+					 this.executablePath = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
+					 #end
 				case Browsers.SAFARI:
 					 this.executablePath = "/Applications/Safari.app";
 				case Browsers.CHROMIUM:
-				case Browsers.OPERA:
 				case Browsers.INTERNET_EXPLORER:
 				default:
 					#if linux
