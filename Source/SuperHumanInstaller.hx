@@ -30,6 +30,7 @@
 
 package;
 
+import genesis.application.events.GenesisApplicationEvent;
 import cpp.NativeSys;
 import haxe.io.Path;
 import superhuman.components.browsers.SetupBrowserPage;
@@ -356,10 +357,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		_browsersPage = new BrowsersPage();
 		_browsersPage.addEventListener(SuperHumanApplicationEvent.SETUP_BROWSER, _setBrowserPage);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
+		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
 		this.addPage( _browsersPage, PAGE_BROWSERS );
 		
 		_setupBrowserPage = new SetupBrowserPage();
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
@@ -754,18 +757,23 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.setBrowserData(e.browserData);
 	}
 	
-	function _refreshBrowsersPage(e:SuperHumanApplicationEvent) {
+	function _refreshDefaultBrowser(e:SuperHumanApplicationEvent) {
 		for (b in _browsersCollection) {
 			if (b != e.browserData) {
 				b.isDefault = false;
 			}
 		}
 		
-		this.selectedPageId = PAGE_BROWSERS;
-		_browsersPage.refreshBrowsers();
-		_settingsPage.updateDefaultBrowser(e.browserData);
-	}
+		_updateDefaultBrowserSettingsPage();
+	}	
 	
+	function _refreshBrowsersPage(e:SuperHumanApplicationEvent) {
+
+		//this.selectedPageId = PAGE_BROWSERS;
+		_browsersPage.refreshBrowsers();
+		_updateDefaultBrowserSettingsPage();
+	}
+
 	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
 		this.selectedPageId = this.previousPageId;	
 	}
@@ -784,9 +792,15 @@ class SuperHumanInstaller extends GenesisApplication {
 				_browsersCollection.push(newBd);
 			}	
 			
-			if (_settingsPage != null) {
-				var defaultBrowser = Browsers.getDefaultBrowser();
-				_settingsPage.updateDefaultBrowser(defaultBrowser);
+			_updateDefaultBrowserSettingsPage();
+		}
+	}
+	
+	function _updateDefaultBrowserSettingsPage() {
+		if (_settingsPage != null) {
+			var defaultBrowser = _browsersCollection.filter(b -> b.isDefault);
+			if (defaultBrowser.length > 0) {
+				_settingsPage.updateDefaultBrowser(defaultBrowser[0]);
 			}
 		}
 	}

@@ -30,7 +30,6 @@
 
 package superhuman.components.browsers;
 
-import feathers.events.TriggerEvent;
 import openfl.events.Event;
 import feathers.layout.VerticalListLayout;
 import feathers.layout.VerticalLayout;
@@ -68,11 +67,11 @@ class BrowsersList extends ListView {
         } );
 		
         recycler.update = ( item:BrowserItem, state:ListViewItemState) -> {
-			item.updateBroswer(state.data);
+			item.updateBrowser(state.data);
         };
 
         recycler.reset = ( item:BrowserItem, state:ListViewItemState) -> {
-        		item.updateBroswer(state.data);
+        		item.updateBrowser(state.data);
         };
 
         recycler.destroy = ( item:BrowserItem ) -> {
@@ -132,11 +131,13 @@ class BrowserItem extends LayoutGroupItemRenderer {
         _checkBrowserStatus = new Check();
         _checkBrowserStatus.iconPosition = RIGHT;
         _checkBrowserStatus.variant = GenesisApplicationTheme.CHECK_MEDIUM;
-        _checkBrowserStatus.addEventListener(TriggerEvent.TRIGGER, _checkBrowserStatusChange);
+        _checkBrowserStatus.addEventListener(Event.CHANGE, _checkBrowserStatusChange);
         this.addChild(_checkBrowserStatus);
     }
     
-    public function updateBroswer(browserData:BrowserData) {
+    public function updateBrowser(browserData:BrowserData) {
+    		_checkBrowserStatus.removeEventListener(Event.CHANGE, _checkBrowserStatusChange);
+    		
     		_browserData = browserData;
     		_labelBrowserName.text = browserData.browserName;
     		if (browserData.isDefault) {
@@ -146,6 +147,8 @@ class BrowserItem extends LayoutGroupItemRenderer {
     			_checkBrowserStatus.text = "";
     			_checkBrowserStatus.selected = false;
     		}
+    		
+    		_checkBrowserStatus.addEventListener(Event.CHANGE, _checkBrowserStatusChange);
     }
     
     function _checkBrowserStatusChange(event:Event) {

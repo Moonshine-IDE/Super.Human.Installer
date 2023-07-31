@@ -1,5 +1,6 @@
 package superhuman.components.browsers;
 
+import openfl.events.Event;
 import superhuman.theme.SuperHumanInstallerTheme;
 import feathers.text.TextFormat;
 import feathers.controls.Check;
@@ -139,14 +140,22 @@ class SetupBrowserPage extends Page {
 	}
 
 	function _saveButtonTriggered(e:TriggerEvent) {
-		_browserData.isDefault = _checkDefaultBrowser.selected;
+		if (_browserData.isDefault != _checkDefaultBrowser.selected)
+		{
+			_browserData.isDefault = _checkDefaultBrowser.selected;
+			var refreshDefaultBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER);
+				refreshDefaultBrowserEvent.browserData = _browserData;
+			this.dispatchEvent(refreshDefaultBrowserEvent);
+		}
 		
-		var superHumanAppEvent:SuperHumanApplicationEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE);
+		_browserData.browserName = _textInputBrowserName.text;		
+		var superHumanAppEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE);
 			superHumanAppEvent.browserData = _browserData;
-			
 		this.dispatchEvent(superHumanAppEvent);
+		
+		this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP ) );
 	}
-	
+
 	function _buttonCloseTriggered( e:TriggerEvent ) {
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP ) );

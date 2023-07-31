@@ -11,7 +11,7 @@ class Browsers
     public static final SAFARI:String = "Safari";
     public static final INTERNET_EXPLORER:String = "Internet Explorer";
     
-    public static function getDefaultBrowser():BrowserData {
+    public static function getDefaultBrowser():Dynamic {
     		var config = SuperHumanInstaller.getInstance().config;
     		if (config.browsers == null)
     		{
@@ -22,14 +22,17 @@ class Browsers
 				new BrowserData(Browsers.SAFARI)
 			];	
     		}
-    		
-    		var defaultBrowser = config.browsers.filter(b -> b.isDefault);
-    		
-    		if (defaultBrowser.length > 0) {
-    			return defaultBrowser[0];
-    		}
-    		
-    		defaultBrowser = config.browsers.filter(b -> b.browserType == MOZILLA_FIREFOX);
-    		return defaultBrowser[0];
+	
+		var defaultBrowser = null;
+		for (index => element in config.browsers) 
+		{
+			var b:Dynamic = config.browsers[index];
+			if (b.isDefault == true) 
+			{
+				defaultBrowser = b;
+			}
+		}
+
+    		return defaultBrowser;
     }
 }

@@ -177,7 +177,7 @@ class SettingsPage extends Page {
 
         updateData();
         
-        var defaultBrowser = Browsers.getDefaultBrowser();
+        var defaultBrowser:Dynamic = Browsers.getDefaultBrowser();
 		updateDefaultBrowser(defaultBrowser);
     }
 
@@ -195,6 +195,8 @@ class SettingsPage extends Page {
     }
 
     public function updateDefaultBrowser(browserData:Dynamic) {
+    		if (browserData.isDefault == false) return;
+    		
     		if (_labelDefaultBrowser != null) {
     			_labelDefaultBrowser.text = LanguageManager.getInstance().getString('settingspage.browser.currentdefaultbrowser', browserData.browserName);
     		}

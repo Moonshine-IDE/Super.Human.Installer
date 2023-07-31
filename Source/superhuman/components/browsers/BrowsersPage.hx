@@ -159,6 +159,11 @@ class BrowsersPage extends Page {
     }
     
     function _browserItemChange(e:SuperHumanApplicationEvent) {
+		//refresh state of default browser for the rest of items
+		var refreshDefaultBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER);
+			refreshDefaultBrowserEvent.browserData = e.browserData;
+		this.dispatchEvent(refreshDefaultBrowserEvent);
+			
     		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE);
     			setupBrowserEvent.browserData = e.browserData;
     		
