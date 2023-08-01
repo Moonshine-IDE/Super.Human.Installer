@@ -73,7 +73,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _forwardEvent );
-            item.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_CONSOLE, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _forwardEvent );
@@ -108,7 +108,7 @@ class ServerList extends ListView {
             item.removeEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _forwardEvent );
-            item.removeEventListener( SuperHumanApplicationEvent.OPEN_BROWSER, _forwardEvent );
+            item.removeEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_CONSOLE, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _forwardEvent );
@@ -423,7 +423,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
     function _buttonOpenBrowserTriggered( e:TriggerEvent ) {
 
-        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_BROWSER );
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS );
         event.server = _server;
         this.dispatchEvent( event );
 

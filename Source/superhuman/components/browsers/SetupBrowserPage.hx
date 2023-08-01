@@ -1,5 +1,6 @@
 package superhuman.components.browsers;
 
+import genesis.application.components.GenesisButton;
 import openfl.events.Event;
 import superhuman.theme.SuperHumanInstallerTheme;
 import feathers.text.TextFormat;
@@ -39,6 +40,7 @@ class SetupBrowserPage extends Page {
 	 
 	var _defaultBrowserGroup:LayoutGroup;
 	var _checkDefaultBrowser:Check;
+	var _buttonDownloadBrowser:GenesisButton;
 	
 	var _buttonGroup:LayoutGroup;
     var _buttonGroupLayout:HorizontalLayout;
@@ -110,7 +112,12 @@ class SetupBrowserPage extends Page {
 		
 		_checkDefaultBrowser = new Check(LanguageManager.getInstance().getString('settingspage.browser.defaultbrowser'));
 		_checkDefaultBrowser.variant = GenesisApplicationTheme.CHECK_MEDIUM;
+		_checkDefaultBrowser.layoutData = new HorizontalLayoutData(100);
 		_defaultBrowserGroup.addChild(_checkDefaultBrowser);
+		
+		_buttonDownloadBrowser = new GenesisButton(LanguageManager.getInstance().getString( 'updatepage.buttondownload' ));
+		_buttonDownloadBrowser.addEventListener(TriggerEvent.TRIGGER, _buttonDownloadBrowserTriggered);
+		_defaultBrowserGroup.addChild(_buttonDownloadBrowser);
 		
 		var line = new HLine();
         		line.width = _width;
@@ -138,6 +145,7 @@ class SetupBrowserPage extends Page {
 		_textInputBrowserName.text = data.browserName;
 		_textInputPath.text = data.executablePath;
 		_checkDefaultBrowser.selected = data.isDefault;
+		_buttonDownloadBrowser.visible = _buttonDownloadBrowser.includeInLayout = data.downloadUrl != null;
 	}
 
 	function _saveButtonTriggered(e:TriggerEvent) {
@@ -156,10 +164,15 @@ class SetupBrowserPage extends Page {
 		
 		this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP ) );
 	}
-
+	    
+    function _buttonDownloadBrowserTriggered(e:TriggerEvent) {
+    		var superHumanAppEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER);
+    			superHumanAppEvent.browserData = _browserData;
+    			
+    		this.dispatchEvent(superHumanAppEvent);
+    }
+    
 	function _buttonCloseTriggered( e:TriggerEvent ) {
-
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP ) );
-
     }
 }

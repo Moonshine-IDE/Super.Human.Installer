@@ -311,7 +311,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _destroyServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VAGRANT, _downloadVagrant );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VIRTUALBOX, _downloadVirtualBox );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER, _openBrowser );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _openBrowserServerAddress );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
@@ -359,6 +359,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage = new SetupBrowserPage();
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
 		
@@ -659,32 +660,42 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	function _openBrowser( e:SuperHumanApplicationEvent ) {
+	function _openBrowserServerAddress( e:SuperHumanApplicationEvent ) {
+		if ( e.server.webAddress == null || e.server.webAddress.length == 0 ) 
+		{
+			if ( e.server.console != null ) 
+			{
+				e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${e.server.webAddress}]' ), true );
+			}
+		}
+		_openBrowser(e.server.webAddress);
+	}
 
-		var defaultBrowser = Browsers.getDefaultBrowser();
-		var a = [e.server.webAddress];
-		#if mac
-		a = ["-a" + defaultBrowser.executablePath, e.server.webAddress];
-		#elseif windows
-		a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${e.server.webAddress}"'];
-		#end
-		
-		if ( e.server.webAddress == null || e.server.webAddress.length == 0 ) {
+	function _openBrowser(webAddress:String) {
 
-			if ( e.server.console != null ) e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${e.server.webAddress}]' ), true );
-			Logger.error( '${this}: Web address is invalid: \"${e.server.webAddress}\"' );
+		if ( webAddress == null || webAddress.length == 0 ) {
+
+			Logger.error( '${this}: Web address is invalid: \"${webAddress}\"' );
 			return;
 
 		}
+		
+		var defaultBrowser = Browsers.getDefaultBrowser();
+		var a = [webAddress];
+		#if mac
+		a = ["-a" + defaultBrowser.executablePath, webAddress];
+		#elseif windows
+		a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${webAddress}"'];
+		#end
 		
 		#if windows
 		var trim = StringTools.trim( a.join( " " ));
 		NativeSys.sys_command(trim);
 		#else
 		Shell.getInstance().open( a );
-		#end
+		#end	
 	}
-
+	
 	function _saveConfig() {
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
@@ -763,12 +774,14 @@ class SuperHumanInstaller extends GenesisApplication {
 	}	
 	
 	function _refreshBrowsersPage(e:SuperHumanApplicationEvent) {
-
-		//this.selectedPageId = PAGE_BROWSERS;
 		_browsersPage.refreshBrowsers();
 		_updateDefaultBrowserSettingsPage();
 	}
 
+	function _openDownloadBrowser(e:SuperHumanApplicationEvent) {
+		_openBrowser(e.browserData.downloadUrl);	
+	}
+	
 	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
 		this.selectedPageId = this.previousPageId;	
 	}
