@@ -31,6 +31,9 @@ class SetupBrowserPage extends Page {
 	var _titleGroup:LayoutGroup;
 	var _labelTitle:Label;
 	
+	var _browserNotDetectedGroup:LayoutGroup;
+	var _labelBrowserNotDetectedError:Label;
+	
 	var _browserNameGroup:LayoutGroup;
 	var _textInputBrowserName:TextInput;
 	
@@ -70,7 +73,21 @@ class SetupBrowserPage extends Page {
         var line = new HLine();
             line.width = _width;
     	    this.addChild( line );
+ 
+    	    titleGroupLayout = new HorizontalLayout();
+    	    titleGroupLayout.horizontalAlign = HorizontalAlign.CENTER;
+    	    titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
     	    
+        _browserNotDetectedGroup = new LayoutGroup();
+        _browserNotDetectedGroup.layout = titleGroupLayout;
+        _browserNotDetectedGroup.width = _width;
+        _browserNotDetectedGroup.visible = _browserNotDetectedGroup.includeInLayout = false;
+        this.addChild(_browserNotDetectedGroup);
+        
+        _labelBrowserNotDetectedError = new Label();
+        _labelBrowserNotDetectedError.variant = GenesisApplicationTheme.LABEL_ERROR;
+        _browserNotDetectedGroup.addChild(_labelBrowserNotDetectedError);
+        
 		var horizontalGroupLayout = new HorizontalLayout();
 			horizontalGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
 			
@@ -146,6 +163,8 @@ class SetupBrowserPage extends Page {
 		_textInputPath.text = data.executablePath;
 		_checkDefaultBrowser.selected = data.isDefault;
 		_buttonDownloadBrowser.visible = _buttonDownloadBrowser.includeInLayout = data.downloadUrl != null;
+		_labelBrowserNotDetectedError.text = LanguageManager.getInstance().getString('settingspage.browser.browsernotdetected', data.browserName);
+		_browserNotDetectedGroup.visible = _browserNotDetectedGroup.includeInLayout = data.exists == false;
 	}
 
 	function _saveButtonTriggered(e:TriggerEvent) {
