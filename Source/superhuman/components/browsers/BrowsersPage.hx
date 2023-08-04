@@ -110,13 +110,12 @@ class BrowsersPage extends Page {
         this.addChild(_hintGroup);
         
         _hintLabel = new Label();
-        _hintLabel.text = LanguageManager.getInstance().getString('settingspage.browser.doubleclickhint');
+        _hintLabel.text = LanguageManager.getInstance().getString('settingspage.browser.browserlisthint');
         _hintLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
         _hintGroup.addChild(_hintLabel);
         
   		_browsersList = new BrowsersList(_browsers);
-  		_browsersList.doubleClickEnabled = true;
-  		_browsersList.addEventListener( MouseEvent.DOUBLE_CLICK, _browserListChanged );
+  		_browsersList.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowser );
   		_browsersList.addEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
   		_browsersList.width = _width;
   		this.addChild(_browsersList);
@@ -137,25 +136,19 @@ class BrowsersPage extends Page {
         _buttonGroup.addChild( _buttonClose );
     }
     
+   	public function refreshBrowsers() {
+    		_browsersList.dataProvider.updateAll();
+    }
+    
     public function setBrowsers(browsers:Array<BrowserData>) {
     		_browsers = new ArrayCollection(browsers);	
     		if (_browsersList != null) {
     			_browsersList.dataProvider = _browsers;
     		}
     }
-    
-    public function refreshBrowsers() {
-    		_browsersList.dataProvider.updateAll();
-    }
-    
-    function _browserListChanged(e:Event) {
-    		var browserData:BrowserData = _browsersList.selectedItem;	
-    		if (browserData == null) return;
-    		
-    		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SETUP_BROWSER);
-    			setupBrowserEvent.browserData = browserData;
-    		
-    		this.dispatchEvent( setupBrowserEvent );
+
+    function _configureBrowser(e:SuperHumanApplicationEvent) {
+    		this._forwardEvent(e);
     }
     
     function _browserItemChange(e:SuperHumanApplicationEvent) {

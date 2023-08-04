@@ -30,13 +30,16 @@
 
 package superhuman.components.browsers;
 
+import superhuman.theme.SuperHumanInstallerTheme;
+import feathers.events.TriggerEvent;
+import genesis.application.managers.LanguageManager;
+import genesis.application.components.GenesisButton;
+import feathers.skins.RectangleSkin;
 import genesis.application.components.AdvancedAssetLoader;
 import feathers.controls.Button;
 import openfl.events.Event;
 import feathers.layout.VerticalListLayout;
-import feathers.layout.VerticalLayout;
 import feathers.layout.HorizontalLayoutData;
-import feathers.layout.VerticalLayoutData;
 import feathers.layout.VerticalAlign;
 import genesis.application.theme.GenesisApplicationTheme;
 import feathers.data.ListViewItemState;
@@ -61,9 +64,11 @@ class BrowsersList extends ListView {
         this.layout = new VerticalListLayout();
 
         var recycler = DisplayObjectRecycler.withFunction( () -> {
-
+			
             var item = new BrowserItem();
-            		item.addEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
+            	    item.addEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
+            		item.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowser);
+            		
             return item;
 
         } );
@@ -78,10 +83,10 @@ class BrowsersList extends ListView {
 
         recycler.destroy = ( item:BrowserItem ) -> {
 			item.removeEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
+			item.removeEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowser);
         };
 
         this.itemRendererRecycler = recycler;
-
     }
 
     function _forwardEvent( e:SuperHumanApplicationEvent ) {
@@ -92,6 +97,10 @@ class BrowsersList extends ListView {
     function _browserItemChange(e:SuperHumanApplicationEvent) {
     		_forwardEvent(e);
     }
+    
+    function _configureBrowser(e:SuperHumanApplicationEvent) {
+    		_forwardEvent(e);
+    }
 }
 
 @:styleContext
@@ -100,11 +109,12 @@ class BrowserItem extends LayoutGroupItemRenderer {
 	public static final BROWSER_ITEM_CHANGE:String = "browserItemChange";
 	
     var _labelBrowserName:Label;
-
+    
     var _checkBrowserStatus:Check;
     
     var _statusGroup:LayoutGroup;
     var _buttonIconExists:Button;
+    var _buttonConfigure:GenesisButton;
     
     var _browserData:BrowserData;
     
@@ -132,23 +142,27 @@ class BrowserItem extends LayoutGroupItemRenderer {
         this.addChild(_labelBrowserName);
         
         horizontalLayout = new HorizontalLayout();
-        horizontalLayout.verticalAlign = VerticalAlign.MIDDLE;
-        	   
-        _statusGroup = new LayoutGroup();
-        _statusGroup.layout = horizontalLayout;
-        this.addChild(_statusGroup);
+        horizontalLayout.horizontalAlign = RIGHT;
+        horizontalLayout.gap = 4;
         
-        _checkBrowserStatus = new Check();
-        _checkBrowserStatus.iconPosition = RIGHT;
-        _checkBrowserStatus.variant = GenesisApplicationTheme.CHECK_MEDIUM;
-        _checkBrowserStatus.addEventListener(Event.CHANGE, _checkBrowserStatusChange);
-        _statusGroup.addChild(_checkBrowserStatus);
+        _statusGroup = new LayoutGroup();
+        _statusGroup.layout = horizontalLayout;        
+        this.addChild(_statusGroup);
         
         _buttonIconExists = new Button();
         _buttonIconExists.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
         _buttonIconExists.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
         _buttonIconExists.visible = _buttonIconExists.includeInLayout = false;
         _statusGroup.addChild(_buttonIconExists);
+        
+        _checkBrowserStatus = new Check();
+        _checkBrowserStatus.iconPosition = RIGHT;
+        _checkBrowserStatus.variant = GenesisApplicationTheme.CHECK_MEDIUM;
+        _statusGroup.addChild(_checkBrowserStatus);
+             
+        _buttonConfigure = new GenesisButton(LanguageManager.getInstance().getString("settingspage.browser.configurebrowser"));
+        _buttonConfigure.addEventListener(TriggerEvent.TRIGGER, _buttonConfigureTriggered);
+        _statusGroup.addChild(_buttonConfigure);
     }
     
     public function updateBrowser(browserData:BrowserData) {
@@ -168,12 +182,18 @@ class BrowserItem extends LayoutGroupItemRenderer {
     		_checkBrowserStatus.addEventListener(Event.CHANGE, _checkBrowserStatusChange);
     }
     
-    function _checkBrowserStatusChange(event:Event) {
+    public function _checkBrowserStatusChange(event:Event) {
     		_browserData.isDefault = _checkBrowserStatus.selected;
     		
 		var browserItemEvent = new SuperHumanApplicationEvent(BrowserItem.BROWSER_ITEM_CHANGE);
     			browserItemEvent.browserData = _browserData;
     			
     		this.dispatchEvent(browserItemEvent);
+    }
+    
+    function _buttonConfigureTriggered(event:TriggerEvent) {
+    		var setupBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_BROWSER);
+    			setupBrowserEvent.browserData = _browserData;
+    		this.dispatchEvent(setupBrowserEvent);
     }
 }

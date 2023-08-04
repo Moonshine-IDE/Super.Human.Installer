@@ -67,6 +67,9 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
     public var consoleTextErrorFormat( get, never ):TextFormat;
     function get_consoleTextErrorFormat() return _themeTypography.ConsoleTextError;
 
+    public var themeTypography(get, never):Typography;
+    function get_themeTypography() return _themeTypography;
+    
     public function new( mode:ThemeMode = ThemeMode.Dark ) {
 
         super( mode );

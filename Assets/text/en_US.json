@@ -385,8 +385,9 @@
         		"executablebrowserpath": "Executable Browser path",
         		"locatebrowser": "Locate Browser",
         		"defaultbrowser": "Default Browser",
-        		"doubleclickhint": "Double click to open any row for more details",
-        		"browsernotdetected": "%1 not detected"
+        		"browserlisthint": "Select default Browser",
+        		"browsernotdetected": "%1 not detected",
+        		"configurebrowser": "Configure"
         }
     }
 }
