@@ -340,21 +340,23 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
 		_settingsPage = new SettingsPage();
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSERS_SETUP, _openBrowsersSetup );
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
+		_settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
 
 		_rolePage = new RolePage();
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
 		this.addPage( _rolePage, PAGE_ROLES );
 
-		_browsersPage = new BrowsersPage();
+		/*_browsersPage = new BrowsersPage();
 		_browsersPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
-		this.addPage( _browsersPage, PAGE_BROWSERS );
+		this.addPage( _browsersPage, PAGE_BROWSERS );*/
 		
 		_setupBrowserPage = new SetupBrowserPage();
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
@@ -547,7 +549,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 	
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		if (this.previousPageId != PAGE_BROWSERS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
@@ -557,7 +559,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		if (this.previousPageId != PAGE_BROWSERS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
@@ -769,13 +771,10 @@ class SuperHumanInstaller extends GenesisApplication {
 				b.isDefault = false;
 			}
 		}
-		
-		_updateDefaultBrowserSettingsPage();
 	}	
 	
 	function _refreshBrowsersPage(e:SuperHumanApplicationEvent) {
-		_browsersPage.refreshBrowsers();
-		_updateDefaultBrowserSettingsPage();
+		_settingsPage.refreshBrowsers();
 	}
 
 	function _openDownloadBrowser(e:SuperHumanApplicationEvent) {
@@ -791,7 +790,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 	
 	function _initializeBrowsersCollection() {
-		if (this.previousPageId != PAGE_BROWSERS && this.previousPageId != PAGE_SETUP_BROWSERS) {
+		//this.previousPageId != PAGE_BROWSERS && 
+		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
 			_browsersCollection = new Array<BrowserData>();
 			for (index => element in _config.browsers) 
 			{
@@ -799,20 +799,9 @@ class SuperHumanInstaller extends GenesisApplication {
 				var newBd = new BrowserData(bd.browserType, bd.isDefault, bd.browserName, bd.executablePath);
 				_browsersCollection.push(newBd);
 			}	
-			
-			_updateDefaultBrowserSettingsPage();
 		}
 	}
-	
-	function _updateDefaultBrowserSettingsPage() {
-		if (_settingsPage != null) {
-			var defaultBrowser = _browsersCollection.filter(b -> b.isDefault);
-			if (defaultBrowser.length > 0) {
-				_settingsPage.updateDefaultBrowser(defaultBrowser[0]);
-			}
-		}
-	}
-	
+
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
 
 		e.server.saveHostsFile();
@@ -990,7 +979,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		if ( _selectedPageId == PAGE_SETTINGS ) 
 		{
 			_initializeBrowsersCollection();
-			_browsersPage.setBrowsers(_browsersCollection);
+			_settingsPage.setBrowsers(_browsersCollection);
 			_settingsPage.updateData();
 		}
 	}

@@ -162,6 +162,7 @@ class SetupBrowserPage extends Page {
 		_textInputBrowserName.text = data.browserName;
 		_textInputPath.text = data.executablePath;
 		_checkDefaultBrowser.selected = data.isDefault;
+		_checkDefaultBrowser.enabled = data.exists;
 		_buttonDownloadBrowser.visible = _buttonDownloadBrowser.includeInLayout = data.downloadUrl != null;
 		_labelBrowserNotDetectedError.text = LanguageManager.getInstance().getString('settingspage.browser.browsernotdetected', data.browserName);
 		_browserNotDetectedGroup.visible = _browserNotDetectedGroup.includeInLayout = data.exists == false;

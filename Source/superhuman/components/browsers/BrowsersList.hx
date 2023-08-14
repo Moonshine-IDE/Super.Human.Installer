@@ -169,15 +169,11 @@ class BrowserItem extends LayoutGroupItemRenderer {
     		_checkBrowserStatus.removeEventListener(Event.CHANGE, _checkBrowserStatusChange);
     		
     		_browserData = browserData;
-    		_buttonIconExists.visible = _buttonIconExists.includeInLayout = browserData.exists == false;
     		_labelBrowserName.text = browserData.browserName;
-    		if (browserData.isDefault) {
-    			_checkBrowserStatus.text = "Default Browser";
-    			_checkBrowserStatus.selected = true;
-    		} else {
-    			_checkBrowserStatus.text = "";
-    			_checkBrowserStatus.selected = false;
-    		}
+    		
+    		_buttonIconExists.visible = _buttonIconExists.includeInLayout = browserData.exists == false;
+    		_checkBrowserStatus.enabled = browserData.exists;
+    		_checkBrowserStatus.selected = browserData.isDefault;
     		
     		_checkBrowserStatus.addEventListener(Event.CHANGE, _checkBrowserStatusChange);
     }

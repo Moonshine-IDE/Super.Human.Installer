@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+import feathers.data.ArrayCollection;
+import superhuman.components.browsers.BrowsersList;
 import superhuman.browser.BrowserData;
 import superhuman.browser.Browsers;
 import feathers.controls.Label;
@@ -60,7 +62,6 @@ class SettingsPage extends Page {
     var _cbDisableVagrantLogging:GenesisFormCheckBox;
     var _cbKeepFailedServersRunning:GenesisFormCheckBox;
     var _cbKeepServersRunning:GenesisFormCheckBox;
-    var _cbProvision:GenesisFormCheckBox;
     var _form:GenesisForm;
     var _label:Label;
     var _rowAdvanced:GenesisFormRow;
@@ -69,10 +70,12 @@ class SettingsPage extends Page {
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
     var _rowBrowsers:GenesisFormRow;
-    var _rowBrowsersDefault:GenesisFormRow;
-    var _buttonDefaultBrowser:GenesisFormButton;
-    var _labelDefaultBrowser:Label;
+
+    var _browsersList:BrowsersList;
+
     var _titleGroup:LayoutGroup;
+    
+    var _browsers:ArrayCollection<BrowserData>;
     
     public function new() {
 
@@ -120,10 +123,7 @@ class SettingsPage extends Page {
         _rowProvision = new GenesisFormRow();
         _rowProvision.text = LanguageManager.getInstance().getString( 'settingspage.servers.title' );
         _form.addChild( _rowProvision );
-
-        _cbProvision = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.servers.alwaysprovision' ) );
-        // _rowProvision.content.addChild( _cbProvision );
-         
+        
         _rowKeepServersRunning = new GenesisFormRow();
         _cbKeepServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.servers.keeprunning' ) );
         _rowProvision.content.addChild( _cbKeepServersRunning );
@@ -143,17 +143,14 @@ class SettingsPage extends Page {
         spacer = new LayoutGroup();
         spacer.height = GenesisApplicationTheme.GRID * 2;
         _form.addChild( spacer );
-      
-        _rowBrowsersDefault = new GenesisFormRow();
-        _rowBrowsersDefault.text = LanguageManager.getInstance().getString( 'settingspage.browser.title' );
-        _labelDefaultBrowser = new Label();
-        _rowBrowsersDefault.content.addChild(_labelDefaultBrowser);
-        _form.addChild(_rowBrowsersDefault);
-        
+
         _rowBrowsers = new GenesisFormRow();
-        _buttonDefaultBrowser = new GenesisFormButton( LanguageManager.getInstance().getString( 'settingspage.browser.defaultbrowser' ) );
-        _buttonDefaultBrowser.addEventListener( TriggerEvent.TRIGGER, _setDefaultBrowserButtonTrigger );
-        _rowBrowsers.content.addChild(_buttonDefaultBrowser);
+        _rowBrowsers.text = LanguageManager.getInstance().getString( 'settingspage.browser.titlesetupbrowser' );
+        _browsersList = new BrowsersList(_browsers);
+        _browsersList.width = _width;
+        _browsersList.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowser );
+  		_browsersList.addEventListener(BrowserItem.BROWSER_ITEM_CHANGE, _browserItemChange);
+        _rowBrowsers.content.addChild(_browsersList);
         _form.addChild(_rowBrowsers);
 
         var line = new HLine();
@@ -177,8 +174,8 @@ class SettingsPage extends Page {
 
         updateData();
         
-        var defaultBrowser:Dynamic = Browsers.getDefaultBrowser();
-		updateDefaultBrowser(defaultBrowser);
+      //  var defaultBrowser:Dynamic = Browsers.getDefaultBrowser();
+		//updateDefaultBrowser(defaultBrowser);
     }
 
     public function updateData() {
@@ -186,7 +183,7 @@ class SettingsPage extends Page {
         if ( _cbApplicationWindow != null ) {
 
             _cbApplicationWindow.selected = SuperHumanInstaller.getInstance().config.preferences.savewindowposition;
-            _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
+       //     _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
             _cbKeepServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepserversrunning;
             _cbDisableVagrantLogging.selected = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
             _cbKeepFailedServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning;
@@ -194,18 +191,34 @@ class SettingsPage extends Page {
         }
     }
 
-    public function updateDefaultBrowser(browserData:Dynamic) {
-    		if (browserData.isDefault == false) return;
-    		
-    		if (_labelDefaultBrowser != null) {
-    			_labelDefaultBrowser.text = LanguageManager.getInstance().getString('settingspage.browser.currentdefaultbrowser', browserData.browserName);
+     public function setBrowsers(browsers:Array<BrowserData>) {
+    		_browsers = new ArrayCollection(browsers);	
+    		if (_browsersList != null) {
+    			_browsersList.dataProvider = _browsers;
     		}
+    }
+    
+    function _configureBrowser(e:SuperHumanApplicationEvent) {
+    		this._forwardEvent(e);
+    }
+    
+    function _browserItemChange(e:SuperHumanApplicationEvent) {
+		//refresh state of default browser for the rest of items
+		var refreshDefaultBrowserEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER);
+			refreshDefaultBrowserEvent.browserData = e.browserData;
+		this.dispatchEvent(refreshDefaultBrowserEvent);
+			
+		this.refreshBrowsers();
+    }
+    
+    public function refreshBrowsers() {
+    		_browsersList.dataProvider.updateAll();
     }
     
     function _saveButtonTriggered( e:TriggerEvent ) {
 
         SuperHumanInstaller.getInstance().config.preferences.savewindowposition = _cbApplicationWindow.selected;
-        SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart = _cbProvision.selected;
+      //  SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart = _cbProvision.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepserversrunning = _cbKeepServersRunning.selected;
         SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning = _cbKeepFailedServersRunning.selected;
@@ -213,9 +226,4 @@ class SettingsPage extends Page {
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
     }
-    
-    function _setDefaultBrowserButtonTrigger(e:TriggerEvent) {
-    		 this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_BROWSERS_SETUP ) );
-    }
-
 }
