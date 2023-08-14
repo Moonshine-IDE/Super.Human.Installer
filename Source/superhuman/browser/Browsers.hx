@@ -1,5 +1,8 @@
 package superhuman.browser;
 
+import champaign.core.logging.Logger;
+import prominic.sys.applications.bin.Shell;
+
 class Browsers  
 {
     public static final MOZILLA_FIREFOX:String = "Mozilla Firefox";
@@ -42,5 +45,29 @@ class Browsers
 		}
 
     		return defaultBrowser;
+    }
+    
+    public static function openLink(webAddress:String) {
+    		if ( webAddress == null || webAddress.length == 0 ) {
+
+			Logger.error( 'Web address is invalid: \"${webAddress}\"' );
+			return;
+
+		}
+		
+		var defaultBrowser = Browsers.getDefaultBrowser();
+		var a = [webAddress];
+		#if mac
+		a = ["-a" + defaultBrowser.executablePath, webAddress];
+		#elseif windows
+		a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${webAddress}"'];
+		#end
+		
+		#if windows
+		var trim = StringTools.trim( a.join( " " ));
+		NativeSys.sys_command(trim);
+		#else
+		Shell.getInstance().open( a );
+		#end	
     }
 }

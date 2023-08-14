@@ -42,7 +42,7 @@ import feathers.controls.Alert;
 import feathers.controls.LayoutGroup;
 import feathers.style.Theme;
 import genesis.application.GenesisApplication;
-import genesis.application.managers.LanguageManager;
+import genesis.application.managers.LanguageManager; 
 import genesis.application.managers.ToastManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import haxe.Json;
@@ -105,7 +105,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_ROLES = "page-roles";
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
-	static public final PAGE_BROWSERS = "page-browsers";
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 
 	static public final DEMO_TASKS_PATH:String = "assets/vagrant/demo-tasks/";
@@ -544,10 +543,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	function _openBrowsersSetup(e:SuperHumanApplicationEvent) {
-		this.selectedPageId = PAGE_BROWSERS;
-	}
-	
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
 		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
 			this.selectedPageId = this.previousPageId;
@@ -570,14 +565,12 @@ class SuperHumanInstaller extends GenesisApplication {
 	
 	function _downloadVagrant( e:SuperHumanApplicationEvent ) {
 
-		Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_DOWNLOAD_URL ] );
+		Browsers.openLink(SuperHumanGlobals.VAGRANT_DOWNLOAD_URL);
 
 	}
 
 	function _downloadVirtualBox( e:SuperHumanApplicationEvent ) {
-
-		Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL ] );
-		
+		Browsers.openLink(SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL);
 	}
 
 	override function _onExit( exitCode:Int ) {
@@ -670,34 +663,9 @@ class SuperHumanInstaller extends GenesisApplication {
 				e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${e.server.webAddress}]' ), true );
 			}
 		}
-		_openBrowser(e.server.webAddress);
+		Browsers.openLink(e.server.webAddress);
 	}
 
-	function _openBrowser(webAddress:String) {
-
-		if ( webAddress == null || webAddress.length == 0 ) {
-
-			Logger.error( '${this}: Web address is invalid: \"${webAddress}\"' );
-			return;
-
-		}
-		
-		var defaultBrowser = Browsers.getDefaultBrowser();
-		var a = [webAddress];
-		#if mac
-		a = ["-a" + defaultBrowser.executablePath, webAddress];
-		#elseif windows
-		a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${webAddress}"'];
-		#end
-		
-		#if windows
-		var trim = StringTools.trim( a.join( " " ));
-		NativeSys.sys_command(trim);
-		#else
-		Shell.getInstance().open( a );
-		#end	
-	}
-	
 	function _saveConfig() {
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
@@ -778,7 +746,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _openDownloadBrowser(e:SuperHumanApplicationEvent) {
-		_openBrowser(e.browserData.downloadUrl);	
+		Browsers.openLink(e.browserData.downloadUrl);	
 	}
 	
 	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
@@ -1075,34 +1043,21 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._visitSourceCode(e);
 
-		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_URL ] );
-		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
-		#end
-
+		Browsers.openLink( SuperHumanGlobals.SOURCE_CODE_URL);
 	}
 
 	override function _visitSourceCodeIssues(?e:Dynamic) {
 
 		super._visitSourceCodeIssues(e);
-		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
-		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
-		#end
 
+		Browsers.openLink( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
 	}
 
 	override function _visitSourceCodeNewIssue(?e:Dynamic) {
 
 		super._visitSourceCodeNewIssue(e);
-		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
-		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
-		#end
 
+		Browsers.openLink( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
 	}
 
 	function _openVirtualBoxGUI( e:SuperHumanApplicationEvent ) {
@@ -1149,22 +1104,22 @@ class SuperHumanInstaller extends GenesisApplication {
 		switch e.text {
 
 			case _TEXT_LINK_DEVOPS:
-				Shell.getInstance().open( [ SuperHumanGlobals.DEVOPS_WIKI_URL ] );
+				Browsers.openLink(SuperHumanGlobals.DEVOPS_WIKI_URL);
 
 			case _TEXT_LINK_DOMINO:
-				Shell.getInstance().open( [ SuperHumanGlobals.DOMINO_WIKI_URL ] );
+				Browsers.openLink(SuperHumanGlobals.DOMINO_WIKI_URL);
 
 			case _TEXT_LINK_GENESIS_DIRECTORY:
-				Shell.getInstance().open( [ SuperHumanGlobals.GENESIS_DIRECTORY_URL ] );
+				Browsers.openLink(SuperHumanGlobals.GENESIS_DIRECTORY_URL);
 
 			case _TEXT_LINK_VAGRANT:
-				Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_URL ] );
+				Browsers.openLink(SuperHumanGlobals.VAGRANT_URL);
 
 			case _TEXT_LINK_VIRTUALBOX:
-				Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_URL ] );
+				Browsers.openLink(SuperHumanGlobals.VIRTUALBOX_URL);
 
 			case _TEXT_LINK_YAML:
-				Shell.getInstance().open( [ SuperHumanGlobals.YAML_WIKI_URL ] );
+				Browsers.openLink(SuperHumanGlobals.YAML_WIKI_URL);
 
 			default:
 

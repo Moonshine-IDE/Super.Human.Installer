@@ -30,6 +30,7 @@
 
 package superhuman.server.provisioners;
 
+import superhuman.browser.Browsers;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import genesis.application.managers.LanguageManager;
@@ -286,9 +287,7 @@ class DemoTasks extends AbstractProvisioner {
     }
 
     public function openWelcomePage() {
-
-        System.openURL( _getWebAddress() );
-
+        Browsers.openLink(_getWebAddress());
     }
 
     public override function reinitialize( sourcePath:String ) {
