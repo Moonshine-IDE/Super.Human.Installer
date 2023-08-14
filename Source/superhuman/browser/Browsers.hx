@@ -2,6 +2,7 @@ package superhuman.browser;
 
 import champaign.core.logging.Logger;
 import prominic.sys.applications.bin.Shell;
+import cpp.NativeSys;
 
 class Browsers  
 {
