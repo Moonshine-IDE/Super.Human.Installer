@@ -41,6 +41,7 @@ class BrowserData {
 					}
 					
 					this.downloadUrl = "https://www.google.com/intl/en/chrome/";
+			case "Brave":
 			case Browsers.BRAVE:
 					if (this.executablePath == "")
 					{
