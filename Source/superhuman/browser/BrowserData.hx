@@ -64,7 +64,7 @@ class BrowserData {
 						this.executablePath = "/Applications/Opera.app";
 						#elseif windows
 						var userName = SysTools.getWindowsUserName();
-						this.executablePath = "C:/Users/${userName}/AppData/Local/Programs/Opera/launcher.exe";
+						this.executablePath = 'C:/Users/${userName}/AppData/Local/Programs/Opera/launcher.exe';
 						#end
 					}
 					
