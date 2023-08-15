@@ -254,6 +254,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
             Check: new TextFormat( "_sans", 14, White),
             ConsoleText:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             ConsoleTextError:  new TextFormat( "_typewriter", 14, _themeColors.Error ),
+            LabelTextError: new TextFormat("_typewriter", 14, _themeColors.Error, true),
             ConsoleTextSelected:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             Default : new TextFormat( "_sans", 14, _themeColors.Text ),
             DefaultCentered : new TextFormat( "_sans", 14, _themeColors.Text, null, null, null, null, null, TextFormatAlign.CENTER ),
@@ -620,7 +621,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     }
 
     function _setLabelErrorStyles( label:Label ) {
-    		label.textFormat = _themeTypography.ConsoleTextError;
+    		label.textFormat = _themeTypography.LabelTextError;
     }
     
     function _setLabelHugeStyles( label:Label ) {
@@ -940,7 +941,7 @@ enum abstract Color( Int ) to Int {
     var GreyD = 0xDDDDDD;
     var Orange = 0xFFAE00;
     var OrangeLight = 0xFFC74E;
-    var Red = 0xff3a3a;
+    var Red = 0xec2222;
     var White = 0xFFFFFF;
 
 }
@@ -987,6 +988,7 @@ typedef Typography = {
     var Check:TextFormat;
     var ConsoleText:TextFormat;
     var ConsoleTextError:TextFormat;
+    var LabelTextError:TextFormat;
     var ConsoleTextSelected:TextFormat;
     var Default:TextFormat;
     var DefaultCentered:TextFormat;
