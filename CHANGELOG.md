@@ -3,6 +3,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.8.18]
+
+This release add ability to select default web browser used for open "Welcome" page currently running server. All links in application are going to be open with selected browser as well.
+
+### Added
+
+* Added selection of default browser ([#81](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/81))
+
+### Fixed
+
+* Fixed issue where user was unable to remove non configured server ([#74](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/74))
+  
 ## Super Human Installer [0.8.17]
 
 This release upgrade [demo-tasks](https://github.com/DominoVagrant/demo-tasks) provisioner to version [0.1.20](https://github.com/DominoVagrant/demo-tasks/releases/tag/demo-tasks%2Fv0.1.20)
