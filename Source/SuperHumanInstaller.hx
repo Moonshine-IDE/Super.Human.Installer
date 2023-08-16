@@ -30,13 +30,18 @@
 
 package;
 
+import genesis.application.events.GenesisApplicationEvent;
+import cpp.NativeSys;
+import haxe.io.Path;
+import superhuman.components.browsers.SetupBrowserPage;
+import superhuman.browser.Browsers;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
 import feathers.controls.Alert;
 import feathers.controls.LayoutGroup;
 import feathers.style.Theme;
 import genesis.application.GenesisApplication;
-import genesis.application.managers.LanguageManager;
+import genesis.application.managers.LanguageManager; 
 import genesis.application.managers.ToastManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import haxe.Json;
@@ -71,6 +76,7 @@ import superhuman.server.CombinedVirtualMachine;
 import superhuman.server.Server;
 import superhuman.server.ServerStatus;
 import superhuman.server.data.RoleData;
+import superhuman.browser.BrowserData;
 import superhuman.server.data.ServerData;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
@@ -98,6 +104,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_ROLES = "page-roles";
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
+	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 
 	static public final DEMO_TASKS_PATH:String = "assets/vagrant/demo-tasks/";
 
@@ -114,6 +121,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		servers : [],
 		user: {},
 		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
+		browsers: Browsers.DEFAULT_BROWSERS_LIST
 	}
 
 	var _advancedConfigPage:AdvancedConfigPage;
@@ -130,6 +138,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _settingsPage:SettingsPage;
 	var _vagrantFile:String;
+	var _setupBrowserPage:SetupBrowserPage;
+	var _browsersCollection:Array<BrowserData>;
 
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
@@ -210,7 +220,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				for ( v in a ) if ( !b.contains( v ) ) s.roles.push( _defaultRoles.get( v ) );
 
 			}
-
+			
 		} else {
 
 			_config = _defaultConfig;
@@ -218,6 +228,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+		Browsers.normaliseConfigBrowsersWithDefaultBrowsers();
+		
 		for ( s in _config.servers ) {
 
 			var server = ServerManager.getInstance().createServer( s );
@@ -294,7 +306,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _destroyServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VAGRANT, _downloadVagrant );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VIRTUALBOX, _downloadVirtualBox );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER, _openBrowser );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _openBrowserServerAddress );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
@@ -325,12 +337,22 @@ class SuperHumanInstaller extends GenesisApplication {
 		_settingsPage = new SettingsPage();
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
+		_settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
 
 		_rolePage = new RolePage();
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
 		this.addPage( _rolePage, PAGE_ROLES );
 
+		_setupBrowserPage = new SetupBrowserPage();
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
+		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
+		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
+		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
 
@@ -511,29 +533,33 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-
-		this.selectedPageId = this.previousPageId;
-
+		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
+			this.selectedPageId = this.previousPageId;
+		} else {
+			this.selectedPageId = PAGE_SERVER;
+		}
 	}
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		this.selectedPageId = this.previousPageId;
+		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
+			this.selectedPageId = this.previousPageId;
+		} else {
+			this.selectedPageId = PAGE_SERVER;
+		}
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.settingssaved' ) );
 
 	}
-
+	
 	function _downloadVagrant( e:SuperHumanApplicationEvent ) {
 
-		Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_DOWNLOAD_URL ] );
+		Browsers.openLink(SuperHumanGlobals.VAGRANT_DOWNLOAD_URL);
 
 	}
 
 	function _downloadVirtualBox( e:SuperHumanApplicationEvent ) {
-
-		Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL ] );
-		
+		Browsers.openLink(SuperHumanGlobals.VIRTUALBOX_DOWNLOAD_URL);
 	}
 
 	override function _onExit( exitCode:Int ) {
@@ -618,20 +644,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	function _openBrowser( e:SuperHumanApplicationEvent ) {
-
-		var a = e.server.webAddress;
-
-		if ( a == null || a.length == 0 ) {
-
-			if ( e.server.console != null ) e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${a}]' ), true );
-			Logger.error( '${this}: Web address is invalid: \"${a}\"' );
-			return;
-
+	function _openBrowserServerAddress( e:SuperHumanApplicationEvent ) {
+		if ( e.server.webAddress == null || e.server.webAddress.length == 0 ) 
+		{
+			if ( e.server.console != null ) 
+			{
+				e.server.console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid', '[${e.server.webAddress}]' ), true );
+			}
 		}
-
-		Shell.getInstance().open( [ '${a}' ] );
-
+		Browsers.openLink(e.server.webAddress);
 	}
 
 	function _saveConfig() {
@@ -647,8 +668,19 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+		if (_config.browsers == null) 
+		{
+			_config.browsers = _defaultConfig.browsers;	
+		} 
+		else if (_browsersCollection != null) 
+		{
+			_config.browsers = _browsersCollection;
+		}
+		_browsersCollection = null;
+		
 		try {
 
+			var conf = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
 			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
 			Logger.debug( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 
@@ -683,6 +715,43 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.selectedPageId = this.previousPageId;
 		_configPage.updateContent();
 
+	}
+
+	function _configureBrowserPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = PAGE_SETUP_BROWSERS;	
+		_setupBrowserPage.setBrowserData(e.browserData);
+	}
+	
+	function _refreshDefaultBrowser(e:SuperHumanApplicationEvent) {
+		for (b in _browsersCollection) {
+			if (b != e.browserData) {
+				b.isDefault = false;
+			}
+		}
+	}	
+	
+	function _refreshBrowsersPage(e:SuperHumanApplicationEvent) {
+		_settingsPage.refreshBrowsers();
+	}
+
+	function _openDownloadBrowser(e:SuperHumanApplicationEvent) {
+		Browsers.openLink(e.browserData.downloadUrl);	
+	}
+	
+	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = this.previousPageId;	
+	}
+	
+	function _initializeBrowsersCollection() {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
+			_browsersCollection = new Array<BrowserData>();
+			for (index => element in _config.browsers) 
+			{
+				var bd:Dynamic = _config.browsers[index];
+				var newBd = new BrowserData(bd.browserType, bd.isDefault, bd.browserName, bd.executablePath);
+				_browsersCollection.push(newBd);
+			}	
+		}
 	}
 
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
@@ -794,6 +863,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _openServerDir( e:SuperHumanApplicationEvent ) {
 
+		Logger.info('${this}: _openServerDir path: ${e.server.path.value}');
 		Shell.getInstance().open( [ e.server.path.value ] );
 		Shell.getInstance().openTerminal( e.server.path.value, false );
 
@@ -858,8 +928,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._pageChanged();
 
-		if ( _selectedPageId == PAGE_SETTINGS ) _settingsPage.updateData();
-
+		if ( _selectedPageId == PAGE_SETTINGS ) 
+		{
+			_initializeBrowsersCollection();
+			_settingsPage.setBrowsers(_browsersCollection);
+			_settingsPage.updateData();
+		}
 	}
 
 	function _deleteServer( e:SuperHumanApplicationEvent ) {
@@ -953,34 +1027,21 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super._visitSourceCode(e);
 
-		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_URL ] );
-		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_URL );
-		#end
-
+		Browsers.openLink( SuperHumanGlobals.SOURCE_CODE_URL);
 	}
 
 	override function _visitSourceCodeIssues(?e:Dynamic) {
 
 		super._visitSourceCodeIssues(e);
-		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
-		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
-		#end
 
+		Browsers.openLink( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
 	}
 
 	override function _visitSourceCodeNewIssue(?e:Dynamic) {
 
 		super._visitSourceCodeNewIssue(e);
-		#if linux
-		Shell.getInstance().open( [ SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL ] );
-		#else
-		System.openURL( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
-		#end
 
+		Browsers.openLink( SuperHumanGlobals.SOURCE_CODE_ISSUE_NEW_URL );
 	}
 
 	function _openVirtualBoxGUI( e:SuperHumanApplicationEvent ) {
@@ -1027,22 +1088,22 @@ class SuperHumanInstaller extends GenesisApplication {
 		switch e.text {
 
 			case _TEXT_LINK_DEVOPS:
-				Shell.getInstance().open( [ SuperHumanGlobals.DEVOPS_WIKI_URL ] );
+				Browsers.openLink(SuperHumanGlobals.DEVOPS_WIKI_URL);
 
 			case _TEXT_LINK_DOMINO:
-				Shell.getInstance().open( [ SuperHumanGlobals.DOMINO_WIKI_URL ] );
+				Browsers.openLink(SuperHumanGlobals.DOMINO_WIKI_URL);
 
 			case _TEXT_LINK_GENESIS_DIRECTORY:
-				Shell.getInstance().open( [ SuperHumanGlobals.GENESIS_DIRECTORY_URL ] );
+				Browsers.openLink(SuperHumanGlobals.GENESIS_DIRECTORY_URL);
 
 			case _TEXT_LINK_VAGRANT:
-				Shell.getInstance().open( [ SuperHumanGlobals.VAGRANT_URL ] );
+				Browsers.openLink(SuperHumanGlobals.VAGRANT_URL);
 
 			case _TEXT_LINK_VIRTUALBOX:
-				Shell.getInstance().open( [ SuperHumanGlobals.VIRTUALBOX_URL ] );
+				Browsers.openLink(SuperHumanGlobals.VIRTUALBOX_URL);
 
 			case _TEXT_LINK_YAML:
-				Shell.getInstance().open( [ SuperHumanGlobals.YAML_WIKI_URL ] );
+				Browsers.openLink(SuperHumanGlobals.YAML_WIKI_URL);
 
 			default:
 

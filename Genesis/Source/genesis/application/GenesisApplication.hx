@@ -30,6 +30,7 @@
 
 package genesis.application;
 
+import superhuman.browser.Browsers;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import champaign.sys.logging.targets.FileTarget;
@@ -518,13 +519,7 @@ abstract class GenesisApplication extends Application {
     }
 
     function _visitGenesisDirectory( ?e:Dynamic ) {
-
-        #if linux
-		Shell.getInstance().open( [ GENESIS_ADDRESS ] );
-		#else
-        System.openURL( GENESIS_ADDRESS );
-        #end
-
+		Browsers.openLink(GENESIS_ADDRESS);
     }
 
     function _visitSourceCode( ?e:Dynamic ) {}

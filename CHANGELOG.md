@@ -9,7 +9,7 @@ This release upgrade [demo-tasks](https://github.com/DominoVagrant/demo-tasks) p
 
 ### Added
 
-* Add MD5 hashes for newest version of installer Nomad-Web and Traveler ([#77](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/77)
+* Add MD5 hashes for newest version of installer Nomad-Web and Traveler ([#77](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/77))
 
 ### Changed
 

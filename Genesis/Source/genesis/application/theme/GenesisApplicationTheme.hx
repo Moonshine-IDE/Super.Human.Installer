@@ -95,6 +95,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_SMALL:String = "button-small";
     public static final BUTTON_TINY:String = "button-tiny";
     public static final BUTTON_WARNING:String = "button-warning";
+    public static final BUTTON_BROWSER_WARNING:String = "button-browser-warning";
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
     public static final INVALID:String = "invalid";
@@ -107,6 +108,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final LABEL_LINK_SMALL:String = "label-link-small";
     public static final LABEL_SMALL_CENTERED:String = "label-small-centered";
     public static final LABEL_TITLE:String = "label-title";
+    public static final LABEL_ERROR:String = "label-error";
     public static final LAYOUT_GROUP_CREATE_ACCOUNT:String = "layout-group-create-account";
     public static final LAYOUT_GROUP_FOOTER:String = "layout-group-footer";
     public static final LAYOUT_GROUP_HEADER:String = "layout-group-header";
@@ -249,8 +251,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
             Button : new TextFormat( "_sans", 14, _themeColors.BtnText ),
             ButtonWarning : new TextFormat( "_sans", 14, _themeColors.BtnWarningText ),
+            Check: new TextFormat( "_sans", 14, White),
             ConsoleText:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             ConsoleTextError:  new TextFormat( "_typewriter", 14, _themeColors.Error ),
+            LabelTextError: new TextFormat("_typewriter", 14, _themeColors.Error, true),
             ConsoleTextSelected:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             Default : new TextFormat( "_sans", 14, _themeColors.Text ),
             DefaultCentered : new TextFormat( "_sans", 14, _themeColors.Text, null, null, null, null, null, TextFormatAlign.CENTER ),
@@ -276,6 +280,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Button, BUTTON_SMALL, _setButtonSmallStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_TINY, _setButtonTinyStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_WARNING, _setButtonWarningStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_BROWSER_WARNING, _setButtonNoBackgrounIconStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON_INVALID, _setPopUpListViewInvalidButtonStyles );
         this.styleProvider.setStyleFunction( Button, PopUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
@@ -307,6 +312,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Label, LABEL_LINK_SMALL, _setLabelLinkSmallStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_SMALL_CENTERED, _setLabelSmallCenteredStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_TITLE, _setLabelTitleStyles );
+        this.styleProvider.setStyleFunction( Label, LABEL_ERROR, _setLabelErrorStyles );
         this.styleProvider.setStyleFunction( Label, null, _setLabelStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, APPLICATION, _setApplicationLayoutGroupStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, LAYOUT_GROUP_CREATE_ACCOUNT, _setLayoutGroupCreateAccountStyles );
@@ -405,6 +411,11 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         button.setSkinForState( ButtonState.DISABLED, disabledSkin );
 
     }
+    
+    function _setButtonNoBackgrounIconStyles( button:Button ) {
+    		var defaultSkin = new RectangleSkin( FillStyle.SolidColor( _themeColors.BtnWarning, 0 ) );
+        button.backgroundSkin = defaultSkin;
+	}
 
     function _setButtonSelectFileStyles( button:Button ) {
 
@@ -609,6 +620,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     }
 
+    function _setLabelErrorStyles( label:Label ) {
+    		label.textFormat = _themeTypography.LabelTextError;
+    }
+    
     function _setLabelHugeStyles( label:Label ) {
 
         label.textFormat = _themeTypography.Huge;
@@ -926,7 +941,7 @@ enum abstract Color( Int ) to Int {
     var GreyD = 0xDDDDDD;
     var Orange = 0xFFAE00;
     var OrangeLight = 0xFFC74E;
-    var Red = 0xff3a3a;
+    var Red = 0xec2222;
     var White = 0xFFFFFF;
 
 }
@@ -970,8 +985,10 @@ typedef Typography = {
 
     var Button:TextFormat;
     var ButtonWarning:TextFormat;
+    var Check:TextFormat;
     var ConsoleText:TextFormat;
     var ConsoleTextError:TextFormat;
+    var LabelTextError:TextFormat;
     var ConsoleTextSelected:TextFormat;
     var Default:TextFormat;
     var DefaultCentered:TextFormat;
