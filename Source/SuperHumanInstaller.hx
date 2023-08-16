@@ -35,7 +35,6 @@ import cpp.NativeSys;
 import haxe.io.Path;
 import superhuman.components.browsers.SetupBrowserPage;
 import superhuman.browser.Browsers;
-import superhuman.components.browsers.BrowsersPage;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
 import feathers.controls.Alert;
@@ -139,7 +138,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _serverRolesCollection:Array<ServerRoleImpl>;
 	var _settingsPage:SettingsPage;
 	var _vagrantFile:String;
-	var _browsersPage:BrowsersPage;
 	var _setupBrowserPage:SetupBrowserPage;
 	var _browsersCollection:Array<BrowserData>;
 
@@ -223,10 +221,6 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			}
 			
-			if (_config.browsers == null) {
-				_config.browsers = _defaultConfig.browsers;
-			}
-			
 		} else {
 
 			_config = _defaultConfig;
@@ -234,6 +228,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+		Browsers.normaliseConfigBrowsersWithDefaultBrowsers();
+		
 		for ( s in _config.servers ) {
 
 			var server = ServerManager.getInstance().createServer( s );
@@ -350,13 +346,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
 		this.addPage( _rolePage, PAGE_ROLES );
 
-		/*_browsersPage = new BrowsersPage();
-		_browsersPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
-		_browsersPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS, _closeBrowsersPage );
-		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
-		_browsersPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
-		this.addPage( _browsersPage, PAGE_BROWSERS );*/
-		
 		_setupBrowserPage = new SetupBrowserPage();
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
@@ -753,12 +742,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.selectedPageId = this.previousPageId;	
 	}
 	
-	function _closeBrowsersPage(e:SuperHumanApplicationEvent) {
-		this.selectedPageId = PAGE_SETTINGS;
-	}
-	
 	function _initializeBrowsersCollection() {
-		//this.previousPageId != PAGE_BROWSERS && 
 		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
 			_browsersCollection = new Array<BrowserData>();
 			for (index => element in _config.browsers) 

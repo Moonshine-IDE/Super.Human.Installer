@@ -12,12 +12,13 @@ class BrowserData {
     public var exists:Bool;
     public var downloadUrl:String;
     
-	public function new(browserType:String, isDefault:Bool = false, browserName:String = "", executablePath:String = "", exists:Bool = false) {
+	public function new(browserType:String, isDefault:Bool = false, browserName:String = "", executablePath:String = "", exists:Bool = false, downloadUrl:String = "") {
 		this.browserType = browserType;
 		this.isDefault = isDefault;
 		this.browserName = browserName;
 		this.executablePath = executablePath;
 		this.exists = exists;
+		this.downloadUrl = downloadUrl;
 		
 		_setDefaultValues(browserType);
 	}

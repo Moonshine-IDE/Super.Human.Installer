@@ -173,9 +173,6 @@ class SettingsPage extends Page {
         this.addChild( _buttonGroup );
 
         updateData();
-        
-      //  var defaultBrowser:Dynamic = Browsers.getDefaultBrowser();
-		//updateDefaultBrowser(defaultBrowser);
     }
 
     public function updateData() {

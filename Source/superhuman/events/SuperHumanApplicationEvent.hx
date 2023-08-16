@@ -44,7 +44,6 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final CANCEL_PAGE:String = "cancelPage";
     public static final CLOSE_CONSOLE:String = "closeConsole";
     public static final CLOSE_ROLES:String = "closeRoles";
-    public static final CLOSE_BROWSERS:String = "closeBrowsers";
     public static final REFRESH_DEFAULT_BROWSER:String = "refreshDefaultBrowser";
     public static final REFRESH_BROWSERS_PAGE:String = "refreshBrowsersPage";
     public static final CONFIGURE_BROWSER:String = "configureBrowser";

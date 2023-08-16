@@ -28,13 +28,39 @@ class Browsers
 		#end
     ];
     
-    public static function getDefaultBrowser():Dynamic {
+    public static function normaliseConfigBrowsersWithDefaultBrowsers() {
     		var config = SuperHumanInstaller.getInstance().config;
-    		if (config.browsers == null)
+    		if (config.browsers == null) 
     		{
     			config.browsers = DEFAULT_BROWSERS_LIST;
     		}
-	
+    		else
+    		{
+    			var configBrowsers:Array<BrowserData> = [];
+    			for (c => e in config.browsers)	
+    			{
+    				var bConfig:Dynamic = e;
+    				configBrowsers.push(new BrowserData(bConfig.browserType, bConfig.isDefault, bConfig.browserName, 
+    				bConfig.executablePath, bConfig.exists, bConfig.downloadUrl));
+    			}
+    			
+    			config.browsers = configBrowsers;
+    			
+			for (index => element in DEFAULT_BROWSERS_LIST) 
+			{
+				var defaultBrowser = DEFAULT_BROWSERS_LIST[index];
+				var configBrowser = config.browsers.filter(f -> f.browserType == defaultBrowser.browserType);
+				if (configBrowser == null || configBrowser.length == 0)
+				{
+					config.browsers.push(defaultBrowser);
+				}
+			}
+    		}
+    }
+    
+    public static function getDefaultBrowser():Dynamic {
+    		var config = SuperHumanInstaller.getInstance().config;
+
 		var defaultBrowser = null;
 		for (index => element in config.browsers) 
 		{
