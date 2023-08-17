@@ -256,9 +256,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 		
 		_serviceTypesCollection = [
-			{value: "Standalone Domino", description: "A new, independent Domino Server", provisionerType: ProvisionerType.DemoTasks},
-			{value: "Additional Domino Server", description: "Additional server based on an existing configuration", provisionerType: ""},
-			{value: "Volt MX", description: "Not yet implemented", provisionerType: ""}
+			{value: "Standalone Domino Server", description: "A new, independent Domino Server", provisionerType: ProvisionerType.DemoTasks},
+			{value: "Additional Domino Server", description: "Join a new server to an existing Domino environment", provisionerType: ""},
+			{value: "Volt MX Go Foundry Server", description: "Coming soon!", provisionerType: ""}
 		];
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
