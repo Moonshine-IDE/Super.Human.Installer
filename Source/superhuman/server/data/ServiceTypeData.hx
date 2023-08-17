@@ -34,5 +34,6 @@ typedef ServiceTypeData = {
 
     value:String,
 	description:String,
-	provisionerType:String
+	provisionerType:String,
+	enabled:Bool
 }

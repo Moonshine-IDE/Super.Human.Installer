@@ -390,8 +390,8 @@
         		"configurebrowser": "Configure"
         }
     },
-    "serviceTypePage" {
-    		"title": "What would you like to create?",
-    		"continue": "Continue"
+    "servicetypepage": {
+		"title": "What would you like to create?",
+		"continue": "Continue"
     }
 }

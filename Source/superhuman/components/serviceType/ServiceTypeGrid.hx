@@ -1,5 +1,6 @@
 package superhuman.components.serviceType;
 
+import feathers.skins.RectangleSkin;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.HorizontalLayout;
 import feathers.data.GridViewCellState;
@@ -22,7 +23,13 @@ class ServiceTypeGrid extends GridView
 		
 		this.variant = GridView.VARIANT_BORDERLESS;
 		this.layoutData = AnchorLayoutData.fill();
-		
+				
+		var backgroundSkin = new RectangleSkin();
+			backgroundSkin.fill = SolidColor(0x222222);
+			backgroundSkin.width = 16.0;
+			backgroundSkin.height = 16.0;
+		this.backgroundSkin = backgroundSkin;
+			
 	 	this.headerRendererRecycler = DisplayObjectRecycler.withFunction(() -> {
             return (new GridViewHeader());
 		}, (itemRenderer:GridViewHeader, state:GridViewHeaderState) -> {
@@ -56,7 +63,7 @@ class GridViewHeader extends LayoutGroupItemRenderer
 	override private function initialize():Void 
 	{
 		this.variant = SuperHumanInstallerTheme.GRID_VIEW_HEADER_VARIANT;
-		
+
         var layout = new HorizontalLayout();
         layout.gap = 6.0;
         layout.paddingTop = 2.0;
@@ -67,7 +74,7 @@ class GridViewHeader extends LayoutGroupItemRenderer
         this.layout = layout;
 
 		this._label = new Label();
-		this._label.variant = GenesisApplicationTheme.LABEL_TITLE;
+		this._label.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         this._label.wordWrap = true;
         this._label.layoutData = new HorizontalLayoutData(100, null);
         this.addChild(_label);

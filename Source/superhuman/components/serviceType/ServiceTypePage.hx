@@ -88,7 +88,7 @@ class ServiceTypePage extends Page {
 
         _labelTitle = new Label();
         _labelTitle.variant = GenesisApplicationTheme.LABEL_LARGE;
-        _labelTitle.text = LanguageManager.getInstance().getString( 'serviceTypePage.title' );
+        _labelTitle.text = LanguageManager.getInstance().getString( 'servicetypepage.title' );
         _labelTitle.layoutData = new HorizontalLayoutData( 100 );
         _titleGroup.addChild( _labelTitle );
         
@@ -97,10 +97,12 @@ class ServiceTypePage extends Page {
     	    this.addChild( line );
     	    
     	    _serviceTypeGrid = new ServiceTypeGrid(new ArrayCollection(_serviceTypesCollection));
+    	    _serviceTypeGrid.width = _w;
     	    _serviceTypeGrid.columns = new ArrayCollection([
 			new GridViewColumn("Service", (data) -> data.value),
 			new GridViewColumn("Description", (data) -> data.description),
 		]);
+		this.addChild(_serviceTypeGrid);
 		
     	    var line = new HLine();
         		line.width = _w;
@@ -113,7 +115,7 @@ class ServiceTypePage extends Page {
         _buttonGroup.layout = _buttonGroupLayout;
         this.addChild( _buttonGroup );
 
-        _buttonSave = new GenesisFormButton( LanguageManager.getInstance().getString( 'serviceTypePage.continue' ) );
+        _buttonSave = new GenesisFormButton( LanguageManager.getInstance().getString( 'servicetypepage.continue' ) );
         _buttonSave.addEventListener( TriggerEvent.TRIGGER, _continueButtonTriggered );
         _buttonGroup.addChild(_buttonSave);
         
