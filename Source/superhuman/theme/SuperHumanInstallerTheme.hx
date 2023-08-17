@@ -46,6 +46,7 @@ import superhuman.components.Console;
 import superhuman.components.ServerList;
 import superhuman.components.SystemInfoBox;
 import superhuman.components.WarningBox;
+import superhuman.components.serviceType.ServiceTypeGrid;
 
 class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 
@@ -56,6 +57,8 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
     public static final LAYOUT_GROUP_APP_CHECKER_OVERLAY:String = "layout-group-app-checker-overlay";
     public static final LAYOUT_GROUP_SERVER_BUTTON_GROUP:String = "layout-group-server-button-group";
     public static final TEXT_AREA_CONSOLE:String = "text-area-console";
+    public static final GRID_VIEW_HEADER_VARIANT:String = "grid-view-header-variant";
+	public static final GRID_VIEW_COLUMN_VARIANT:String = "grid-view-column-variant";
 
     static var _instance:SuperHumanInstallerTheme;
 
@@ -92,7 +95,8 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         this.styleProvider.setStyleFunction( ServerList, null, _setServerListStyles );
         this.styleProvider.setStyleFunction( SystemInfoBox, null, _setSystemInfoBoxStyles );
         this.styleProvider.setStyleFunction( WarningBox, null, _setWarningBoxStyles );
-
+		this.styleProvider.setStyleFunction( GridViewHeader, GRID_VIEW_HEADER_VARIANT, _setGridViewHeaderStyles);
+		this.styleProvider.setStyleFunction( GridViewColumnMultiline, GRID_VIEW_COLUMN_VARIANT, _setGridViewColumnStyles);
     }
 
     function _setConsoleStyles( console:Console ) {
@@ -164,6 +168,22 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 
     }
 
+    function _setGridViewHeaderStyles( box:GridViewHeader ) {
+		var backgroundSkin = new RectangleSkin();
+			backgroundSkin.fill = SolidColor(0x444444);
+	
+			box.backgroundSkin = backgroundSkin;
+			box.minHeight = 35;
+	}
+	
+	function _setGridViewColumnStyles( box:GridViewColumnMultiline ) {
+		var backgroundSkin = new RectangleSkin();
+			backgroundSkin.fill = SolidColor(0x222222);
+			backgroundSkin.selectedFill = SolidColor(0x666666);
+			box.backgroundSkin = backgroundSkin;
+			box.minHeight = 35;
+	}
+	
     function _setServerListStyles( list:ServerList ) {
 
         var layout = new VerticalLayout();

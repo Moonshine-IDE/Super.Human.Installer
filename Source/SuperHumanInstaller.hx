@@ -30,6 +30,9 @@
 
 package;
 
+import superhuman.server.data.ServiceTypeData;
+import superhuman.server.provisioners.ProvisionerType;
+import superhuman.components.serviceType.ServiceTypePage;
 import genesis.application.events.GenesisApplicationEvent;
 import cpp.NativeSys;
 import haxe.io.Path;
@@ -97,6 +100,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static final _TEXT_LINK_VIRTUALBOX:String = "VirtualBox";
 	static final _TEXT_LINK_YAML:String = "YAML";
 
+	static public final PAGE_SERVICE_TYPE = "page-service-type";
 	static public final PAGE_CONFIG = "page-config";
 	static public final PAGE_CONFIG_ADVANCED = "page-config-advanced";
 	static public final PAGE_HELP = "page-help";
@@ -126,6 +130,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	var _advancedConfigPage:AdvancedConfigPage;
 	var _appCheckerOverlay:LayoutGroup;
+	var _serviceTypePage:ServiceTypePage;
 	var _config:SuperHumanConfig;
 	var _configPage:ConfigPage;
 	var _defaultRoles:Map<String, RoleData>;
@@ -140,7 +145,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _vagrantFile:String;
 	var _setupBrowserPage:SetupBrowserPage;
 	var _browsersCollection:Array<BrowserData>;
-
+	var _serviceTypesCollection:Array<ServiceTypeData>;
+	
 	public var config( get, never ):SuperHumanConfig;
 	function get_config() return _config;
 
@@ -248,6 +254,12 @@ class SuperHumanInstaller extends GenesisApplication {
 			if ( this._window.y < 0 ) this._window.y = 0;
 
 		}
+		
+		_serviceTypesCollection = [
+			{value: "Standalone Domino", description: "A new, independent Domino Server", provisionerType: ProvisionerType.DemoTasks},
+			{value: "Additional Domino Server", description: "Additional server based on an existing configuration", provisionerType: ""},
+			{value: "Volt MX", description: "Not yet implemented", provisionerType: ""}
+		];
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
 		Shell.getInstance().findProcessId( 'SuperHumanInstaller', null, _processIdFound );
@@ -301,7 +313,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage = new ServerPage( ServerManager.getInstance().servers, SuperHumanGlobals.MAXIMUM_ALLOWED_SERVERS );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _configureServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.CREATE_SERVER, _createServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.START_CONFIGURE_SERVER, _startConfigureServer);
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _deleteServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _destroyServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VAGRANT, _downloadVagrant );
@@ -322,6 +334,11 @@ class SuperHumanInstaller extends GenesisApplication {
 		_helpPage.addEventListener( SuperHumanApplicationEvent.TEXT_LINK, _helpPageTextLink );
 		this.addPage( _helpPage, PAGE_HELP );
 
+		_serviceTypePage = new ServiceTypePage(_serviceTypesCollection);
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_SERVER, _createServer);
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
+		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
+		
 		_configPage = new ConfigPage();
 		_configPage.addEventListener( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER, _advancedConfigureServer );
 		_configPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
@@ -520,9 +537,14 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	function _cancelServiceType( e:SuperHumanApplicationEvent ) {
+		this.selectedPageId = PAGE_SERVER;
+	}
+
 	function _cancelConfigureServer( e:SuperHumanApplicationEvent ) {
 
-		this.selectedPageId = PAGE_SERVER;
+		this.selectedPageId = PAGE_SERVICE_TYPE;
+		//this.selectedPageId = PAGE_SERVER;
 
 	}
 
@@ -1012,7 +1034,11 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 	}
-
+	
+	function _startConfigureServer(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = PAGE_SERVICE_TYPE;	
+	}
+	
 	function _showCPUArchitectureNotSupportedWarning() {
 
 		Alert.show(
