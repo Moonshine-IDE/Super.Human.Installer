@@ -43,6 +43,9 @@ class ServiceTypeGrid extends GridView
             return (new GridViewColumnMultiline());
 		}, (itemRenderer:GridViewColumnMultiline, state:GridViewCellState) -> {
 			itemRenderer.label.text = state.text;
+			itemRenderer.label.enabled = state.data.isEnabled;
+			itemRenderer.enabled = state.data.isEnabled;
+			state.enabled = state.data.isEnabled;
 		},
 		(itemRenderer:GridViewColumnMultiline, state:GridViewCellState) -> {
 			itemRenderer.label.text = "";

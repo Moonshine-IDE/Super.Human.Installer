@@ -30,6 +30,7 @@
 
 package superhuman.theme;
 
+import feathers.controls.ToggleButtonState;
 import feathers.controls.LayoutGroup;
 import feathers.controls.TextInputState;
 import feathers.layout.AnchorLayout;
@@ -180,6 +181,8 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 		var backgroundSkin = new RectangleSkin();
 			backgroundSkin.fill = SolidColor(0x222222);
 			backgroundSkin.selectedFill = SolidColor(0x666666);
+			backgroundSkin.disabledFill = SolidColor(0x222222);
+			
 			box.backgroundSkin = backgroundSkin;
 			box.minHeight = 35;
 	}

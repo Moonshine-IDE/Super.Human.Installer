@@ -97,6 +97,7 @@ class ServiceTypePage extends Page {
     	    this.addChild( line );
     	    
     	    _serviceTypeGrid = new ServiceTypeGrid(new ArrayCollection(_serviceTypesCollection));
+    	    _serviceTypeGrid.selectedIndex = 0;
     	    _serviceTypeGrid.width = _w;
     	    _serviceTypeGrid.columns = new ArrayCollection([
 			new GridViewColumn("Service", (data) -> data.value),
