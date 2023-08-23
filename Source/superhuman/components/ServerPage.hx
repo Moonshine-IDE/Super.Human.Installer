@@ -265,11 +265,12 @@ class ServerPage extends Page {
 	}
 
     function _createServerButtonTriggered( e:TriggerEvent ) {
-
-        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
-        event.provisionerType = ProvisionerType.DemoTasks;
-        this.dispatchEvent( event );
-
+		
+        /*var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
+        		event.provisionerType = ProvisionerType.DemoTasks;
+        this.dispatchEvent( event );*/
+		
+        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.START_CONFIGURE_SERVER));
     }
 
     function _headerInputChanged( e:Event ) {

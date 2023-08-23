@@ -99,6 +99,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
     public static final INVALID:String = "invalid";
+    public static final LABEL_DEFAULT:String = "label-default";
     public static final LABEL_CENTERED:String = "label-centered";
     public static final LABEL_COPYRIGHT:String = "label-copyright";
     public static final LABEL_COPYRIGHT_CENTER:String = "label-copyright-center";
@@ -303,6 +304,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Header, Alert.CHILD_VARIANT_HEADER, _setAlertHeaderStyles );
         this.styleProvider.setStyleFunction( Label, Alert.CHILD_VARIANT_MESSAGE_LABEL, _setLabelAlertStyles );
         this.styleProvider.setStyleFunction( Label, DefaultToolTipManager.CHILD_VARIANT_TOOL_TIP, _setToolTipStyles );
+        this.styleProvider.setStyleFunction( Label, LABEL_DEFAULT, _setLabelDefaultStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_CENTERED, _setLabelCenteredStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_COPYRIGHT, _setLabelCopyrightStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_COPYRIGHT_CENTER, _setLabelCopyrightCenterStyles );
@@ -569,6 +571,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     }
 
+    function _setLabelDefaultStyles(label:Label) {
+    		label.textFormat = _themeTypography.Default;
+    }
+    
     function _setLabelCenteredStyles( label:Label ) {
 
         label.textFormat = _themeTypography.DefaultCentered;
