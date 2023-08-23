@@ -552,9 +552,14 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _cancelConfigureServer( e:SuperHumanApplicationEvent ) {
 
-		this.selectedPageId = PAGE_SERVICE_TYPE;
-		//this.selectedPageId = PAGE_SERVER;
-
+		if (this.previousPageId != PAGE_SERVICE_TYPE)
+		{
+			this.selectedPageId = PAGE_SERVER;
+		}
+		else
+		{
+			this.selectedPageId = PAGE_SERVICE_TYPE;
+		}
 	}
 
 	function _cancelAdvancedConfigureServer( e:SuperHumanApplicationEvent ) {
