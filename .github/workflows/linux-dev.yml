@@ -19,14 +19,14 @@ jobs:
         run: git lfs checkout
 
       - name: Set up Haxe
-        uses: krdlab/setup-haxe@v1
+        uses: krdlab/setup-haxe@v1.5.1
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.3.1
 
       - name: Install dependencies
         run: | 
           haxelib install hxcpp
-          haxelib install openfl
+          haxelib git openfl https://github.com/openfl/openfl.git 9.3.0-Dev
           haxelib run openfl setup
           haxelib install feathersui
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
