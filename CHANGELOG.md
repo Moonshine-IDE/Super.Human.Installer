@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.8.19]
+
+This release add service type interface which allows create different type of servers.
+
+### Added
+
+* Added service type interface when creating a new server. ([#88](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/88))
+  
 ## Super Human Installer [0.8.18]
 
 This release add ability to select default web browser used for open "Welcome" page currently running server. All links in application are going to be open with selected browser as well.

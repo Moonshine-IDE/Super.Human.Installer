@@ -51,7 +51,7 @@
      static function process_stdin_close(handle:Dynamic):Void;
  
      @:native("_hx_std_process_exit")
-     static function process_exit(handle:Dynamic):Int;
+     static function process_exit(handle:Dynamic, block:Bool):Int;
  
      @:native("_hx_std_process_pid")
      static function process_pid(handle:Dynamic):Int;
