@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: | 
           haxelib install hxcpp
-          haxelib git openfl https://github.com/openfl/openfl.git 9.3.0-Dev
+          haxelib git openfl https://github.com/openfl/openfl.git develop
           haxelib run openfl setup
           haxelib install feathersui
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git

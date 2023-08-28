@@ -81,10 +81,11 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
-            #if debug
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+            #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
             #end
+            
             return item;
 
         } );
@@ -115,10 +116,12 @@ class ServerList extends ListView {
             item.removeEventListener( SuperHumanApplicationEvent.START_SERVER, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.STOP_SERVER, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
-            #if debug
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+            
+            #if debug
             item.removeEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
             #end
+            
             item.destroy();
 
         };
@@ -174,15 +177,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     }
 
     public function destroy() {
-
-        if ( _server != null ) {
-
-            if ( _server.onStatusUpdate != null ) _server.onStatusUpdate.clear();
-            if ( _server.onUpdate != null ) _server.onUpdate.clear();
-            _server = null;
-
-        }
-
+        this._clearServerUpdates();
     }
 
     override function initialize() {
@@ -334,47 +329,17 @@ class ServerItem extends LayoutGroupItemRenderer {
     }
 
     public function reset() {
-
-        if ( _server != null ) {
-
-            if ( _server.onUpdate != null ) _server.onUpdate.clear();
-            if ( _server.onStatusUpdate != null ) _server.onStatusUpdate.clear();
-            if ( _server.onVagrantUpElapsedTimerUpdate != null ) _server.onVagrantUpElapsedTimerUpdate.clear();
-
-        }
-
+        this._clearServerUpdates();
     }
 
     public function updateServer( server:Server ) {
 
         if ( _serverUpdated ) return;
 
-        if ( _server != null ) {
-
-            #if neko
-            // List.remove( func ) is not working on Neko,
-            // so the entire List must be cleared
-            _server.onUpdate.clear();
-            _server.onStatusUpdate.clear();
-            _server.onVagrantUpElapsedTimerUpdate.clear();
-            #else
-            _server.onUpdate.remove( _updateServer );
-            _server.onStatusUpdate.remove( _updateServer );
-            _server.onVagrantUpElapsedTimerUpdate.remove( _updateVagrantUpElapsedTimer );
-            #end
-
-        }
+        this._clearServerUpdates();
 
         _server = server;
-        #if neko
-        // Putting back the main class' function on Neko
-        _server.onUpdate.add( SuperHumanInstaller.getInstance().onServerPropertyChanged );
-        _server.onStatusUpdate.add( _updateServer );
-        _server.onVagrantUpElapsedTimerUpdate.add( _updateVagrantUpElapsedTimer );
-        #end
-        _server.onUpdate.add( _updateServer );
-        _server.onStatusUpdate.add( _updateServer );
-        _server.onVagrantUpElapsedTimerUpdate.add( _updateVagrantUpElapsedTimer );
+        this._addServerUpdates();
 
         if ( _labelTitle != null ) {
 
@@ -682,6 +647,60 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         }
 
+    }
+    
+    function _clearServerUpdates() {
+    		 if ( _server != null ) {
+            // List.remove( func ) is not working on Neko,
+            // so the entire List must be cleared
+            if (_server.onUpdate != null)
+            {
+            		#if neko
+            		_server.onUpdate.clear();
+            		#else
+            		_server.onUpdate.remove( _updateServer );
+            		#end
+        		}
+        		
+        		if (_server.onStatusUpdate != null)
+        		{
+        			#if neko
+            		_server.onStatusUpdate.clear();
+            		#else
+            		_server.onStatusUpdate.remove( _updateServer );
+            		#end
+        		}
+        		
+        		if (_server.onVagrantUpElapsedTimerUpdate != null)
+        		{
+        			#if neko
+	    			_server.onVagrantUpElapsedTimerUpdate.clear();
+            		#else
+            		_server.onVagrantUpElapsedTimerUpdate.remove( _updateVagrantUpElapsedTimer );
+            		#end
+        		}
+        }
+    }
+    
+    function _addServerUpdates() {
+    		if ( _server != null ) {
+            // List.remove( func ) is not working on Neko,
+            // so the entire List must be cleared
+            if (_server.onUpdate != null)
+            {
+            		 _server.onUpdate.add( _updateServer );
+        		}
+        		
+        		if (_server.onStatusUpdate != null)
+        		{
+        			_server.onStatusUpdate.add( _updateServer );
+        		}
+        		
+        		if (_server.onVagrantUpElapsedTimerUpdate != null)
+        		{
+        			 _server.onVagrantUpElapsedTimerUpdate.add( _updateVagrantUpElapsedTimer );
+        		}
+        }
     }
 
 }
