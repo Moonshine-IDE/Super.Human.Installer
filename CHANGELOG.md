@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.8.20]
+
+The release update source code of application to use newest Haxe 4.3.1. It contains some small bug fixes.
+
+### Changed
+
+* Update source code to Haxe 4.3.1 ([#91](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/91))
+
+### Fixed
+
+* Fixed issue where open folder on server page doesn't work ([#94](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/94))
+* Fixed crash when deleting VM ([#78](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/78))
+
 ## Super Human Installer [0.8.19]
 
 This release add service type interface which allows create different type of servers.
