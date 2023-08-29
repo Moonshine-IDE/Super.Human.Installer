@@ -35,6 +35,7 @@ jobs:
           haxelib install hxcpp
           git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime
           haxelib dev lime lime
+          haxelib install format
           haxelib git openfl https://github.com/openfl/openfl.git develop
           haxelib run openfl setup
           haxelib install feathersui
