@@ -37,6 +37,7 @@ jobs:
           haxelib dev lime lime
           haxelib install format
           haxelib install hxp
+          haxelib git lime-samples https://github.com/openfl/lime-samples
           haxelib git openfl https://github.com/openfl/openfl.git develop
           haxelib run openfl setup
           haxelib install feathersui
