@@ -30,6 +30,9 @@
 
 package;
 
+import openfl.desktop.ClipboardFormats;
+import openfl.desktop.Clipboard;
+import haxe.io.Bytes;
 import superhuman.server.data.ServiceTypeData;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.components.serviceType.ServiceTypePage;
@@ -1042,7 +1045,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( e.data != null ) {
 
-			openfl.system.System.setClipboard( e.data );
+			var content = Bytes.ofString(e.data);
+			Clipboard.generalClipboard.setData(ClipboardFormats.RICH_TEXT_FORMAT, content);
 			ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.copiedtoclipboard' ) );
 
 		}
