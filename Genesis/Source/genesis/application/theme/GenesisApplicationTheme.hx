@@ -30,6 +30,7 @@
 
 package genesis.application.theme;
 
+import feathers.skins.TriangleSkin;
 import feathers.controls.Alert;
 import feathers.controls.AssetLoader;
 import feathers.controls.Button;
@@ -52,7 +53,6 @@ import feathers.layout.AnchorLayoutData;
 import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
-import feathers.layout.RelativePosition;
 import feathers.layout.VerticalAlign;
 import feathers.layout.VerticalLayout;
 import feathers.layout.VerticalLayoutData;
@@ -732,11 +732,20 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
         button.textFormat.align = TextFormatAlign.LEFT;
         button.horizontalAlign = HorizontalAlign.LEFT;
-        button.iconPosition = RelativePosition.RIGHT;
+        
+        var icon = new TriangleSkin();
+			icon.pointPosition = BOTTOM;
+			icon.fill = SolidColor(_themeColors.BtnText);
+			icon.disabledFill = SolidColor(_themeColors.Btn);
+			icon.width = 10.0;
+			icon.height = 6.0;
+		button.icon = icon;
+        
+        button.iconPosition = RIGHT;
         //var bmp = AssetManager.getTilemap( ICON_EXPAND_MORE );
         //button.icon = bmp;
         button.minGap = GRID * 4;
-
+        button.gap = Math.POSITIVE_INFINITY;
     }
 
     function _setPopUpListViewInvalidButtonStyles( button:Button ) {
@@ -755,7 +764,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
         button.textFormat.align = TextFormatAlign.LEFT;
         button.horizontalAlign = HorizontalAlign.LEFT;
-        button.iconPosition = RelativePosition.RIGHT;
+        button.iconPosition = RIGHT;
         //var bmp = AssetManager.getTilemap( ICON_EXPAND_MORE );
         //button.icon = bmp;
         button.minGap = GRID * 4;
