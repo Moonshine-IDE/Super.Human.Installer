@@ -25,9 +25,9 @@
       {% endif %}
       "network":{
          {% if domino_major_version == 12 and domino_patch_version == 1 %}
-         "hostName":"{{ settings.hostname }}.{{ settings.domain }}",
-         {% elif domino_major_version == 12 and domino_patch_version >= 2  %}
          "hostName":"{{ settings.hostname }}",
+         {% elif domino_major_version == 12 and domino_patch_version >= 2  %}
+         "hostName":"{{ settings.hostname }}.{{ settings.domain }}",
          {% endif %}
          "enablePortEncryption":true,
          "enablePortCompression":true
@@ -127,9 +127,9 @@
                   "findDocument":{
                      "Type":"Server",
                      {% if domino_major_version == 12 and domino_patch_version == 1 %}
-                     "ServerName":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
-                     {% elif domino_major_version == 12 and domino_patch_version >= 2  %}
                      "ServerName":"CN={{ settings.hostname }}/O={{ domino_organization }}"
+                     {% elif domino_major_version == 12 and domino_patch_version >= 2  %}
+                     "ServerName":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
                      {% endif %}                     
                   },
                   "computeWithForm":true,
@@ -186,9 +186,9 @@
                      "Enabled":"2",
                      "Program":"runjava",
                      {% if domino_major_version == 12 and domino_patch_version == 1 %}
-                     "Source":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
-                     {% elif domino_major_version == 12 and domino_patch_version >= 2  %}
                      "Source":"CN={{ settings.hostname }}/O={{ domino_organization }}"
+                     {% elif domino_major_version == 12 and domino_patch_version >= 2  %}
+                     "Source":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
                      {% endif %}
                   }
                },
