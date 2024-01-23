@@ -528,7 +528,10 @@ class HostsFileGenerator {
 
             //Domino Variables
             DOMINO_INSTALLER: "",
-                        
+            DOMINO_INSTALLER_VERSION: "",
+            DOMINO_INSTALLER_MAJOR_VERSION: "",
+            DOMINO_INSTALLER_MINOR_VERSION: "",
+            
             //Domino fixpack Variables
             DOMINO_INSTALLER_FIXPACK_INSTALL: false,
             DOMINO_INSTALLER_FIXPACK_VERSION: "",
@@ -593,7 +596,25 @@ class HostsFileGenerator {
 			if (r.value == "domino")
 			{
 				replace.DOMINO_INSTALLER = installerName;
-	
+						
+				if (installerVersion != null)
+				{
+					if (installerVersion.fullVersion != null)
+					{
+						replace.DOMINO_INSTALLER_VERSION = installerVersion.fullVersion;
+					}
+					
+					if (installerVersion.majorVersion != null)
+					{
+						replace.DOMINO_INSTALLER_MAJOR_VERSION = installerVersion.majorVersion;
+					}
+					
+					if (installerVersion.minorVersion != null)
+					{
+						replace.DOMINO_INSTALLER_MINOR_VERSION = installerVersion.minorVersion;
+					}
+				}
+				
 				if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
 				{
 					var hotfixesPath = new Path(r.files.hotfixes[0]);

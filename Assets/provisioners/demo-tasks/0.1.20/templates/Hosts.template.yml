@@ -120,6 +120,8 @@ hosts:
       # Domino Variables
       #domino_hash: ::DOMINO_HASH:: # "4153dfbb571b1284ac424824aa0e25e4"
       domino_server_installer_tar: ::DOMINO_INSTALLER:: # "Domino_12.0.2_Linux_English.tar"
+      domino_major_version: ::DOMINO_INSTALLER_MAJOR_VERSION::
+      domino_patch_version: ::DOMINO_INSTALLER_MINOR_VERSION::
 
       # Domino fixpack Variables
       #domino_fp_hash: ::DOMINO_FP_HASH:: # "124153dfbb571b1284ac4248"
