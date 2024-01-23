@@ -9,7 +9,7 @@ hosts:
       memory: ::RESOURCES_RAM:: # 8G
 
       box: 'STARTcloud/debian12-server'
-      box_version: 0.0.3
+      box_version: 0.0.4
       os_type: 'Debian_64'
       provider-type: virtualbox
       firmware_type: UEFI
