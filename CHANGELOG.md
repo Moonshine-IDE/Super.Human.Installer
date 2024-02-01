@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 This release reintroduce usage of Domino 12.0.1. It contains some small UI bug fixes.
 
+### Changed
+
+* Reintroduce Domino 12.0.1 ([#103](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/103))
+
 ### Fixed
 
 * Server > Advanced > Network Interface Should Look Like Dropdown ([#94](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/94))
