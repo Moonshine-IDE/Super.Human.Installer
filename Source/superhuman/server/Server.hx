@@ -647,8 +647,10 @@ class Server {
     function _batchCopyComplete() {
 
         Logger.debug( '${this}: Setting working directory to ${_serverDir}' );
-        console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.setworkingdirectory', _serverDir ) );
-
+        if (console != null) {
+        		console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.setworkingdirectory', _serverDir ) );
+		}
+		
         _saveSafeId();
 
         if ( !_provisioner.hostFileExists ) _provisioner.saveHostsFile();
@@ -659,7 +661,6 @@ class Server {
         }
 
 		_startVagrantUp();
-
     }
 
     function _saveSafeId() {
