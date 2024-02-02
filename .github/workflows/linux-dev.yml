@@ -21,14 +21,14 @@ jobs:
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1.5.1
         with:
-          haxe-version: 4.3.1
+          haxe-version: 4.3.3
 
       - name: Install dependencies
         run: | 
           haxelib install hxcpp
           haxelib git openfl https://github.com/openfl/openfl.git develop
           haxelib run openfl setup
-          haxelib install feathersui
+          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
 
       - name: Build project
