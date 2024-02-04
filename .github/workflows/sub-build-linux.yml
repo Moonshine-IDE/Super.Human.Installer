@@ -96,6 +96,7 @@ jobs:
           key: ${{ env.app_name }}-linux-bin
 
       - name: Install dependencies
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         run: >
           haxe 
           --run Build/InstallDependencies.hx 
