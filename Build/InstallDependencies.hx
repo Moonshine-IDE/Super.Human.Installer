@@ -1,7 +1,5 @@
-package build;
-
 // Usage:
-// $: haxe --run build/InstallDependencies.hx --target=windows --haxelibpath=C:/MoonshineSDKs/Haxe/lib
+// $: haxe --run InstallDependencies.hx --target=windows --haxelibpath=C:/MoonshineSDKs/Haxe/lib
 
 class InstallDependencies {
     public static function main() {

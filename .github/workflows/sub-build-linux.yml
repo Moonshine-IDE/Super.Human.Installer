@@ -97,9 +97,10 @@ jobs:
 
       - name: Install dependencies
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        working-directory: Build
         run: >
           haxe 
-          --run Build/InstallDependencies.hx 
+          --run InstallDependencies.hx 
           --target=linux
           --haxelibpath=/opt/hostedtoolcache/haxe/${{ env.haxe_version }}/x64/lib
 
