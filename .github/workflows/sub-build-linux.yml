@@ -67,7 +67,7 @@ jobs:
           replace: "${{ env.full_version }}"
 
       - name: Set up Haxe
-        uses: krdlab/setup-haxe@v1
+        uses: krdlab/setup-haxe@v1.5.1
         with:
           haxe-version: 4.3.3
   
