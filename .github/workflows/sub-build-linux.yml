@@ -113,7 +113,6 @@ jobs:
           -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
-        working-directory: NativeHaxeMaster
         run: tree Export/Development/linux/bin/
 
       - name: Upload bin
