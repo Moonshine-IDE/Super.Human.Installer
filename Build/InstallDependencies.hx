@@ -33,16 +33,16 @@ class InstallDependencies {
         Sys.command('haxelib install hxcpp --quiet --never');
         
         // Clone lime
-        Sys.command('git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime');
-        Sys.command('haxelib dev lime lime');
+        // Sys.command('git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime');
+        // Sys.command('haxelib dev lime lime');
 
         // Install lime dependencies
-        Sys.command('haxelib install format --quiet');
-        Sys.command('haxelib install hxp --quiet');
-        Sys.command('haxelib git lime-samples https://github.com/openfl/lime-samples --quiet');
+        // Sys.command('haxelib install format --quiet');
+        // Sys.command('haxelib install hxp --quiet');
+        // Sys.command('haxelib git lime-samples https://github.com/openfl/lime-samples --quiet');
 
         // Rebuild lime
-        Sys.command('haxelib run lime rebuild ${target} -release -clean');
+        // Sys.command('haxelib run lime rebuild ${target} -release -clean');
 
         // Install and setup openfl
         Sys.command('haxelib git openfl https://github.com/openfl/openfl.git develop --quiet --never');
