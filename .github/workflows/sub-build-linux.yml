@@ -58,20 +58,6 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v3
-  
-      - name: Override project.xml title
-        uses: Moonshine-IDE/xml-replace-action@v1.0
-        with:
-          filepath: "project.xml"
-          xpath: "/project/meta/@title"
-          replace: "${{ env.app_name }}"
-
-      - name: Override project.xml package
-        uses: Moonshine-IDE/xml-replace-action@v1.0
-        with:
-          filepath: "project.xml"
-          xpath: "/project/meta/@package"
-          replace: "${{ env.app_id }}"
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v1.0
@@ -80,17 +66,10 @@ jobs:
           xpath: "/project/meta/@version"
           replace: "${{ env.full_version }}"
 
-      - name: Override project.xml file
-        uses: Moonshine-IDE/xml-replace-action@v1.0
-        with:
-          filepath: "NativeHaxeMaster/project.xml"
-          xpath: "/project/app/@file"
-          replace: "${{ env.app_name }}"
-
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.3.3
   
       - name: Show haxe info
         run: |
