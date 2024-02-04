@@ -41,6 +41,7 @@ env:
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
+  haxe_version: 4.3.3
 
 jobs:
   build:
@@ -74,7 +75,7 @@ jobs:
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1.5.1
         with:
-          haxe-version: 4.3.3
+          haxe-version: ${{ env.haxe_version }}
   
       - name: Show haxe info
         run: |
@@ -95,12 +96,11 @@ jobs:
           key: ${{ env.app_name }}-linux-bin
 
       - name: Install dependencies
-        run: | 
-          haxelib install hxcpp
-          haxelib git openfl https://github.com/openfl/openfl.git develop
-          haxelib run openfl setup
-          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
-          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
+        run: >
+          haxe 
+          --run Build/InstallDependencies.hx 
+          --target=linux
+          --haxelibpath=/opt/hostedtoolcache/haxe/${{ env.haxe_version }}/x64/lib
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
