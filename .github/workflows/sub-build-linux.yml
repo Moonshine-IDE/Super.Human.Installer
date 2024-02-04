@@ -2,7 +2,45 @@ name: SUB - Build on Linux
 
 on:
   workflow_dispatch:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: choice
+        options:
+          - development
+          - production
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
   workflow_call:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: string
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
+env:
+  app_name: ${{ inputs.env == 'production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
+  app_id: net.prominic.${{ inputs.env == 'production' && 'genesis.superhumaninstaller' || 'net.prominic.genesis.superhumaninstallerdev' }}
+  full_version: ${{ inputs.version }}.${{ github.run_number }}
+  haxe_flag: ${{ inputs.env == 'production' && '-final' || '-debug' }}
 
 jobs:
   build:
@@ -11,4 +49,9 @@ jobs:
     steps:
       - name: Build info
         run: |
-          echo "Stub flow"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Env: ${{ inputs.env }}"
+          echo "Version: ${{ env.full_version }}"
+          echo "App Name: ${{ env.app_name }}"
+          echo "App ID: ${{ env.app_id }}"
+          echo "Haxe Env Flag: ${{ env.haxe_flag }}"
