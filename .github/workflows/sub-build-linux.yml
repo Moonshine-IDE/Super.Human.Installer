@@ -95,14 +95,24 @@ jobs:
           path: Export/Development/linux/bin/
           key: ${{ env.app_name }}-linux-bin
 
+      # - name: Install dependencies
+      #   if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+      #   working-directory: Build
+      #   run: >
+      #     haxe 
+      #     --run InstallDependencies.hx 
+      #     --target=linux
+      #     --haxelibpath=/opt/hostedtoolcache/haxe/${{ env.haxe_version }}/x64/lib
+
       - name: Install dependencies
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        working-directory: Build
-        run: >
-          haxe 
-          --run InstallDependencies.hx 
-          --target=linux
-          --haxelibpath=/opt/hostedtoolcache/haxe/${{ env.haxe_version }}/x64/lib
+        run: |
+          haxelib --global update haxelib --quiet --never
+          haxelib install hxcpp --quiet --never
+          haxelib git openfl https://github.com/openfl/openfl.git develop --quiet --never
+          haxelib run openfl setup --quiet --never
+          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git --quiet --never
+          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git --quiet --never          
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
