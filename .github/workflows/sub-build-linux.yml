@@ -8,8 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - development
-          - production
+          - Development
+          - Production
       version:
         description: "A Version"
         required: true
@@ -37,10 +37,10 @@ on:
         default: false
 
 env:
-  app_name: ${{ inputs.env == 'production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
-  app_id: net.prominic.genesis.${{ inputs.env == 'production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
+  app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
+  app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   full_version: ${{ inputs.version }}.${{ github.run_number }}
-  haxe_flag: ${{ inputs.env == 'production' && '-final' || '-debug' }}
+  haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
 
 jobs:
   build:
@@ -55,3 +55,85 @@ jobs:
           echo "App Name: ${{ env.app_name }}"
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
+
+          - name: Checkout repo
+          uses: actions/checkout@v3
+  
+      - name: Override project.xml title
+        uses: Moonshine-IDE/xml-replace-action@v1.0
+        with:
+          filepath: "project.xml"
+          xpath: "/project/meta/@title"
+          replace: "${{ env.app_name }}"
+
+      - name: Override project.xml package
+        uses: Moonshine-IDE/xml-replace-action@v1.0
+        with:
+          filepath: "project.xml"
+          xpath: "/project/meta/@package"
+          replace: "${{ env.app_id }}"
+
+      - name: Override project.xml version
+        uses: Moonshine-IDE/xml-replace-action@v1.0
+        with:
+          filepath: "project.xml"
+          xpath: "/project/meta/@version"
+          replace: "${{ env.full_version }}"
+
+      - name: Override project.xml file
+        uses: Moonshine-IDE/xml-replace-action@v1.0
+        with:
+          filepath: "NativeHaxeMaster/project.xml"
+          xpath: "/project/app/@file"
+          replace: "${{ env.app_name }}"
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1
+        with:
+          haxe-version: 4.2.5
+  
+      - name: Show haxe info
+        run: |
+          echo "Haxe version:"
+          haxe -version
+          echo "Haxe lib path:"
+          haxelib config
+
+      - name: Update haxelib
+        run: haxelib --global update haxelib
+
+      - name: Cache Binaries
+        id: cache-bin
+        if: ${{ inputs.caching }}
+        uses: actions/cache@v3
+        with:
+          path: Export/Development/linux/bin/
+          key: ${{ env.app_name }}-linux-bin
+
+      - name: Install dependencies
+        run: | 
+          haxelib install hxcpp
+          haxelib git openfl https://github.com/openfl/openfl.git develop
+          haxelib run openfl setup
+          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
+          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
+
+      - name: Build
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        run: >
+          haxelib run lime build project.xml linux 
+          ${{ env.haxe_flag }} 
+          -Dlogverbose 
+          -Dlogcolor 
+          -Dgitsha=${{ github.sha }} 
+          -Dgitbranch=${{ github.ref_name }}
+
+      - name: Show Build
+        working-directory: NativeHaxeMaster
+        run: tree Export/Development/linux/bin/
+
+      - name: Upload bin
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.app_name }}-linux-bin
+          path: Export/${{ inputs.env }}/linux/bin/
