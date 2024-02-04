@@ -38,7 +38,7 @@ on:
 
 env:
   app_name: ${{ inputs.env == 'production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
-  app_id: net.prominic.${{ inputs.env == 'production' && 'genesis.superhumaninstaller' || 'net.prominic.genesis.superhumaninstallerdev' }}
+  app_id: net.prominic.genesis.${{ inputs.env == 'production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'production' && '-final' || '-debug' }}
 
