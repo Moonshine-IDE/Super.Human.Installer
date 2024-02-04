@@ -1,0 +1,14 @@
+name: Manual - Release
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Build info
+        run: |
+          echo "Stub flow"
