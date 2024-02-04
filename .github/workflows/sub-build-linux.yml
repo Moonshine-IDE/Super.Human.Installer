@@ -56,8 +56,8 @@ jobs:
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
-          - name: Checkout repo
-          uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
   
       - name: Override project.xml title
         uses: Moonshine-IDE/xml-replace-action@v1.0
