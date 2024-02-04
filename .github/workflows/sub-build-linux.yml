@@ -100,7 +100,7 @@ jobs:
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         run: >
-          haxelib run lime build project.xml linux 
+          haxelib run openfl build project.xml linux 
           ${{ env.haxe_flag }} 
           -Dlogverbose 
           -Dlogcolor 
