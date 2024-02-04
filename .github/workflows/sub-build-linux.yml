@@ -57,7 +57,7 @@ jobs:
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           lfs: true
 
@@ -65,7 +65,7 @@ jobs:
         run: git lfs checkout
 
       - name: Override project.xml version
-        uses: Moonshine-IDE/xml-replace-action@v1.0
+        uses: Moonshine-IDE/xml-replace-action@v2.0
         with:
           filepath: "project.xml"
           xpath: "/project/meta/@version"
@@ -89,7 +89,7 @@ jobs:
       - name: Cache Binaries
         id: cache-bin
         if: ${{ inputs.caching }}
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: Export/Development/linux/bin/
           key: ${{ env.app_name }}-linux-bin
@@ -116,7 +116,7 @@ jobs:
         run: tree Export/Development/linux/bin/
 
       - name: Upload bin
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.app_name }}-linux-bin
           path: Export/${{ inputs.env }}/linux/bin/
