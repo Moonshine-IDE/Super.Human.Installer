@@ -41,7 +41,7 @@ env:
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
-  haxe_version: 4.2.5
+  haxe_version: 4.3.3
 
 jobs:
   build:
