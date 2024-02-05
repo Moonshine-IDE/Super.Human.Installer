@@ -1,8 +1,47 @@
-name: SUB - Build on MacOS
+name: SUB - Build on macOS
 
 on:
   workflow_dispatch:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: choice
+        options:
+          - Development
+          - Production
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
   workflow_call:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: string
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
+env:
+  app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
+  app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
+  full_version: ${{ inputs.version }}.${{ github.run_number }}
+  haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
+  haxe_version: 4.3.3
 
 jobs:
   build:
@@ -11,4 +50,75 @@ jobs:
     steps:
       - name: Build info
         run: |
-          echo "Stub flow"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Env: ${{ inputs.env }}"
+          echo "Version: ${{ env.full_version }}"
+          echo "App Name: ${{ env.app_name }}"
+          echo "App ID: ${{ env.app_id }}"
+          echo "Haxe Env Flag: ${{ env.haxe_flag }}"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: Override project.xml version
+        uses: Moonshine-IDE/xml-replace-action@v2.0
+        with:
+          filepath: "project.xml"
+          xpath: "/project/meta/@version"
+          replace: "${{ env.full_version }}"
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1.5.1
+        with:
+          haxe-version: ${{ env.haxe_version }}
+  
+      - name: Show haxe info
+        run: |
+          echo "Haxe version:"
+          haxe -version
+          echo "Haxe lib path:"
+          haxelib config
+
+      - name: Update haxelib
+        run: haxelib --global update haxelib
+
+      - name: Cache Binaries
+        id: cache-bin
+        if: ${{ inputs.caching }}
+        uses: actions/cache@v4
+        with:
+          path: Export/Development/macos/bin/
+          key: ${{ env.app_name }}-macos-bin
+
+      - name: Install dependencies
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        working-directory: Build
+        run: >
+          haxe 
+          --run InstallDependencies.hx 
+          --target=mac
+          --haxelibpath=/Users/runner/hostedtoolcache/haxe/${{ env.haxe_version }}/x64/lib       
+
+      - name: Build
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        run: >
+          haxelib run openfl build project.xml mac 
+          ${{ env.haxe_flag }} 
+          -Dlogverbose 
+          -Dlogcolor 
+          -Dgitsha=${{ github.sha }} 
+          -Dgitbranch=${{ github.ref_name }}
+
+      - name: Show Build
+        run: tree Export/Development/macos/bin/
+
+      - name: Upload bin
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.app_name }}-macos-bin
+          path: Export/${{ inputs.env }}/macos/bin/
