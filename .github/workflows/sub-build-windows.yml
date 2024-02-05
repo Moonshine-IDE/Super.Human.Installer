@@ -98,11 +98,7 @@ jobs:
       - name: Install dependencies
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
-        run: >
-          haxe 
-          --run InstallDependencies.hx 
-          --target=windows
-          --haxelibpath=C:/hostedtoolcache/windows/haxe/${{ env.haxe_version }}/x64/lib
+        run: haxe --run InstallDependencies.hx
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
