@@ -99,7 +99,8 @@ jobs:
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxe --run InstallDependencies.hx  
+          haxe --run InstallDependencies.hx
+          haxelib install hxp  
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
