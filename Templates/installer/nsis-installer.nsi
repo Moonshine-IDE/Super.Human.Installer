@@ -59,7 +59,7 @@ Section "MainSection" SEC01
   RMDir /r "$INSTDIR"
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
-  File /r ""
+  File /r "${BIN_PATH}"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
   CreateShortCut "$DESKTOP\S${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
