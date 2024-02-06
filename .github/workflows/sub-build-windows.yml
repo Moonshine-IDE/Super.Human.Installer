@@ -145,6 +145,6 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.app_name }}-Setup.exe
+          name: ${{ env.app_name }}-Setup
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
