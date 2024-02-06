@@ -153,7 +153,7 @@ jobs:
           sm-code-signing-cert-sha1-hash: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
 
       - name: Upload installer
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.app_name }}-Setup
           path: Templates/installer/${{ env.app_name }}-Setup.exe
