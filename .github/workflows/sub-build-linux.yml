@@ -146,7 +146,7 @@ jobs:
         with:
           app-name: ${{ env.app_name }}
           app-version: ${{ env.full_version }}
-          app-icon-name: icon128
+          app-icon-name: icon
           app-categories: Utility
           bin-paths: ${{ env.bin_path }}/*
           appdir-paths: Assets/icon.png
