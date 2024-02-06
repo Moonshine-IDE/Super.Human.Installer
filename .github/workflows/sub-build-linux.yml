@@ -113,13 +113,17 @@ jobs:
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        run: >
-          haxelib run openfl build project.xml linux 
-          ${{ env.haxe_flag }} 
-          -Dlogverbose 
-          -Dlogcolor 
-          -Dgitsha=${{ github.sha }} 
-          -Dgitbranch=${{ github.ref_name }}
+        run: |
+          haxelib install hxcpp
+          git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime
+          haxelib dev lime lime
+          haxelib install format
+          haxelib install hxp
+          haxelib git lime-samples https://github.com/openfl/lime-samples
+          haxelib git openfl https://github.com/openfl/openfl.git develop
+          haxelib run openfl setup
+          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
+          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
 
       - name: Show Build
         run: tree Export/Development/linux/bin/
