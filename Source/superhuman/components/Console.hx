@@ -173,6 +173,7 @@ class Console extends LayoutGroup implements IConsole {
         #if windows
         text = StringTools.replace( text, '\r\n', '\n' );
         #end
+        
         _textList.appendText( text, isError );
         this.dispatchEvent( new Event( Event.CHANGE ) );
 
@@ -227,12 +228,12 @@ class ConsoleTextArea extends TextArea {
 
     }
 
-    override function update() {
+  /*  override function update() {
 
         super.update();
         if ( _scrollToBottom ) this.scrollY = this.maxScrollY;
 
-    }
+    }*/
 
     override function baseScrollContainer_addedToStageHandler(event:Event) {
 
@@ -297,7 +298,7 @@ class ConsoleTextList extends ListView {
     }
 
     public function appendText( text:String, isError:Bool = false ) {
-
+    	
         _elements.add( { text: text, isError: isError } );
 
     }
@@ -317,10 +318,11 @@ class ConsoleTextList extends ListView {
     }
 
     override function update() {
-
+        if ( _scrollToBottom ) 
+        {
+        		this.scrollY = this.maxScrollY;
+        }
         super.update();
-        if ( _scrollToBottom ) this.scrollY = this.maxScrollY;
-
     }
 
     function _allElementsRemoved( e:FlatCollectionEvent ) { }
