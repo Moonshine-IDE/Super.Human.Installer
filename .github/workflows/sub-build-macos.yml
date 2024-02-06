@@ -42,6 +42,7 @@ env:
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
   haxe_version: 4.3.3
+  bin_path: Export/${{ inputs.env }}/macos/bin/
 
 jobs:
   build:
@@ -92,7 +93,7 @@ jobs:
         if: ${{ inputs.caching }}
         uses: actions/cache@v4
         with:
-          path: Export/Development/macos/bin/
+          path: ${{ env.bin_path }}
           key: ${{ env.app_name }}-macos-bin
 
       - name: Install dependencies
@@ -121,10 +122,53 @@ jobs:
           -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
-        run: ls -r Export/${{ inputs.env }}/macos/bin/
+        run: ls -r ${{ env.bin_path }}
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.app_name }}-macos-bin
-          path: Export/${{ inputs.env }}/macos/bin/
+          path: ${{ env.bin_path }}
+
+      - name: Sign app
+        uses: Moonshine-IDE/macos-sign-app-action@v1.0
+        with:
+          app-path: ${{ env.bin_path }}/${{ env.app_name }}.app
+          plist-path: NativeHaxeMaster/build/entitlement-non-sandbox.plist
+          mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
+          mac-application-certkey: ${{ secrets.MAC_APPLICATION_CERTKEY }}
+          mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
+
+      - name: Create installer
+        run: |
+          productbuild \
+            --version ${{ inputs.version }} \
+            --product NativeHaxeMaster/build/entitlement-non-sandbox.plist \
+            --identifier ${{ env.app_id }} \
+            --component ${{ env.bin_path }}/${{ env.app_name }}.app \
+            /Applications \
+            ./${{ env.app_name }}-Setup-Unsigned.pkg
+
+      - name: Sign installer
+        uses: Moonshine-IDE/macos-sign-installer-action@v1.0
+        with:
+          unsigned-pkg-path: ./${{ env.app_name }}-Setup-Unsigned.pkg
+          signed-pkg-path: ./${{ env.app_name }}-Setup.pkg
+          mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
+          mac-installer-certkey: ${{ secrets.MAC_INSTALLER_CERTKEY }}
+          mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
+
+      - name: Notarize installer
+        uses: Moonshine-ide/macos-notarize-action@v1.0
+        with:
+          app-path: ./${{ env.app_name }}-Setup.pkg
+          mac-notarization-apple-id: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
+          mac-notarization-team-id: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
+          mac-notarization-pass: ${{ secrets.MAC_NOTARIZATION_PASS }}
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.app_name }}-macos-installer
+          path: ./${{ env.app_name }}-Setup.pkg
+          if-no-files-found: error
