@@ -42,6 +42,7 @@ env:
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
   haxe_version: 4.3.3
+  bin_path: Export/${{ inputs.env }}/windows/bin/
 
 jobs:
   build:
@@ -92,7 +93,7 @@ jobs:
         if: ${{ inputs.caching }}
         uses: actions/cache@v4
         with:
-          path: Export/Development/windows/bin/
+          path: ${{ env.bin_path }}
           key: ${{ env.app_name }}-windows-bin
 
       - name: Install dependencies
@@ -121,13 +122,13 @@ jobs:
           -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
-        run: ls -r Export/${{ inputs.env }}/windows/bin/
+        run: ls -r ${{ env.bin_path }}
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.app_name }}-windows-bin
-          path: Export/${{ inputs.env }}/windows/bin/
+          path: ${{ env.bin_path }}
 
       - name: Create NSIS installer
         run: >
@@ -136,7 +137,7 @@ jobs:
           /DPRODUCT_VERSION=${{ env.full_version }}
           /DPRODUCT_PUBLISHER="Prominic.NET"
           /DPRODUCT_WEB_SITE="/https://superhumaninstaller.com/"
-          /DBIN_PATH="..\..\Export\${{ inputs.env }}\windows\bin\*.*"
+          /DBIN_PATH="..\..\${{ env.bin_path }}\*.*"
           /DPRODUCT_EXE=${{ env.app_name }}.exe
           /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
           /DROOT_KEY=HKCU
@@ -155,6 +156,6 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.app_name }}-Setup
+          name: ${{ env.app_name }}-windows-installer
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
