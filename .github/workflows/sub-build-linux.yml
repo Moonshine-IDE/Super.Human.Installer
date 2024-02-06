@@ -42,7 +42,7 @@ env:
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
   haxe_version: 4.3.3
-  bin_path: Export/${{ inputs.env }}/macos/bin
+  bin_path: Export/${{ inputs.env }}/linux/bin
 
 jobs:
   build:
