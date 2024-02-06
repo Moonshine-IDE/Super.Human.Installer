@@ -128,3 +128,23 @@ jobs:
         with:
           name: ${{ env.app_name }}-windows-bin
           path: Export/${{ inputs.env }}/windows/bin/
+
+      - name: Create NSIS installer
+        run: >
+          makensis 
+          /DPRODUCT_NAME=${{ env.app_name }}
+          /DPRODUCT_VERSION=${{ env.full_version }}
+          /DPRODUCT_PUBLISHER="Prominic.NET"
+          /DPRODUCT_WEB_SITE="/https://superhumaninstaller.com/"
+          /DBIN_PATH="..\..\Export\${{ inputs.env }}\windows\bin\*.*"
+          /DPRODUCT_EXE=${{ env.app_name }}.exe
+          /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
+          /DROOT_KEY=HKCU
+          Templates/installer/nsis-installer.nsi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.app_name }}-Setup.exe
+          path: Templates/installer/${{ env.app_name }}-Setup.exe
+          if-no-files-found: error
