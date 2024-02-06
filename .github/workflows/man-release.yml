@@ -8,8 +8,8 @@ on:
         required: true
         type: choice
         options:
-          - development
-          - production
+          - Development
+          - Production
       version:
         description: "A Version"
         required: true
