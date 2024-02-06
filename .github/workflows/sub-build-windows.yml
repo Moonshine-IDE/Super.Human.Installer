@@ -159,3 +159,29 @@ jobs:
           name: ${{ env.app_name }}-windows-installer
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
+
+      - name: Copy files to choco
+        run: |
+          cp Templates/installer/SuperHumanInstallerDev-Setup.exe Templates/chocolatey-dev/tools/
+          cp LICENSE.MD Templates/chocolatey-dev/
+
+      - name: Create chocko package
+        env:
+          choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
+          nupkg: ${{ inputs.env == 'Production' && 'superhumaninstaller*.nupkg' || 'superhumaninstallerdev*.nupkg' }}
+        run: |
+          choco pack `
+            --version ${{ inputs.version }} `
+            --out Templates/${{ env.choco_dir }}/ `
+            Templates/${{ env.choco_dir }}/${{ env.app_name }}.nuspec
+          mv `
+            .\Templates\${{ env.choco_dir }}\superhumaninstallerdev*.nupkg `
+            .\Templates\${{ env.choco_dir }}\${{ env.app_name }}-Choco.nupkg
+
+      - name: Upload choco package
+        uses: actions/upload-artifact@v4
+        env:
+          choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
+        with:
+          name: ${{ env.app_name }}-Choco
+          path: Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg
