@@ -42,6 +42,7 @@ env:
   full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
   haxe_version: 4.3.3
+  bin_path: Export/${{ inputs.env }}/macos/bin
 
 jobs:
   build:
@@ -103,7 +104,7 @@ jobs:
         if: ${{ inputs.caching }}
         uses: actions/cache@v4
         with:
-          path: Export/Development/linux/bin/
+          path: ${{ env.bin_path }}
           key: ${{ env.app_name }}-linux-bin
 
       - name: Install dependencies
@@ -132,10 +133,30 @@ jobs:
           -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
-        run: tree Export/Development/linux/bin/
+        run: tree ${{ env.bin_path }}
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.app_name }}-linux-bin
-          path: Export/${{ inputs.env }}/linux/bin/
+          path: ${{ env.bin_path }}
+
+      - name: Create AppImage
+        uses: Moonshine-IDE/create-appimage-action@main
+        with:
+          app-name: ${{ env.app_name }}
+          app-version: ${{ env.full_version }}
+          app-icon-name: icon128
+          app-categories: Utility
+          bin-paths: ${{ env.bin_path }}/*
+          appdir-paths: Assets/icon.png
+          lib-paths:
+          share-paths:
+          output-path: Build/${{ env.app_name }}-x86_64.AppImage
+  
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.app_name }}-linux-installer
+          path: Build/${{ env.app_name }}-x86_64.AppImage
+          if-no-files-found: error
