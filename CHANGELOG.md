@@ -3,6 +3,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.8.21]
+
+This release reintroduce usage of Domino 12.0.1. It contains some small UI bug fixes.
+
+### Changed
+
+* Reintroduce Domino 12.0.1 ([#103](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/103))
+
+### Fixed
+
+* Server > Advanced > Network Interface Should Look Like Dropdown ([#94](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/94))
+* Add dropdown arrow in Settings of server -> Advance -> Network Interface ([#96](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/96))
+
 ## Super Human Installer [0.8.20]
 
 The release update source code of application to use newest Haxe 4.3.1. It contains some small bug fixes.

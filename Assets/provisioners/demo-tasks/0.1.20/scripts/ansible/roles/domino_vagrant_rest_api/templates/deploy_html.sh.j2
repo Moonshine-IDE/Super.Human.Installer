@@ -30,7 +30,12 @@ fi
 sudo su -c "mkdir -p '$TARGET_FULL'" - domino
 
 # unzip the application
-sudo su -c "unzip -q -d '$TARGET_FULL' '$ZIP_FILE_CHOWN'" - domino
+sudo su -c "unzip -q -d '$TARGET_FULL' '$ZIP_FILE_CHOWN'" - domino || EXIT_CODE=$?
+if [ "$EXIT_CODE" -gt 1]; then
+    echo "unzip failed with exit code $EXIT_CODE";
+    exit $EXIT_CODE;
+fi
+sudo chown -R domino.domino "$TARGET_FULL"
 
 # Cleanup
 sudo rm -f "$ZIP_FILE_CHOWN"
