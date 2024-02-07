@@ -104,4 +104,5 @@ jobs:
             ${{ env.app_name }}-x86_64.AppImage
             ${{ env.app_name }}-Setup.pkg
             ${{ env.app_name }}-Setup.exe
+            ${{ env.app_name }}-Choco.nupkg
           fail_on_unmatched_files: true
