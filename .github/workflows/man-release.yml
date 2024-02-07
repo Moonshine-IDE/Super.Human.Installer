@@ -92,8 +92,22 @@ jobs:
         with:
           name: ${{ env.app_name }}-macos-installer
 
-      - name: Debug artifacts
-        run: ls .
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.1.1
+
+      - name: Generate buildinfo
+        uses: devops-actions/json-to-file@v1.0.3
+        with:
+          json: |
+            {
+              "workflow": "development",
+              "version": "${{ env.full_version }}",
+              "branch": "${{ github.ref_name }}",
+              "commit_sha": "${{ github.sha }}",
+              "build_date": "${{ steps.current-time.outputs.readableTime }}"
+            }
+          filename: buildinfo.json
 
       - name: Create release
         uses: softprops/action-gh-release@v1
@@ -110,4 +124,5 @@ jobs:
             ${{ env.app_name }}-Setup.pkg
             ${{ env.app_name }}-Setup.exe
             ${{ env.app_name }}-Choco.nupkg
+            buildinfo.json
           fail_on_unmatched_files: true
