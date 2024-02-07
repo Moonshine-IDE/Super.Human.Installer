@@ -82,6 +82,11 @@ jobs:
         with:
           name: ${{ env.app_name }}-windows-installer
 
+      - name: Download windows chocolatey package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.app_name }}-Choco
+
       - name: Download macos installer
         uses: actions/download-artifact@v4
         with:
