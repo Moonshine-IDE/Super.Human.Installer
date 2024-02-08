@@ -9,5 +9,11 @@ restinterface:
         - upload-html
         - java-domino-gradle
         - nsfodp
-    serverName: demo/DEMO
-    baseURL: https://127.0.0.1:{{ domino_vagrant_rest_api_port_forwards[0].guest }}
+        - import-domino-json
+{% if domino_major_version == 12 and domino_patch_version == 1 %}
+    serverName: {{ settings.hostname }}/{{ domino_organization }}
+{% else %}
+    serverName: {{ settings.hostname }}.{{ settings.domain }}/{{ domino_organization }}
+{% endif %}
+    baseURL: https://domino.{{ settings.hostname }}.{{ settings.domain|lower }}
+    dominoVersion: {{ domino_major_version }}.{{ domino_minor_version }}.{{ domino_patch_version }}

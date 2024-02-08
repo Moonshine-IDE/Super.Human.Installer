@@ -93,6 +93,7 @@
     - { src: 'deploy_database.sh.j2', dest: '/opt/domino/scripts/deploy_database.sh', owner: '{{ service_user }}' }
     - { src: 'deploy_html.sh.j2', dest: '/opt/domino/scripts/deploy_html.sh', owner: '{{ service_user }}' }
     - { src: 'run_dxl_importer.sh.j2', dest: '/opt/domino/scripts/run_dxl_importer.sh', owner: '{{ service_user }}'}
+    - { src: 'import_json_documents.sh.j2', dest: '/opt/domino/scripts/import_json_documents.sh', owner: '{{ service_user }}'}
 
 -
   name: "Placing Configuration and scripts"
