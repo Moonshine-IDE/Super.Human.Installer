@@ -134,7 +134,6 @@ jobs:
         uses: Moonshine-IDE/macos-sign-app-action@v1.0
         with:
           app-path: ${{ env.bin_path }}/${{ env.app_name }}.app
-          plist-path: Templates/installer/SuperHumanInstaller.template.plist
           mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
           mac-application-certkey: ${{ secrets.MAC_APPLICATION_CERTKEY }}
           mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
