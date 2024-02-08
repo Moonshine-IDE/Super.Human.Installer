@@ -2,13 +2,127 @@ name: Manual - Release
 
 on:
   workflow_dispatch:
-  workflow_call:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: choice
+        options:
+          - Development
+          - Production
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
+env:
+  app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
+  app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
+  full_version: ${{ inputs.version }}.${{ github.run_number }}
+  tag: v${{ inputs.version }}${{ inputs.env == 'Production' && ' ' || '-dev' }}
 
 jobs:
-  build:
+  build-linux:
+    name: Build on Linux
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-linux.yml@master
+    secrets: inherit
+    with:
+      env: ${{ inputs.env }}
+      version: ${{ inputs.version }}
+      caching: ${{ inputs.caching }}
+
+  build-windows:
+    name: Build on Windows
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@master
+    secrets: inherit
+    with:
+      env: ${{ inputs.env }}
+      version: ${{ inputs.version }}
+      caching: ${{ inputs.caching }}
+
+  build-macos:
+    name: Build on MacOS
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-macos.yml@master
+    secrets: inherit
+    with:
+      env: ${{ inputs.env }}
+      version: ${{ inputs.version }}
+      caching: ${{ inputs.caching }}
+
+  release:
+    name: Draft Release
+    needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
 
     steps:
-      - name: Build info
+      - name: Print info
         run: |
-          echo "Stub flow"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Env: ${{ inputs.env }}"
+          echo "Version: ${{ env.full_version }}"
+          echo "App Name: ${{ env.app_name }}"
+          echo "App ID: ${{ env.app_id }}"
+          echo "Tag: ${{ env.tag }}"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download linux installer
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.app_name }}-linux-installer
+
+      - name: Download windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.app_name }}-windows-installer
+
+      - name: Download windows chocolatey package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.app_name }}-Choco
+
+      - name: Download macos installer
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.app_name }}-macos-installer
+
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.1.1
+
+      - name: Generate buildinfo
+        uses: devops-actions/json-to-file@v1.0.3
+        with:
+          json: |
+            {
+              "workflow": "development",
+              "version": "${{ env.full_version }}",
+              "branch": "${{ github.ref_name }}",
+              "commit_sha": "${{ github.sha }}",
+              "build_date": "${{ steps.current-time.outputs.readableTime }}"
+            }
+          filename: buildinfo.json
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Super.Human.Installer v${{ inputs.version }} ${{ inputs.env }}
+          tag_name: ${{ env.tag }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            This is a ${{ inputs.env }} release of Super.Human.Installer.
+          draft: true
+          prerelease: ${{ inputs.env == 'Development' }}
+          files: |
+            ${{ env.app_name }}-x86_64.AppImage
+            ${{ env.app_name }}-Setup.pkg
+            ${{ env.app_name }}-Setup.exe
+            ${{ env.app_name }}-Choco.nupkg
+            buildinfo.json
+          fail_on_unmatched_files: true

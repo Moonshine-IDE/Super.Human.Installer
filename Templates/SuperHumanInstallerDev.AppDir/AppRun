@@ -1,7 +1,0 @@
-#!/bin/bash
-
-APPRUN=$(readlink -f "$0")
-MOUNTPOINT=${APPRUN%/*}
-BINDIR=${MOUNTPOINT}/usr/bin
-cd ${BINDIR}
-./SuperHumanInstallerDev

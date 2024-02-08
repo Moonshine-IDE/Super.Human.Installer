@@ -2,7 +2,47 @@ name: SUB - Build on Linux
 
 on:
   workflow_dispatch:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: choice
+        options:
+          - Development
+          - Production
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
   workflow_call:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: string
+      version:
+        description: "A Version"
+        required: true
+        type: string
+      caching:
+        description: "Use caching"
+        required: true
+        type: boolean
+        default: false
+
+env:
+  app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
+  app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
+  full_version: ${{ inputs.version }}.${{ github.run_number }}
+  haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
+  haxe_version: 4.3.3
+  bin_path: Export/${{ inputs.env }}/linux/bin
 
 jobs:
   build:
@@ -11,4 +51,112 @@ jobs:
     steps:
       - name: Build info
         run: |
-          echo "Stub flow"
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Env: ${{ inputs.env }}"
+          echo "Version: ${{ env.full_version }}"
+          echo "App Name: ${{ env.app_name }}"
+          echo "App ID: ${{ env.app_id }}"
+          echo "Haxe Env Flag: ${{ env.haxe_flag }}"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
+      - name: Override project.xml version
+        uses: Moonshine-IDE/xml-replace-action@v2.0
+        with:
+          filepath: "project.xml"
+          xpath: "/project/meta/@version"
+          replace: "${{ env.full_version }}"
+
+      - name: Install missing system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libxinerama-dev
+          sudo apt-get install libxrandr-dev
+          sudo apt-get install mesa-common-dev
+          sudo apt-get install libasound2-dev
+          sudo apt-get install gcc-multilib
+          sudo apt-get install g++-multilib
+          sudo apt-get install libfuse2
+
+      - name: Set up Haxe
+        uses: krdlab/setup-haxe@v1.5.1
+        with:
+          haxe-version: ${{ env.haxe_version }}
+  
+      - name: Show haxe info
+        run: |
+          echo "Haxe version:"
+          haxe -version
+          echo "Haxe lib path:"
+          haxelib config
+
+      - name: Update haxelib
+        run: haxelib --global update haxelib
+
+      - name: Cache Binaries
+        id: cache-bin
+        if: ${{ inputs.caching }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.bin_path }}
+          key: ${{ env.app_name }}-linux-bin
+
+      - name: Install dependencies
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        working-directory: Build
+        run: |
+          haxelib install hxcpp
+          git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime
+          haxelib dev lime lime
+          haxelib install format
+          haxelib install hxp
+          haxelib git lime-samples https://github.com/openfl/lime-samples
+          haxelib git openfl https://github.com/openfl/openfl.git develop
+          haxelib run openfl setup
+          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
+          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git        
+
+      - name: Build
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        run: >
+          haxelib run openfl build project.xml linux 
+          ${{ env.haxe_flag }} 
+          -Dlogverbose 
+          -Dlogcolor 
+          -Dgitsha=${{ github.sha }} 
+          -Dgitbranch=${{ github.ref_name }}
+
+      - name: Show Build
+        run: tree ${{ env.bin_path }}
+
+      - name: Upload bin
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.app_name }}-linux-bin
+          path: ${{ env.bin_path }}
+
+      - name: Create AppImage
+        uses: Moonshine-IDE/create-appimage-action@main
+        with:
+          app-name: ${{ env.app_name }}
+          app-version: ${{ env.full_version }}
+          app-icon-name: icon
+          app-categories: Utility
+          bin-paths: ${{ env.bin_path }}/*
+          appdir-paths: Assets/icon.png
+          lib-paths:
+          share-paths:
+          output-path: Build/${{ env.app_name }}-x86_64.AppImage
+  
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.app_name }}-linux-installer
+          path: Build/${{ env.app_name }}-x86_64.AppImage
+          if-no-files-found: error
