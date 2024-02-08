@@ -2,10 +2,8 @@ name: Update versioninfo
 
 on:
   workflow_dispatch:
-
-env:
-  environment: development
-  tag: 0.8.5-dev
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -34,8 +32,7 @@ jobs:
         run: |
           python DevOps/generate-vinfo.py
           mkdir site
-          mkdir site/test
-          mv versioninfo.json site/test/versioninfo.json
+          mv versioninfo.json site/versioninfo.json
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
