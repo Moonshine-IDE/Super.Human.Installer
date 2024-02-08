@@ -178,7 +178,7 @@ jobs:
             --out Templates/${{ env.choco_dir }}/ `
             Templates/${{ env.choco_dir }}/${{ env.app_name }}.nuspec
           mv `
-            .\Templates\${{ env.choco_dir }}\superhumaninstallerdev*.nupkg `
+            .\Templates\${{ env.choco_dir }}\${{ env.nupkg }}*.nupkg `
             .\Templates\${{ env.choco_dir }}\${{ env.app_name }}-Choco.nupkg
 
       - name: Upload choco package
