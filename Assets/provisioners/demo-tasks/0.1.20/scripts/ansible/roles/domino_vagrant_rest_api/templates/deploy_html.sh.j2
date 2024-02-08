@@ -19,7 +19,7 @@ echo "Deploying $ZIP_FILE to $TARGET_FULL"
 TIMESTAMP=`date +%Y%m%d%H%M%S`
 ZIP_FILE_CHOWN=${ZIP_FILE}.${TIMESTAMP}.zip
 cp "$ZIP_FILE" "$ZIP_FILE_CHOWN"
-sudo chown domino.domino "$ZIP_FILE_CHOWN"
+sudo chown {{ domino_user }}:{{ domino_group }} "$ZIP_FILE_CHOWN"
 
 # cleanup existing application
 if [ -e "$TARGET_FULL" ]; then
@@ -30,12 +30,17 @@ fi
 sudo su -c "mkdir -p '$TARGET_FULL'" - domino
 
 # unzip the application
-sudo su -c "unzip -q -d '$TARGET_FULL' '$ZIP_FILE_CHOWN'" - domino || EXIT_CODE=$?
-if [ "$EXIT_CODE" -gt 1]; then
-    echo "unzip failed with exit code $EXIT_CODE";
-    exit $EXIT_CODE;
-fi
-sudo chown -R domino.domino "$TARGET_FULL"
+# If the caller was on Windows, the unzip command can return exit code 1 for a
+# warning on the file separators.  This needs to be caught.
+sudo su -c "unzip -q -d '$TARGET_FULL' '$ZIP_FILE_CHOWN' 2>&1" - domino || {
+    EXIT_CODE=$?
+    echo "Exit Code:  '$EXIT_CODE'"
+    if [ $EXIT_CODE -gt 1 ]; then
+        echo "unzip failed with exit code $EXIT_CODE";
+        exit $EXIT_CODE;
+    fi
+}
+sudo chown -R {{ domino_user }}:{{ domino_group }} "$TARGET_FULL"
 
 # Cleanup
 sudo rm -f "$ZIP_FILE_CHOWN"

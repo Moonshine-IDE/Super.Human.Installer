@@ -23,12 +23,17 @@ mkdir -p $TMP_DIR
 
 # unzip and setup project
 cd $TMP_DIR
-unzip $ZIP_FILE || EXIT_CODE=$?
-if [ "$EXIT_CODE" -gt 1]; then
-    echo "unzip failed with exit code $EXIT_CODE";
-    exit $EXIT_CODE;
-fi
-sudo chown -R vagrant.vagrant .
+# If the caller was on Windows, the unzip command can return exit code 1 for a
+# warning on the file separators.  This needs to be caught.
+unzip $ZIP_FILE 2>&1 || {
+    EXIT_CODE=$?
+    echo "Exit Code:  '$EXIT_CODE'"
+    if [ $EXIT_CODE -gt 1 ]; then
+        echo "unzip failed with exit code $EXIT_CODE";
+        exit $EXIT_CODE;
+    fi
+}
+sudo chown -R {{ service_user }}:{{ service_group }} .
 
 # Read default user password
 PASSWORD=$(jq -r '.serverSetup | .admin | .password' {{ domino_home_dir }}/setup.json)
