@@ -131,7 +131,7 @@ jobs:
           path: ${{ env.bin_path }}
 
       - name: Sign app
-        uses: Moonshine-IDE/macos-sign-app-action@v1.0
+        uses: Moonshine-IDE/macos-sign-app-action@main
         with:
           app-path: ${{ env.bin_path }}/${{ env.app_name }}.app
           mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
