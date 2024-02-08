@@ -34,7 +34,8 @@ jobs:
         run: |
           python DevOps/generate-vinfo.py
           mkdir site
-          mv versioninfo.json site/versioninfo.json
+          mkdir site/test
+          mv versioninfo.json site/test/versioninfo.json
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
