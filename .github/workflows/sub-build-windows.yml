@@ -161,9 +161,12 @@ jobs:
           if-no-files-found: error
 
       - name: Copy files to choco
+        env:
+          choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
+          nupkg: ${{ inputs.env == 'Production' && 'superhumaninstaller*.nupkg' || 'superhumaninstallerdev*.nupkg' }}
         run: |
-          cp Templates/installer/SuperHumanInstallerDev-Setup.exe Templates/chocolatey-dev/tools/
-          cp LICENSE.MD Templates/chocolatey-dev/
+          cp Templates/installer/${{ env.app_name }}-Setup.exe Templates/${{ env.choco_dir }}/tools/
+          cp LICENSE.MD Templates/${{ env.choco_dir }}/
 
       - name: Create chocko package
         env:
