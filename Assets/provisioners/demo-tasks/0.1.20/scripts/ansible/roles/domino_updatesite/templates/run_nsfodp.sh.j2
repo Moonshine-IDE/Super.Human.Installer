@@ -34,6 +34,10 @@ unzip $ZIP_FILE 2>&1 || {
     fi
 }
 sudo chown -R {{ service_user }}:{{ service_group }} .
+# I found some cases on Windows where directories were missing the "x" permission,
+# This permission is required to access the subdirectories or files.
+# This command makes sure this permission is set for all subdirectories.
+sudo find . -type d -exec chmod 744 {} +
 
 # Read default user password
 PASSWORD=$(jq -r '.serverSetup | .admin | .password' {{ domino_home_dir }}/setup.json)

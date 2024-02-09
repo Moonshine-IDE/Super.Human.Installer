@@ -41,6 +41,10 @@ sudo su -c "unzip -q -d '$TARGET_FULL' '$ZIP_FILE_CHOWN' 2>&1" - domino || {
     fi
 }
 sudo chown -R {{ domino_user }}:{{ domino_group }} "$TARGET_FULL"
+# I found some cases on Windows where directories were missing the "x" permission,
+# This permission is required to access the subdirectories or files.
+# This command makes sure this permission is set for all subdirectories.
+sudo find "$TARGET_FULL" -type d -exec chmod 744 {} +
 
 # Cleanup
 sudo rm -f "$ZIP_FILE_CHOWN"
