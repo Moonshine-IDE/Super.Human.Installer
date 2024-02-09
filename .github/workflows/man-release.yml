@@ -23,7 +23,6 @@ on:
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
-  full_version: ${{ inputs.version }}.${{ github.run_number }}
   tag: v${{ inputs.version }}${{ inputs.env == 'Production' && ' ' || '-dev' }}
 
 jobs:
@@ -64,7 +63,7 @@ jobs:
         run: |
           echo "Ref: ${{ github.ref_name }}"
           echo "Env: ${{ inputs.env }}"
-          echo "Version: ${{ env.full_version }}"
+          echo "Version: ${{ inputs.version }}"
           echo "App Name: ${{ env.app_name }}"
           echo "App ID: ${{ env.app_id }}"
           echo "Tag: ${{ env.tag }}"
@@ -102,7 +101,7 @@ jobs:
           json: |
             {
               "workflow": "development",
-              "version": "${{ env.full_version }}",
+              "version": "${{ inputs.version }}",
               "branch": "${{ github.ref_name }}",
               "commit_sha": "${{ github.sha }}",
               "build_date": "${{ steps.current-time.outputs.readableTime }}"

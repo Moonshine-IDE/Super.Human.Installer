@@ -39,7 +39,6 @@ on:
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
-  full_version: ${{ inputs.version }}.${{ github.run_number }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
   haxe_version: 4.3.3
   bin_path: Export/${{ inputs.env }}/macos/bin/
@@ -53,7 +52,7 @@ jobs:
         run: |
           echo "Ref: ${{ github.ref_name }}"
           echo "Env: ${{ inputs.env }}"
-          echo "Version: ${{ env.full_version }}"
+          echo "Version: ${{ inputs.version }}"
           echo "App Name: ${{ env.app_name }}"
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
@@ -71,7 +70,7 @@ jobs:
         with:
           filepath: "project.xml"
           xpath: "/project/meta/@version"
-          replace: "${{ env.full_version }}"
+          replace: "${{ inputs.version }}"
 
       - name: Set up Haxe
         uses: krdlab/setup-haxe@v1.5.1
