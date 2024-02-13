@@ -39,7 +39,7 @@ on:
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
-  haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug' }}
+  haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_process_logs' }}
   haxe_version: 4.3.3
   bin_path: Export/${{ inputs.env }}/linux/bin
 
