@@ -154,3 +154,10 @@ Example of a command line launch with parameters:
 
 `SuperHumanInstaller.exe --loglevel=warning --mr`
 
+### Log locations
+
+- **SuperHumanInstaller [macOS]:** `/Users/$USER/Library/Application Support/SuperHumanInstaller`
+- **SuperHumanInstaller [Windows]:** ``
+
+- **SuperHumanInstallerDev [macOS]:** `/Users/$USER/Library/Application Support/SuperHumanInstallerDev`
+- **SuperHumanInstallerDev [Windows]:** ``
