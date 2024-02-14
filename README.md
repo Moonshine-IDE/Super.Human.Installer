@@ -157,7 +157,7 @@ Example of a command line launch with parameters:
 ### Log locations
 
 - **SuperHumanInstaller [macOS]:** `/Users/$USER/Library/Application Support/SuperHumanInstaller`
-- **SuperHumanInstaller [Windows]:** ``
+- **SuperHumanInstaller [Windows]:** `%AppData%\SuperHumanInstaller`
 
 - **SuperHumanInstallerDev [macOS]:** `/Users/$USER/Library/Application Support/SuperHumanInstallerDev`
-- **SuperHumanInstallerDev [Windows]:** ``
+- **SuperHumanInstallerDev [Windows]:** `%AppData%\SuperHumanInstallerDev`
