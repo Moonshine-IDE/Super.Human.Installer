@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.9.0]
+
+This release contains small updates in existing Domino provisioner 0.1.20. 
+
+### Changed
+
+* Temporary Update for Domino provisioner 0.1.20 ([#110](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/110))
+
 ## Super Human Installer [0.8.21]
 
 This release reintroduce usage of Domino 12.0.1. It contains some small UI bug fixes.
