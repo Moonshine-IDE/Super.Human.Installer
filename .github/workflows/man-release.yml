@@ -24,6 +24,7 @@ env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   tag: v${{ inputs.version }}${{ inputs.env == 'Production' && ' ' || '-dev' }}
+  workflow: ${{ inputs.env == 'Production' && 'production' || 'development' }}
 
 jobs:
   build-linux:
@@ -100,7 +101,7 @@ jobs:
         with:
           json: |
             {
-              "workflow": "development",
+              "workflow": "${{ env.workflow }}",
               "version": "${{ inputs.version }}",
               "branch": "${{ github.ref_name }}",
               "commit_sha": "${{ github.sha }}",
