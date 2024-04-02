@@ -45,7 +45,7 @@ class GenesisFormTextInput extends TextInput implements IGenesisFormValidatedIte
 
     public function new( text:String = "", ?prompt:String, ?validationKey:EReg, ?isEmptyValid:Bool ) {
 
-        super( text, prompt );
+        super( text, prompt, textField_changeHandler);
 
         this.validationKey = validationKey;
         this._isEmptyValid = isEmptyValid;
@@ -66,7 +66,7 @@ class GenesisFormTextInput extends TextInput implements IGenesisFormValidatedIte
 
     }
 
-    override function textField_changeHandler(event:Event) {
+    function textField_changeHandler(event:Event) {
 
         super.textField_changeHandler(event);
 
