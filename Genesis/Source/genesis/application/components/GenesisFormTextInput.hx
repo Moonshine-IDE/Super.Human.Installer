@@ -66,9 +66,7 @@ class GenesisFormTextInput extends TextInput implements IGenesisFormValidatedIte
 
     }
 
-    function textField_changeHandler(event:Event) {
-
-        super.textField_changeHandler(event);
+    public function textField_changeHandler(event:Event) {
 
         if ( this.variant != null ) this.variant = null;
 
