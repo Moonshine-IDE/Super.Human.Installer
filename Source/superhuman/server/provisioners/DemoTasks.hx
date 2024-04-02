@@ -209,12 +209,10 @@ class DemoTasks extends AbstractProvisioner {
         super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath, server );
 
         _versionFile = "version.rb";
-        _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-
-        if ( _version == "0.0.0" && _sourcePath != null ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
-
+        
+        _setVersionFromFiles();
+ 
         _onProvisioningFileChanged = new List();
-
     }
 
     public function calculateTotalNumberOfTasks() {
@@ -294,13 +292,11 @@ class DemoTasks extends AbstractProvisioner {
 
         super.reinitialize( sourcePath );
 
-        _version = getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile );
-        if ( _version == "0.0.0" ) _version = getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile );
+        _setVersionFromFiles();
 
         Logger.debug( '${this}: Reinitialized' );
-
     }
-
+	
     public function saveHostsFile() {
 
         if ( _server.isValid() ) this._saveHostsFile();
@@ -342,7 +338,7 @@ class DemoTasks extends AbstractProvisioner {
 
     public override function toString():String {
 
-        return '[DemoTasks(v${this._version})]';
+        return '[DemoTasks(v${this.version})]';
 
     }
 
@@ -370,6 +366,37 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
+    function _setVersionFromFiles() {
+    		var versions:Array<Dynamic> = [];
+        	var ver:Dynamic;
+        	
+        	if (_targetPath != null)
+        	{
+        		ver = {path: Path.addTrailingSlash( _targetPath ) + _versionFile , 
+        					   version: getVersionFromFile( Path.addTrailingSlash( _targetPath ) + _versionFile )};
+        		versions.push(ver);
+        	}
+        	
+        if (_sourcePath != null ) 
+        {
+        		ver = {path: Path.addTrailingSlash( _targetPath ) + _versionFile, 
+        			   version: getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile )};
+        		versions.push(ver);
+		}
+
+        versions = versions.filter(v -> v.version != 0);
+        
+        if (versions.length > 0) 
+        {
+        		var fullVer:Dynamic = versions.shift();
+        		_version = fullVer.version;
+    		}
+    		else
+    		{
+    			_version = "0.0.0";
+    		}
+    }
+    
     function _fileCopied( pathPair:PathPair, canCopy:Bool ) {
 
         if ( console != null ) {
@@ -525,12 +552,15 @@ class HostsFileGenerator {
             USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
             DOMINO_SERVER_CLUSTERMATES: 0,
             CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
-
+			
+		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
+			
             //Domino Variables
             DOMINO_INSTALLER: "",
             DOMINO_INSTALLER_VERSION: "",
             DOMINO_INSTALLER_MAJOR_VERSION: "",
             DOMINO_INSTALLER_MINOR_VERSION: "",
+            DOMINO_INSTALLER_PATCH_VERSION: "",
             
             //Domino fixpack Variables
             DOMINO_INSTALLER_FIXPACK_INSTALL: false,
@@ -543,6 +573,7 @@ class HostsFileGenerator {
             DOMINO_INSTALLER_HOTFIX: "",
             
             //Leap Variables
+            LEAP_INSTALLED_CHECK: false,
             LEAP_INSTALLER: "",
             LEAP_INSTALLER_VERSION: "",
 		    
@@ -576,6 +607,7 @@ class HostsFileGenerator {
             ROLE_VERSE: "",
             ROLE_APPDEVPACK: "",
             ROLE_RESTAPI: "",
+            ROLE_VOLTMX: "",
             ROLE_STARTCLOUD_QUICK_START: "",
             ROLE_STARTCLOUD_HAPROXY: "",
             ROLE_STARTCLOUD_VAGRANT_README: "",
@@ -613,6 +645,11 @@ class HostsFileGenerator {
 					{
 						replace.DOMINO_INSTALLER_MINOR_VERSION = installerVersion.minorVersion;
 					}
+					
+					if (installerVersion.patchVersion != null)
+					{
+						replace.DOMINO_INSTALLER_PATCH_VERSION = installerVersion.minorVersion;
+					}
 				}
 				
 				if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
@@ -637,7 +674,7 @@ class HostsFileGenerator {
             if ( r.value == "leap" ) {
 
                 if ( r.enabled ) {
-
+                	    replace.LEAP_INSTALLED_CHECK = true;
                     replaceWith = "- name: domino_leap";
 
                 } else {
@@ -830,7 +867,7 @@ class HostsFileGenerator {
             if ( r.value == "leap" ) {
 
                 if ( r.enabled ) {
-
+					
                     replaceWith = "- name: domino_leap";
                     if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_LEAP );
 

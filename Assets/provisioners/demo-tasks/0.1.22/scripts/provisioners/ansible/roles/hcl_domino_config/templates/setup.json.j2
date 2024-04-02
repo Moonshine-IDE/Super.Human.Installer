@@ -1,0 +1,246 @@
+{
+    "serverSetup":{
+        "server":{
+            {% if existing_server_id is defined and is_additional_server %}
+            "type":"additional",
+            "IDFilePath":"{{ domino_home_dir }}/ids/{{ existing_server_id }}",
+            {% else %}
+            "type":"first",
+            {% endif %}
+            "name":"{{ settings.hostname }}.{{ settings.domain }}",
+            "domainName":"{{ domino_organization }}",
+            "title":"{{ settings.hostname }}",
+            "password":null,
+            "minPasswordLength":5,
+            {% if existing_server_id is defined and use_existing_server_id %}
+            "IDFilePath":"{{ domino_home_dir }}/ids/{{ existing_server_id }}",
+            "useExistingServerID": {{ use_existing_server_id }},
+            {% endif %}
+            "serverTasks":"HTTP"
+        },
+        {% if existing_server_ip is defined and existing_server is defined and is_additional_server %}
+        "existingServer": {
+            "CN":  "{{ existing_server }}",
+            "hostNameOrIP": "{{ existing_server_ip }}"
+        },
+        {% endif %}
+        "network":{
+            "hostName":"{{ settings.hostname }}.{{ settings.domain }}",
+            "enablePortEncryption":true,
+            "enablePortCompression":true
+        },
+        "org":{
+            "countryCode":null,
+            "orgName":"{{ domino_organization }}",
+            "certifierPassword":"{{ domino_admin_notes_id_password }}",
+            "orgUnitName":null,
+            "orgUnitPassword":null
+        },
+        "admin":{
+            {% if not is_additional_server %}
+            "firstName":"{{ domino_admin_user_first_name }}",
+            "middleName":null,
+            "lastName":"{{ domino_admin_user_last_name }}",
+            "password":"{{ domino_admin_notes_id_password }}",
+            "IDFilePath":"{{ domino_home_dir }}/ids/{{ domino_admin_user_id }}"
+            {% endif %}
+            {% if existing_server_id is defined and is_additional_server %}
+            "CN": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}"
+            {% endif %}
+        },
+        "notesINI":{
+            "ServerTasks":"{{ domino_notesini_servertasks }}",
+            "LOG_REPLICATION":"1",
+            "LOG_SESSIONS":"1",
+            "iNotes_WA_EnableActionsInArchive":"1",
+            "JavaUserClassesExt":"GJA_Genesis",
+            "GJA_Genesis":"JavaAddin/Genesis/{{ genesis_jar }}",
+            "HTTPEnableMethods":"GET,POST,PUT,DELETE,HEAD,OPTIONS",
+            "HTTPJVMMaxHeapSize":"2048M",
+            "HTTPJVMMaxHeapSizeSet":"1"
+        },
+        {% if not is_additional_server %}
+        "autoRegister":{
+            "count": {{ domino_server_clustermates }},
+            "IDPath":"{{ domino_home_dir }}/ids",
+            "pattern":"server#"
+        },
+        "registerUsers":{
+            "users":[
+            {
+                "firstName":"{{ domino_dev_user_first_name }}",
+                "lastName":"{{ domino_dev_user_last_name }}",
+                "shortName":"{{ domino_dev_user_short_name }}",
+                "password":"{{ domino_dev_user_id_password }}",
+                "IDFilePath":"{{ domino_home_dir }}/ids/{{ domino_dev_user_id }}"
+            }
+            ]
+        },
+        {% endif %}
+        "security":{
+            "ACL":{
+                "prohibitAnonymousAccess":true,
+                "addLocalDomainAdmins":true
+            {% if not is_additional_server %}
+            },
+            "TLSSetup": {
+                    "method": "import",
+                    "retainImportFile": true,
+                    "importFilePath": "{{ cert_dir }}/kyr/{{ kyr_cert }}",
+                    "importFilePassword": "{{ cert_pass }}",
+                    "exportPassword": "{{ cert_pass }}"
+            {% endif %}
+            }
+        }
+    },
+    {% if not is_additional_server %}
+    "IDVault":{
+        "name":"O={{ id_vault_name }}",
+        "description":"{{ id_vault_name }}",
+        "IDFile":"/idvault/{{ id_vault_name }}.id",
+        "IDPassword":"{{ id_vault_password }}",
+        "path":"IBM_ID_VAULT/{{ id_vault_name }}.nsf",
+        "passwordReset":{
+            "helpText":"{{ id_vault_help_text }}"
+        },
+        "securitySettingsPolicy":{
+            "name":"{{ id_vault_name }} Security Settings Policy",
+            "description":"{{ id_vault_name }} Security Settings"
+        },
+        "masterPolicy":{
+            "description":"{{ id_vault_name }} Master Policy Description"
+        }
+    },
+    "appConfiguration":{
+        "databases":[
+            {
+                "filePath":"names.nsf",
+                "action":"update",
+                "ACL":{
+                    "ACLEntries":[
+                        {
+                            "name":"AutomaticallyCrossCertifiedUsers",
+                            "level":"manager",
+                            "type":"personGroup",
+                            "isPublicReader":true,
+                            "isPublicWriter":true,
+                            "canDeleteDocuments":true
+                        }
+                    ]
+                },
+                "documents":[
+                {
+                    "action":"update",
+                    "findDocument":{
+                        "Type":"Server",
+                        "ServerName":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+                    },
+                    "computeWithForm":true,
+                    "items":{
+                        "FullAdmin":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "CreateAccess":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "ReplicaAccess":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "UnrestrictedList":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "OnBehalfOfInvokerLst":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "LibsLst":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "RestrictedList":[
+                            "LocalDomainAdmins",
+                            "AutomaticallyCrossCertifiedUsers",
+                            "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+                        ],
+                        "HTTP_EnableSessionAuth":"1",
+                        "HTTP_Port":{{ domino_install_port_forwards[1].guest }},
+                        "HTTP_SSLPort":{{ domino_install_port_forwards[0].guest }},
+                        "HTTP_SSLMode":"{{ domino_https_enabled }}",
+                        "HTTP_SSLKeyFile":"{{ cert_dir }}/kyr/{{ kyr_cert }}",
+                        "LdISite":"1"
+                    }
+                },
+                {
+                    "action":"create",
+                    "computeWithForm":true,
+                    "items":{
+                        "Form":"Program",
+                        "CmdLine":"Genesis",
+                        "Enabled":"2",
+                        "Program":"runjava",
+                        "Source":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+                    }
+                },
+                {
+                    "action":"create",
+                    "computeWithForm":true,
+                    "items":{
+                        "Form":"WebSite",
+                        "ISiteOrg":"{{ domino_organization }}",
+                        "ISiteName":"Domino Web Site",
+                        "WSIsDflt":"1",
+                        "HTTP_EnableSessionAuth":"1",
+                        "WSHTTPMthds_ed":[ "1", "2", "3", "4", "6", "7" ]
+                    }
+                },
+                {
+                    "action":"create",
+                    "computeWithForm":true,
+                    "items":{
+                        "Form":"Group",
+                        "Type":"Group",
+                        "GroupType":"0",
+                        "ListName":"AutomaticallyCrossCertifiedUsers",
+                        "ListDescription":"Created automatically during installation"
+                    }
+                },
+                {
+                    "action":"update",
+                    "findDocument":{
+                        "Type":"Group",
+                        "ListName":"LocalDomainAdmins"
+                    },
+                    "computeWithForm":true,
+                    "items":{
+                        "Form":"Group",
+                        "Type":"Group",
+                        "GroupType":"0",
+                        "ListName":"LocalDomainAdmins",
+                        "ListCategory": "Administration",
+                        "Members": ["{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}", "{{ domino_dev_user_first_name }} {{ domino_dev_user_last_name }}/{{ domino_organization }}", "AutomaticallyCrossCertifiedUsers"],
+                        "ListDescription":"This group should contain all Domino administrators in your domain. Most system databases and templates give people in this group Manager access."
+                    }
+                }
+                ]
+            }
+        ]
+    },
+    {% endif %}
+    "autoConfigPreferences":{
+        "startServerAfterConfiguration": true,
+        "consoleLogOutput": {
+                "show": "all",
+                "pauseOnErrorSeconds": 10
+        }
+    }
+}

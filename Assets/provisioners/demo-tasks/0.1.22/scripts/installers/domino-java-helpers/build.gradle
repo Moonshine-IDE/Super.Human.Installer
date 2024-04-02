@@ -1,0 +1,172 @@
+/*
+Example project to build and run a Notes application on your local machine.
+*/
+plugins {
+    id 'java'
+    id 'application'  // allows 'run' task.
+    id 'eclipse'      // allows dependencies to be exported to .classpath
+}
+mainClassName = 'CheckNotesUser'
+
+String notesInstallation = '/Applications/HCL Notes.app/Contents/MacOS'
+if (!notesInstallation) {
+	throw new GradleException("Missing configured path for Notes installation.  Set notesInstallation in build.gradle.")
+}
+if (!(new File(notesInstallation).exists())) {
+	// try this as a Linux environment instead
+	notesInstallation = '/opt/hcl/domino/notes/latest/linux'
+}
+// TODO: try Windows
+if (!(new File(notesInstallation).exists())) {
+	throw new GradleException("Invalid configured path for Notes installation ($notesInstallation).  Check notesInstallation in build.gradle.")
+}
+
+String notesJarPath = "$notesInstallation/jvm/lib/ext/Notes.jar"
+String envPath = System.getenv('PATH')
+if (!envPath) {
+	logger.warn "Missing PATH environment variable."
+	envPath = ''  // default to empty string to avoid null errors later
+}
+
+// change envPath as needed
+if (notesInstallation.toLowerCase().startsWith('/applications/')) { // treat as macOS
+	if (!(new File(notesJarPath).exists())) {
+		// alternative location for macOS: /Applications/HCL Notes.app/Contents/Resources/jvm/lib/ext/Notes.jar
+		logger.info "Notes.jar not found at $notesJarPath"
+		notesJarPath = "$notesInstallation/../Resources/jvm/lib/ext/Notes.jar"
+	}
+	if (!(new File(notesJarPath).exists())) {
+		logger.info "Notes.jar not found at $notesJarPath"
+		throw new GradleException("ERROR: Could not find Notes.jar")
+	}
+	println("Notes JAR path: $notesJarPath")
+}
+else { // treat as Windows
+	// update PATH
+	envPath = "$envPath;$notesInstallation"
+	println "Updated PATH: $envPath"
+}
+
+// build a jar path to use for Notes.jar
+// Supports local and Linux server executions
+String jarClassPath = "./Notes.jar /opt/hcl/domino/notes/latest/linux/jvm/lib/ext/Notes.jar ${notesJarPath.replaceAll(' ', '%20').replaceAll('^\\w+:', '/$0')}"
+
+logger.debug "Environment"
+System.env.each {
+    logger.debug "${it.key}:${it.value}"
+}
+
+repositories {
+    mavenCentral()
+}
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+
+            // The servlet requires additional dependencies that are not available with the Notes client
+            exclude '**/ExampleServlet*'
+        }
+    }
+}
+
+// Required for Java 8 Language server support
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    // Local JAR dependency
+    implementation files(notesJarPath)
+    implementation 'org.json:json:20160212'  // For parsing setup.json
+}
+
+/*
+OPTIONAL: Configuration to let this build and run in Moonshine
+Use "clean runApp" for the Gradle command
+*/
+task runApp(type: JavaExec) {
+	classpath = sourceSets.main.runtimeClasspath
+	main = mainClassName  // deprecated in later versions of Gradle - use mainClass
+	environment('DYLD_LIBRARY_PATH', notesInstallation)
+	environment('PATH', envPath)
+
+	// args 'appArg1'
+}
+
+
+/*
+ * Build a fat jar (excluding Notes.jar) for import into script library.
+ */
+jar {
+	from {
+		// runtimeClasspath includes implementation and runtimeOnly dependencies
+		// findResults allows using null to exclude results
+		configurations.runtimeClasspath.findResults { File dependency ->
+			if (dependency.getName().equalsIgnoreCase("Notes.jar")) {
+				return null  // skip this entry
+			}
+			else {
+				return dependency.isDirectory() ? dependency : zipTree(dependency)
+			}
+		}
+	}
+	// classpath needs to be specified in individual tasks
+}
+
+/**
+ * Example of custom JAR task
+ */
+task jarCheckNotesUser(type: Jar) {
+	String mainClass = 'CheckNotesUser'
+	archiveName = "${mainClass}.jar"
+	manifest {
+		attributes 'Main-Class': "net.prominic.domino/vagrant/$mainClass",
+				'Class-Path': jarClassPath
+	}
+	with jar
+}
+
+task jarIndividual() {
+	// placeholder for generated tasks
+}
+
+// generate tasks to create individual jars
+String jarIndividualDir = project.findProperty('jarIndividualDir') ?: 'src/main/java/net/prominic/domino/vagrant'
+new File(jarIndividualDir).eachFileRecurse groovy.io.FileType.FILES, {File curFile ->
+	String fullName = curFile.getName()
+	int splitIndex = fullName.lastIndexOf('.')
+
+	if (splitIndex >= 0) {  // confirm this is a file with the expected format
+		String extension = fullName.substring(splitIndex+1)
+		String mainClass = fullName.substring(0, splitIndex)
+
+		if ( extension.equalsIgnoreCase('java') &&
+			 curFile.text.contains("public static void main")) { // main class
+			String curTaskName = "jar$mainClass"
+			// don't override the existing task if it exists - allow this so that the user can define a custom override
+			if (!tasks.findByName(curTaskName)) {
+				println "Creating task: '$curTaskName'"
+				tasks.create(name: curTaskName, type: Jar) {
+					archiveName = "${mainClass}.jar"
+					manifest {
+						attributes 'Main-Class': "net.prominic.domino/vagrant/$mainClass",
+								'Class-Path': jarClassPath
+					}
+					with jar
+				}
+			}
+			else {
+				println "Using existing task: '$curTaskName'"
+			}
+			tasks.getByName('jarIndividual').dependsOn << curTaskName
+
+
+		}
+		else {
+			println "Skipping non-main class: ${curFile.getAbsolutePath()}"
+		}
+	}
+	else {
+		println "Ignoring invalid class file: ${curFile.getAbsolutePath()}"
+	}
+}

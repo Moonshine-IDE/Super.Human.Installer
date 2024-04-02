@@ -1,0 +1,155 @@
+---
+-
+  name: "Create Directories for SSLs"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0777'
+  with_items:
+    - "{{ cert_dir }}"
+    - "{{ cert_dir }}/key"
+    - "{{ cert_dir }}/crt"
+    - "{{ cert_dir }}/csr"
+    - "{{ cert_dir }}/pfx"
+    - "{{ cert_dir }}/kyr"
+    - "{{ cert_dir }}/jks"
+    - "{{ cert_dir }}/combined"
+    - "{{ cert_dir }}/ca"
+
+-
+  name: "Using existing Certificate"
+  when: not selfsigned_enabled
+  block:
+    -
+      name: "Checking if SSL default certs exists"
+      ansible.builtin.wait_for:
+        path: "{{ item }}"
+      with_items:
+        - "{{ cert_dir }}/key/default-signed.key"
+        - "{{ cert_dir }}/crt/default-signed.crt"
+        - "{{ cert_dir }}/ca/default-signed.ca"
+
+    -
+      name: "Generating Signed PKCS12 file"
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: "{{ cert_dir }}/pfx/default-signed.pfk"
+        certificate_path: "{{ cert_dir }}/crt/default-signed.crt"
+        privatekey_path: "{{ cert_dir }}/key/default-signed.key"
+        other_certificates_parse_all: true
+        other_certificates:
+          - "{{ cert_dir }}/ca/default-signed.ca"
+        state: present
+        friendly_name: 'pkcs12_file'
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Parsing PKCS12 file to concatenated PEM"
+      community.crypto.openssl_pkcs12:
+        action: parse
+        src: "{{ cert_dir }}/pfx/default-signed.pfk"
+        path: "{{ cert_dir }}/combined/default-signed.pem"
+        state: present
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Creating a keystore for the given certificate/private key pair"
+      become: true
+      community.general.java_keystore:
+        name: "{{ settings.hostname }}.{{ settings.domain }}"
+        certificate: "{{ lookup('file', '{{ cert_dir }}/crt/default-signed.crt') }}"
+        private_key: "{{ lookup('file', '{{ cert_dir }}/key/default-signed.key') }}"
+        password: "{{ cert_pass }}"
+        owner: "{{ service_user }}"
+        mode: '0777'
+        dest: "{{ cert_dir }}/jks/default-signed.jks"
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
+
+-
+  name: "Generating Self Signed Certificate"
+  when: selfsigned_enabled
+  block:
+    -
+      name: "Generating self signed SSL Key"
+      community.crypto.openssl_privatekey:
+        path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Generating self signed CSR Request"
+      community.crypto.openssl_csr:
+        path: "{{ cert_dir }}/csr/{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+        privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        country_name: "{{ countrycode }}"
+        organization_name: "{{ domino_organization }}"
+        common_name: "{{ settings.hostname }}.{{ settings.domain }}"
+        subject_alt_name:
+          - "DNS:{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:nomadweb.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:domino.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:traveler.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:verse.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:console.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:logging.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:welcome.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:proxy.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:downloads.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:sametime.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:leap.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:restapi.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:guacamole.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:voltmx.{{ settings.hostname }}.{{ settings.domain }}"
+          - "DNS:www.{{ settings.hostname }}.{{ settings.domain }}"
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Generating self signed Certificate"
+      community.crypto.x509_certificate:
+        provider: selfsigned
+        path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        csr_path: "{{ cert_dir }}/csr/{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr"
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Generating self signed PKCS12 file"
+      community.crypto.openssl_pkcs12:
+        action: export
+        path: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfk"
+        certificate_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        privatekey_path: "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        state: present
+        friendly_name: 'pkcs12_file'
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Parsing self-signed PKCS12 file to concatenated PEM"
+      community.crypto.openssl_pkcs12:
+        action: parse
+        src: "{{ cert_dir }}/pfx/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfk"
+        path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pem"
+        state: present
+        owner: "{{ service_user }}"
+        mode: '0777'
+
+    -
+      name: "Creating a keystore for the self-signed certificate/private key pair"
+      community.general.java_keystore:
+        name: "{{ settings.hostname }}.{{ settings.domain }}"
+        certificate: "{{ lookup('file', '{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt') }}"
+        private_key: "{{ lookup('file', '{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}-self-signed.key') }}"
+        password: "{{ cert_pass }}"
+        owner: "{{ service_user }}"
+        mode: '0777'
+        dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"

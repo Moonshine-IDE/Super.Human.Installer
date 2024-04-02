@@ -1,0 +1,57 @@
+{
+   "serverSetup":{
+      "server":{
+         "type":"additional",
+         "IDFilePath":"/local/notesdata/ids/mail0.id",
+         "name":"mail-s2.prominic.global",
+         "domainName":"STARTcloud",
+         "title":"mail-s2",
+         "password":null,
+         "minPasswordLength":5,
+         "serverTasks":"HTTP"
+      },
+      "network":{
+         "hostName":"mail-s2.prominic.global",
+         "enablePortEncryption":true,
+         "enablePortCompression":true
+      },
+      "org":{
+         "countryCode":null,
+         "orgName":"STARTcloud",
+         "certifierPassword":"password",
+         "orgUnitName":null,
+         "orgUnitPassword":null
+      },
+      "admin":{
+         "CN": "Demo Admin"
+      },
+      "notesINI":{
+         "ServerTasks":"HTTP,nomad",
+         "LOG_REPLICATION":"1",
+         "LOG_SESSIONS":"1",
+         "iNotes_WA_EnableActionsInArchive":"1",
+         "JavaUserClassesExt":"GJA_Genesis",
+         "GJA_Genesis":"JavaAddin/Genesis/Genesis-0.6.18.jar",
+         "HTTPEnableMethods":"GET,POST,PUT,DELETE,HEAD,OPTIONS",
+         "HTTPJVMMaxHeapSize":"2048M",
+         "HTTPJVMMaxHeapSizeSet":"1"
+      },
+      "existingServer": {
+        "CN": "mail-s1.prominic.global",
+        "hostNameOrIP": "100.65.3.20"
+      },
+      "security":{
+         "ACL":{
+            "prohibitAnonymousAccess":true,
+            "addLocalDomainAdmins":true
+         }
+     }
+  },
+      "autoConfigPreferences":{
+          "startServerAfterConfiguration": true,
+          "consoleLogOutput": {
+                        "show": "all",
+                        "pauseOnErrorSeconds": 10
+                }
+     }
+}

@@ -46,6 +46,7 @@ class AbstractProvisioner {
 
     static final _SCRIPTS_ROOT:String = "scripts/";
     static final _TEMPLATES_ROOT:String = "templates/";
+    static final _CORE_ROOT:String = _SCRIPTS_ROOT + "core/";
     
     var _exists:Bool = false;
     var _fileWatcher:FileWatcher;
@@ -168,7 +169,20 @@ class AbstractProvisioner {
 
     public function getFileContentFromSourceTemplateDirectory( path:String ):String {
 
-        if ( !FileSystem.exists( Path.addTrailingSlash( _sourcePath ) + _TEMPLATES_ROOT + path ) ) return null;
+    		var srcPath:String = Path.addTrailingSlash( _sourcePath );
+    		var tmplRoot:String = _TEMPLATES_ROOT;
+    		var p:String = path;
+    		try
+    		{
+			if ( !FileSystem.exists( srcPath + _TEMPLATES_ROOT + path ) ) 
+			{
+				return null;
+			}
+    		}
+       	catch( e ) 
+       	{
+       		return null;
+       	}
         
         try {
 
@@ -244,7 +258,7 @@ class AbstractProvisioner {
 
     public function toString():String {
 
-        return '[AbstractProvisioner(v${this._version})]';
+        return '[AbstractProvisioner(v${this.version})]';
 
     }
 

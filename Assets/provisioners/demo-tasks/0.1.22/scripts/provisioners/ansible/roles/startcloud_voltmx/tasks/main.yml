@@ -1,0 +1,55 @@
+---
+-
+  name: "Checking if the VoltMX Installer archive is at /voltmx/archives/{{ voltmxinstallerzip }}"
+  register: voltmx_server_installer_check
+  ansible.builtin.stat:
+    path: "{{ installer_dir }}/voltmx/archives/{{ voltmxinstallerzip }}"
+    get_md5: false
+
+-
+  name: "Checking if VoltMX has been installed"
+  register: voltmx_server_installed
+  ansible.builtin.stat:
+    path: "{{ installation_dir }}/Notice.txt"
+    get_md5: false
+
+-
+  name: "Downloading VoltMX from {{ voltmx_installer_base_url }}"
+  register: voltlsresult
+  until: "voltlsresult is not failed"
+  retries: 3
+  ansible.builtin.get_url:
+    mode: '0755'
+    url: "{{ voltmx_installer_base_url }}"
+    dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_server_installer_tar }}"
+    username: "{{ voltmx_installer_url_user }}"
+    password: "{{ voltmx_installer_url_pass }}"
+  when: not voltmx_server_installer_check.stat.exists and not voltmx_server_installed.stat.exists
+
+-
+  name: "Extracting voltmx from {{ voltmxinstallerzip }}"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.unarchive:
+    src: "{{ installer_dir }}/voltmx/archives/{{ voltmxinstallerzip }}"
+    dest: "{{ installer_dir }}/voltmx/core"
+    remote_src: true
+
+-
+  name: "Adding Voltmx silent install response file"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.template:
+    dest: "{{ installer_dir }}/voltmx/installer.properties"
+    mode: a+x
+    src: "installer.properties.j2"
+
+-
+  name: "Installing Voltmx"
+  ansible.builtin.command: "{{ item }}"
+  become: true
+  become_user: root
+  when: not voltmx_server_installed.stat.exists
+  args:
+    chdir: "{{ installer_dir }}/voltmx/Linux/VoltMXFoundry_Installer_Linux"
+    creates: "{{ installation_dir }}/Notice.txt"
+  with_items:
+    - "bash ./VoltMXFoundryInstaller-9.5.1.1_GA.bin -f {{ installer_dir }}/votlmx/installer.properties -i silent"
