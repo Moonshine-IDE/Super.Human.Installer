@@ -675,11 +675,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
                 	    replace.LEAP_INSTALLED_CHECK = true;
-                    replaceWith = "- name: domino_leap";
+                    replaceWith = "- name: hcl_domino_leap";
 
                 } else {
 
-                    replaceWith = "#- name: domino_leap";
+                    replaceWith = "#- name: hcl_domino_leap";
 
                 }
 				
@@ -692,11 +692,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino_nomadweb";
+                    replaceWith = "- name: hcl_domino_nomadweb";
 
                 } else {
 
-                    replaceWith = "#- name: domino_nomadweb";
+                    replaceWith = "#- name: hcl_domino_nomadweb";
 
                 }
 				
@@ -709,11 +709,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino_traveler";
+                    replaceWith = "- name: hcl_domino_traveler";
 
                 } else {
 
-                    replaceWith = "#- name: domino_traveler";
+                    replaceWith = "#- name: hcl_domino_traveler";
 
                 }
 				
@@ -726,11 +726,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino_traveler_htmo";
+                    replaceWith = "- name: hcl_domino_traveler_htmo";
 
                 } else {
 
-                    replaceWith = "#- name: domino_traveler_htmo";
+                    replaceWith = "#- name: hcl_domino_traveler_htmo";
 
                 }
 
@@ -742,11 +742,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino_verse";
+                    replaceWith = "- name: hcl_domino_verse";
 
                 } else {
 
-                    replaceWith = "#- name: domino_verse";
+                    replaceWith = "#- name: hcl_domino_verse";
 
                 }
 
@@ -759,11 +759,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino_appdevpack";
+                    replaceWith = "- name: hcl_domino_appdevpack";
 
                 } else {
 
-                    replaceWith = "#- name: domino_appdevpack";
+                    replaceWith = "#- name: hcl_domino_appdevpack";
 
                 }
 				
@@ -776,11 +776,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: domino_rest_api";
+                    replaceWith = "- name: hcl_domino_rest_api";
 
                 } else {
 
-                    replaceWith = "#- name: domino_rest_api";
+                    replaceWith = "#- name: hcl_domino_rest_api";
 
                 }
 				

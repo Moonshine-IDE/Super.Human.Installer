@@ -207,13 +207,13 @@ hosts:
       - name: hcl_domino_genesis
       - name: hcl_domino_genesis_applications
       - name: hcl_domino_cross_certify
-      #- name: domino_leap                         # hcl_domino_leap
-      - name: domino_nomadweb                     # hcl_domino_nomadweb
-      #- name: domino_traveler                     # hcl_domino_traveler
-      #- name: domino_traveler_htmo                # hcl_domino_traveler_htmo
-      #- name: domino_verse                        # hcl_domino_verse
-      - name: domino_appdevpack                   # hcl_domino_appdevpack
-      - name: domino_rest_api                      # hcl_domino_rest_api
+      - name: hcl_domino_leap
+      - name: hcl_domino_nomadweb
+      - name: hcl_domino_traveler
+      - name: hcl_domino_traveler_htmo
+      - name: hcl_domino_verse
+      - name: hcl_domino_appdevpack
+      - name: hcl_domino_rest_api
                              # hcl_voltmx
       - name: hcl_domino_vagrant_readme
       - name: startcloud_quick_start       # startcloud_quick_start
