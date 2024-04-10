@@ -193,7 +193,7 @@ frontend  HTTPS-IN
 
         {% if domino_install_proxy_url is defined %}
         use_backend                     domino               if host_domino
-        default_backend                 domino
+        default_backend                 downloads
         {% endif %}
 
         {% if startcloud_quick_start_proxy_url is defined %}
