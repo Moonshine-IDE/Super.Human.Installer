@@ -136,7 +136,7 @@ jobs:
           /DPRODUCT_VERSION=${{ inputs.version }}
           /DPRODUCT_PUBLISHER="Prominic.NET"
           /DPRODUCT_WEB_SITE="/https://superhumaninstaller.com/"
-          /DBIN_PATH="..\..\${{ env.bin_path }}\*.*"
+          /DBIN_PATH="${{ env.bin_path }}\*.*"
           /DPRODUCT_EXE=${{ env.app_name }}.exe
           /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
           /DROOT_KEY=HKCU
