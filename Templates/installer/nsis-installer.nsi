@@ -61,6 +61,7 @@ Section "MainSection" SEC01
   SetOverwrite ifnewer
   !cd "..\..\"
   File /r "${BIN_PATH}"
+  !cd "Templates/installer/"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
   CreateShortCut "$DESKTOP\S${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
