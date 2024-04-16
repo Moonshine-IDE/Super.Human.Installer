@@ -99,7 +99,11 @@ jobs:
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib install hxcpp
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git --branch v4.3.24
+          pushd .
+          cd $HXCPP-PATH/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+          popd
           git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime
           haxelib dev lime lime
           haxelib install format
