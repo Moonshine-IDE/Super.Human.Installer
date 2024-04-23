@@ -7,7 +7,11 @@
             {% else %}
             "type":"first",
             {% endif %}
+            {% if domino_major_version == 12 and domino_patch_version == 1 %}
+         		"name":"{{ settings.hostname }}",
+         	{% else %}
             "name":"{{ settings.hostname }}.{{ settings.domain }}",
+            {% endif %}
             "domainName":"{{ domino_organization }}",
             "title":"{{ settings.hostname }}",
             "password":null,
@@ -25,7 +29,11 @@
         },
         {% endif %}
         "network":{
-            "hostName":"{{ settings.hostname }}.{{ settings.domain }}",
+        		{% if domino_major_version == 12 and domino_patch_version == 1 %}
+         		"hostName":"{{ settings.hostname }}",
+         	{% else %}
+            		"hostName":"{{ settings.hostname }}.{{ settings.domain }}",
+            {% endif %}
             "enablePortEncryption":true,
             "enablePortCompression":true
         },
@@ -133,7 +141,11 @@
                     "action":"update",
                     "findDocument":{
                         "Type":"Server",
-                        "ServerName":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+                        {% if domino_major_version == 12 and domino_patch_version == 1 %}
+							"ServerName":"CN={{ settings.hostname }}/O={{ domino_organization }}",
+						{% else %}
+							"ServerName":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}",
+						{% endif %}
                     },
                     "computeWithForm":true,
                     "items":{
@@ -188,7 +200,11 @@
                         "CmdLine":"Genesis",
                         "Enabled":"2",
                         "Program":"runjava",
-                        "Source":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+                        {% if domino_major_version == 12 and domino_patch_version == 1 %}
+						"Source":"CN={{ settings.hostname }}/O={{ domino_organization }}"
+						{% else %}
+						"Source":"CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+						{% endif %}
                     }
                 },
                 {
