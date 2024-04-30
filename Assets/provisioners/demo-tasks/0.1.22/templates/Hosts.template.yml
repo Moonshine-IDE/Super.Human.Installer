@@ -22,7 +22,7 @@ hosts:
       setup_wait: 300
       vagrant_user_private_key_path: ./core/ssh_keys/id_rsa
       vagrant_user: startcloud
-      vagrant_user_pass: 'STARTcloud22@!'
+      vagrant_user_pass: 'STARTcloud24@!'
       vagrant_insert_key: true
       ssh_forward_agent: true
 
