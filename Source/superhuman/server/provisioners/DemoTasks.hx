@@ -671,15 +671,18 @@ class HostsFileGenerator {
 				}
 			}
 			
+			var versionGreaterThan20:Bool = provisioner.data.version > "0.1.20";
+		  	
             if ( r.value == "leap" ) {
 
                 if ( r.enabled ) {
                 	    replace.LEAP_INSTALLED_CHECK = true;
-                    replaceWith = "- name: hcl_domino_leap";
+
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_leap" : "- name: domino_leap";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_leap";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_leap" : "#- name: domino_leap";
 
                 }
 				
@@ -692,11 +695,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: hcl_domino_nomadweb";
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_nomadweb";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_nomadweb" : "#- name: domino_nomadweb";
 
                 }
 				
@@ -709,11 +712,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: hcl_domino_traveler";
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_traveler" : "- name: domino_traveler";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_traveler";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_traveler" : "#- name: domino_traveler";
 
                 }
 				
@@ -726,11 +729,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: hcl_domino_traveler_htmo";
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_traveler_htmo" : "- name: domino_traveler_htmo";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_traveler_htmo";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_traveler_htmo" : "#- name: domino_traveler_htmo";
 
                 }
 
@@ -742,11 +745,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: hcl_domino_verse";
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_verse" : "- name: domino_verse";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_verse";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_verse" : "#- name: domino_verse";
 
                 }
 
@@ -759,11 +762,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: hcl_domino_appdevpack";
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_appdevpack" : "- name: domino_appdevpack";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_appdevpack";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_appdevpack" : "#- name: domino_appdevpack";
 
                 }
 				
@@ -776,11 +779,11 @@ class HostsFileGenerator {
 
                 if ( r.enabled ) {
 
-                    replaceWith = "- name: hcl_domino_rest_api";
+                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_rest_api" : "- name: domino_rest_api";
 
                 } else {
 
-                    replaceWith = "#- name: hcl_domino_rest_api";
+                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_rest_api" : "#- name: domino_rest_api";
 
                 }
 				
