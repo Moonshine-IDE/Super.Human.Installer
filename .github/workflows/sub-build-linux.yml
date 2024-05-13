@@ -119,11 +119,14 @@ jobs:
           haxelib dev lime lime
           haxelib install format
           haxelib install hxp
+          haxelib install yaml
           haxelib git lime-samples https://github.com/openfl/lime-samples
           haxelib git openfl https://github.com/openfl/openfl.git develop
           haxelib run openfl setup
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
-          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git        
+          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git      
+          haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
+          haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git  
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
