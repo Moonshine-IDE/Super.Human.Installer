@@ -12,6 +12,9 @@
 	<haxelib name="feathersui" />
 	<haxelib name="actuate" />
 	<haxelib name="champaign" />
+	<haxelib name="mxhx-component"/>
+	<haxelib name="mxhx-feathersui"/>
+	<haxelib name="yaml"/>
 	
 	<haxedef name="no-deprecation-warnings" />
 

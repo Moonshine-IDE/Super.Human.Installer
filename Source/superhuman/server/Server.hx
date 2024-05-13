@@ -30,6 +30,8 @@
 
 package superhuman.server;
 
+import superhuman.application.ApplicationData;
+import prominic.sys.io.Executor;
 import genesis.application.managers.LanguageManager;
 import haxe.Json;
 import haxe.Timer;
@@ -58,6 +60,8 @@ import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.DemoTasks;
 import sys.FileSystem;
 import sys.io.File;
+import yaml.util.ObjectMap;
+import yaml.Yaml;
 
 using champaign.core.tools.ObjectTools;
 
@@ -440,7 +444,6 @@ class Server {
 
         if ( _provisioner != null ) _provisioner.dispose();
         _provisioner = null;
-
     }
 
     public function getData():ServerData {
@@ -546,11 +549,41 @@ class Server {
 
     }
 
+    public function openFtpClient(appData:ApplicationData) {
+    		if ( console != null ) 
+    		{
+    			if (appData != null && appData.exists)
+    			{
+    				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
+			}
+			else
+			{
+				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
+				return;
+			}
+		}
+    			
+    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + DemoTasks.HOSTS_FILE);
+    		var hosts:TObjectMap<String, Dynamic> = hostsFileMap.get('hosts')[0];
+    		var settings:TObjectMap<String, Dynamic> = hosts.get('settings');
+    		var userName = settings.get('vagrant_user');
+    		var pass = settings.get('vagrant_user_pass');
+    		
+    		var ftpAddress = this._hostname.value;
+    		if (this._organization.value != "")
+    		{
+    			ftpAddress += "." + this._organization.value + ".com";
+    		}
+    		var ftpAppCommand = 'sftp://${userName}:${pass}@${ftpAddress}';
+    		var ftpExecutor = new Executor( appData.executablePath, [ ftpAppCommand ]);
+    			ftpExecutor.execute();
+    }
+    
     public function saveData() {
 
         try {
-
-            var s = Json.stringify( getData() );
+			
+        	 	var s = Json.stringify( getData() );
             File.saveContent( Path.addTrailingSlash( this._serverDir ) + _CONFIG_FILE, s );
 
         } catch ( e ) {};
@@ -574,7 +607,6 @@ class Server {
         }
 
         _prepareFiles();
-
     }
 
     public function updateProvisioner( data:ProvisionerData ):Bool {
@@ -672,8 +704,10 @@ class Server {
 
     public function saveHostsFile() {
 
-        if ( isValid() ) this.provisioner.saveHostsFile();
-
+        if ( isValid() ) 
+        {
+        		this.provisioner.saveHostsFile();
+        }
     }
 
     function _actionChanged( prop:Property<ServerAction> ) { }

@@ -30,6 +30,7 @@
 
 package superhuman.events;
 
+import superhuman.application.ApplicationData;
 import superhuman.browser.BrowserData;
 import genesis.application.events.GenesisApplicationEvent;
 import superhuman.components.Console;
@@ -48,7 +49,9 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final REFRESH_DEFAULT_BROWSER:String = "refreshDefaultBrowser";
     public static final REFRESH_BROWSERS_PAGE:String = "refreshBrowsersPage";
     public static final CONFIGURE_BROWSER:String = "configureBrowser";
+    public static final CONFIGURE_APPLICATION:String = "configureApplication";
     public static final CLOSE_BROWSERS_SETUP:String = "closeBrowsersSetup";
+    public static final CLOSE_APPLICATION_SETUP:String = "closeApplicationSetup";
     public static final CONFIGURE_ROLES:String = "configureRoles";
     public static final START_CONFIGURE_SERVER:String = "startConfigureServer";
     public static final CONFIGURE_SERVER:String = "configureServer";
@@ -75,6 +78,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final SUSPEND_SERVER:String = "suspendServer";
     public static final SYNC_SERVER:String = "syncServer";
     public static final TEXT_LINK:String = "textLink";
+    public static final OPEN_FTP_CLIENT:String = "openFtpClient";
 
     public var console:Console;
     public var data:String;
@@ -83,6 +87,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var server:Server;
     public var text:String;
     public var browserData:BrowserData;
+    public var appData:ApplicationData;
     
     public function new( type:String ) {
 

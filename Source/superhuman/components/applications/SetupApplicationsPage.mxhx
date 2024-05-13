@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<components:Page xmlns:mx="https://ns.mxhx.dev/2024/basic"
+			xmlns:f="https://ns.feathersui.com/mxhx"
+			xmlns:components="genesis.application.components.*">
+	<f:LayoutGroup>
+		<f:layout>
+			<f:HorizontalLayout horizontalAlign="RIGHT" verticalAlign="MIDDLE"/>
+		</f:layout>
+		<f:Label id="labelTitle" variant="label-large" text="Title" />
+	</f:LayoutGroup>
+	
+	<components:HLine id="firstLine"/>
+	
+	<f:LayoutGroup id="appNotDetectedGroup" visible="false" includeInLayout="false">
+		<f:layout>
+			<f:HorizontalLayout horizontalAlign="CENTER" verticalAlign="MIDDLE"/>
+		</f:layout>
+		<f:Label id="notDetected" variant="label-error" text="Title" />
+	</f:LayoutGroup>
+	
+	<f:LayoutGroup id="appNameGroup">
+		<f:layout>
+			<f:HorizontalLayout verticalAlign="MIDDLE" />
+		</f:layout>
+		<f:TextInput id="textInputAppName"/>
+	</f:LayoutGroup>
+	
+	<f:LayoutGroup id="exectPathGroup">
+		<f:layout>
+			<f:HorizontalLayout verticalAlign="MIDDLE" gap="4"/>
+		</f:layout>
+		<f:TextInput id="textInputPath"/>
+		<f:Button id="locatePath" variant="button-select-file"/>
+	</f:LayoutGroup>
+	
+	<components:HLine id="secondLine"/>
+	
+	<f:LayoutGroup>
+		<f:layout>
+			<f:HorizontalLayout horizontalAlign="CENTER" gap="12"/>
+		</f:layout>
+		<components:GenesisFormButton id="buttonSave" />
+		<components:GenesisFormButton id="buttonClose" />
+	</f:LayoutGroup>
+</components:Page>

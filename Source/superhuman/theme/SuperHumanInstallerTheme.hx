@@ -87,7 +87,6 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         super._init();
 
         this.styleProvider.setStyleFunction( Console, null, _setConsoleStyles );
-        this.styleProvider.setStyleFunction( ConsoleTextArea, null, _setConsoleTextAreaStyles );
         this.styleProvider.setStyleFunction( ConsoleTextList, null, _setConsoleTextListStyles );
         this.styleProvider.setStyleFunction( ConsoleTextListItemRenderer, null, _setConsoleTextListItemRendererStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, LAYOUT_GROUP_APP_CHECKER_OVERLAY, _setLayoutGroupAppCheckerOverlayStyles );
@@ -106,15 +105,6 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         console.layoutData = AnchorLayoutData.fill();
         var layout = new VerticalLayout();
         console.layout = layout;
-
-    }
-
-    function _setConsoleTextAreaStyles( textArea:ConsoleTextArea ) {
-
-        textArea.setTextFormatForState( TextInputState.FOCUSED, _themeTypography.ConsoleTextSelected );
-        textArea.layoutData = new VerticalLayoutData( 100, 100 );
-        textArea.setPadding( GenesisApplicationTheme.GRID * 2 );
-        textArea.textFormat = _themeTypography.ConsoleText;
 
     }
 

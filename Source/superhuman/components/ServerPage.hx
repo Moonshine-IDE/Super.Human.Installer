@@ -204,6 +204,7 @@ class ServerPage extends Page {
         _serverList.addEventListener( SuperHumanApplicationEvent.CLOSE_CONSOLE, _closeConsole );
         _serverList.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _forwardEvent );
+        _serverList.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _forwardEvent );

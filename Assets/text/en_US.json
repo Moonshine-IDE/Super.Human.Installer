@@ -304,6 +304,8 @@
                 "vagrantupstart":"[SHI]: Executing 'vagrant up' %1\n",
                 "vagrantupstarted":"[SHI]: 'vagrant up' started\n",
                 "vagrantupstopped":"[SHI]: 'vagrant up' stopped with exit code: %1, elapsed time: %2\n",
+                "openftp":"[SHI]: Opening FTP client...\n",
+                "openftpFailed":"[SHI]: FTP client %1 does not exists. \n",
                 "virtualboxmachine":"[SHI]: VirtualBox VM: %1\n",
                 "webaddress":"[SHI]: Retrieving web address from %1...",
                 "webaddressfileerror":"file cannot be opened\n",
@@ -315,6 +317,7 @@
             "delete": "Delete server",
             "destroy": "Destroy server",
             "directory": "Open server directory in default file manager, and in Terminal",
+            "ftp": "Open server directory",
             "output": "Display console output",
             "provision": "Run provisioning on server",
             "resync": "Re-sync configuration files",
@@ -388,6 +391,13 @@
         		"browserlisthint": "Select default Browser",
         		"browsernotdetected": "%1 not detected",
         		"configurebrowser": "Configure"
+        },
+        "applications": {
+        		"titlesetupapplications": "Applications",
+        		"executableapppath": "Executable Application path",
+        		"locateapplication": "Locate Application",
+        		"appname": "Application name",
+        		"titleapppath": "Setup %1 path"
         }
     },
     "servicetypepage": {

@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+import superhuman.application.ApplicationData;
+import superhuman.components.applications.ApplicationsList;
 import feathers.data.ArrayCollection;
 import superhuman.components.browsers.BrowsersList;
 import superhuman.browser.BrowserData;
@@ -70,12 +72,15 @@ class SettingsPage extends Page {
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
     var _rowBrowsers:GenesisFormRow;
+    var _rowApplications:GenesisFormRow;
 
     var _browsersList:BrowsersList;
+    var _applicationsList:ApplicationsList;
 
     var _titleGroup:LayoutGroup;
     
     var _browsers:ArrayCollection<BrowserData>;
+    var _applications:ArrayCollection<ApplicationData>;
     
     public function new() {
 
@@ -153,6 +158,18 @@ class SettingsPage extends Page {
         _rowBrowsers.content.addChild(_browsersList);
         _form.addChild(_rowBrowsers);
 
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.GRID * 2;
+        _form.addChild( spacer );
+        
+        _rowApplications = new GenesisFormRow();
+        _rowApplications.text = LanguageManager.getInstance().getString( 'settingspage.applications.titlesetupapplications' );
+        _applicationsList = new ApplicationsList(_applications);
+        _applicationsList.width = _width;
+        _applicationsList.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplication );
+        _rowApplications.content.addChild(_applicationsList);
+        _form.addChild(_rowApplications);
+        
         var line = new HLine();
         line.width = _width;
         this.addChild( line );
@@ -195,7 +212,18 @@ class SettingsPage extends Page {
     		}
     }
     
+    public function setApplications(apps:Array<ApplicationData>) {
+    		_applications = new ArrayCollection(apps);	
+    		if (_applicationsList != null) {
+    			_applicationsList.dataProvider = _applications;
+    		}
+    }
+    
     function _configureBrowser(e:SuperHumanApplicationEvent) {
+    		this._forwardEvent(e);
+    }
+    
+   function _configureApplication(e:SuperHumanApplicationEvent) {
     		this._forwardEvent(e);
     }
     

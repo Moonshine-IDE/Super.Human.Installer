@@ -30,6 +30,7 @@
 
 package;
 
+import superhuman.components.applications.SetupApplicationsPage;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.io.Bytes;
@@ -88,6 +89,8 @@ import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
 import sys.io.File;
+import superhuman.application.ApplicationData;
+import superhuman.application.Applications;
 
 using champaign.core.tools.ObjectTools;
 
@@ -112,7 +115,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
-
+	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
+	
 	static public final DEMO_TASKS_PATH:String = "assets/vagrant/demo-tasks/";
 
 	static var _instance:SuperHumanInstaller;
@@ -128,7 +132,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		servers : [],
 		user: {},
 		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
-		browsers: Browsers.DEFAULT_BROWSERS_LIST
+		browsers: Browsers.DEFAULT_BROWSERS_LIST,
+		applications: Applications.DEFAULT_APPLICATIONS_LIST
 	}
 
 	var _advancedConfigPage:AdvancedConfigPage;
@@ -147,7 +152,9 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _settingsPage:SettingsPage;
 	var _vagrantFile:String;
 	var _setupBrowserPage:SetupBrowserPage;
+	var _setupApplicationsPage:SetupApplicationsPage;
 	var _browsersCollection:Array<BrowserData>;
+	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
 	
 	public var config( get, never ):SuperHumanConfig;
@@ -238,6 +245,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		Browsers.normaliseConfigBrowsersWithDefaultBrowsers();
+		Applications.normaliseConfigApplications();
 		
 		for ( s in _config.servers ) {
 
@@ -323,23 +331,26 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _loadingPage, 0, PAGE_LOADING );
 
 		_serverPage = new ServerPage( ServerManager.getInstance().servers, SuperHumanGlobals.MAXIMUM_ALLOWED_SERVERS );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _configureServer );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.START_CONFIGURE_SERVER, _startConfigureServer);
-		_serverPage.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _deleteServer );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _destroyServer );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VAGRANT, _downloadVagrant );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VIRTUALBOX, _downloadVirtualBox );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _openBrowserServerAddress );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _provisionServer );
-		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _openFtpServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.START_SERVER, _startServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.STOP_SERVER, _stopServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _suspendServer );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _syncServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.PROVISION_SERVER, _provisionServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.DESTROY_SERVER, _destroyServer );		
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _openBrowserServerAddress );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _deleteServer );
+						
+		_serverPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _configureServer );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.START_CONFIGURE_SERVER, _startConfigureServer);
+		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VAGRANT, _downloadVagrant );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VIRTUALBOX, _downloadVirtualBox );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
+
 		this.addPage( _serverPage, PAGE_SERVER );
 
 		_helpPage = new HelpPage();
@@ -367,6 +378,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
 		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
+		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplicationPage);
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
@@ -381,6 +393,13 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
+		
+		_setupApplicationsPage = new SetupApplicationsPage();
+		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
+		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
+		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
+		this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
 		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
@@ -572,7 +591,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
@@ -582,7 +601,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		if (this.previousPageId != PAGE_SETUP_BROWSERS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
@@ -715,6 +734,17 @@ class SuperHumanInstaller extends GenesisApplication {
 		{
 			_config.browsers = _browsersCollection;
 		}
+		
+		if (_config.applications == null) 
+		{
+			_config.applications = _defaultConfig.applications;	
+		} 
+		else if (_applicationsCollection != null) 
+		{
+			_config.applications = _applicationsCollection;
+		}
+		
+		_applicationsCollection = null;
 		_browsersCollection = null;
 		
 		try {
@@ -761,6 +791,11 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.setBrowserData(e.browserData);
 	}
 	
+	function _configureApplicationPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = PAGE_SETUP_APPLICATIONS;	
+		_setupApplicationsPage.setAppData(e.appData);
+	}
+	
 	function _refreshDefaultBrowser(e:SuperHumanApplicationEvent) {
 		for (b in _browsersCollection) {
 			if (b != e.browserData) {
@@ -779,6 +814,25 @@ class SuperHumanInstaller extends GenesisApplication {
 	
 	function _closeSetupBrowserPage(e:SuperHumanApplicationEvent) {
 		this.selectedPageId = this.previousPageId;	
+	}
+	
+	function _closeSetupAppPage(e:SuperHumanApplicationEvent) {
+		this.selectedPageId = this.previousPageId;
+	}
+	
+	function _initializeApplicationsCollection() {
+		if (this.previousPageId != PAGE_SETUP_APPLICATIONS) {
+			_applicationsCollection = new Array<ApplicationData>();
+			for (index => element in _config.applications) 
+			{
+				var aConfig:Dynamic = _config.applications[index];
+				var appData:ApplicationData = new ApplicationData(aConfig.appId);
+    					appData.appName = aConfig.appName;
+    					appData.executablePath = aConfig.executablePath;
+    					appData.exists = aConfig.exists;
+				_applicationsCollection.push(appData);
+			}	
+		}
 	}
 	
 	function _initializeBrowsersCollection() {
@@ -971,6 +1025,10 @@ class SuperHumanInstaller extends GenesisApplication {
 		{
 			_initializeBrowsersCollection();
 			_settingsPage.setBrowsers(_browsersCollection);
+			
+			_initializeApplicationsCollection();
+			_settingsPage.setApplications(_applicationsCollection);
+			
 			_settingsPage.updateData();
 		}
 	}
@@ -1002,6 +1060,12 @@ class SuperHumanInstaller extends GenesisApplication {
 			}
 		);
 
+	}
+	
+	function _openFtpServer(e:SuperHumanApplicationEvent) {
+		var apps = _config.applications;
+		var fileZilla:Array<Dynamic> = apps.filter(f -> f.appId == Applications.FILE_ZILLA);
+		e.server.openFtpClient(fileZilla[0]);
 	}
 
 	function _deleteServerInstance( server:Server, deleteFiles:Bool = false ) {

@@ -82,6 +82,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
             #end
@@ -117,6 +118,7 @@ class ServerList extends ListView {
             item.removeEventListener( SuperHumanApplicationEvent.STOP_SERVER, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+            item.removeEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent);
             
             #if debug
             item.removeEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
@@ -140,35 +142,34 @@ class ServerList extends ListView {
 
 @:styleContext
 class ServerItem extends LayoutGroupItemRenderer {
-
-    var _buttonConfigure:GenesisButton;
-    var _buttonConsole:GenesisButton;
-    var _buttonDelete:GenesisButton;
-    var _buttonDestroy:GenesisButton;
-    var _buttonGroup:LayoutGroup;
-    var _buttonOpenBrowser:GenesisButton;
-    var _buttonOpenDir:GenesisButton;
-    var _buttonProvision:GenesisButton;
-    var _buttonSSH:GenesisButton;
-    var _buttonStart:GenesisButton;
+    
+    var _labelTitle:Label;
+    var _progressIndicator:ProgressIndicator;  
+    var _labelRoles:Label;
+    var _labelInfo:Label;   
+    var _statusLabel:Label;
+    var _elapsedTimeLabel:Label;
+         
+    var _buttonStart:GenesisButton;  
     var _buttonStop:GenesisButton;
     var _buttonSuspend:GenesisButton;
     var _buttonSync:GenesisButton;
+    var _buttonProvision:GenesisButton;
+    var _buttonDestroy:GenesisButton;
+    var _buttonConsole:GenesisButton;
+    var _buttonOpenBrowser:GenesisButton;
+    var _buttonSSH:GenesisButton;
+    var _buttonOpenDir:GenesisButton;      
+    var _buttonDelete:GenesisButton;  
+    var _buttonFtp:GenesisButton;    
+           
+    var _buttonConfigure:GenesisButton;
+
     var _console:Console;
+    
     var _develKeys:Property<Bool>;
-    var _elapsedTimeLabel:Label;
-    var _labelInfo:Label;
-    var _labelRoles:Label;
-    var _labelTitle:Label;
-    var _progressIndicator:ProgressIndicator;
     var _server:Server;
     var _serverUpdated:Bool = false;
-    var _spacer:LayoutGroup;
-    var _statusLabel:Label;
-    var _statusLabelGroup:LayoutGroup;
-    var _statusLabelGroupLayout:HorizontalLayout;
-    var _titleGroup:LayoutGroup;
-    var _titleGroupLayout:HorizontalLayout;
 
     public function new() {
 
@@ -184,22 +185,22 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         super.initialize();
 
-        _titleGroupLayout = new HorizontalLayout();
-        _titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
+        var titleGroupLayout = new HorizontalLayout();
+        		titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
 
-        _titleGroup = new LayoutGroup();
-        _titleGroup.layoutData = new VerticalLayoutData( 100 );
-        _titleGroup.layout = _titleGroupLayout;
-        this.addChild( _titleGroup );
+        var titleGroup = new LayoutGroup();
+        		titleGroup.layoutData = new VerticalLayoutData( 100 );
+        		titleGroup.layout = titleGroupLayout;
+        this.addChild( titleGroup );
 
         _labelTitle = new Label();
         _labelTitle.variant = GenesisApplicationTheme.LABEL_LARGE;
         _labelTitle.layoutData = new HorizontalLayoutData( 100 );
-        _titleGroup.addChild( _labelTitle );
+        titleGroup.addChild( _labelTitle );
 
         _progressIndicator = new ProgressIndicator( 20, 16, 0xAAAAAA );
         _progressIndicator.visible = false;
-        _titleGroup.addChild( _progressIndicator );
+        titleGroup.addChild( _progressIndicator );
 
         _labelRoles = new Label();
         _labelRoles.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
@@ -209,109 +210,115 @@ class ServerItem extends LayoutGroupItemRenderer {
         _labelInfo.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
         this.addChild( _labelInfo );
 
-        _statusLabelGroupLayout = new HorizontalLayout();
-        _statusLabelGroupLayout.gap = GenesisApplicationTheme.GRID;
+        var statusLabelGroupLayout = new HorizontalLayout();
+        		statusLabelGroupLayout.gap = GenesisApplicationTheme.GRID;
 
-        _statusLabelGroup = new LayoutGroup();
-        _statusLabelGroup.layout = _statusLabelGroupLayout;
-        this.addChild( _statusLabelGroup );
+        var statusLabelGroup = new LayoutGroup();
+        		statusLabelGroup.layout = statusLabelGroupLayout;
+        this.addChild( statusLabelGroup );
 
         _statusLabel = new Label( '' );
         _statusLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
-        _statusLabelGroup.addChild( _statusLabel );
+        statusLabelGroup.addChild( _statusLabel );
 
         _elapsedTimeLabel = new Label( '' );
         _elapsedTimeLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
         _elapsedTimeLabel.includeInLayout = _elapsedTimeLabel.visible = false;
-        _statusLabelGroup.addChild( _elapsedTimeLabel );
+        statusLabelGroup.addChild( _elapsedTimeLabel );
 
-        _buttonGroup = new LayoutGroup();
-        _buttonGroup.variant = SuperHumanInstallerTheme.LAYOUT_GROUP_SERVER_BUTTON_GROUP;
-        this.addChild( _buttonGroup );
+        var buttonGroup = new LayoutGroup();
+        	    buttonGroup.variant = SuperHumanInstallerTheme.LAYOUT_GROUP_SERVER_BUTTON_GROUP;
+        this.addChild( buttonGroup );
 
         _buttonStart = new GenesisButton();
         _buttonStart.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_START ) );
         _buttonStart.enabled = true;
         _buttonStart.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.start' );
         _buttonStart.addEventListener( TriggerEvent.TRIGGER, _buttonStartTriggered );
-        _buttonGroup.addChild( _buttonStart );
+        buttonGroup.addChild( _buttonStart );
 
         _buttonStop = new GenesisButton();
         _buttonStop.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_STOP ) );
         _buttonStop.enabled = _buttonStop.visible = _buttonStop.includeInLayout = false;
         _buttonStop.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.stop' );
         _buttonStop.addEventListener( TriggerEvent.TRIGGER, _buttonStopTriggered );
-        _buttonGroup.addChild( _buttonStop );
+        buttonGroup.addChild( _buttonStop );
 
         _buttonSuspend = new GenesisButton();
         _buttonSuspend.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SUSPEND ) );
         _buttonSuspend.enabled = _buttonSuspend.visible = _buttonSuspend.includeInLayout = false;
         _buttonSuspend.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.suspend' );
         _buttonSuspend.addEventListener( TriggerEvent.TRIGGER, _buttonSuspendTriggered );
-        _buttonGroup.addChild( _buttonSuspend );
+        buttonGroup.addChild( _buttonSuspend );
 
         _buttonSync = new GenesisButton();
         _buttonSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_UPLOAD ) );
         _buttonSync.enabled = false;
         _buttonSync.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.resync' );
         _buttonSync.addEventListener( TriggerEvent.TRIGGER, _buttonSyncTriggered );
-        _buttonGroup.addChild( _buttonSync );
+        buttonGroup.addChild( _buttonSync );
 
         _buttonProvision = new GenesisButton();
         _buttonProvision.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_REFRESH ) );
         _buttonProvision.enabled = false;
         _buttonProvision.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.provision' );
         _buttonProvision.addEventListener( TriggerEvent.TRIGGER, _buttonProvisionTriggered );
-        _buttonGroup.addChild( _buttonProvision );
+        buttonGroup.addChild( _buttonProvision );
 
         _buttonDestroy = new GenesisButton();
         _buttonDestroy.enabled = false;
         _buttonDestroy.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DESTROY ) );
         _buttonDestroy.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.destroy' );
         _buttonDestroy.addEventListener( TriggerEvent.TRIGGER, _buttonDestroyTriggered );
-        _buttonGroup.addChild( _buttonDestroy );
+        buttonGroup.addChild( _buttonDestroy );
 
         _buttonConsole = new GenesisButton();
         _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OUTPUT ) );
         _buttonConsole.addEventListener( TriggerEvent.TRIGGER, _buttonConsoleTriggered );
         _buttonConsole.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.output' );
-        _buttonGroup.addChild( _buttonConsole );
+        buttonGroup.addChild( _buttonConsole );
 
         _buttonOpenBrowser = new GenesisButton();
         _buttonOpenBrowser.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WEB ) );
         _buttonOpenBrowser.enabled = false;
         _buttonOpenBrowser.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.welcomepage' );
         _buttonOpenBrowser.addEventListener( TriggerEvent.TRIGGER, _buttonOpenBrowserTriggered );
-        _buttonGroup.addChild( _buttonOpenBrowser );
+        buttonGroup.addChild( _buttonOpenBrowser );
 
         _buttonSSH = new GenesisButton();
         _buttonSSH.enabled = false;
         _buttonSSH.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CONSOLE ) );
         _buttonSSH.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.vagrantssh' );
         _buttonSSH.addEventListener( TriggerEvent.TRIGGER, _buttonSSHTriggered );
-        _buttonGroup.addChild( _buttonSSH );
+        buttonGroup.addChild( _buttonSSH );
 
         _buttonOpenDir = new GenesisButton();
         _buttonOpenDir.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_FOLDER ) );
         _buttonOpenDir.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.directory' );
         _buttonOpenDir.addEventListener( TriggerEvent.TRIGGER, _buttonOpenDirTriggered );
-        _buttonGroup.addChild( _buttonOpenDir );
+        buttonGroup.addChild( _buttonOpenDir );
 
         _buttonDelete = new GenesisButton();
         _buttonDelete.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DELETE ) );
         _buttonDelete.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.delete' );
         _buttonDelete.addEventListener( TriggerEvent.TRIGGER, _buttonDeleteTriggered );
-        _buttonGroup.addChild( _buttonDelete );
+        buttonGroup.addChild( _buttonDelete );
 
-        _spacer = new LayoutGroup();
-        _spacer.layoutData = new HorizontalLayoutData( 100 );
-        _buttonGroup.addChild( _spacer );
+        _buttonFtp = new GenesisButton();
+        _buttonFtp.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_UPLOAD ) );
+        _buttonFtp.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.ftp' );
+        _buttonFtp.addEventListener( TriggerEvent.TRIGGER, _buttonFtpTriggered );
+        buttonGroup.addChild( _buttonFtp );
+        
+        var spacer = new LayoutGroup();
+        		spacer.layoutData = new HorizontalLayoutData( 100 );
+        buttonGroup.addChild( spacer );
 
         _buttonConfigure = new GenesisButton();
         _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
         _buttonConfigure.addEventListener( TriggerEvent.TRIGGER, _buttonConfigureTriggered );
         _buttonConfigure.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.configure' );
-        _buttonGroup.addChild( _buttonConfigure );
+        buttonGroup.addChild( _buttonConfigure );
 
         _console = new Console( LanguageManager.getInstance().getString( 'serverpage.server.console.serverloaded' ) );
         _console.addEventListener( Event.CHANGE, _consoleChanged );
@@ -376,6 +383,13 @@ class ServerItem extends LayoutGroupItemRenderer {
         event.server = _server;
         this.dispatchEvent( event );
 
+    }
+    
+    function _buttonFtpTriggered( e:TriggerEvent ) {
+    		var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_FTP_CLIENT );
+        		event.server = _server;
+        this.dispatchEvent( event );
+       // _server.openFtpClient('/Applications/FileZilla.app/Contents/MacOS/filezilla');
     }
 
     function _buttonDestroyTriggered( e:TriggerEvent ) {
@@ -533,6 +547,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
         _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
         _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = false;
+        _buttonFtp.enabled = _buttonFtp.includeInLayout = _buttonFtp.visible = false;
         _buttonProvision.enabled = _buttonProvision.includeInLayout = _buttonProvision.visible = false;
         _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = false;
         _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = false;
@@ -583,6 +598,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Running( hasError ):
             	    _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+            	    _buttonFtp.enabled = _buttonFtp.includeInLayout = _buttonFtp.visible = true;
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
