@@ -25,17 +25,12 @@ class SetupApplicationsPage extends Page
 		super();
 		
 		firstLine.width = _width;
-		
-		labelTitle.layoutData = new HorizontalLayoutData( 100 );
-		
+
 		appNotDetectedGroup.width = _width;
 		appNameGroup.width = _width;
 		exectPathGroup.width = _width;
 		
-		textInputAppName.layoutData = new HorizontalLayoutData(100);
 		textInputAppName.prompt = LanguageManager.getInstance().getString( 'settingspage.applications.appname' );
-		
-		textInputPath.layoutData = new HorizontalLayoutData(100);
 		textInputPath.prompt = LanguageManager.getInstance().getString('settingspage.applications.executableapppath');
 		
 		locatePath.text = LanguageManager.getInstance().getString('settingspage.applications.locateapplication');

@@ -6,7 +6,11 @@
 		<f:layout>
 			<f:HorizontalLayout horizontalAlign="RIGHT" verticalAlign="MIDDLE"/>
 		</f:layout>
-		<f:Label id="labelTitle" variant="label-large" text="Title" />
+		<f:Label id="labelTitle" variant="label-large" text="Title">
+			<f:layoutData>
+				<f:HorizontalLayoutData percentWidth="100"/>
+			</f:layoutData>
+		</f:Label>
 	</f:LayoutGroup>
 	
 	<components:HLine id="firstLine"/>
@@ -22,15 +26,23 @@
 		<f:layout>
 			<f:HorizontalLayout verticalAlign="MIDDLE" />
 		</f:layout>
-		<f:TextInput id="textInputAppName"/>
+		<f:TextInput id="textInputAppName">
+			<f:layoutData>
+				<f:HorizontalLayoutData percentWidth="100"/>
+			</f:layoutData>
+		</f:TextInput>
 	</f:LayoutGroup>
 	
 	<f:LayoutGroup id="exectPathGroup">
 		<f:layout>
 			<f:HorizontalLayout verticalAlign="MIDDLE" gap="4"/>
 		</f:layout>
-		<f:TextInput id="textInputPath"/>
-		<f:Button id="locatePath" variant="button-select-file"/>
+		<f:TextInput id="textInputPath">
+			<f:layoutData>
+				<f:HorizontalLayoutData percentWidth="100"/>
+			</f:layoutData>
+		</f:TextInput>
+		<f:Button id="locatePath" variant="button-select-file" height="30"/>
 	</f:LayoutGroup>
 	
 	<components:HLine id="secondLine"/>

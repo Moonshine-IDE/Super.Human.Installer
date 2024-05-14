@@ -305,8 +305,9 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonDelete );
 
         _buttonFtp = new GenesisButton();
-        _buttonFtp.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_UPLOAD ) );
+        _buttonFtp.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_FILEZILLA ) );
         _buttonFtp.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.ftp' );
+        _buttonFtp.height = 30;
         _buttonFtp.addEventListener( TriggerEvent.TRIGGER, _buttonFtpTriggered );
         buttonGroup.addChild( _buttonFtp );
         
