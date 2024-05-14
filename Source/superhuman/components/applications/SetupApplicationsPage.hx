@@ -82,18 +82,14 @@ class SetupApplicationsPage extends Page
 	
         fd.onSelect.add( path -> {
 			
-            var currentPath = new Path(path);
-            var fullFileName = currentPath.file + "." + currentPath.ext;
-            
             currentDir = Path.directory( path );
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            
-			_appData.executablePath = fullFileName;
-			_appData.exists = FileSystem.exists(fullFileName);
+			_appData.executablePath = path;
+			_appData.exists = FileSystem.exists(path);
 			
-			textInputPath.text = fullFileName;
+			textInputPath.text = path;
 			_showError();
         } );
 
