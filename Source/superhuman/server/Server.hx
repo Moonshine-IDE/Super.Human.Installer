@@ -569,12 +569,7 @@ class Server {
     		var userName = settings.get('vagrant_user');
     		var pass = settings.get('vagrant_user_pass');
     		
-    		var ftpAddress = this._hostname.value;
-    		if (this._organization.value != "")
-    		{
-    			ftpAddress += "." + this._organization.value + ".com";
-    		}
-    		var ftpAppCommand = 'sftp://${userName}:${pass}@${ftpAddress}';
+    		var ftpAppCommand = 'sftp://${userName}:${pass}@${this.domainName}';
     		var ftpExecutor = new Executor( appData.executablePath, [ ftpAppCommand ]);
     			ftpExecutor.execute();
     }

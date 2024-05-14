@@ -29,11 +29,11 @@ class ApplicationData {
 			if (this.executablePath == null)
 			{
 				#if linux
-				
+				this.executablePath = "";
 				#elseif mac
 				this.executablePath = "/Applications/FileZilla.app/Contents/MacOS/filezilla";
 				#elseif windows
-				this.executablePath = "";
+				this.executablePath = "C:/Program Files/FileZilla FTP Client/filezilla.exe";
 				#end
 			}
 		}
