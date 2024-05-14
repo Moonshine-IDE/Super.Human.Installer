@@ -1,6 +1,0 @@
----
-cert_dir: /secure
-selfsigned_enabled: false
-cert_pass: ThisNeedstoBeSecure!
-countrycode: US
-domino_organization: DEMO
