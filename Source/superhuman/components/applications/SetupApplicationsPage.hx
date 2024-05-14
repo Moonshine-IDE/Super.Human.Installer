@@ -29,9 +29,13 @@ class SetupApplicationsPage extends Page
 		appNotDetectedGroup.width = _width;
 		appNameGroup.width = _width;
 		exectPathGroup.width = _width;
+		validatePathGroup.width = _width;
 		
 		textInputAppName.prompt = LanguageManager.getInstance().getString( 'settingspage.applications.appname' );
 		textInputPath.prompt = LanguageManager.getInstance().getString('settingspage.applications.executableapppath');
+		
+		validatePath.text = LanguageManager.getInstance().getString('settingspage.applications.validateapppath');
+		validatePath.addEventListener( TriggerEvent.TRIGGER, _validateButtonTriggered);
 		
 		locatePath.text = LanguageManager.getInstance().getString('settingspage.applications.locateapplication');
 		locatePath.addEventListener( TriggerEvent.TRIGGER, _locateButtonTriggered);
@@ -64,7 +68,12 @@ class SetupApplicationsPage extends Page
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP ) );
     }
     
-     function _locateButtonTriggered( e:TriggerEvent ) {
+    function _validateButtonTriggered( e:TriggerEvent ) {
+    		_appData.exists = FileSystem.exists(textInputPath.text);
+    		_showError();
+    }
+    
+    function _locateButtonTriggered( e:TriggerEvent ) {
 
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
         var fd = new FileDialog();
@@ -83,8 +92,16 @@ class SetupApplicationsPage extends Page
             
 			_appData.executablePath = fullFileName;
 			_appData.exists = FileSystem.exists(fullFileName);
+			
+			textInputPath.text = fullFileName;
+			_showError();
         } );
 
         fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'settingspage.applications.titleapppath', _appData.appName ) );
+    }
+    
+    function _showError() {
+    		notDetected.text = LanguageManager.getInstance().getString('settingspage.applications.appnotdetected');
+    		appNotDetectedGroup.visible = appNotDetectedGroup.includeInLayout = !_appData.exists;
     }
 }

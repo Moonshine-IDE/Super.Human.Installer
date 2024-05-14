@@ -42,9 +42,18 @@
 				<f:HorizontalLayoutData percentWidth="100"/>
 			</f:layoutData>
 		</f:TextInput>
-		<f:Button id="locatePath" variant="button-select-file" height="30"/>
+		<f:Button id="validatePath" variant="button-select-file" height="30"/>
 	</f:LayoutGroup>
-	
+	<f:LayoutGroup id="validatePathGroup">
+		<f:layout>
+			<f:HorizontalLayout horizontalAlign="CENTER" verticalAlign="MIDDLE"/>
+		</f:layout>
+		<f:Button id="locatePath" variant="button-select-file" height="30">
+			<f:layoutData>
+				<f:HorizontalLayoutData percentWidth="80"/>
+			</f:layoutData>
+		</f:Button>
+	</f:LayoutGroup>
 	<components:HLine id="secondLine"/>
 	
 	<f:LayoutGroup>

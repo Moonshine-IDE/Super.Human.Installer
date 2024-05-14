@@ -396,8 +396,10 @@
         		"titlesetupapplications": "Applications",
         		"executableapppath": "Executable Application path",
         		"locateapplication": "Locate Application",
+        		"validateapppath": "Validate",
         		"appname": "Application name",
-        		"titleapppath": "Setup %1 path"
+        		"titleapppath": "Setup %1 path",
+        		"appnotdetected": "Invalid executable path. Make sure the selected file is a valid executable."
         }
     },
     "servicetypepage": {
