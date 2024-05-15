@@ -36,7 +36,7 @@ class ApplicationData {
 			{
 				#if linux
 				this.executablePath = "";
-				this.disdisplayPath = "";
+				this.displayPath = "";
 				#elseif mac
 				this.displayPath = "/Applications/FileZilla.app";
 				this.executablePath = PathUtil.getValidatedAppPath(this.displayPath);
