@@ -829,6 +829,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				var appData:ApplicationData = new ApplicationData(aConfig.appId);
     					appData.appName = aConfig.appName;
     					appData.executablePath = aConfig.executablePath;
+    					appData.displayPath = aConfig.displayPath;
     					appData.exists = aConfig.exists;
 				_applicationsCollection.push(appData);
 			}	

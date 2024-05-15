@@ -1,16 +1,16 @@
 package superhuman.application;
 
+import prominic.helpers.PathUtil;
 import prominic.sys.tools.SysTools;
-import sys.FileSystem;
 import superhuman.application.Applications;
 
 class ApplicationData {
 	
 	public var appId:String = Applications.FILE_ZILLA;
 	public var appName:String = Applications.FILE_ZILLA;    
-    	public var executablePath:String;
     public var exists:Bool;
-    
+   	public var displayPath:String;
+    public var executablePath:String;
     
 	public function new(appId:String) {
 		_setDefaultValues(appId);
@@ -24,20 +24,27 @@ class ApplicationData {
 			this.appName = Applications.FILE_ZILLA;
 		}
 		
+		this._setDefaultExecutablePath(this.appId);
+		
+		this.exists = this.executablePath != null;
+	}
+	
+	function _setDefaultExecutablePath(appId) {
 		switch appId {
 			case Applications.FILE_ZILLA:
-			if (this.executablePath == null)
+			if (this.executablePath == null || this.executablePath == "")
 			{
 				#if linux
 				this.executablePath = "";
+				this.disdisplayPath = "";
 				#elseif mac
-				this.executablePath = "/Applications/FileZilla.app/Contents/MacOS/filezilla";
+				this.displayPath = "/Applications/FileZilla.app";
+				this.executablePath = PathUtil.getValidatedAppPath(this.displayPath);
 				#elseif windows
-				this.executablePath = "C:/Program Files/FileZilla FTP Client/filezilla.exe";
+				this.displayPath = "C:/Program Files/FileZilla FTP Client/filezilla.exe";
+				this.executablePath = PathUtil.getValidatedAppPath(this.displayPath);
 				#end
 			}
 		}
-		
-		this.exists = FileSystem.exists(this.executablePath);
 	}
 }

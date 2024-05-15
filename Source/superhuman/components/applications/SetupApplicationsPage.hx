@@ -1,5 +1,6 @@
 package superhuman.components.applications;
 
+import prominic.helpers.PathUtil;
 import lime.ui.FileDialogType;
 import haxe.io.Path;
 import lime.ui.FileDialog;
@@ -54,12 +55,22 @@ class SetupApplicationsPage extends Page
 		
 		labelTitle.text = LanguageManager.getInstance().getString( 'settingspage.applications.titleapppath', data.appName );
 		textInputAppName.text = data.appName;
-		textInputPath.text = data.executablePath;
+		textInputPath.text = data.displayPath;
 	}
 	
 	function _saveButtonTriggered(e:TriggerEvent) {
 		_appData.appName = textInputAppName.text;		
-		_appData.executablePath = textInputPath.text;
+		_appData.executablePath = PathUtil.getValidatedAppPath(textInputPath.text);
+		if (_appData.executablePath != null)
+		{
+			_appData.exists = _appData.executablePath != null;
+			_appData.displayPath = textInputPath.text;
+		}
+		else
+		{
+			_appData.exists = false;
+			_appData.displayPath = "";
+		}
 		
 		this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP ) );
 	}
@@ -69,7 +80,8 @@ class SetupApplicationsPage extends Page
     }
     
     function _validateButtonTriggered( e:TriggerEvent ) {
-    		_appData.exists = FileSystem.exists(textInputPath.text);
+    		_appData.executablePath = PathUtil.getValidatedAppPath(textInputPath.text);
+		_appData.exists = _appData.executablePath != null;
     		_showError();
     }
     
@@ -78,16 +90,18 @@ class SetupApplicationsPage extends Page
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
         var fd = new FileDialog();
         
-        var currentDir:String;
+        var currentDir:String; 
 	
         fd.onSelect.add( path -> {
 			
+        		path = Path.removeTrailingSlashes(path);
             currentDir = Path.directory( path );
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-			_appData.executablePath = path;
-			_appData.exists = FileSystem.exists(path);
+			_appData.executablePath = PathUtil.getValidatedAppPath(path);
+			_appData.exists = _appData.executablePath != null;
+			_appData.displayPath = path;
 			
 			textInputPath.text = path;
 			_showError();
@@ -97,7 +111,11 @@ class SetupApplicationsPage extends Page
     }
     
     function _showError() {
-    		notDetected.text = LanguageManager.getInstance().getString('settingspage.applications.appnotdetected');
+    		#if mac
+    			notDetected.text = LanguageManager.getInstance().getString('settingspage.applications.appnotdetectedmac');
+    		#else
+    			notDetected.text = LanguageManager.getInstance().getString('settingspage.applications.appnotdetectedother');
+    		#end
     		appNotDetectedGroup.visible = appNotDetectedGroup.includeInLayout = !_appData.exists;
     }
 }
