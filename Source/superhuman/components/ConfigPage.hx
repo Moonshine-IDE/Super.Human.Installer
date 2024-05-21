@@ -127,12 +127,7 @@ class ConfigPage extends Page {
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
-        //Temporary selection of older provisioner on windows, due to bugs in newest one. It's going to be changes with next prov release
-        #if windows
-	        _dropdownCoreComponentVersion.selectedIndex = 1;
-        #else
-        		_dropdownCoreComponentVersion.selectedIndex = 0;
-        #end
+        	_dropdownCoreComponentVersion.selectedIndex = 0;
         for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).length ) {
             var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).get( i );
             if ( d.data.version == _server.provisioner.version ) {
@@ -140,6 +135,10 @@ class ConfigPage extends Page {
                 break;
             }
         }
+        //Temporary selection of older provisioner on windows, due to bugs in newest one. It's going to be changes with next prov release
+        #if windows
+	        _dropdownCoreComponentVersion.selectedIndex = 1;
+        #end
         _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
         _rowCoreComponentVersion.content.addChild( _dropdownCoreComponentVersion );
         _form.addChild( _rowCoreComponentVersion );
