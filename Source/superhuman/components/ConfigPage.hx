@@ -127,7 +127,12 @@ class ConfigPage extends Page {
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
-        _dropdownCoreComponentVersion.selectedIndex = 0;
+        //Temporary selection of older provisioner on windows, due to bugs in newest one. It's going to be changes with next prov release
+        #if windows
+	        _dropdownCoreComponentVersion.selectedIndex = 1;
+        #else
+        		_dropdownCoreComponentVersion.selectedIndex = 0;
+        #end
         for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).length ) {
             var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).get( i );
             if ( d.data.version == _server.provisioner.version ) {
