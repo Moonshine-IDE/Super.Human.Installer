@@ -555,10 +555,12 @@ class Server {
     			if (appData != null && appData.exists)
     			{
     				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
+    				Logger.debug( '${this}: ' + LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
 			}
 			else
 			{
 				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
+				Logger.debug( '${this}: ' + LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
 				return;
 			}
 		}
@@ -570,12 +572,18 @@ class Server {
     		var pass = settings.get('vagrant_user_pass');
     		
     		var ftpAppCommand = 'sftp://${userName}:${pass}@${this.domainName}';
-    		var ftpExecutor = new Executor( appData.executablePath, [ ftpAppCommand ]);
+			var clientCommand = appData.executablePath;
+    		#if windows
+			clientCommand = 'start "" "${appData.executablePath}" ${ftpAppCommand}';
+			Sys.command( clientCommand );
+			Logger.debug( '${this}: ' + '[Execute: ${clientCommand}]' );
+    		#else
+			var ftpExecutor = new Executor(clientCommand, [ftpAppCommand]);
     			ftpExecutor.execute();
+		#end
     }
     
     public function saveData() {
-
         try {
 			
         	 	var s = Json.stringify( getData() );

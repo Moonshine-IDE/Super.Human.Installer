@@ -7,6 +7,11 @@ class PathUtil
 {
 	public static function getValidatedAppPath(path:String):String
     {
+    		if (path == "" || path == null)
+    		{
+    			return null;
+    		}
+    		
         var finalExecutablePath:String;
         var splitPath = path.split("/");
         var file:File;
