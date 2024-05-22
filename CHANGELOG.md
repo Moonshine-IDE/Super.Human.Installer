@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.10.0]
+
+The 0.10.0 release of Super.Human.Installer update Domino provisioner to version [0.1.22](https://github.com/DominoVagrant/demo-tasks/compare/demo-tasks/v0.1.21...demo-tasks/v0.1.22). 
+
+### Added
+* Update Domino provisioner to version 0.1.22 ([#99](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/99))
+* Add SCP application button for easier access to the VM contents ([#113](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/113))
+
+### Known Issues
+* Domino Provisioner: Issues have been reported with Domino Provisioner version 0.1.22 on Windows machines. It is recommended to use provisioner version 0.1.20 on Windows to avoid these issues. The provisioner functions correctly on macOS.
+
 ## Super Human Installer [0.9.0]
 
 This release contains small updates in existing Domino provisioner 0.1.20. 
