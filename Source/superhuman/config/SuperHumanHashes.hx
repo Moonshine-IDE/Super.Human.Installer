@@ -15,7 +15,8 @@ class SuperHumanHashes
 										 { hash: "8f3e42f4f5105467c99cfd56b8b4a755", version: { majorVersion: "1", minorVersion: "0", patch: "6", fullVersion: "1.0.6"} }, 
 										 { hash: "fe2dd37e6d05ea832d8ecc4f0e1dbe80", version: { majorVersion: "1", minorVersion: "0", patch: "8", fullVersion: "1.0.8"} },
 										 { hash: "378880b838aeeb4db513ebf05a8a7285", version: { majorVersion: "1", minorVersion: "0", patch: "9", fullVersion: "1.0.9"} },
-										 { hash: "697d89eb78fa6c1512e0ee199fa0c97c", version: { majorVersion: "1", minorVersion: "0", patch: "10", fullVersion: "1.0.10"}}]],
+										 { hash: "697d89eb78fa6c1512e0ee199fa0c97c", version: { majorVersion: "1", minorVersion: "0", patch: "10", fullVersion: "1.0.10"}},
+										 { hash: "3e0eb048284669557949bcdf97701754", version: { majorVersion: "1", minorVersion: "0", patch: "11", fullVersion: "1.0.11"}}]],
 		"traveler" => [ "installers" => [ { hash: "4a195e3282536de175a2979def40527d" }, 
 										 { hash: "4118ee30d590289070f2d29ecf1b34cb", version: { majorVersion: "12", minorVersion: "0", patch: "2", fullVersion: "12.0.2" }}, 
 										 { hash: "216807509d96f65c7a76b878fc4c4bd5", version: { majorVersion: "12", minorVersion: "0", patch: "2", fixPackVersion: "FP1", fullVersion: "12.0.2"} } ]],
@@ -75,6 +76,22 @@ class SuperHumanHashes
 		var version:{} = getVersion(installersHashes, hash);
 		
 		return version;
+	}
+	
+	public static function getHash(installerType:String, hashType:String, fullVersion:String):String
+	{
+		var installers:Array<Dynamic> = validHashes.get(installerType).get( hashType );
+		
+		var filteredHashes:Array<Dynamic> = installers.filter(function(item:Dynamic):Bool {
+			return item.fullVersion == fullVersion;
+		});
+		
+		if (filteredHashes != null && filteredHashes.length > 0)
+		{
+			return filteredHashes.shift();
+		}
+		
+		return "";
 	}
 	
 	private static function getVersion(installerHashes:Array<Dynamic>, hash:String):{}

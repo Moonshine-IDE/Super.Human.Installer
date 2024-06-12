@@ -30,6 +30,7 @@
 
 package superhuman.server.provisioners;
 
+import superhuman.server.provisioners.roles.RolesUtil;
 import superhuman.browser.Browsers;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
@@ -54,7 +55,7 @@ class DemoTasks extends AbstractProvisioner {
     static final _CURRENT_TASK_IDENTIFIER_PATTERN:EReg = ~/(?:TASK \x{5b})(\S+)(?:.+)(?:\x{3a})(?:.*)/m;
     static final _IP_ADDRESS_PATTERN:EReg = ~/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
     static final _SAFE_ID_FILE:String = "safe.ids";
-    static final _SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
+    static final _DEFAULT_SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
     static final _TASK_IDENTIFIER_PATTERN:EReg = ~/(?:\s{6})(?:- name: )(\S+)/;
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
     static final _WEB_ADDRESS_PATTERN:EReg = ~/(?:https:\/\/)(.*)(?::\d{1,5}\/welcome.html)/;
@@ -196,7 +197,7 @@ class DemoTasks extends AbstractProvisioner {
     function get_provisionSuccessful() return _webAddressValid();
 
     public var safeIdExists( get, never ):Bool;
-    function get_safeIdExists() return this.fileExists( Path.addTrailingSlash( _SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
+    function get_safeIdExists() return this.fileExists( Path.addTrailingSlash( _DEFAULT_SAFE_ID_LOCATION ) + _SAFE_ID_FILE );
 
     public var server( get, never ):Server;
     function get_server() return _server;
@@ -280,7 +281,7 @@ class DemoTasks extends AbstractProvisioner {
         _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
 
         //if ( _version >= "0.1.18" ) return HostsFileGenerator.generateContentForV18( _hostsTemplate, this );
-        return HostsFileGenerator.generateContentForV17( _hostsTemplate, this );
+        return HostsFileGenerator.generateContent( _hostsTemplate, this );
 
     }
 
@@ -309,7 +310,7 @@ class DemoTasks extends AbstractProvisioner {
 
         if ( FileSystem.exists( safeIdPath ) ) {
 
-            var safeIdDir = Path.addTrailingSlash( _targetPath ) + Path.addTrailingSlash( _SAFE_ID_LOCATION );
+            var safeIdDir = Path.addTrailingSlash( _targetPath ) + Path.addTrailingSlash( _getSafeIdLocation() );
             FileSystem.createDirectory( safeIdDir );
 
             try {
@@ -515,12 +516,21 @@ class DemoTasks extends AbstractProvisioner {
         return false;
 
     }
+    
+    function _getSafeIdLocation():String {
+    		if (version < "0.1.23")
+    		{
+    			return _DEFAULT_SAFE_ID_LOCATION;
+    		}
+
+    		return "id-files/user-safe-ids";
+    }
 
 }
 
 class HostsFileGenerator {
 
-    static public function generateContentForV17( sourceTemplate:String, provisioner:DemoTasks ):String {
+    static public function generateContent( sourceTemplate:String, provisioner:DemoTasks ):String {
 
         var output:String = null;
 
@@ -534,6 +544,10 @@ class HostsFileGenerator {
          	SERVER_ID: provisioner.server.id,
          	RESOURCES_CPU: provisioner.server.numCPUs.value,
          	RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
+         	
+         	//vagrant_user
+         	SERVER_DEFAULT_USER: "startcloud",
+         	SERVER_DEFAULT_USER_PASS: "STARTcloud24@!",
          	
          	//network
          	NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
@@ -550,34 +564,44 @@ class HostsFileGenerator {
             //vars
             SERVER_ORGANIZATION: provisioner.server.organization.value,
             USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
+            DOMINO_ADMIN_PASSWORD: "password",
             DOMINO_SERVER_CLUSTERMATES: 0,
             CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
 			
 		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
 			
             //Domino Variables
+            DOMINO_HASH: "",
             DOMINO_INSTALLER: "",
             DOMINO_INSTALLER_VERSION: "",
             DOMINO_INSTALLER_MAJOR_VERSION: "",
             DOMINO_INSTALLER_MINOR_VERSION: "",
             DOMINO_INSTALLER_PATCH_VERSION: "",
             
+            DOMINO_MAJOR_VERSION: "",
+            DOMINO_MINOR_VERSION: "",
+            DOMINO_PATCH_VERSION: "",
+            
             //Domino fixpack Variables
+            DOMINO_FP_HASH: "",
             DOMINO_INSTALLER_FIXPACK_INSTALL: false,
             DOMINO_INSTALLER_FIXPACK_VERSION: "",
             DOMINO_INSTALLER_FIXPACK: "",
             
             //Domino Hotfix Variables
+            DOMINO_HF_HASH: "",
             DOMINO_INSTALLER_HOTFIX_INSTALL: false,
             DOMINO_INSTALLER_HOTFIX_VERSION: "",
             DOMINO_INSTALLER_HOTFIX: "",
             
             //Leap Variables
+            LEAP_HASH: "",
             LEAP_INSTALLED_CHECK: false,
             LEAP_INSTALLER: "",
             LEAP_INSTALLER_VERSION: "",
 		    
             //Nomad Web Variables
+            NOMADWEB_HASH: "",
             NOMADWEB_INSTALLER: "",
             NOMADWEB_VERSION: "",
             
@@ -607,10 +631,14 @@ class HostsFileGenerator {
             ROLE_VERSE: "",
             ROLE_APPDEVPACK: "",
             ROLE_RESTAPI: "",
-            ROLE_VOLTMX: "",
             ROLE_STARTCLOUD_QUICK_START: "",
             ROLE_STARTCLOUD_HAPROXY: "",
             ROLE_STARTCLOUD_VAGRANT_README: "",
+            ROLE_DOMINO_RESET: "",
+            ROLE_MARIADB: "",
+            ROLE_DOCKER: "",
+            ROLE_VOLTMX: "",
+            ROLE_VOLTMX_DOCKER: "",
             
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: provisioner.server.setupWait.value,
@@ -624,6 +652,7 @@ class HostsFileGenerator {
 			var installerVersion:Dynamic = r.files.installerVersion;
 			var hotfixVersion:Dynamic = r.files.installerHotFixVersion;
 			var fixpackVersion:Dynamic = r.files.installerFixpackVersion;
+			var installerHash:Dynamic = r.files.installerHash;
 			
 			if (r.value == "domino")
 			{
@@ -631,6 +660,11 @@ class HostsFileGenerator {
 						
 				if (installerVersion != null)
 				{
+					if (installerVersion.hash != null)
+					{
+						replace.DOMINO_HASH = installerHash;
+					}
+					
 					if (installerVersion.fullVersion != null)
 					{
 						replace.DOMINO_INSTALLER_VERSION = installerVersion.fullVersion;
@@ -639,16 +673,19 @@ class HostsFileGenerator {
 					if (installerVersion.majorVersion != null)
 					{
 						replace.DOMINO_INSTALLER_MAJOR_VERSION = installerVersion.majorVersion;
+						replace.DOMINO_MAJOR_VERSION = installerVersion.majorVersion;
 					}
 					
 					if (installerVersion.minorVersion != null)
 					{
 						replace.DOMINO_INSTALLER_MINOR_VERSION = installerVersion.minorVersion;
+						replace.DOMINO_MINOR_VERSION = installerVersion.minorVersion;
 					}
 					
 					if (installerVersion.patchVersion != null)
 					{
-						replace.DOMINO_INSTALLER_PATCH_VERSION = installerVersion.minorVersion;
+						replace.DOMINO_INSTALLER_PATCH_VERSION = installerVersion.patchVersion;
+						replace.DOMINO_PATCH_VERSION = installerVersion.patchVersion;
 					}
 				}
 				
@@ -670,22 +707,13 @@ class HostsFileGenerator {
 					replace.DOMINO_INSTALLER_FIXPACK_VERSION = fixpackVersion == null ? "" : fixpackVersion.fullVersion;
 				}
 			}
-			
-			var versionGreaterThan20:Bool = provisioner.data.version > "0.1.20";
 		  	
             if ( r.value == "leap" ) {
 
-                if ( r.enabled ) {
-                	    replace.LEAP_INSTALLED_CHECK = true;
-
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_leap" : "- name: domino_leap";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_leap" : "#- name: domino_leap";
-
-                }
-				
+            		replace.LEAP_INSTALLED_CHECK = r.enabled;
+            		//"- name: hcl_domino_leap" : "- name: domino_leap";
+            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+ 
                 replace.LEAP_INSTALLER = installerName;
                 replace.LEAP_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_LEAP = replaceWith;
@@ -693,15 +721,8 @@ class HostsFileGenerator {
 
             if ( r.value == "nomadweb" ) {
 
-                if ( r.enabled ) {
-
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_nomadweb" : "#- name: domino_nomadweb";
-
-                }
+            		//"- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
+            	 	replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
 				
                 replace.NOMADWEB_INSTALLER = installerName;
                 replace.NOMADWEB_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
@@ -710,16 +731,9 @@ class HostsFileGenerator {
 
             if ( r.value == "traveler" ) {
 
-                if ( r.enabled ) {
-
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_traveler" : "- name: domino_traveler";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_traveler" : "#- name: domino_traveler";
-
-                }
-				
+            		//"- name: hcl_domino_traveler" : "- name: domino_traveler"
+            	    replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+            	    
                 replace.TRAVELER_INSTALLER = installerName;
                 replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_TRAVELER = replaceWith;
@@ -727,32 +741,16 @@ class HostsFileGenerator {
 
             if ( r.value == "traveler" ) {
 
-                if ( r.enabled ) {
-
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_traveler_htmo" : "- name: domino_traveler_htmo";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_traveler_htmo" : "#- name: domino_traveler_htmo";
-
-                }
-
+            		//"- name: hcl_domino_traveler_htmo" : "- name: domino_traveler_htmo"
+            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "traveler_htmo", r.enabled);
                 replace.ROLE_TRAVELER_HTMO = replaceWith;
-
             }
 
             if ( r.value == "verse" ) {
 
-                if ( r.enabled ) {
-
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_verse" : "- name: domino_verse";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_verse" : "#- name: domino_verse";
-
-                }
-
+            		//"- name: hcl_domino_verse" : "- name: domino_verse"
+            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+       
                 replace.VERSE_INSTALLER = installerName;
                 replace.VERSE_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_VERSE = replaceWith;
@@ -760,16 +758,9 @@ class HostsFileGenerator {
 
             if ( r.value == "appdevpack" ) {
 
-                if ( r.enabled ) {
-
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_appdevpack" : "- name: domino_appdevpack";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_appdevpack" : "#- name: domino_appdevpack";
-
-                }
-				
+            		//"- name: hcl_domino_appdevpack" : "- name: domino_appdevpack"
+            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+            		
                 replace.APPDEVPACK_INSTALLER = installerName;
                 replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_APPDEVPACK = replaceWith;
@@ -777,24 +768,20 @@ class HostsFileGenerator {
 
             if ( r.value == "domino-rest-api" ) {
 
-                if ( r.enabled ) {
+            		//"- name: hcl_domino_rest_api" : "- name: domino_rest_api"
+            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "rest_api", r.enabled);
 
-                    replaceWith = versionGreaterThan20 ? "- name: hcl_domino_rest_api" : "- name: domino_rest_api";
-
-                } else {
-
-                    replaceWith = versionGreaterThan20 ? "#- name: hcl_domino_rest_api" : "#- name: domino_rest_api";
-
-                }
-				
                 replace.DOMINO_REST_API_INSTALLER = installerName;
                 replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_RESTAPI = replaceWith;
             }
-
-            replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud_quick_start";
-            replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud_haproxy";
-            replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud_vagrant_readme";
+			
+            //"- name: startcloud_quick_start";
+            replace.ROLE_STARTCLOUD_QUICK_START = RolesUtil.getOtherRole(provisioner.data.version, "quick_start");
+             //"- name: startcloud_haproxy";
+            replace.ROLE_STARTCLOUD_HAPROXY = RolesUtil.getOtherRole(provisioner.data.version, "haproxy");
+            //"- name: startcloud_vagrant_readme";
+            replace.ROLE_STARTCLOUD_VAGRANT_README = RolesUtil.getOtherRole(provisioner.data.version, "vagrant_readme");
         }
 
         var template = new Template( sourceTemplate );
@@ -816,211 +803,4 @@ class HostsFileGenerator {
         return output;
 
     }
-
-    static public function generateContentForV18( sourceTemplate:String, provisioner:DemoTasks ):String {
-
-        var output:String = null;
-
-        var replace = {
-
-            USER_EMAIL: provisioner.server.userEmail.value,
-            USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
-
-            SERVER_ID: provisioner.server.id,
-            SERVER_HOSTNAME: provisioner.server.url.hostname,
-            SERVER_DOMAIN: provisioner.server.url.domainName,
-            SERVER_ORGANIZATION: provisioner.server.organization.value,
-
-            NETWORK_BRIDGE: provisioner.server.networkBridge.value,
-
-            // Always true, never false
-            NETWORK_DHCP4: true,
-            NETWORK_DNS_NAMESERVER_1: ( provisioner.server.dhcp4.value ) ? "1.1.1.1" : provisioner.server.nameServer1.value,
-            NETWORK_DNS_NAMESERVER_2: ( provisioner.server.dhcp4.value ) ? "1.0.0.1" : provisioner.server.nameServer2.value,
-            NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
-            NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
-            NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
-
-            ENV_SETUP_WAIT: provisioner.server.setupWait.value,
-
-            RESOURCES_CPU: provisioner.server.numCPUs.value,
-            RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
-
-            ROLE_LEAP: "",
-            ROLE_NOMADWEB: "",
-            ROLE_TRAVELER: "",
-            ROLE_TRAVELER_HTMO: "",
-            ROLE_VERSE: "",
-            ROLE_APPDEVPACK: "",
-            ROLE_STARTCLOUD_QUICK_START: "",
-            ROLE_STARTCLOUD_HAPROXY: "",
-            ROLE_STARTCLOUD_VAGRANT_README: "",
-            ROLE_RESTAPI: "",
-            ROLE_DOMINO_INSTALL: "",
-            ROLE_DOMINO_VAGRANT_REST_API: "",
-
-            CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
-
-        };
-
-        for ( r in provisioner.server.roles.value ) {
-
-            var replaceWith:String = "";
-
-            if ( r.value == "leap" ) {
-
-                if ( r.enabled ) {
-					
-                    replaceWith = "- name: domino_leap";
-                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_LEAP );
-
-                } else {
-
-                    replaceWith = "#- name: domino_leap";
-
-                }
-
-                replace.ROLE_LEAP = replaceWith;
-
-            }
-
-            if ( r.value == "nomadweb" ) {
-
-                if ( r.enabled ) {
-
-                    replaceWith = "- name: domino_nomadweb";
-                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_NOMADWEB );
-
-                } else {
-
-                    replaceWith = "#- name: domino_nomadweb";
-
-                }
-
-                replace.ROLE_NOMADWEB = replaceWith;
-
-            }
-
-            if ( r.value == "traveler" ) {
-
-                if ( r.enabled ) {
-
-                    replaceWith = "- name: domino_traveler";
-                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_TRAVELER );
-
-                } else {
-
-                    replaceWith = "#- name: domino_traveler";
-
-                }
-
-                replace.ROLE_TRAVELER = replaceWith;
-
-            }
-
-            if ( r.value == "traveler" ) {
-
-                if ( r.enabled ) {
-
-                    replaceWith = "- name: domino_traveler_htmo";
-
-                } else {
-
-                    replaceWith = "#- name: domino_traveler_htmo";
-
-                }
-
-                replace.ROLE_TRAVELER_HTMO = replaceWith;
-
-            }
-
-            if ( r.value == "verse" ) {
-
-                if ( r.enabled ) {
-
-                    replaceWith = "- name: domino_verse";
-                    if ( provisioner.server.disableBridgeAdapter.value ) replaceWith += "\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_VERSE );
-
-                } else {
-
-                    replaceWith = "#- name: domino_verse";
-
-                }
-
-                replace.ROLE_VERSE = replaceWith;
-
-            }
-
-            if ( r.value == "appdevpack" ) {
-
-                if ( r.enabled ) {
-
-                    replaceWith = "- name: domino_appdevpack";
-
-                } else {
-
-                    replaceWith = "#- name: domino_appdevpack";
-
-                }
-
-                replace.ROLE_APPDEVPACK = replaceWith;
-
-            }
-
-            if ( r.value == "domino-rest-api" ) {
-
-                if ( r.enabled ) {
-
-                    replaceWith = "- name: domino_rest_api";
-
-                } else {
-
-                    replaceWith = "#- name: domino_rest_api";
-
-                }
-
-                replace.ROLE_RESTAPI = replaceWith;
-
-            }
-
-            if ( provisioner.server.disableBridgeAdapter.value ) {
-
-                replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud_quick_start\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_STARTCLOUD_QUICK_START );
-                replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud_haproxy\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_STARTCLOUD_HAPROXY );
-                replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud_vagrant_readme\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_STARTCLOUD_VAGRANT_README );
-                replace.ROLE_DOMINO_INSTALL = "- name: domino_install\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_INSTALL );
-                replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino_vagrant_rest_api\n" + provisioner.getFileContentFromSourceTemplateDirectory( superhuman.server.provisioners.DemoTasks._TEMPLATE_DOMINO_VAGRANT_REST_API );
-
-            } else {
-
-                replace.ROLE_STARTCLOUD_QUICK_START = "- name: startcloud_quick_start";
-                replace.ROLE_STARTCLOUD_HAPROXY = "- name: startcloud_haproxy";
-                replace.ROLE_STARTCLOUD_VAGRANT_README = "- name: startcloud_vagrant_readme";
-                replace.ROLE_DOMINO_INSTALL = "- name: domino_install";
-                replace.ROLE_DOMINO_VAGRANT_REST_API = "- name: domino_vagrant_rest_api";
-
-            }
-
-        }
-
-        var template = new Template( sourceTemplate );
-		output = template.execute( replace );
-
-        if ( provisioner.server.disableBridgeAdapter.value ) {
-
-            // Remove the contents of networks yaml tag
-            var r:EReg = ~/(?:networks:)((.|\n)*)(?: For later)/;
-
-            if ( r.match( output ) ) {
-
-                output = r.replace( output, "## For later" );
-
-            }
-
-        }
-
-        return output;
-
-    }
-
 }

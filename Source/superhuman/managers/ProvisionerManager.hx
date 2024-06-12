@@ -54,12 +54,17 @@ class ProvisionerManager {
             },
             */
             {
-                name: "Demo-tasks v0.1.22",
+                name: "HCL Standalone Provisioner v0.1.23",
+                data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.23" ) },
+                root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_DEMO_TASKS_LOCAL_PATH + "0.1.23"
+            },
+            {
+                name: "HCL Standalone Provisioner v0.1.22",
                 data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.22" ) },
                 root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_DEMO_TASKS_LOCAL_PATH + "0.1.22"
             },
             {
-                name: "Demo-tasks v0.1.20",
+                name: "HCL Standalone Provisioner v0.1.20",
                 data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString( "0.1.20" ) },
                 root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_DEMO_TASKS_LOCAL_PATH + "0.1.20"
             }
