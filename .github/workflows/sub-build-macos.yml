@@ -73,7 +73,7 @@ jobs:
           replace: "${{ inputs.version }}"
 
       - name: Set up Haxe
-        uses: krdlab/setup-haxe@master
+        uses: krdlab/setup-haxe@v1.5.1
         with:
           haxe-version: ${{ env.haxe_version }}
   
