@@ -40,7 +40,7 @@ env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
-  haxe_version: 4.3.5
+  haxe_version: 4.3.4
   bin_path: Export/${{ inputs.env }}/linux/bin
 
 jobs:
@@ -84,7 +84,7 @@ jobs:
           sudo apt-get install libfuse2
 
       - name: Set up Haxe
-        uses: krdlab/setup-haxe@master
+        uses: krdlab/setup-haxe@v1.5.1
         with:
           haxe-version: ${{ env.haxe_version }}
   
