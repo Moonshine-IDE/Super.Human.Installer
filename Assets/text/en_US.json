@@ -361,8 +361,9 @@
     "settingspage":{
         "title": "Application Settings & Preferences",
         "interface":{
-            "title": "User Interface",
-            "rememberwindowposition": "Remember application window size and position"
+            "title": "General",
+            "rememberwindowposition": "Remember application window size and position",
+            "preventsystemfromsleep": "Prevent System from sleep"
         },
         "servers":{
             "title": "Servers",
