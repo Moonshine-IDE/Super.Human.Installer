@@ -115,7 +115,7 @@ jobs:
           cd /opt/hostedtoolcache/haxe/4.3.4/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
-          git clone --recursive --depth 1 --branch develop https://github.com/openfl/lime
+          git clone --recursive --depth 1 --branch 8.2.0-Dev https://github.com/openfl/lime
           haxelib dev lime lime
           haxelib install format
           haxelib install hxp
