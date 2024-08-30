@@ -99,13 +99,12 @@ jobs:
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.56
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.62
           pushd .
           cd /Users/runner/hostedtoolcache/haxe/4.3.4/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
-          git clone --recursive --depth 1 --branch 8.3.0-Dev https://github.com/openfl/lime
-          haxelib dev lime lime
+          haxelib install lime 8.1.3 
           haxelib install format
           haxelib install hxp
           haxelib install yaml

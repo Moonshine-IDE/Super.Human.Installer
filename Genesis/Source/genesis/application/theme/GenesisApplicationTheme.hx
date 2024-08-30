@@ -42,7 +42,6 @@ import feathers.controls.FormItem;
 import feathers.controls.Header;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
-import feathers.controls.PageIndicator;
 import feathers.controls.PopUpListView;
 import feathers.controls.TextArea;
 import feathers.controls.TextInput;
@@ -118,7 +117,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final LAYOUT_GROUP_TOAST:String = "layout-group-toast";
     public static final LAYOUT_GROUP_TOAST_CONTAINER:String = "layout-group-toast-container";
     public static final LAYOUT_GROUP_PERCENTAGE_BAR:String = "layout-group-percentage-bar";
-    public static final PAGE_INDICATOR_INVISIBLE:String = "page-indicator-invisible";
     public static final TEXT_AREA_PRIVACY:String = "text-area-privacy";
 
     public static final ICON_CHECKBOX_LARGE:String = "assets/images/common/checkbox_large.png";
@@ -328,7 +326,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( MainMenuButton, null, _setMainMenuButtonStyles );
         this.styleProvider.setStyleFunction( Page, LAYOUT_GROUP_LOGIN, _setPageLoginStyles );
         this.styleProvider.setStyleFunction( Page, null, _setPageStyles );
-        this.styleProvider.setStyleFunction( PageIndicator, PAGE_INDICATOR_INVISIBLE, _setPageIndicatorInvisibleStyles );
         this.styleProvider.setStyleFunction( ProgressBar, null, _setProgressBarStyles );
         this.styleProvider.setStyleFunction( TextArea, TEXT_AREA_PRIVACY, _setTextAreaPrivacyStyles );
         this.styleProvider.setStyleFunction( TextInput, null, _setTextInputStyles );
@@ -706,14 +703,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setPageLoginStyles( page:Page ) {
 
         _setPageStyles( page );
-
-    }
-
-
-    function _setPageIndicatorInvisibleStyles( indicator:PageIndicator ) {
-
-        indicator.layout = new HorizontalLayout();
-        indicator.visible = indicator.includeInLayout = false;
 
     }
 
