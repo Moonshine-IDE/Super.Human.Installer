@@ -40,7 +40,7 @@ env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
-  haxe_version: 4.3.4
+  haxe_version: 4.3.6
   bin_path: Export/${{ inputs.env }}/macos/bin/
 
 jobs:
@@ -104,12 +104,12 @@ jobs:
           cd /Users/runner/hostedtoolcache/haxe/4.3.4/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
-          haxelib install lime 8.1.3 
+          haxelib install lime 8.2.0
           haxelib install format
           haxelib install hxp
           haxelib install yaml
           haxelib git lime-samples https://github.com/openfl/lime-samples
-          haxelib git openfl https://github.com/openfl/openfl.git develop
+          haxelib install openfl 9.4.0
           haxelib run openfl setup
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
