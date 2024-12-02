@@ -115,7 +115,7 @@ jobs:
           cd /opt/hostedtoolcache/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
-          haxelib install lime 8.2.0
+          haxelib install lime 8.2.1
           haxelib install format
           haxelib install hxp
           haxelib install yaml
