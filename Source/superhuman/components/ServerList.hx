@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import openfl.Assets;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.Property;
 import feathers.controls.Label;
@@ -57,6 +58,7 @@ import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
 import superhuman.server.ServerStatus;
 import superhuman.theme.SuperHumanInstallerTheme;
+import openfl.display.Bitmap;
 
 @:styleContext
 class ServerList extends ListView {
@@ -231,7 +233,9 @@ class ServerItem extends LayoutGroupItemRenderer {
         this.addChild( buttonGroup );
 
         _buttonStart = new GenesisButton();
-        _buttonStart.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_START ) );
+        var iconStart = new Bitmap(Assets.getBitmapData("ICON_START"));
+        iconStart.smoothing = true;
+        _buttonStart.icon = iconStart; //new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_START ) );
         _buttonStart.enabled = true;
         _buttonStart.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.start' );
         _buttonStart.addEventListener( TriggerEvent.TRIGGER, _buttonStartTriggered );
