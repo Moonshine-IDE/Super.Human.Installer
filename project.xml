@@ -30,6 +30,9 @@
 	<source path="Macros" />
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
+	<assets path="Assets/images">
+		<image path="start.png" id="ICON_START" />
+	</assets>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
 	<assets rename="assets/provisioners" path="Assets/provisioners" include="*"/>
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>
