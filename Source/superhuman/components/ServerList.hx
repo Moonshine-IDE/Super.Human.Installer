@@ -145,6 +145,9 @@ class ServerList extends ListView {
 @:styleContext
 class ServerItem extends LayoutGroupItemRenderer {
     
+    private static final CONTROL_BUTTON_WIDTH:Float = 50;
+    private static final CONTROL_BUTTON_HEIGHT:Float = 30;
+
     var _labelTitle:Label;
     var _progressIndicator:ProgressIndicator;  
     var _labelRoles:Label;
@@ -233,85 +236,106 @@ class ServerItem extends LayoutGroupItemRenderer {
         this.addChild( buttonGroup );
 
         _buttonStart = new GenesisButton();
-        var iconStart = new Bitmap(Assets.getBitmapData("ICON_START"));
-        iconStart.smoothing = true;
-        _buttonStart.icon = iconStart; //new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_START ) );
+        _buttonStart.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_START, 20, 20 );
+        _buttonStart.width = CONTROL_BUTTON_WIDTH;
+        _buttonStart.height = CONTROL_BUTTON_HEIGHT;
         _buttonStart.enabled = true;
         _buttonStart.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.start' );
         _buttonStart.addEventListener( TriggerEvent.TRIGGER, _buttonStartTriggered );
         buttonGroup.addChild( _buttonStart );
 
         _buttonStop = new GenesisButton();
-        _buttonStop.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_STOP ) );
+        _buttonStop.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_STOP, 20, 20 );
+        _buttonStop.width = CONTROL_BUTTON_WIDTH;
+        _buttonStop.height = CONTROL_BUTTON_HEIGHT;
         _buttonStop.enabled = _buttonStop.visible = _buttonStop.includeInLayout = false;
         _buttonStop.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.stop' );
         _buttonStop.addEventListener( TriggerEvent.TRIGGER, _buttonStopTriggered );
         buttonGroup.addChild( _buttonStop );
 
         _buttonSuspend = new GenesisButton();
-        _buttonSuspend.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SUSPEND ) );
+        _buttonSuspend.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SUSPEND, 20, 20 );
+        _buttonSuspend.width = CONTROL_BUTTON_WIDTH;
+        _buttonSuspend.height = CONTROL_BUTTON_HEIGHT;
         _buttonSuspend.enabled = _buttonSuspend.visible = _buttonSuspend.includeInLayout = false;
         _buttonSuspend.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.suspend' );
         _buttonSuspend.addEventListener( TriggerEvent.TRIGGER, _buttonSuspendTriggered );
         buttonGroup.addChild( _buttonSuspend );
 
         _buttonSync = new GenesisButton();
-        _buttonSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_UPLOAD ) );
+        _buttonSync.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_UPLOAD, 20, 20 );
+        _buttonSync.width = CONTROL_BUTTON_WIDTH;
+        _buttonSync.height = CONTROL_BUTTON_HEIGHT;
         _buttonSync.enabled = false;
         _buttonSync.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.resync' );
         _buttonSync.addEventListener( TriggerEvent.TRIGGER, _buttonSyncTriggered );
         buttonGroup.addChild( _buttonSync );
 
         _buttonProvision = new GenesisButton();
-        _buttonProvision.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_REFRESH ) );
+        _buttonProvision.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_REFRESH, 20, 20 );
+        _buttonProvision.width = CONTROL_BUTTON_WIDTH;
+        _buttonProvision.height = CONTROL_BUTTON_HEIGHT;
         _buttonProvision.enabled = false;
         _buttonProvision.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.provision' );
         _buttonProvision.addEventListener( TriggerEvent.TRIGGER, _buttonProvisionTriggered );
         buttonGroup.addChild( _buttonProvision );
 
         _buttonDestroy = new GenesisButton();
+        _buttonDestroy.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DESTROY, 20, 20 );
+        _buttonDestroy.width = CONTROL_BUTTON_WIDTH;
+        _buttonDestroy.height = CONTROL_BUTTON_HEIGHT;
         _buttonDestroy.enabled = false;
-        _buttonDestroy.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DESTROY ) );
         _buttonDestroy.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.destroy' );
         _buttonDestroy.addEventListener( TriggerEvent.TRIGGER, _buttonDestroyTriggered );
         buttonGroup.addChild( _buttonDestroy );
 
         _buttonConsole = new GenesisButton();
-        _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OUTPUT ) );
+        _buttonConsole.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OUTPUT, 20, 20 );
+        _buttonConsole.width = CONTROL_BUTTON_WIDTH;
+        _buttonConsole.height = CONTROL_BUTTON_HEIGHT;
         _buttonConsole.addEventListener( TriggerEvent.TRIGGER, _buttonConsoleTriggered );
         _buttonConsole.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.output' );
         buttonGroup.addChild( _buttonConsole );
 
         _buttonOpenBrowser = new GenesisButton();
-        _buttonOpenBrowser.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WEB ) );
+        _buttonOpenBrowser.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WEB, 20, 20 );
+        _buttonOpenBrowser.width = CONTROL_BUTTON_WIDTH;
+        _buttonOpenBrowser.height = CONTROL_BUTTON_HEIGHT;
         _buttonOpenBrowser.enabled = false;
         _buttonOpenBrowser.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.welcomepage' );
         _buttonOpenBrowser.addEventListener( TriggerEvent.TRIGGER, _buttonOpenBrowserTriggered );
         buttonGroup.addChild( _buttonOpenBrowser );
 
         _buttonSSH = new GenesisButton();
+        _buttonSSH.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CONSOLE, 20, 20 );
+        _buttonSSH.width = CONTROL_BUTTON_WIDTH;
+        _buttonSSH.height = CONTROL_BUTTON_HEIGHT;
         _buttonSSH.enabled = false;
-        _buttonSSH.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_CONSOLE ) );
         _buttonSSH.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.vagrantssh' );
         _buttonSSH.addEventListener( TriggerEvent.TRIGGER, _buttonSSHTriggered );
         buttonGroup.addChild( _buttonSSH );
 
         _buttonOpenDir = new GenesisButton();
-        _buttonOpenDir.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_FOLDER ) );
+        _buttonOpenDir.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_FOLDER, 20, 20 );
+        _buttonOpenDir.width = CONTROL_BUTTON_WIDTH;
+        _buttonOpenDir.height = CONTROL_BUTTON_HEIGHT;
         _buttonOpenDir.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.directory' );
         _buttonOpenDir.addEventListener( TriggerEvent.TRIGGER, _buttonOpenDirTriggered );
         buttonGroup.addChild( _buttonOpenDir );
 
         _buttonDelete = new GenesisButton();
-        _buttonDelete.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DELETE ) );
+        _buttonDelete.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DELETE, 20, 20 );
+        _buttonDelete.width = CONTROL_BUTTON_WIDTH;
+        _buttonDelete.height = CONTROL_BUTTON_HEIGHT;
         _buttonDelete.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.delete' );
         _buttonDelete.addEventListener( TriggerEvent.TRIGGER, _buttonDeleteTriggered );
         buttonGroup.addChild( _buttonDelete );
 
         _buttonFtp = new GenesisButton();
-        _buttonFtp.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_FILEZILLA ) );
+        _buttonFtp.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_FILEZILLA, 20, 20 );
+        _buttonFtp.width = CONTROL_BUTTON_WIDTH;
+        _buttonFtp.height = CONTROL_BUTTON_HEIGHT;
         _buttonFtp.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.ftp' );
-        _buttonFtp.height = 30;
         _buttonFtp.addEventListener( TriggerEvent.TRIGGER, _buttonFtpTriggered );
         buttonGroup.addChild( _buttonFtp );
         
@@ -320,7 +344,9 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( spacer );
 
         _buttonConfigure = new GenesisButton();
-        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
+        _buttonConfigure.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SETTINGS, 20, 20 );
+        _buttonConfigure.width = CONTROL_BUTTON_WIDTH;
+        _buttonConfigure.height = CONTROL_BUTTON_HEIGHT;
         _buttonConfigure.addEventListener( TriggerEvent.TRIGGER, _buttonConfigureTriggered );
         _buttonConfigure.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.configure' );
         buttonGroup.addChild( _buttonConfigure );
@@ -500,17 +526,17 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             if ( _console.hasError ) {
 
-                _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT_ERROR );
+                _buttonConsole.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OUTPUT_ERROR, 20, 20 );
 
             } else {
 
-                _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT_NEW );
+                _buttonConsole.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OUTPUT_NEW, 20, 20 );
 
             }
 
         } else {
 
-            _buttonConsole.icon = new AdvancedAssetLoader( GenesisApplicationTheme.ICON_OUTPUT );
+            _buttonConsole.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OUTPUT, 20, 20 );
 
         }
 
@@ -546,7 +572,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
         _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = false;
-        _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS ) );
+        _buttonConfigure.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SETTINGS, 20, 20 );
         _buttonConsole.enabled = _buttonConsole.includeInLayout = _buttonConsole.visible = true;
         _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = false;
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
@@ -613,8 +639,8 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Unconfigured:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
-                _buttonConfigure.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_SETTINGS_WARNING ) );
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
+                _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unconfigured' );
 
             case ServerStatus.Ready:
