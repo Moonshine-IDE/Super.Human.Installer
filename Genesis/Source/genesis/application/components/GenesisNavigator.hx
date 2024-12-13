@@ -31,7 +31,6 @@
 package genesis.application.components;
 
 import feathers.controls.navigators.PageNavigator;
-import genesis.application.theme.GenesisApplicationTheme;
 
 class GenesisNavigator extends PageNavigator {
 
@@ -44,9 +43,8 @@ class GenesisNavigator extends PageNavigator {
     override function initialize() {
 
         super.initialize();
-
-        this.customPageIndicatorVariant = GenesisApplicationTheme.PAGE_INDICATOR_INVISIBLE;
-
+		
+        this.showPageIndicator = false;
     }
 
 }

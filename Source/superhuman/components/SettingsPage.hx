@@ -61,6 +61,7 @@ class SettingsPage extends Page {
     var _buttonGroupLayout:HorizontalLayout;
     var _buttonSave:GenesisFormButton;
     var _cbApplicationWindow:GenesisFormCheckBox;
+    var _cbSystemSleep:GenesisFormCheckBox;
     var _cbDisableVagrantLogging:GenesisFormCheckBox;
     var _cbKeepFailedServersRunning:GenesisFormCheckBox;
     var _cbKeepServersRunning:GenesisFormCheckBox;
@@ -68,6 +69,7 @@ class SettingsPage extends Page {
     var _label:Label;
     var _rowAdvanced:GenesisFormRow;
     var _rowApplicationWindow:GenesisFormRow;
+    var _rowSystemSleep:GenesisFormRow;
     var _rowKeepFailedServersRunning:GenesisFormRow;
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
@@ -118,9 +120,16 @@ class SettingsPage extends Page {
 
         _cbApplicationWindow = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.interface.rememberwindowposition' ) );
         _rowApplicationWindow.content.addChild( _cbApplicationWindow );
-
+        
         _form.addChild( _rowApplicationWindow );
 
+        _rowSystemSleep = new GenesisFormRow();
+        
+        _cbSystemSleep = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.interface.preventsystemfromsleep' ) );
+        _rowSystemSleep.content.addChild( _cbSystemSleep );
+        
+        _form.addChild( _rowSystemSleep );
+        
         var spacer = new LayoutGroup();
         spacer.height = GenesisApplicationTheme.GRID * 2;
         _form.addChild( spacer );
@@ -197,6 +206,7 @@ class SettingsPage extends Page {
         if ( _cbApplicationWindow != null ) {
 
             _cbApplicationWindow.selected = SuperHumanInstaller.getInstance().config.preferences.savewindowposition;
+            _cbSystemSleep.selected = SuperHumanInstaller.getInstance().config.preferences.preventsystemfromsleep;
        //     _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
             _cbKeepServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepserversrunning;
             _cbDisableVagrantLogging.selected = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
@@ -243,6 +253,7 @@ class SettingsPage extends Page {
     function _saveButtonTriggered( e:TriggerEvent ) {
 
         SuperHumanInstaller.getInstance().config.preferences.savewindowposition = _cbApplicationWindow.selected;
+        SuperHumanInstaller.getInstance().config.preferences.preventsystemfromsleep = _cbSystemSleep.selected;
       //  SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart = _cbProvision.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepserversrunning = _cbKeepServersRunning.selected;
         SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;

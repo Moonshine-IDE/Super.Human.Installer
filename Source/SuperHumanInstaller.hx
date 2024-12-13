@@ -131,7 +131,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		servers : [],
 		user: {},
-		preferences: { keepserversrunning: true, savewindowposition: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
+		preferences: { keepserversrunning: true, savewindowposition: false, preventsystemfromsleep: false, provisionserversonstart:false, disablevagrantlogging: false, keepfailedserversrunning: false },
 		browsers: Browsers.DEFAULT_BROWSERS_LIST,
 		applications: Applications.DEFAULT_APPLICATIONS_LIST
 	}
@@ -266,6 +266,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 		
+		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
+	
 		_serviceTypesCollection = [
 			{value: "Standalone Domino Server", 
 			 description: "A new, independent Domino Server", 

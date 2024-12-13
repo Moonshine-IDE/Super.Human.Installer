@@ -30,6 +30,7 @@
 
 package genesis.application.theme;
 
+import openfl.display.Bitmap;
 import feathers.skins.TriangleSkin;
 import feathers.controls.Alert;
 import feathers.controls.AssetLoader;
@@ -42,7 +43,6 @@ import feathers.controls.FormItem;
 import feathers.controls.Header;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
-import feathers.controls.PageIndicator;
 import feathers.controls.PopUpListView;
 import feathers.controls.TextArea;
 import feathers.controls.TextInput;
@@ -89,6 +89,15 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     }
 
+    public static function getCommonIcon(id:String, width:Float, height:Float):Bitmap
+    {
+		var icon = new Bitmap(Assets.getBitmapData(id));
+			icon.width = width;
+			icon.height = height;
+			icon.smoothing = true;
+		return icon;
+    }
+    
     public static final APPLICATION:String = "application";
     public static final BUTTON_HIGHLIGHT:String = "button-hightlight";
     public static final BUTTON_SELECT_FILE:String = "button-select-file";
@@ -118,38 +127,36 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final LAYOUT_GROUP_TOAST:String = "layout-group-toast";
     public static final LAYOUT_GROUP_TOAST_CONTAINER:String = "layout-group-toast-container";
     public static final LAYOUT_GROUP_PERCENTAGE_BAR:String = "layout-group-percentage-bar";
-    public static final PAGE_INDICATOR_INVISIBLE:String = "page-indicator-invisible";
     public static final TEXT_AREA_PRIVACY:String = "text-area-privacy";
 
-    public static final ICON_CHECKBOX_LARGE:String = "assets/images/common/checkbox_large.png";
-    public static final ICON_CHECKBOX_LARGE_DISABLED:String = "assets/images/common/checkbox_large_disabled.png";
-    public static final ICON_CHECKBOX_LARGE_SELECTED:String = "assets/images/common/checkbox_large_selected.png";
+    public static final ICON_CHECKBOX_LARGE:String = "ICON_CHECKBOX_LARGE";
+    public static final ICON_CHECKBOX_LARGE_SELECTED:String = "ICON_CHECKBOX_LARGE_SELECTED";
     public static final ICON_CLEAR:String = "assets/images/common/clear.png";
     public static final ICON_CLOSE:String = "assets/images/common/close.png";
-    public static final ICON_CONSOLE:String = "assets/images/common/console.png";
+    public static final ICON_CONSOLE:String = "ICON_CONSOLE";
     public static final ICON_COPY:String = "assets/images/common/copy.png";
-    public static final ICON_DELETE:String = "assets/images/common/delete.png";
-    public static final ICON_DESTROY:String = "assets/images/common/destroy.png";
+    public static final ICON_DELETE:String = "ICON_DELETE";
+    public static final ICON_DESTROY:String = "ICON_DESTROY";
     public static final ICON_DESTROY_SMALL:String = "assets/images/common/destroy_small.png";
     public static final ICON_ERROR:String = "assets/images/common/error.png";
-    public static final ICON_FOLDER:String = "assets/images/common/folder.png";
+    public static final ICON_FILEZILLA:String = "ICON_FILEZILLA";
+    public static final ICON_FOLDER:String = "ICON_FOLDER";
     public static final ICON_GITHUB:String = "assets/images/common/github.png";
     public static final ICON_HELP:String = "assets/images/common/help.png";
     public static final ICON_LOCATE_FILE:String = "assets/images/common/locatefile.png";
     public static final ICON_OK:String = "assets/images/common/ok.png";
-    public static final ICON_OUTPUT:String = "assets/images/common/output.png";
-    public static final ICON_OUTPUT_ERROR:String = "assets/images/common/output_error.png";
-    public static final ICON_OUTPUT_NEW:String = "assets/images/common/output_new.png";
-    public static final ICON_REFRESH:String = "assets/images/common/refresh.png";
-    public static final ICON_SETTINGS:String = "assets/images/common/settings.png";
-    public static final ICON_SETTINGS_WARNING:String = "assets/images/common/settings_warning.png";
-    public static final ICON_START:String = "assets/images/common/start.png";
-    public static final ICON_STOP:String = "assets/images/common/stop.png";
-    public static final ICON_SUSPEND:String = "assets/images/common/suspend.png";
-    public static final ICON_UPLOAD:String = "assets/images/common/upload.png";
-    public static final ICON_FILEZILLA:String = "assets/images/common/filezilla.png";
+    public static final ICON_OUTPUT:String = "ICON_OUTPUT";
+    public static final ICON_OUTPUT_ERROR:String = "ICON_OUTPUT_ERROR";
+    public static final ICON_OUTPUT_NEW:String = "ICON_OUTPUT_NEW";
+    public static final ICON_REFRESH:String = "ICON_REFRESH";
+    public static final ICON_SETTINGS:String = "ICON_SETTINGS";
+    public static final ICON_SETTINGS_WARNING:String = "ICON_SETTINGS_WARNING";
+    public static final ICON_START:String = "ICON_START";
+    public static final ICON_STOP:String = "ICON_STOP";
+    public static final ICON_SUSPEND:String = "ICON_SUSPEND";
+    public static final ICON_UPLOAD:String = "ICON_UPLOAD";
     public static final ICON_WARNING:String = "assets/images/common/warning.png";
-    public static final ICON_WEB:String = "assets/images/common/web.png";
+    public static final ICON_WEB:String = "ICON_WEB";
 
     public static final IMAGE_GENESIS_DIRECTORY:String = "assets/images/genesisdirectory.png";
     public static final IMAGE_HELP:String = "assets/images/help.png";
@@ -328,7 +335,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( MainMenuButton, null, _setMainMenuButtonStyles );
         this.styleProvider.setStyleFunction( Page, LAYOUT_GROUP_LOGIN, _setPageLoginStyles );
         this.styleProvider.setStyleFunction( Page, null, _setPageStyles );
-        this.styleProvider.setStyleFunction( PageIndicator, PAGE_INDICATOR_INVISIBLE, _setPageIndicatorInvisibleStyles );
         this.styleProvider.setStyleFunction( ProgressBar, null, _setProgressBarStyles );
         this.styleProvider.setStyleFunction( TextArea, TEXT_AREA_PRIVACY, _setTextAreaPrivacyStyles );
         this.styleProvider.setStyleFunction( TextInput, null, _setTextInputStyles );
@@ -385,8 +391,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setCheckMediumStyles( check:Check ) {
 
         check.textFormat = _themeTypography.Medium;
-        check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
-        check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
+        check.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
+        check.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -525,8 +531,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setGenesisFormCheckBoxStyles( cb:GenesisFormCheckBox ) {
 
         cb.textFormat = _themeTypography.Default;
-        cb.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
-        cb.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
+        cb.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
+        cb.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
         cb.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -706,14 +712,6 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setPageLoginStyles( page:Page ) {
 
         _setPageStyles( page );
-
-    }
-
-
-    function _setPageIndicatorInvisibleStyles( indicator:PageIndicator ) {
-
-        indicator.layout = new HorizontalLayout();
-        indicator.visible = indicator.includeInLayout = false;
 
     }
 

@@ -30,6 +30,29 @@
 	<source path="Macros" />
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
+	<assets path="Assets/images">
+		<image path="/common/start.png" id="ICON_START" />
+		<image path="/common/stop.png" id="ICON_STOP"/>
+		<image path="/common/checkbox_large.png" id="ICON_CHECKBOX_LARGE"/>
+		<image path="/common/checkbox_large_selected.png" id="ICON_CHECKBOX_LARGE_SELECTED"/>
+		<image path="/common/suspend.png" id="ICON_SUSPEND"/>
+		<image path="/common/upload.png" id="ICON_UPLOAD"/>
+		<image path="/common/refresh.png" id="ICON_REFRESH"/>
+		<image path="/common/destroy.png" id="ICON_DESTROY"/>
+		<image path="/common/output.png" id="ICON_OUTPUT"/>
+		<image path="/common/web.png" id="ICON_WEB"/>
+		<image path="/common/console.png" id="ICON_CONSOLE"/>
+		<image path="/common/folder.png" id="ICON_FOLDER"/>
+		<image path="/common/delete.png" id="ICON_DELETE"/>
+		<image path="/common/filezilla.png" id="ICON_FILEZILLA"/>
+		<image path="/common/settings.png" id="ICON_SETTINGS"/>
+		<image path="/common/output_error.png" id="ICON_OUTPUT_ERROR"/>
+		<image path="/common/output_new.png" id="ICON_OUTPUT_NEW"/>
+		<image path="/common/settings_warning.png" id="ICON_SETTINGS_WARNING"/>
+		<image path="/common/clear.png" id="ICON_CLEAR"/>
+		<image path="/common/close.png" id="ICON_CLOSE"/>
+		<image path="/common/copy.png" id="ICON_COPY"/>
+	</assets>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
 	<assets rename="assets/provisioners" path="Assets/provisioners" include="*"/>
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>

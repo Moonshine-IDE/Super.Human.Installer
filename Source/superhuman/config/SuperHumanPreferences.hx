@@ -36,6 +36,7 @@ typedef SuperHumanPreferences = {
     ?keepfailedserversrunning:Bool,
     ?keepserversrunning:Bool,
     ?provisionserversonstart:Bool,
+    ?preventsystemfromsleep:Bool,
     ?savewindowposition:Bool,
     ?windowheight:Int,
     ?windowwidth:Int,
