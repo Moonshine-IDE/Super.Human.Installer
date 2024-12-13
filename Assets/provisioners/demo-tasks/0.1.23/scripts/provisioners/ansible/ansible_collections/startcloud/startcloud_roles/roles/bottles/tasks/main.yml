@@ -1,0 +1,4 @@
+---
+-
+  name: "Adding Bottles from flatpak"
+  ansible.builtin.command: "flatpak install --system flathub com.usebottles.bottles -y"

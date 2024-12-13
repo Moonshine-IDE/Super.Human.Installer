@@ -533,6 +533,11 @@ class HostsFileGenerator {
     static public function generateContent( sourceTemplate:String, provisioner:DemoTasks ):String {
 
         var output:String = null;
+			
+        var versionGreaterThan20:Bool = provisioner.data.version > "0.1.20";
+        var versionGreaterThan22:Bool = provisioner.data.version > "0.1.22";
+        
+        var defaultProvisionerFieldValue:String = versionGreaterThan22 ? null : "";
 
         var replace = {
 
@@ -564,64 +569,64 @@ class HostsFileGenerator {
             //vars
             SERVER_ORGANIZATION: provisioner.server.organization.value,
             USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
-            DOMINO_ADMIN_PASSWORD: "password",
+            DOMINO_ADMIN_PASSWORD: defaultProvisionerFieldValue,
             DOMINO_SERVER_CLUSTERMATES: 0,
             CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
 			
 		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
 			
             //Domino Variables
-            DOMINO_HASH: "",
-            DOMINO_INSTALLER: "",
-            DOMINO_INSTALLER_VERSION: "",
-            DOMINO_INSTALLER_MAJOR_VERSION: "",
-            DOMINO_INSTALLER_MINOR_VERSION: "",
-            DOMINO_INSTALLER_PATCH_VERSION: "",
+            DOMINO_HASH: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_MAJOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_MINOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_PATCH_VERSION: defaultProvisionerFieldValue,
             
             DOMINO_MAJOR_VERSION: "",
             DOMINO_MINOR_VERSION: "",
             DOMINO_PATCH_VERSION: "",
             
             //Domino fixpack Variables
-            DOMINO_FP_HASH: "",
+            DOMINO_FP_HASH: defaultProvisionerFieldValue,
             DOMINO_INSTALLER_FIXPACK_INSTALL: false,
-            DOMINO_INSTALLER_FIXPACK_VERSION: "",
-            DOMINO_INSTALLER_FIXPACK: "",
+            DOMINO_INSTALLER_FIXPACK_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_FIXPACK: defaultProvisionerFieldValue,
             
             //Domino Hotfix Variables
-            DOMINO_HF_HASH: "",
+            DOMINO_HF_HASH: defaultProvisionerFieldValue,
             DOMINO_INSTALLER_HOTFIX_INSTALL: false,
-            DOMINO_INSTALLER_HOTFIX_VERSION: "",
-            DOMINO_INSTALLER_HOTFIX: "",
+            DOMINO_INSTALLER_HOTFIX_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_HOTFIX: defaultProvisionerFieldValue,
             
             //Leap Variables
-            LEAP_HASH: "",
+            LEAP_HASH: defaultProvisionerFieldValue,
             LEAP_INSTALLED_CHECK: false,
-            LEAP_INSTALLER: "",
-            LEAP_INSTALLER_VERSION: "",
+            LEAP_INSTALLER: defaultProvisionerFieldValue,
+            LEAP_INSTALLER_VERSION: defaultProvisionerFieldValue,
 		    
             //Nomad Web Variables
-            NOMADWEB_HASH: "",
-            NOMADWEB_INSTALLER: "",
-            NOMADWEB_VERSION: "",
+            NOMADWEB_HASH: defaultProvisionerFieldValue,
+            NOMADWEB_INSTALLER: defaultProvisionerFieldValue,
+            NOMADWEB_VERSION: defaultProvisionerFieldValue,
             
             //Traveler Variables
-            TRAVELER_INSTALLER: "",
-            TRAVELER_INSTALLER_VERSION: "",
-            TRAVELER_FP_INSTALLER: "",
-            TRAVELER_FP_INSTALLER_VERSION: "",
+            TRAVELER_INSTALLER: defaultProvisionerFieldValue,
+            TRAVELER_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            TRAVELER_FP_INSTALLER: defaultProvisionerFieldValue,
+            TRAVELER_FP_INSTALLER_VERSION: defaultProvisionerFieldValue,
             
             //Verse Variables
-            VERSE_INSTALLER: "",
-            VERSE_INSTALLER_VERSION: "",
+            VERSE_INSTALLER: defaultProvisionerFieldValue,
+            VERSE_INSTALLER_VERSION: defaultProvisionerFieldValue,
       		
             //AppDev Web Pack Variables
-            APPDEVPACK_INSTALLER: "",
-            APPDEVPACK_INSTALLER_VERSION: "",
+            APPDEVPACK_INSTALLER: defaultProvisionerFieldValue,
+            APPDEVPACK_INSTALLER_VERSION: defaultProvisionerFieldValue,
             
             //Domino Rest API Variables
-            DOMINO_REST_API_INSTALLER_VERSION: "",
-            DOMINO_REST_API_INSTALLER: "",
+            DOMINO_REST_API_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
             
             //roles
             ROLE_LEAP: "",
@@ -631,14 +636,14 @@ class HostsFileGenerator {
             ROLE_VERSE: "",
             ROLE_APPDEVPACK: "",
             ROLE_RESTAPI: "",
+            ROLE_VOLTMX: "",
+            ROLE_VOLTMX_DOCKER: "",
             ROLE_STARTCLOUD_QUICK_START: "",
             ROLE_STARTCLOUD_HAPROXY: "",
             ROLE_STARTCLOUD_VAGRANT_README: "",
             ROLE_DOMINO_RESET: "",
             ROLE_MARIADB: "",
             ROLE_DOCKER: "",
-            ROLE_VOLTMX: "",
-            ROLE_VOLTMX_DOCKER: "",
             
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: provisioner.server.setupWait.value,
@@ -648,7 +653,8 @@ class HostsFileGenerator {
 
 			var roleValue = r.value;
 			var replaceWith:String = "";
-			var installerName:String = r.files.installerFileName == null ? "" : r.files.installerFileName;
+			var installerHash:String = r.files.installerHash == null ? defaultProvisionerFieldValue : "\"" + r.files.installerHash + "\"";
+			var installerName:String = r.files.installerFileName == null ? defaultProvisionerFieldValue : r.files.installerFileName;
 			var installerVersion:Dynamic = r.files.installerVersion;
 			var hotfixVersion:Dynamic = r.files.installerHotFixVersion;
 			var fixpackVersion:Dynamic = r.files.installerFixpackVersion;
@@ -656,6 +662,7 @@ class HostsFileGenerator {
 			
 			if (r.value == "domino")
 			{
+				replace.DOMINO_HASH = installerHash;
 				replace.DOMINO_INSTALLER = installerName;
 						
 				if (installerVersion != null)
@@ -695,7 +702,7 @@ class HostsFileGenerator {
 					
 					replace.DOMINO_INSTALLER_HOTFIX_INSTALL = true;
 					replace.DOMINO_INSTALLER_HOTFIX = hotfixesPath.file + "." + hotfixesPath.ext;
-					replace.DOMINO_INSTALLER_HOTFIX_VERSION = hotfixVersion == null ? "" : hotfixVersion.fullVersion;
+					replace.DOMINO_INSTALLER_HOTFIX_VERSION = hotfixVersion == null ? defaultProvisionerFieldValue : hotfixVersion.fullVersion;
 				}
 					
 				if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
@@ -704,7 +711,7 @@ class HostsFileGenerator {
 					
 					replace.DOMINO_INSTALLER_FIXPACK_INSTALL = true;
 					replace.DOMINO_INSTALLER_FIXPACK = fixPacksPath.file + "." + fixPacksPath.ext;
-					replace.DOMINO_INSTALLER_FIXPACK_VERSION = fixpackVersion == null ? "" : fixpackVersion.fullVersion;
+					replace.DOMINO_INSTALLER_FIXPACK_VERSION = fixpackVersion == null ? defaultProvisionerFieldValue : fixpackVersion.fullVersion;
 				}
 			}
 		  	
@@ -724,8 +731,9 @@ class HostsFileGenerator {
             		//"- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
             	 	replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
 				
+                replace.NOMADWEB_HASH = installerHash;
                 replace.NOMADWEB_INSTALLER = installerName;
-                replace.NOMADWEB_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
+                replace.NOMADWEB_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_NOMADWEB = replaceWith;
             }
 
@@ -735,7 +743,7 @@ class HostsFileGenerator {
             	    replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
             	    
                 replace.TRAVELER_INSTALLER = installerName;
-                replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
+                replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_TRAVELER = replaceWith;
             }
 
@@ -752,7 +760,7 @@ class HostsFileGenerator {
             		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
        
                 replace.VERSE_INSTALLER = installerName;
-                replace.VERSE_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
+                replace.VERSE_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_VERSE = replaceWith;
             }
 
@@ -762,7 +770,7 @@ class HostsFileGenerator {
             		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
             		
                 replace.APPDEVPACK_INSTALLER = installerName;
-                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
+                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_APPDEVPACK = replaceWith;
             }
 
@@ -772,7 +780,7 @@ class HostsFileGenerator {
             		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "rest_api", r.enabled);
 
                 replace.DOMINO_REST_API_INSTALLER = installerName;
-                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
+                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_RESTAPI = replaceWith;
             }
 			

@@ -1,0 +1,276 @@
+---
+-
+  name: "Installing Gnome for Debian"
+  when: "ansible_os_family == 'Debian'"
+  become: true
+  block:
+    -
+      name: "Ensuring apt cache is updated"
+      ansible.builtin.apt: 
+        update_cache: true
+        cache_valid_time: 3600
+
+    -
+      name: "Upgrading all apt packages"
+      ansible.builtin.apt:
+        force_apt_get: true
+        upgrade: dist
+    
+    -
+      name: "Installing some helpful utilities"
+      ansible.builtin.apt:
+        name:
+          - ffmpeg
+          - gettext
+          - wmctrl
+          - xdotool
+          - gnome-session
+          - gnome-shell-extension-manager
+          - gnome-shell-extensions
+          - gnome-terminal
+          - gnome-tweaks
+          - nautilus
+          - plymouth
+          - yaru-theme-icon
+          - yaru-theme-unity
+          - yaru-theme-sound
+          - yaru-theme-gtk
+          - yaru-theme-gnome-shell
+        state: present
+        update_cache: true
+    
+    -
+      name: "Removing bloat"
+      ansible.builtin.apt:
+        name:
+          - thunderbird
+          - rhythmbox
+          - libreoffice*
+          - libreoffice-core
+          - libreoffice-common
+          - libreoffice-draw
+          - gnome-2048
+          - aisleriot
+          - atomix
+          - gnome-chess
+          - five-or-more
+          - hitori
+          - iagno
+          - gnome-klotski
+          - lightsoff
+          - gnome-mines
+          - gnome-nibbles
+          - quadrapassel
+          - four-in-a-row
+          - gnome-robots
+          - gnome-sudoku
+          - swell-foop
+          - tali
+          - gnome-taquin
+          - gnome-tetravex
+          - gbrainy
+          - transmission-gtk
+          - byobu
+          - cheese
+          - totem
+          - totem-plugins
+          - gnome-power-manager
+          - shotwell
+        state: absent
+    
+    -
+      name: "Ensuring apt cache is updated"
+      ansible.builtin.apt: 
+        update_cache: true
+        cache_valid_time: 3600
+    
+    -
+      name: "Setting Graphical Boot Target"
+      changed_when: false
+      ansible.builtin.command: "systemctl set-default graphical.target"
+    
+    -
+      name: "Creating dconf DB Directories"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "/etc/dconf/db/gdm.d/"
+        - "/etc/dconf/db/local.d/"
+    
+    -
+      name: Setting User Dconf
+      ansible.builtin.copy:
+        content: |
+          user-db:user
+          system-db:local
+        dest: /etc/dconf/profile/user
+        mode: "0644"
+    
+    -
+      name: "Setting Global Dconf"
+      ansible.builtin.template:
+        src: userconf.j2
+        dest: /etc/dconf/db/local.d/userconf
+        mode: "0644"
+        force: true
+   
+    -
+      name: "Removing Initial Setup Package"
+      ansible.builtin.apt:
+        name:
+          - gnome-initial-setup
+        state: absent
+    
+    -
+      name: Updating dconf Configuration for all users
+      ansible.builtin.command: dconf update
+
+-
+  name: "Installing Gnome for Ubuntu"
+  when: "ansible_os_family == 'Ubuntu'"
+  become: true
+  block:
+    -
+      name: "Disabling Ubuntu Welcome Screen"
+      ansible.builtin.lineinfile: 
+        line: "InitialSetupEnable = false"
+        path: /etc/gdm3/custom.conf
+        regexp: "^[daemon]"
+        insertafter: '^[daemon]'
+
+    -
+      name: "Disabling Upgrade Prompt"
+      ansible.builtin.lineinfile:
+        path: /etc/update-manager/release-upgrades
+        regexp: '^Prompt='
+        line: Prompt=never
+
+-
+  name: "Installing Gnome Extensions"
+  when: ansible_os_family == 'Debian' and desktop_extensions_enabled
+  become: true
+  block:
+    -
+      name: "Cloning dash-to-panel Gnome Extension"
+      ansible.builtin.git:
+        repo: https://github.com/home-sweet-gnome/dash-to-panel.git
+        dest: /usr/local/src/dash-to-panel
+    
+    -
+      name: "Installing dash-to-panel Gnome Extension Plus for all users"
+      ansible.builtin.make:
+        chdir: /usr/local/src/dash-to-panel
+        target: install
+        params:
+          DESTDIR: /
+    
+    -
+      name: "Installing Extension -- Sound Output Chooser"
+      ansible.builtin.git:
+        repo: https://github.com/kgshank/gse-sound-output-device-chooser.git 
+        dest:  /usr/share/gnome-shell/extensions/gse-sound-output-device-chooser
+    
+    -
+      name: "Correct Directory Structure for Sound Output Chooser"
+      changed_when: false
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - "cp -r /usr/share/gnome-shell/extensions/gse-sound-output-device-chooser/sound-output-device-chooser@kgshank.net  /usr/share/gnome-shell/extensions"
+        - "rm -rf gse-sound-output-device-chooser"
+    
+    -
+      name: "Installing Extension -- Sound Output Chooser"
+      ansible.builtin.git:
+        repo: https://github.com/Tudmotu/gnome-shell-extension-clipboard-indicator.git
+        dest: /usr/share/gnome-shell/extensions/clipboard-indicator@tudmotu.com
+    
+    -
+      name: "Enabling Extensions"
+      changed_when: false
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - gnome-extensions enable dash-to-panel@jderose9.github.com
+        - gnome-extensions enable sound-output-device-chooser@kgshank.net
+        - gnome-extensions enable clipboard-indicator@tudmotu.com
+    
+-
+  name: "Configuring Desktop"
+  when: "ansible_os_family == 'Debian'"
+  become: true
+  block:
+    -
+      name: "Copying Logout Desktop Shortcut to /usr/share/applications"
+      ansible.builtin.template:
+        src: Logout.desktop.j2
+        dest: /usr/share/applications/Logout.desktop
+        mode: "0644"
+    
+    -
+      name: Copy Logout script to /usr/share/applications
+      ansible.builtin.template:
+        src: logout.sh.j2
+        dest: /usr/share/applications/logout.sh
+        mode: a+x
+    
+    -
+      name: Copy Logout Desktop Icons to /usr/share/applications
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: /usr/share/applications
+        mode: "0644"
+      with_items:
+        - Logout.png
+
+-
+  name: "Configuring Desktop Polkit Rules"
+  when: desktop_update_polkit
+  become: true
+  block:
+    -
+      name: "Allowing Access to commonly used functions on Desktop for Debian Based VMs"
+      when: ansible_os_family == 'Debian' and not ansible_os_family == 'Ubuntu'
+      ansible.builtin.template:
+        mode: "0644"
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: 47-allow-wifi-scan.pkla.j2
+          dest: "/etc/polkit-1/rules.d/50-local.d/47-allow-wifi-scan.pkla"
+        -
+          src: 45-allow-colord.pkla.j2
+          dest: "/etc/polkit-1/rules.d/50-local.d/45-allow-colord.pkla"
+        -
+          src: universal.pkla.j2
+          dest: "/etc/polkit-1/rules.d/universal.pkla"
+
+    -
+      name: "Allowing Access to commonly used functions on Desktop For Ubuntu Based VMS"
+      when: ansible_os_family == 'Ubuntu'
+      ansible.builtin.template:
+        mode: "0644"
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: 47-allow-wifi-scan.pkla.j2
+          dest: "/etc/polkit-1/localauthority/50-local.d/47-allow-wifi-scan.pkla"
+        -
+          src: 45-allow-colord.pkla.j2
+          dest: "/etc/polkit-1/localauthority/50-local.d/45-allow-colord.pkla"
+        -
+          src: universal.pkla.j2
+          dest: "/etc/polkit-1/localauthority/50-local.d/universal.pkla"
+
+-
+  name: "Resatarting GDM3"
+  become: true
+  ansible.builtin.service:
+    name: gdm3
+    state: restarted
+    enabled: true
+  register: domino_service_start_details
+  retries: 3
+  delay: 5
+  until: domino_service_start_details.state == "started"

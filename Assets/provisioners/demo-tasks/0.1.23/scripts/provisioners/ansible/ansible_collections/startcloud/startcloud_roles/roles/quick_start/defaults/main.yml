@@ -1,0 +1,9 @@
+---
+python_simple_web_server_path: "{{ service_home_dir }}"
+index: index.html.j2
+index_name: welcome.html
+startcloud_quick_start_port_forwards:
+  -
+    guest: 8000
+    url: "demo"
+startcloud_quick_start_proxy_url: "{{ startcloud_quick_start_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

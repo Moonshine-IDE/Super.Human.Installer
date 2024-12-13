@@ -1,0 +1,48 @@
+---
+bbb_apt_repo_url: 'https://ubuntu.bigbluebutton.org/xenial-220/'
+bbb_ubuntu_version: "16.04"
+bbb_install_html5: True
+bbb_install_playback_notes: True
+bbb_install_playback_podcast: True
+bbb_install_playback_screenshare: True
+bbb_install_webhooks: True
+bbb_install_greenlight: False
+bbb_install_demo: False
+bbb_install_check: False
+bbb_configure_firewall: True
+bbb_configure_nat: False
+bbb_configure_ssl: False
+bbb_server_names:
+  - "{{ bbb_server_name }}"
+bbb_ssl_webroot_path: /var/www/bigbluebutton-default
+bbb_ssl_renewal_command_args: '--post-hook "systemctl reload nginx"'
+## Uncoment the following line to test on test network.
+# bbb_ssl_server: "https://acme-staging.api.letsencrypt.org/directory"
+bbb_greenlight_image: bigbluebutton/greenlight:v2
+bbb_greenlight_etcdir: /etc/bigbluebutton/greenlight
+bbb_greenlight_libdir: /var/lib/greenlight
+bbb_greenlight_dbdir: "{{ bbb_greenlight_libdir }}/production"
+bbb_greenlight_storagedir: "{{ bbb_greenlight_libdir }}/storage"
+bbb_greenlight_logdir: /var/log/greenlight
+bbb_greenlight_redirect_root: false
+bbb_greenlight_db_adapter: postgresql
+bbb_greenlight_db_host: db
+bbb_greenlight_db_username: postgres
+bbb_greenlight_db_name: greenlight_production
+bbb_greenlight_db_port: 5432
+bbb_greenlight_environment: {}
+bbb_greenlight_environment_defaults:
+  HELP_URL: "https://docs.bigbluebutton.org/greenlight/v3/install"
+  REDIS_URL: "redis://redis:6379"
+  DATABASE_URL: "{{ bbb_greenlight_db_adapter }}://{{ bbb_greenlight_db_username }}:{{ bbb_greenlight_db_password }}@{{ bbb_greenlight_db_host }}:{{ bbb_greenlight_db_port }}/{{ bbb_greenlight_db_name }}"
+  SECRET_KEY_BASE: "{{ bbb_greenlight_rails_secret }}"
+  ALLOW_GREENLIGHT_ACCOUNTS: "true"
+  DEFAULT_REGISTRATION: "open"
+  RELATIVE_URL_ROOT: "/b"
+  ROOM_FEATURES: "mute-on-join,require-moderator-approval,anyone-can-start,all-join-moderator"
+  PAGINATION_NUMBER: "25"
+  NUMBER_OF_ROWS: "25"
+  MAINTENANCE_MODE: "false"
+  ENABLE_SSL: "{{ bbb_configure_ssl | bool | string | lower }}"
+  BIGBLUEBUTTON_ENDPOINT: "{{ bbb_greenlight_extracted_endpoint }}"
+  BIGBLUEBUTTON_SECRET: "{{ bbb_greenlight_extracted_secret }}"

@@ -1,0 +1,75 @@
+---
+- include_tasks: virtualbox.yml
+
+- changed_when: false
+  command: "uname -r"
+  name: "Get the current kernel release."
+  register: kernel_release
+  when: "ansible_os_family == 'RedHat'"
+- name: "Set the appropriate libselinux package for RHEL 8."
+  set_fact:
+    packer_rhel_libselinux_package: python3-libselinux
+  when: "ansible_os_family == 'RedHat'"
+- name: "Ensure necessary packages are installed."
+  when: "ansible_os_family == 'RedHat'"
+  yum:
+    name:
+      - "kernel-devel-{{ kernel_release.stdout }}"
+      - "{{ packer_rhel_libselinux_package }}"
+    state: present
+- name: "Check if VirtualBox is running the guest VM."
+  register: virtualbox_check
+  ansible.builtin.stat: "path=/home/{{ user }}/.vbox_version"
+  when: "ansible_os_family == 'RedHat'"
+- changed_when: false
+  command: "cat /home/{{ user }}/.vbox_version"
+  name: "Get VirtualBox version."
+  register: virtualbox_version
+  when: "ansible_os_family == 'RedHat'"
+- mount:
+    fstype: iso9660
+    name: /tmp/vbox
+    opts: loop
+    src: "/home/{{ user }}/VBoxGuestAdditions_{{ virtualbox_version.stdout }}.iso"
+    state: mounted
+  name: "Mount VirtualBox guest additions ISO."
+  when: "ansible_os_family == 'RedHat'"
+- changed_when: true
+  command: "sh /tmp/vbox/VBoxLinuxAdditions.run"
+  name: "Run VirtualBox guest additions installation."
+  when: "ansible_os_family == 'RedHat'"
+- mount:
+    fstype: iso9660
+    name: /tmp/vbox
+    src: "/home/{{ user }}/VBoxGuestAdditions_{{ virtualbox_version.stdout }}.iso"
+    state: absent
+  name: "Unmount VirtualBox guest additions ISO."
+  when: "ansible_os_family == 'RedHat'"
+- ansible.builtin.file:
+    path: "/home/{{ user }}/VBoxGuestAdditions_{{ virtualbox_version.stdout }}.iso"
+    state: absent
+  name: "Delete VirtualBox guest additions ISO."
+  when: "ansible_os_family == 'RedHat'"
+- changed_when: true
+  command: "yum clean all warn=false\n"
+  name: "Clean up yum."
+  when: "ansible_os_family == 'RedHat'"
+- name: "Remove any remnants of VirtualBox ISOs."
+  ansible.builtin.shell: "rm -rf VBoxGuestAdditions_*.iso VBoxGuestAdditions_*.iso.? warn=false\n"
+  tags:
+    - skip_ansible_lint
+  when: "ansible_os_family == 'RedHat'"
+- command: "rm -f /etc/udev/rules.d/70-persistent-net.rules warn=false\n"
+  name: "Remove RedHat interface persistence (step 1)."
+  tags:
+    - skip_ansible_lint
+  when: "ansible_os_family == 'RedHat'"
+- ansible.builtin.lineinfile:
+    dest: /etc/sysconfig/network-scripts/ifcfg-eth0
+    regexp: "{{ item }}"
+    state: absent
+  name: "Remove RedHat interface persistence (step 2)."
+  when: "ansible_os_family == 'RedHat'"
+  with_items:
+    - ^HWADDR
+    - ^UUID

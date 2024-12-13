@@ -1,0 +1,143 @@
+---
+domino_user: domino
+domino_group: domino
+domino_home_dir: /local/notesdata
+domino_user_soft_limit: "60000"
+domino_user_hard_limit: "80000"
+kyr_cert: keyfile.kyr
+id_vault_setup: true
+id_vault_replicate: false
+id_vault_name: ServerIDVault
+id_vault_password: IDVaultPassword
+id_vault_help_text: Please create an issue in the DominoVagrant Issues Page for help!
+domino_admin_user_first_name: Prominic
+domino_admin_user_last_name: Admin
+domino_admin_user_id: admin-user.id
+domino_admin_notes_id_password: "password"
+domino_dev_user_first_name: Dev
+domino_dev_user_last_name: User
+domino_dev_user_short_name: DevUser
+domino_dev_user_id: dev-user.id
+domino_dev_user_id_password: "password"
+user_safe_id: SAFE.ids
+is_additional_server: false
+domino_major_version: "14"
+domino_minor_version: "0"
+domino_patch_version: "0"
+domino_server_installer_tar: "Domino_14.0_Linux_English.tar"
+domino_notesini_servertasks: "replica,router,update,amgr,adminp,certmgr,http,nomad"
+domino_installer_fixpack_install: false
+domino_fixpack_version: FP1
+domino_server_fixpack_tar: "Domino_140FP1_Linux.tar"
+domino_installer_hotfix_install: false
+domino_hotfix_version: HF50
+domino_server_hotfix_tar: "1201HF50-linux64.tar"
+domino_installer_base_url: "{{ secrets.domino_installer_base_url }}"
+domino_installer_url_user: "{{ secrets.domino_installer_url_user }}"
+domino_installer_url_pass: "{{ secrets.domino_installer_url_pass }}"
+installer_url_app_path: "Super.Human.Installer/Domino"
+domino_install_dir: /opt/hcl/domino/notes/latest/linux
+domino_install_basedir: /opt/hcl/domino
+domino_install_chosen_feature_list: Domino,Nomad,OnTime,Verse,Help
+domino_https_enabled: 1
+generate_server_id_count: 0
+domino_organization: STARTcloud
+domino_countrycode: null
+
+domino_enable_java_agent_cache: 2
+domino_daos_enable: 0
+domino_daos_base_path: /local/daos
+domino_daos_min_obj_size: 256000
+domino_daos_encrypt_nlo: 0
+domino_translog_auto_fixup: ""
+domino_translog_max_size: 1024
+domino_translog_performance: "2"
+domino_translog_status: "1"
+domino_translog_style: "0"
+domino_translog_use_all: "0"
+domino_qta_mthd: "1"
+domino_http_home_url: "homepage.nsf"
+domino_http_enable_session_auth: "1"
+domino_http_tcpnp: "1"
+domino_http_allow_anonymous: "0"
+domino_http_normal_mode: "1"
+domino_http_max_active_threads: 40
+domino_http_ssl_anonymous: "0"
+domino_http_enforce_access: "1"
+domino_ldap_enforce_access: "1"
+domino_imap_enforce_access: "1"
+domino_pop3_enforce_access: "1"
+domino_smtp_listener_enabled: "1"
+domino_router_port_status: "2"
+domino_ldap_ssl_status: "1"
+domino_imap_ssl_status: "1"
+domino_pop3_ssl_status: "1"
+domino_nsd_enbld: "1"
+domino_fr_enbld: "1"
+domino_flt_rcvry_not: "LocalDomainAdmins"
+domino_ld_isite: "1"
+domino_translogs_path: /local/translog
+
+# NotesINI settings
+domino_notesini_daos_encrypt_nlo: 0
+domino_noteini_daos_max_files_per_subcontainer: 10000
+domino_create_r12_databases: "1"
+domino_create_r85_log: "1"
+domino_admin_ignore_new_servernaming_convention: "1"
+domino_log_replication: "1"
+domino_log_sessions: "1"
+domino_compress_lz1_create: "1"
+domino_create_nifnsf_databases: "1"
+domino_nifnsf_enable: "1"
+domino_nifnsf_base_path: "/local/nif"
+domino_inotes_wa_enable_actions_in_archive: "1"
+domino_http_public_urls: "/iwaredir.nsf/*:/.well-known*"
+domino_enable_sni: "1"
+domino_admin_client_skip_domino: "1"
+domino_event_pool_size: "41943040"
+domino_server_restart_delay: "1"
+domino_nsf_buffer_pool_size_mb: "256"
+domino_ft_fly_index_off: "1"
+domino_update_fulltext_thread: "1"
+domino_update_fulltext_thread_path: "/local/ft"
+domino_ftg_use_sys_memory: "1"
+domino_server_min_possible_trans_time: "1500"
+domino_server_max_possible_trans_time: "20000000"
+domino_certmgr_accept_tou: "1"
+domino_certstore_cachelog: "0"
+domino_nts_auto_config: "true"
+domino_http_enable_methods:  "GET,POST,PUT,DELETE,HEAD,OPTIONS"
+domino_http_jvm_max_heap_size: "2048M"
+domino_http_jvm_max_heap_size_set: "1"
+domino_quota_method: "1"
+domino_ssl_cipher_list:
+  - "C030"
+  - "9F"
+  - "C02F"
+  - "9E"
+  - "C028"
+  - "6B"
+  - "C027"
+  - "67"
+
+domino_ssl_cipher_supported_list:
+  - "C030"
+  - "9F"
+  - "C02F"
+  - "9E"
+  - "C028"
+  - "6B"
+  - "C027"
+  - "67"
+
+domino_install_port_forwards:
+  -
+    guest: 442
+    url: "domino"
+  -
+    guest: 82
+    url: "domino"
+  -
+    guest: 1352
+    url: "domino"
+domino_install_proxy_url: "{{ domino_install_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

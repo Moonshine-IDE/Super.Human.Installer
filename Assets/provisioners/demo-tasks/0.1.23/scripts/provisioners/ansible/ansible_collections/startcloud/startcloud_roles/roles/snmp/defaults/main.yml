@@ -1,0 +1,23 @@
+---
+snmp_access_adress: "0.0.0.0"
+snmp_additional_packages: []
+snmp_agentadress_adress:
+  ipv4: "{{ ansible_default_ipv4.address if ansible_default_ipv4.address is defined else '127.0.0.1' }}"
+  ipv6: "{{ ansible_default_ipv6.address if ansible_default_ipv6.address is defined else '::1' }}"
+snmp_agentadress_port:
+  ipv4: 161
+  ipv6: 161
+snmp_agentadress_protocol:
+  ipv4: udp
+  ipv6: udp6
+snmp_encryption: snmp_encryption
+snmp_extension_list:
+  - extend: ".1.3.6.1.4.1.2021.7890.1 distro {{ snmp_extension_scripts }}/distro"
+    url: "https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro"
+  - extend: "osupdate {{ snmp_extension_scripts }}/osupdate"
+    url: "https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/osupdate"
+snmp_extension_scripts: /usr/local/lib/snmpd
+snmp_logging_options: ""
+snmp_monitoring_server: "0.0.0.0"
+snmp_password: snmp_password
+snmp_user: snmp

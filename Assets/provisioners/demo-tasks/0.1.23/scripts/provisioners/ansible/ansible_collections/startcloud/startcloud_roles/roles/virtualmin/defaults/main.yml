@@ -1,0 +1,8 @@
+---
+mariadb_admin_pass: SomeMariaDBeyPassword
+mariadb_admin_user: root
+startcloud_mariadb_port_forwards:
+  -
+    guest: 3306
+    url: "mariadb"
+startcloud_mariadb_proxy_url: "{{ startcloud_mariadb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

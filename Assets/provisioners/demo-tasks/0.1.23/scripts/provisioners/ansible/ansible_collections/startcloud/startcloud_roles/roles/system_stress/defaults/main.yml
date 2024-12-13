@@ -1,0 +1,10 @@
+---
+show_help: true
+vm_encrypted: false
+stress_packages:
+  - stress-ng
+  - stress
+  - fio
+  - software-properties-common
+  - python3-cpuinfo
+#  - sysbench

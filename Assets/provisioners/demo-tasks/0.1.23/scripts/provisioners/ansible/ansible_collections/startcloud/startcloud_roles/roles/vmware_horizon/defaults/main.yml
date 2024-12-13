@@ -1,0 +1,28 @@
+---
+horizon_view_depenencies:
+  - libcairomm-1.0-1v5
+  - libcanberra-gtk-module
+  - libefiboot1
+  - libglib2.0-dev-bin
+  - libgtkmm-3.0-1v5
+  - libtar0
+  - libudev0
+  - libudev1
+  - libxss1
+  - libgcc1:armhf
+  - libc6:armhf
+  - libatk-bridge2.0-0:armhf
+  - libpangocairo-1.0-0:armhf
+  - libgdk-pixbuf2.0-0:armhf
+  - libgtk-3-0:armhf
+  - libxss1:armhf  
+  - libatkmm-1.6-1v5:armhf
+  - libcairomm-1.0-1v5:armhf
+  - libxkbfile1:armhf
+  - libxtst6:armhf
+  - packagekit-gtk3-module:armhf
+  - libpulse0:armhf
+  - libgtkmm-3.0-1v5:armhf
+  - libudev0:armhf
+  - libmagic-dev:armhf
+  - uuid-dev:armhf

@@ -1,0 +1,176 @@
+---
+-
+  name: "Creating Prominic Configuration and Provisioner Directories"
+  ansible.builtin.file:
+    mode: '0755'
+    path: "{{ item }}"
+    state: directory
+    owner: '{{ service_user }}'
+    group: '{{ service_group }}'
+  with_items:
+    - "/opt/prominic/"
+    - "/opt/prominic/provisioners/"
+    - "/opt/prominic/provisioners/ansible"
+
+-
+  name: "Installing some helpful utilities"
+  when: "ansible_os_family == 'Debian'"
+  ansible.builtin.apt:
+    name:
+      - mumble
+      - remmina
+      - remmina-plugin-vnc
+      - xtightvncviewer
+
+- 
+  name: "Copying ansible provisioning scripts"
+  ansible.builtin.copy:
+    src: roles
+    dest: /opt/prominic/provisioners/ansible/
+
+-
+  name: "Dynamically generating provisioning playbook"
+  ansible.builtin.template:
+    dest: "/opt/prominic/provisioners/ansible/playbook.yml"
+    mode: a+x
+    src: "playbook.yml.j2"
+
+-
+  name: "Copying background wallpaper files"
+  ansible.builtin.copy:
+    mode: "0644"
+    src: "prominic.jpg"
+    dest: /usr/share/backgrounds/prominic.jpg
+
+-
+  name: "Pinning openfortivpn"
+  ansible.builtin.dpkg_selections:
+    name: openfortivpn
+    selection: hold
+
+-
+  name: "Adding Thawte to CACerts"
+  ansible.builtin.copy:
+    src: "thawte.crt"
+    dest: "/usr/local/share/ca-certificates/thawte.crt"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
+-
+  become: true
+  name: "Updating CA Certs"
+  ansible.builtin.shell: update-ca-certificates
+  register: deb_architecture
+
+-
+  name: "Setting up cmdline.txt"
+  ansible.builtin.template:
+    src: "cmdline.txt.j2"
+    dest: "/boot/firmware/cmdline.txt"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
+-
+  name: "Setting up config.txt"
+  ansible.builtin.template:
+    src: "config.txt.j2"
+    dest: "/boot/firmware/config.txt"
+    owner: "root"
+    group: "root"
+    mode: "0644"
+
+-
+  name: "Copying S2 - Rantoul - VMWare Horizon Client Icon"
+  ansible.builtin.copy:
+    mode: '0644'
+    dest: "{{ item.dest }}"
+    src: "{{ item.path }}"
+  with_items:
+    -
+      path: "vmware-view-s2.png"
+      dest: "/usr/share/icons/vmware-view-s2.png"
+
+-
+  name: "Copying S1 - Champaign - VMWare Horizon Client Icon"
+  ansible.builtin.copy:
+    mode: '0644'
+    dest: "{{ item.dest }}"
+    src: "{{ item.path }}"
+  with_items:
+    -
+      path: "vmware-view-s1.png"
+      dest: "/usr/share/icons/vmware-view-s1.png"
+
+-
+  name: "Creating Prominic.Work S1 Champaign -- Application Shortcut"
+  ansible.builtin.copy:
+    content: |
+      [Desktop Entry]
+      Name=S1-Horizon
+      GenericName=S1 - Champaign
+      Comment=Horizon Client - S1 - Champaign
+      Exec=/usr/bin/vmware-view  -s desktopz.prominic.work -q
+      Icon=/usr/share/icons/vmware-view-s1.png
+      Categories=Office;
+      Terminal=false
+      Type=Application
+    dest: "/usr/share/applications/vmware-view-s1-champaign.desktop"
+    force: false
+    mode: '0644'
+
+-
+  name: "Creating Prominic.Work S2 Rantoul -- Application Shortcut"
+  ansible.builtin.copy:
+    content: |
+      [Desktop Entry]
+      Name=HorizonClientS2Rantoul
+      GenericName=S2-Horizon
+      Comment=Horizon Client - S2 - Rantoul
+      Exec=/usr/bin/vmware-view  -s desktop.prominic.work -q
+      Icon=/usr/share/icons/vmware-view-s2.png
+      Categories=Office;
+      Terminal=false
+      Type=Application
+    dest: "/usr/share/applications/vmware-view-s2-rantoul.desktop"
+    force: false
+    mode: '0644'
+
+-
+  name: "Set Horizon View to Start for All Users"
+  ansible.builtin.copy:
+    src: /usr/share/applications/vmware-view-s2-rantoul.desktop
+    dest: /etc/xdg/autostart/
+    mode: 0644
+
+-
+  name: "Setting User_configured script to launch on user login"
+  ansible.builtin.template:
+    src: user_configured.sh.j2
+    dest: /etc/xdg/autostart/
+    mode: 0644
+
+-
+  name: "Setting Cron Job to Force reauthenticate with FreeIPA servers"
+  ansible.builtin.cron:
+    name: "Reboot and Reauthenticate"
+    minute: "0"
+    hour: "0"
+    day: "1"
+    month: "*/2"
+    job: "sudo cloud-init clean --logs --reboot"
+
+-
+  name: "Adding Auth provisioning VPN"
+  ansible.builtin.template:
+    mode: a+x
+    dest: "{{ item.dest }}"
+    src: "{{ item.src }}"
+  with_items:
+    -
+      src: auth-vpn.py.j2
+      dest: "/usr/local/bin/auth-vpn.py"
+    -
+      src: auth-vpn.service.j2
+      dest: "/etc/systemd/system/auth-vpn.service"

@@ -1,0 +1,294 @@
+# core_provisioner_version: 0.2.8
+# provisioner_name: hcl_domino_standalone_provisioner
+# provisioner_version: 0.1.23
+#
+# Template Notes:
+# This is an example Hosts.yml that is configured to install Domino 12.0.1 only.
+# Instructions (paths are relative to Hosts.example.yml):
+# 1. Make a copy this file as Hosts.yml
+# 2. Update all `REPLACEME` entries in the file
+# 3. Add your safe ID in `id-files/user-safe-ids/`
+# 4. Provide installer files.  Options:
+#   a. Add any local installers in `installers/domino/archives`
+#   b. Enable and update domino_installer* if you want to download the artifacts instead of deploying them manually
+# 5. Other optional changes:
+#   a. networks - by default, this uses DHCP, but you may need to manually populate this in some cases
+#   b. domino_server_installer_tar - update this and the corresponding version properties if desired
+#   c. Other installers - make sure to update both the installer vars (i.e. nomadweb_*) and enable the corresponding roles (i.e. startcloud.hcl_roles.domino_nomadweb)
+---
+hosts:
+  -
+    settings:
+      # Identifiers
+      hostname: REPLACEME #test-standalone
+      domain: REPLACEME #shi.com
+      server_id: REPLACEME #'1234'
+
+      # Resources
+      vcpus: 4
+      memory: 8G
+
+      # Console Access
+      consoleport: 1234
+      consolehost: 0.0.0.0
+      show_console: false ## Some people have reported issues when VBox doesn't show the Console
+
+      # Box information
+      box: 'STARTcloud/debian12-server'
+      box_url: 'https://vagrantcloud.com'
+      box_version: 0.0.8
+
+      # Provider Specific Settings
+      provider-type: virtualbox
+      os_type: 'Debian_64'
+      firmware_type: UEFI
+
+      # Setup Variables
+      setup_wait: 300
+
+      # Vagrant Configurations
+      vagrant_user_private_key_path: ./id_rsa
+      vagrant_user: startcloud
+      vagrant_user_pass: REPLACEME #'STARTcloud24@!' 
+      vagrant_insert_key: true
+      ssh_forward_agent: true
+
+    networks:
+      -
+        type: external
+        address: 192.168.1.255
+        netmask: 255.255.255.0
+        gateway: 192.168.1.1
+        autoconf: false 
+        vlan:
+        dhcp4: true
+        dhcp6: false
+        is_control: true
+        route: default
+        provisional: false
+        bridge:
+        nic_type: virtio
+        mac: auto
+        dns:
+          - nameserver: 199.103.5.20
+          - nameserver: 199.103.7.51
+
+    disks:
+      boot:
+        array: ignored
+        dataset: ignored
+        volume_name: boot
+        mount: /
+        size: 48G
+    
+      additional_disks:
+    
+
+    provisioning:
+      ansible:
+        enabled: true
+        playbooks:
+          - local:
+              -
+                description: "This generates a Ansible Playbook on the VM with all the variables in Hosts.yml"
+                playbook: ansible/generate-playbook.yml
+                nsible_python_interpreter: /usr/bin/python3
+                compatibility_mode: 2.0
+                install_mode: pip
+                ssh_pipelining: true
+                verbose: false
+                callbacks: profile_tasks
+                run: always
+                remote_collections: false
+                collections: []
+              -
+                description: "This generates and runs the previously generated playbook, This playbook configures the machine"
+                playbook: ansible/playbook.yml
+                ansible_python_interpreter: /usr/bin/python3
+                compatibility_mode: 2.0
+                install_mode: pip
+                ssh_pipelining: true
+                verbose: false
+                callbacks: profile_tasks
+                run: once
+                remote_collections: false
+                collections:
+#                  - startcloud.startcloud_roles
+#                  - startcloud.hcl_roles
+#                  - moonshine.moonshine_roles
+#                  - community.docker
+              -
+                description: "This Playbook is a special provisioner that will always run, ie vagrant up, vagrant reload"
+                playbook: ansible/always-playbook.yml
+                ansible_python_interpreter: /usr/bin/python3
+                compatibility_mode: 2.0
+                install_mode: pip
+                ssh_pipelining: true
+                verbose: false
+                callbacks: profile_tasks
+                run: not_first
+                remote_collections: false
+                collections:
+                  - startcloud.startcloud_roles
+    
+
+    folders:
+      - 
+        description: "Disables VBoxSF, do not enable"
+        map: .
+        to: /vagrant
+        type: virtualbox
+        disabled: true
+        automount: true
+      -
+        description: "Directory for Ansible Scripts"
+        map: ./provisioners/ansible/
+        to: /vagrant/ansible/
+        type: rsync
+        args:
+          - '--verbose'
+          - '--archive'
+          - '--delete'
+          - '-z'
+          - '--copy-links'
+      -
+        description: "Directory for Application Installers"
+        map: ./installers/
+        to: /vagrant/installers/
+        type: rsync
+      -
+        description: "Directory for Pre-Signed SSLs"
+        map: ./ssls/
+        to: /secure/
+        type: rsync
+      -
+        description: "Directory for Server and User IDs"
+        map: ./id-files/
+        to: /id-files/
+        type: rsync
+        syncback: true
+
+    vars:
+      debug_all: true
+      selfsigned_enabled: true
+      haproxy_ssl_redirect: true
+
+      # Uncomment and fill in these lines if you want to download the installers for this instance
+      # Note that the installer names must match the names on the download server.
+      #secrets:
+      #  domino_installer_base_url: "replacme"
+      #  domino_installer_url_user: "replaceme"
+      #  domino_installer_url_pass: "replaceme"
+
+      
+      # Domino Configuration Variables
+      domino_organization: REPLACEME #TESTSTANDLONE
+      # You need to add a file matching this name to id-files/user-safe-ids
+      user_safe_id: REPLACEME #safe.ids
+      domino_admin_notes_id_password: password
+      generate_server_id_count: 0
+
+      # Additional server options
+      is_additional_server: false
+
+      # Genesis Variables
+      genesis_packages:
+        - netmonitor
+        - SuperHumanPortal
+
+      # Domino Installer Variables
+      domino_hash: null
+      # REPLACEME:   Update Domino installer and version if needed, and update the versions as well
+      # If you want to use a local copy, it must match the below name and be added to `./installers/domino/archives`
+      domino_server_installer_tar: Domino_12.0.1_Linux_English.tar
+      domino_major_version: 12
+      domino_minor_version: 0
+      domino_patch_version: 1
+
+      # Domino fixpack Variables
+      domino_fp_hash: 
+      domino_installer_fixpack_install: false
+      domino_fixpack_version: 
+      domino_server_fixpack_tar: 
+
+      # Domino Hotfix Variables
+      domino_hf_hash: 
+      domino_installer_hotfix_install: false
+      domino_hotfix_version: 
+      domino_server_hotfix_tar: 
+
+      # Leap Variables
+      leap_hash: 
+      leap_archive: 
+      leap_version: 
+
+      # Nomad Web Variables
+      nomadweb_hash: 
+      nomadweb_archive: 
+      nomadweb_version: 
+
+      # Traveler Variables
+      #traveler_hash: ::TRAVELER_HASH::
+      traveler_archive: 
+      traveler_base_version: 
+      traveler_fixpack_archive: 
+      traveler_fixpack_version: 
+
+      # Verse Variables
+      #verse_hash: ::VERSE_HASH::
+      verse_archive: 
+      verse_base_version: 
+
+      # AppDev Web Pack Variables
+      #appdevpack_hash: ::APPDEVPACK_HASH::
+      appdevpack_archive: 
+      appdevpack_version: 
+
+      # Domino Rest API Variables
+      #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
+      domino_rest_api_version: 
+      domino_rest_api_archive: 
+
+    roles:
+      - name: startcloud.startcloud_roles.setup
+      - name: startcloud.startcloud_roles.networking
+        tags: always
+      - name: startcloud.startcloud_roles.hostname
+      - name: startcloud.startcloud_roles.dependencies
+      - name: startcloud.startcloud_roles.service_user
+      - name: startcloud.startcloud_roles.sdkman_install
+      - name: startcloud.startcloud_roles.sdkman_java
+      - name: startcloud.startcloud_roles.sdkman_maven
+      - name: startcloud.startcloud_roles.sdkman_gradle
+      - name: startcloud.startcloud_roles.ssl
+      #- name: startcloud.hcl_roles.domino_reset 
+      - name: startcloud.hcl_roles.domino_install
+      - name: startcloud.hcl_roles.domino_vagrant_rest_api 
+      - name: startcloud.hcl_roles.domino_service_nash
+      - name: startcloud.hcl_roles.domino_java_config
+      - name: startcloud.hcl_roles.domino_java_tools
+      - name: startcloud.hcl_roles.domino_updatesite
+      - name: startcloud.hcl_roles.domino_config 
+      - name: startcloud.hcl_roles.domino_genesis
+      - name: startcloud.hcl_roles.domino_genesis_applications
+      - name: startcloud.hcl_roles.domino_cross_certify
+      #- name: startcloud.hcl_roles.domino_java_app_example ## Uncomment Me to build your own Domino Java Servlet
+      #- name: startcloud.hcl_roles.domino_leap
+      #- name: startcloud.hcl_roles.domino_nomadweb
+      #- name: startcloud.hcl_roles.domino_traveler
+      #- name: startcloud.hcl_roles.domino_traveler_htmo
+      #- name: startcloud.hcl_roles.domino_verse
+      #- name: startcloud.hcl_roles.domino_appdevpack
+      ## Note to SHI devs, This should be called ROLE_DOMINO_RESTAPI, as this is different than startcloud.hcl_roles.domino_vagrant_rest_api
+      #- name: startcloud.hcl_roles.domino_rest_api
+      - name: startcloud.hcl_roles.domino_vagrant_readme
+      #- name: startcloud.hcl_roles.mariadb
+      #- name: startcloud.hcl_roles.docker
+      #::ROLE_VOLTMX_DOCKER::  #TODO
+      #- name: startcloud.hcl_roles.voltmx
+      - name: startcloud.startcloud_roles.quick_start # ::ROLE_STARTCLOUD_QUICK_START::
+        tags: always
+      # TODO:  additional properties?
+      #- name: startcloud.hcl_roles.haproxy
+      #- name: startcloud.startcloud_roles.vagrant_readme
+      - name: startcloud.startcloud_roles.lockdown

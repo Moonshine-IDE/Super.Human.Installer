@@ -1,0 +1,8 @@
+---
+# tasks file for gse_build_source
+- name: CentOS 8 tasks
+  include_tasks: centos8.yml
+  when:
+    - ansible_facts['distribution'] == "CentOS"
+    - ansible_facts['distribution_major_version'] == "8"
+  become: true

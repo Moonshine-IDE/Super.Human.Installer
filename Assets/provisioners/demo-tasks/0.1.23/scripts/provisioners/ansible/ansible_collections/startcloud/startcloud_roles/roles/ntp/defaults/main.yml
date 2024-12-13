@@ -1,0 +1,18 @@
+---
+ntp_enabled: true
+ntp_timezone: America/Chicago
+# ntp_daemon: [various]
+# ntp_package: ntp
+# ntp_config_file: /etc/ntp.conf
+# ntp_driftfile: [various]
+ntp_manage_config: false
+# See: http://support.ntp.org/bin/view/Servers/NTPPoolServers
+ntp_area: ""
+ntp_servers:
+  - "ntp1.prominic.net iburst"
+  - "ntp2.prominic.net iburst"
+ntp_restrict:
+  - "127.0.0.1"
+  - "::1"
+ntp_cron_handler_enabled: false
+ntp_tinker_panic: false

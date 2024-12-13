@@ -1,0 +1,142 @@
+---
+-
+  name: "Setting up Debian Installations"
+  when: "ansible_os_family == 'Debian'"
+  block:
+    -
+      name: "Gathering DEB architecture"
+      ansible.builtin.command: dpkg --print-architecture
+      register: deb_architecture
+      changed_when: false
+
+    -
+      name: "Printing DEB architecture"
+      ansible.builtin.debug:
+        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+
+    -
+      name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true
+
+    -
+      name: "Upgrading all apt packages"
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    -
+      name: "Adding Additional Dependencies {{ packages }}"
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
+    - 
+      debug: 
+        msg: "The hostname is {{ ansible_hostname }} and the OS is {{ ansible_version }}"
+      name: "Displaying System Information"
+    - 
+      name: "Installing Tools and Packages"
+      yum: 
+        name: 
+          - gcc
+          - net-tools
+          - vim
+          - bash-completion
+          - tmux
+          - tree
+          - htop
+          - wget
+          - unzip
+          - curl
+          - git
+    - 
+      name: "Setting timezone to {{ timezone }}"
+      timezone: 
+        name: "{{ timezone }}"
+
+    - 
+      command: "yum clean all"
+      name: "Cleaning Yum Cache"
+    - name: Adding EPEL repository
+      yum:
+        name: epel-release
+        state: present
+    - 
+      ignore_errors: true
+      name: "Adding the user asterisk"
+      user: 
+        comment: Asterisk SIP User
+        shell: /bin/bash
+        name: asterisk
+        password: "{{ userpass | password_hash('sha512') }}"
+    - name: Creating Export Directoring
+      file:
+        path: /data
+        state: directory
+        mode: '0755'
+        owner: asterisk
+        group: asterisk
+
+    - 
+      become: true
+      name: Creating Asterisk Base Directory
+      file:
+        path:  /usr/src/asterisk
+        owner: asterisk
+        group: asterisk
+        state: directory
+        mode: '0755'
+    - 
+      name: "Downloading Asterisk"
+      get_url: 
+        url: https://downloads.asterisk.org/pub/telephony/asterisk/asterisk-17-current.tar.gz
+        dest: /usr/src/asterisk/asterisk-17-current.tar.gz
+        timeout: 300
+    - 
+      name: "Unpacking Asterisk"
+      unarchive: 
+        copy: false
+        dest: /usr/src/
+        src: /usr/src/asterisk/asterisk-17-current.tar.gz
+    - 
+      args: 
+        chdir: /usr/src/asterisk-17.8.0/contrib/scripts/
+      name: "Preparing Asterisk Source for Compilation"
+      become: true
+      shell: "sudo sh install_prereq install"
+    -
+      args:
+        chdir: /usr/src/asterisk-17.8.0/
+      name: "Configuring Asterisk Source for Compilation"
+      become: true
+      shell: "sudo ./configure  --with-jansson-bundled"
+    - 
+      args: 
+        chdir: /usr/src/asterisk-17.8.0
+      name: "Compiling Asterisk Server from Source"
+      shell: "make && make install && make config && make install-logrotate"
+
+    -
+      name: "Unpacking Asterisk"
+      unarchive:
+        copy: false
+        dest: /etc/asterisk
+        src: /etc/asterisk/conf.zip
+
+    - name: Setting Asterisk ACLs
+      file:
+        path: /var/lib/asterisk
+        state: directory
+        mode: '0755'
+        owner: asterisk
+        group: asterisk
+  
+    - name: Setting Asterisk ACLs
+      file:
+        path: /var/log/asterisk
+        state: directory
+        mode: '0755'
+        owner: asterisk
+        group: asterisk

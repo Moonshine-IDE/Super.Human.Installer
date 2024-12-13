@@ -1,0 +1,26 @@
+{ 
+    "title": "Create configuration document required for nomadhelper.html", 
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Import Documents ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "SuperHumanPortal.nsf", 
+                    "documents":[
+                        { 
+                            "action": "create", 
+                            "computeWithForm": true,
+                            "items": {
+                                "Form":"Config Value",
+                                "Key":"nomad_helper_url",
+                                "Value":"https://{{ domino_nomadweb_proxy_url }}/nomad/nomadhelper.html"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

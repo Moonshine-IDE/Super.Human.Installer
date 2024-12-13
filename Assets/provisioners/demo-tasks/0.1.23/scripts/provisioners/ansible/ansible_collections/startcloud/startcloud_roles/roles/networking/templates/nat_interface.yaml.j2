@@ -1,0 +1,14 @@
+#jinja2:lstrip_blocks: True
+---
+network:
+  ethernets:
+    renderer: NetworkManager
+    {{ network_name }}:
+      accept-ra: false
+      dhcp-identifier: mac
+      dhcp4: true
+      dhcp6: false
+      match:
+        macaddress: {{ macaddress }}
+      set-name: {{ network_name }}
+  version: 2

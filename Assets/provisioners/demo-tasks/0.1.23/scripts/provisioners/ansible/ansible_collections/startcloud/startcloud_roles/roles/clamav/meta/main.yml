@@ -1,0 +1,30 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: clamav
+  author: geerlingguy
+  description: ClamAV installation and configuration.
+  company: "Midwestern Mac, LLC"
+  license: "license (BSD, MIT)"
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - trusty
+        - xenial
+        - bionic
+    - name: Debian
+      versions:
+        - jessie
+        - stretch
+  galaxy_tags:
+    - networking
+    - cloud
+    - security
+    - antivirus
+    - antimalware
+    - scan
+
+collections:
+  - startcloud.startcloud_roles

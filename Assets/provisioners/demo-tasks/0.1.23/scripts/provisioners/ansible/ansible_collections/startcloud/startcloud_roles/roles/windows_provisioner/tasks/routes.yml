@@ -1,0 +1,129 @@
+---
+- hosts: all
+  tasks:
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.242.2.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+
+    win_route:
+      destination: 10.59.2.0/23
+      state: absent
+
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+
+    win_route:
+      destination: 10.100.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+
+    win_route:
+      destination: 10.101.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+
+    win_route:
+      destination: 10.14.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.8.0/22
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.20.0/22
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.28.0/22
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination:  10.10.40.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.40.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.48.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.60.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.10.4.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.14.5.0/23
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.13.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.16.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.18.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.11.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.15.0.0/16
+      state: absent
+
+  - name: Remove Cisco Static Route
+    ignore_errors: true
+    win_route:
+      destination: 10.19.0.0/16
+      state: absent
+
+

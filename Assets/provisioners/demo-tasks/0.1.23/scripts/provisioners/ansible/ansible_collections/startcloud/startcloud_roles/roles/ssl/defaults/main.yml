@@ -1,0 +1,15 @@
+---
+cert_dir: /secure
+selfsigned_enabled: false
+selfsigned_use_pregenerated: false
+letsencrypt_enabled: false
+cert_pass: ThisNeedstoBeSecure!
+countrycode: US
+domino_organization: DEMO
+
+# Variables for Role Certbot certs.
+certbot_create_if_missing: false
+certbot_create_method: standalone
+certbot_admin_email: "{{ mailer_user }}"
+certbot_create_standalone_stop_services:
+  - nginx

@@ -1,0 +1,7 @@
+---
+mattermost_user: mattermost
+mattermost_group: mattermost
+mattermost_db_user: "{{ mattermost_team_name }}_mattermost"
+mattermost_db_name: "{{ mattermost_team_name }}_mattermost"
+mattermost_root_dir: "/opt/{{ mattermost_team_name }}_mattermost"
+mattermost_port: 8065

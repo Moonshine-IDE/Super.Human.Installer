@@ -1,0 +1,13 @@
+---
+## Handlers in Ansible are special tasks that execute only when notified by another task.
+## They are typically used to manage services, such as restarting a service after a configuration change.
+## Unlike regular tasks, handlers run at the end of the play, ensuring that services are only restarted once,
+## even if multiple tasks notify the same handler.
+## This approach enhances efficiency and prevents unnecessary service interruptions.
+-
+  name: Zip Support Bundle
+  community.general.archive:
+    mode: '0777'
+    path: "/vagrant/support-bundle"
+    dest: "{{ python_simple_web_server_path }}/support-bundle.zip"
+    format: zip

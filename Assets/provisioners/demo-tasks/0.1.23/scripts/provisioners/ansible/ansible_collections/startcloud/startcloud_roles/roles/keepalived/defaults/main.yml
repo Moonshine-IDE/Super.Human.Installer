@@ -1,0 +1,6 @@
+---
+startcloud_keepalived_state: master
+startcloud_keepalived_virtual_router_id: 60
+startcloud_keepalived_auth_pass: true
+startcloud_keepalived_virtual_ipaddress:
+startcloud_keepalived_priority: 101

@@ -1,0 +1,4 @@
+---
+show_help: true
+vm_encrypted: false
+root_unlock_key: pass123

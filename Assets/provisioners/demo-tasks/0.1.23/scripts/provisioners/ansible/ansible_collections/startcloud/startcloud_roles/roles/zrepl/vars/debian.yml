@@ -1,0 +1,8 @@
+---
+packages:
+      - curl
+      - gnupg
+      - lsb-release
+zrepl_apt_key_url: https://zrepl.cschwarz.com/apt/apt-key.asc
+zrepl_apt_key_dst: /usr/share/keyrings/zrepl.gpg
+zrepl_apt_repo_file: /etc/apt/sources.list.d/zrepl.list

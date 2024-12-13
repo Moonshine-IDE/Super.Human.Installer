@@ -1,0 +1,6 @@
+- 
+  name: "Setting DB2-A-HADR as Primary"
+  raw: "su - {{ db2usr }} -c 'db2 start hadr on database  {{ db2dbname }} as primary'"
+- 
+  name: "Running Monitoring Tool"
+  raw: "su - {{ db2usr }} -c 'db2pd -alldbs -hadr'"

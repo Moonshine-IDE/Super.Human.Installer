@@ -1,0 +1,12 @@
+---
+-
+  name: "Including OS-specific tasks"
+  ansible.builtin.include_tasks: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Enabling Cockpit"
+  when: cockpit_enabled
+  ansible.builtin.systemd:
+    name: cockpit.socket
+    enabled: true
+    state: started

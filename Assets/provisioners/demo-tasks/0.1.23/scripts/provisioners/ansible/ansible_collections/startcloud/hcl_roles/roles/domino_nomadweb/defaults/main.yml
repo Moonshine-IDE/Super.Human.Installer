@@ -1,0 +1,12 @@
+---
+nomadweb_archive: nomad-server-1.0.13-linux.tar.gz
+nomadweb_version: 1.0.13
+nomadweb_debug: false
+nomadweb_update: false
+installer_url_app_path: "Super.Human.Installer/Nomad"
+domino_nomadweb_port_forwards:
+  -
+    guest: 9443
+    url: "nomadweb"
+domino_nomadweb_use_proxy_url: false
+domino_nomadweb_proxy_url: "{{ domino_nomadweb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

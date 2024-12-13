@@ -1,0 +1,1019 @@
+---
+- name: "Creating STARTcloud Administrator User"
+  block:
+    - name: "Lowering password complexity requirements"
+      community.windows.win_security_policy:
+        section: System Access
+        key: PasswordComplexity
+        value: 0
+
+    - name: "Adding Startcloud as admin user"
+      ansible.windows.win_user:
+        name: STARTcloud
+        password: "STARTcloud24@!"
+        state: present
+        password_never_expires: true
+        groups:
+          - Administrators
+
+    - name: "Restoring original password complexity requirements"
+      community.windows.win_security_policy:
+        section: System Access
+        key: PasswordComplexity
+        value: 1
+
+- name: "Configuring System Proxy"
+  when: use_proxy
+  block:
+    - name: "Setting HTTP and HTTPS Proxy Environment Variables"
+      ansible.windows.win_environment:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        level: machine
+      loop:
+        - { name: "HTTP_PROXY", value: "http://{{ proxy_host }}:{{ proxy_port }}" }
+        - { name: "HTTPS_PROXY", value: "http://{{ proxy_host }}:{{ proxy_port }}" }
+
+    - name: "Configuring WinHTTP Proxy Settings"
+      ansible.windows.win_shell: |
+        netsh winhttp set proxy proxy-server="http={{ proxy_host }}:{{ proxy_port }};https={{ proxy_host }}:{{ proxy_port }}" bypass-list="*.local"
+
+- name: "Configuring Powershell"
+  block:
+    - name: "Setting Execution Policy to Unrestricted"
+      ansible.windows.win_shell: Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
+      register: execution_policy_unrestricted
+
+    - name: "Setting Execution Policy to Bypass for Process Scope and Enable TLS 1.2"
+      ansible.windows.win_shell: '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072'
+      register: execution_policy_bypass
+
+- name: "Installing PS Updates"
+  block:
+    - name: "Setting NuGet Package Provider"
+      ansible.windows.win_shell: Install-PackageProvider -Name NuGet -Force
+
+    - name: "Setting PSGallery Repository to Trusted"
+      ansible.windows.win_shell: Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+
+    - name: "Installing PSWindowsUpdate Module"
+      ansible.windows.win_shell: Install-Module -Name PSWindowsUpdate -Force
+
+    - name: "Adding WUServiceManager"
+      ansible.windows.win_shell: Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d"  -AddServiceFlag 7 -Confirm:$false
+
+    - name: "Running Updates"
+      ansible.windows.win_powershell:
+        script: Install-WindowsUpdate -AcceptAll -MicrosoftUpdate -IgnoreReboot
+
+    - name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: 3600
+
+- name: "Configuring AutoUnattend.xml and Post Provisioning Setup scripts"
+  block:
+    - name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\temp
+        state: directory
+
+    - name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\Windows\Temp\packer
+        state: directory
+
+    - name: "Creating STARTcloud Directory"
+      ansible.windows.win_file:
+        path: C:\opt\STARTcloud
+        state: directory
+
+    - name: "Copying provision-Autounattend.ps1 to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.ps1.j2
+        dest: C:\Windows\Temp\packer\Autounattend.ps1
+
+    - name: "Copying provision-Autounattend.xml to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+- name: "Setting up WinRM"
+  block:
+    - name: "Downloading WinRM Configuration Script"
+      ansible.windows.win_get_url:
+        url: "https://raw.githubusercontent.com/ansible/ansible-documentation/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
+        dest: C:\temp\ConfigureRemotingForAnsible.ps1
+      register: winrm_setup
+
+    - name: "Executing WinRM Configuration Script"
+      ansible.windows.win_powershell:
+        script: iex "C:\temp\ConfigureRemotingForAnsible.ps1"
+      register: winrm_execution
+
+- name: "Installing Chocolatey"
+  block:
+    - name: "Downloading Chocolatey Installation Script"
+      ansible.windows.win_get_url:
+        url: "https://community.chocolatey.org/install.ps1"
+        dest: C:\temp\choco_install.ps1
+      register: choco_download
+
+    - name: "Executing Chocolatey Installation Script"
+      ansible.windows.win_powershell:
+        script: iex "C:\temp\choco_install.ps1"
+      register: choco_install
+
+- name: "Setting Timezone"
+  ansible.windows.win_shell: |
+    Write-Output "Setting Timezone"
+    Set-TimeZone -Name "{{ timezone }}" -PassThru
+
+- name: "Setting NTP"
+  ansible.windows.win_shell: |
+    Write-Output "Setting NTP"
+    net start w32time
+    w32tm /config /manualpeerlist:"{{ ntp1server }} {{ ntp2server }}" /syncfromflags:manual /update
+    w32tm /resync /force
+  vars:
+    ntp1server: "ntp1.prominic.net,0x8"
+    ntp2server: "ntp2.prominic.net,0x8"
+
+- name: "Setting User Configurations"
+  ansible.windows.win_user:
+    name: administrator
+    password_never_expires: true
+
+- name: "Enabling Remote Desktop"
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server
+    name: fDenyTSConnections
+    data: 0
+    type: dword
+
+- name: "Enabling Serial Emergency Management Console"
+  ansible.windows.win_shell: |
+    bcdedit /ems ON
+    bcdedit /bootems ON
+    bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200
+
+- name: "Adjusting Theme Settings"
+  block:
+    - name: "Adjusting Theme Settings AppsUseLightTheme"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: AppsUseLightTheme
+        data: 0
+        type: dword
+
+    - name: "Adjust Theme Settings SystemUsesLightTheme"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: SystemUsesLightTheme
+        data: 0
+        type: dword
+
+    - name: "Adjusting Theme Settings TaskbarMn"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarMn
+        data: 0
+        type: dword
+
+    - name: "Adjusting Theme Settings ShowTaskViewButton"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowTaskViewButton
+        data: 0
+        type: dword
+
+    - name: "Adjusting Theme Settings TaskbarDa"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarDa
+        data: 0
+        type: dword
+
+    - name: "Adjusting Theme Settings TaskbarAl"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarAl
+        data: 0
+        type: dword
+
+    - name: "Adjusting Theme Settings SearchboxTaskbarMode"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
+        name: SearchboxTaskbarMode
+        data: 0
+        type: dword
+
+- name: "Adjusting Default User Settings"
+  ansible.windows.win_shell: |
+    REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
+    Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type Dword
+    Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type Dword
+    Set-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarMn -Value 0 -Type Dword
+    New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
+    New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
+    New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
+    REG UNLOAD HKLM\Default
+
+- name: "Disabling Hibernate"
+  block:
+    - name: "Setting Hibernate file size"
+      ansible.windows.win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Control\Power\
+        name: HiberFileSizePercent
+        data: 0
+        type: dword
+
+    - name: "Disabling Hibernate"
+      ansible.windows.win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Control\Power\
+        name: HibernateEnabled
+        data: 0
+        type: dword
+
+- name: "Adjusting Power Settings"
+  block:
+    - name: "Disabling Screen Saver"
+      ansible.windows.win_regedit:
+        path: HKCU:\Control Panel\Desktop
+        name: ScreenSaveActive
+        data: 0
+        type: dword
+
+    - name: "Disabling Monitor Timeout on AC"
+      ansible.windows.win_shell: |
+        powercfg -x -monitor-timeout-ac 0
+
+    - name: "Disabling Monitor Timeout on DC"
+      ansible.windows.win_shell: |
+        powercfg -x -monitor-timeout-dc 0
+
+    - name: "Setting Power Plan to High"
+      ansible.windows.win_shell: |
+        $HighPerf = powercfg -l | ForEach-Object { if ($_.contains("High performance")) { $_.split()[3] } }
+        $CurrPlan = $(powercfg -getactivescheme).split()[3]
+        if ($CurrPlan -ne $HighPerf) { powercfg -setactive $HighPerf }
+
+- name: "Disabling Windows Security Notification Icon"
+  block:
+    - name: "Disabling Windows Security Notification Icon"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Systray
+        name: HideSystray
+        data: 1
+        type: dword
+
+    - name: "Disabling Windows Security Notification Icon"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender Security Center\Notifications-Name
+        name: DisableNotifications
+        data: 1
+        type: dword
+
+- name: "Setting Registery to show Hidden files"
+  block:
+    - name: "Setting ShowSuperHidden to 1 to show system/super-hidden items"
+      ansible.windows.win_regedit:
+        path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: Hidden
+        data: 1
+        type: dword
+
+    - name: "Setting ShowSuperHidden to 1 to show system/super-hidden items"
+      ansible.windows.win_regedit:
+        path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowSuperHidden
+        data: 0
+        type: dword
+
+- name: "Installing Powershell 7"
+  block:
+    - name: Check if PowerShell 7 is already installed
+      ansible.windows.win_shell: |
+        $psVersion = (Get-Command pwsh -ErrorAction SilentlyContinue).Version.Major
+        if ($psVersion -eq 7) {
+          $psVersion
+        }
+      register: ps7_check
+      changed_when: false
+
+    - name: "Debugging PS7 Check Result"
+      ansible.builtin.debug:
+        var: ps7_check
+
+    - name: "Downloading Powershell 7 Installation Script"
+      ansible.windows.win_get_url:
+        url: "https://aka.ms/install-powershell.ps1"
+        dest: C:\temp\install-powershell.ps1
+      when: ps7_check != "7"
+
+    - name: "Executing Powershell 7 Installation Script"
+      ansible.windows.win_powershell:
+        script: iex "C:\temp\install-powershell.ps1"
+      when: ps7_check != "7"
+
+- name: "Installing Chocolatey Packages"
+  block:
+    - name: "Installing Chocolatey packages"
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - firefox
+        - telegraf
+        - git
+        - bginfo
+        - cyg-get
+        - clamwin
+
+    - name: "Upgrading all Chocolatey packages"
+      chocolatey.chocolatey.win_chocolatey:
+        name: all
+        state: latest
+
+- name: "Removing Firefox Desktop Icon for All Users"
+  ansible.windows.win_file:
+    path: C:\Users\Public\Desktop\Firefox.lnk
+    state: absent
+
+- name: "Installing and configuring cygwin with cyg-get"
+  block:
+    - name: "Adding Cygwin to System PATH"
+      ansible.windows.win_path:
+        elements:
+          - C:\tools\cygwin\bin
+        scope: machine
+        state: present
+
+    - name: "Installing Cygwin"
+      ansible.windows.win_powershell:
+        script: cyg-get cygrunsrv nano diffutils lynx make openssh perl psmisc rsync vim wget curl
+
+- name: "Setting RealTimeIsUniversal"
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation
+    name: RealTimeIsUniversal
+    data: 1
+    type: dword
+  when: is_bhyve_zone
+
+- name: "Gathering Windows Facts"
+  ansible.windows.setup:
+
+- name: "Running Windows Server Configurations"
+  when: ansible_os_family == "Windows" and "server" in ansible_distribution.lower()
+  block:
+    - name: "Create InstallOpenSSHServer.ps1"
+      ansible.windows.win_copy:
+        dest: C:\Windows\Temp\packer\InstallOpenSSHServer.ps1
+        content: |
+          Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+          Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+
+    - name: "Creating scheduled task to install OpenSSH Server"
+      community.windows.win_scheduled_task:
+        name: InstallOpenSSHServerTask
+        description: Install OpenSSH Server
+        actions:
+          - path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+            arguments: -ExecutionPolicy Bypass -File C:\Windows\Temp\packer\InstallOpenSSHServer.ps1
+        triggers:
+          - type: registration
+        username: SYSTEM
+        state: present
+        enabled: true
+
+    - name: "Executing the scheduled task"
+      ansible.windows.win_shell: schtasks /Run /TN "InstallOpenSSHServerTask"
+
+    - name: "Waiting for the scheduled task to complete"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        }
+
+    - name: "Waiting for the scheduled task to complete and check if it completed successfully"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        }
+        if ($task.LastTaskResult -eq 0) {
+          $completedSuccessfully = $true
+        } else {
+          $completedSuccessfully = $false
+        }
+        $completedSuccessfully
+      register: task_result
+
+    - name: Delete the scheduled task if it completed successfully
+      community.windows.win_scheduled_task:
+        name: InstallOpenSSHServerTask
+        state: absent
+      when: task_result.stdout == "True"
+
+    - name: "Starting and Setting the SSHD Service to Automatic"
+      ansible.windows.win_service:
+        name: sshd
+        state: started
+        start_mode: auto
+
+    - name: "Waiting for file C:\\ProgramData\\ssh\\sshd_config to exist before continuing"
+      ansible.windows.win_wait_for:
+        path: C:\ProgramData\ssh\sshd_config
+
+    - name: "Modifying SSH Configuration"
+      ansible.windows.win_shell: |
+        $sshd_config = "$($env:ProgramData)\ssh\sshd_config"
+        (Get-Content $sshd_config).Replace("Match Group administrators", "# Match Group administrators") | Set-Content $sshd_config
+        (Get-Content $sshd_config).Replace("AuthorizedKeysFile", "# AuthorizedKeysFile") | Set-Content $sshd_config
+
+    - name: "Ensuring OpenSSH Server firewall rule exists"
+      community.windows.win_firewall_rule:
+        name: OpenSSH-Server-In-TCP
+        direction: in
+        action: allow
+        protocol: tcp
+        localport: 22
+        description: OpenSSH Server (sshd)
+        enabled: true
+
+    - name: "Disabling Server Manager on Login"
+      ansible.windows.win_regedit:
+        path: HKCU:\Software\Microsoft\ServerManager
+        name: DoNotOpenServerManagerAtLogon
+        data: 1
+        type: dword
+
+    - name: "Removing unwanted features"
+      ansible.windows.win_feature:
+        name: AzureArcSetup
+        state: absent
+
+    - name: "Installing and configuring SNMP Service"
+      block:
+        - name: "Installing SNMP Service"
+          ansible.windows.win_powershell:
+            script: Install-WindowsFeature SNMP-Service -IncludeAllSubFeature -IncludeManagementTools
+
+        - name: "Configuring SNMP"
+          block:
+            - name: "Setting sysContact"
+              ansible.windows.win_regedit:
+                path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
+                name: sysContact
+                data: "{{ syscontact }}"
+                type: string
+
+            - name: "Setting sysLocation"
+              ansible.windows.win_regedit:
+                path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
+                name: sysLocation
+                data: "{{ syslocation }}"
+                type: string
+
+            - name: "Setting ValidCommunities"
+              ansible.windows.win_regedit:
+                path: HKLM:\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\ValidCommunities
+                name: "{{ validcommunities }}"
+                data: 4
+                type: dword
+
+            - name: "Setting PermittedManagers"
+              ansible.windows.win_regedit:
+                path: HKLM:\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\PermittedManagers
+                name: "2"
+                data: "0.0.0.0"
+                type: string
+
+    - name: "Enabling NFS Client"
+      ansible.windows.win_feature:
+        name: "NFS-Client"
+        state: present
+
+    - name: "Enabling Telnet Client"
+      ansible.windows.win_feature:
+        name: "Telnet-Client"
+        state: present
+
+- name: "Running Windows Desktop Configurations"
+  when: ansible_os_family == "Windows" and "server" not in ansible_distribution.lower()
+  block:
+    - name: "Enabling Telnet Client"
+      ansible.windows.win_shell: |
+        dism /online /Enable-Feature /FeatureName:TelnetClient
+
+    - name: "Checking if Windows Backup package exists"
+      ansible.windows.win_shell: |
+        $packageName = (dism /online /get-packages | Select-String "Desktop" | ForEach-Object { $_.ToString().Split(':')[1].Trim() })
+        if ($packageName) {
+          $packageName
+        }
+      register: backup_package
+      changed_when: false
+
+    - name: "Create InstallOpenSSHServer.ps1"
+      ansible.windows.win_copy:
+        dest: C:\Windows\Temp\packer\InstallOpenSSHServer.ps1
+        content: |
+          Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+          Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+
+    - name: "Creating scheduled task to install OpenSSH Server"
+      community.windows.win_scheduled_task:
+        name: InstallOpenSSHServerTask
+        description: Install OpenSSH Server
+        actions:
+          - path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+            arguments: -ExecutionPolicy Bypass -File C:\Windows\Temp\packer\InstallOpenSSHServer.ps1
+        triggers:
+          - type: registration
+        username: SYSTEM
+        state: present
+        enabled: true
+
+    - name: "Executing the scheduled task"
+      ansible.windows.win_shell: schtasks /Run /TN "InstallOpenSSHServerTask"
+
+    - name: "Waiting for the scheduled task to complete"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        }
+
+    - name: "Waiting for the scheduled task to complete and check if it completed successfully"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+        }
+        if ($task.LastTaskResult -eq 0) {
+          $completedSuccessfully = $true
+        } else {
+          $completedSuccessfully = $false
+        }
+        $completedSuccessfully
+      register: task_result
+
+    - name: Delete the scheduled task if it completed successfully
+      community.windows.win_scheduled_task:
+        name: InstallOpenSSHServerTask
+        state: absent
+
+    - name: "Ensuring OpenSSH Server firewall rule exists"
+      community.windows.win_firewall_rule:
+        name: OpenSSH-Server-In-TCP
+        direction: in
+        action: allow
+        protocol: tcp
+        localport: 22
+        description: OpenSSH Server (sshd)
+        enabled: true
+
+    - name: "Applying Blackscreen Resolution: Disable Firewall rule on Container log in and out"
+      ansible.windows.win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Services\SharedAccess\Parameters\FirewallPolicy
+        name: DeleteUserAppContainersOnLogoff
+        data: 1
+        type: dword
+
+    - name: "Disabling Windows Feedback Experience program"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo
+        name: Enabled
+        data: 0
+        type: dword
+
+    - name: "Stopping Cortana from being used as part of your Windows Search Function"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+        name: AllowCortana
+        data: 0
+        type: dword
+
+    - name: "Disabling Bing Search in Start Menu"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
+        name: BingSearchEnabled
+        data: 0
+        type: dword
+
+    - name: "Adding Registry key to prevent bloatware apps from returning"
+      block:
+        - name: "Ensuring CloudContent registry path exists"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+            state: present
+
+        - name: "Setting DisableWindowsConsumerFeatures"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent
+            name: DisableWindowsConsumerFeatures
+            data: 1
+            type: dword
+
+        - name: "Ensuring ContentDeliveryManager registry path exists"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+            state: present
+
+        - name: "Setting ContentDeliveryAllowed"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+            name: ContentDeliveryAllowed
+            data: 0
+            type: dword
+
+        - name: "Setting OemPreInstalledAppsEnabled"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+            name: OemPreInstalledAppsEnabled
+            data: 0
+            type: dword
+
+        - name: "Setting PreInstalledAppsEnabled"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+            name: PreInstalledAppsEnabled
+            data: 0
+            type: dword
+
+        - name: "Setting PreInstalledAppsEverEnabled"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+            name: PreInstalledAppsEverEnabled
+            data: 0
+            type: dword
+
+        - name: "Setting SilentInstalledAppsEnabled"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\ContentDeliveryManager
+            name: SilentInstalledAppsEnabled
+            data: 0
+            type: dword
+
+    - name: "Setting Mixed Reality Portal value to 0"
+      ansible.windows.win_regedit:
+        path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Holographic
+        name: FirstRunSucceeded
+        data: 0
+        type: dword
+
+    - name: "Disabling live tiles"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Policies\Microsoft\Windows\CurrentVersion\PushNotifications
+        name: NoTileApplicationNotification
+        data: 1
+        type: dword
+
+    - name: "Turning off Data Collection"
+      block:
+        - name: "Disable Data Collection for HKLM"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection
+            name: AllowTelemetry
+            data: 0
+            type: dword
+
+        - name: "Disabling Data Collection for HKLM (Wow6432Node)"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection
+            name: AllowTelemetry
+            data: 0
+            type: dword
+
+        - name: "Disabling Data Collection for HKLM (Windows DataCollection)"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection
+            name: Al              lowTelemetry
+            data: 0
+            type: dword
+
+    - name: "Disabling Location Tracking"
+      block:
+        - name: "Ensuring SensorState registry path exists"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}
+            state: present
+
+        - name: "Setting SensorPermissionState to 0"
+          ansible.windows.win_regedit:
+            path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}
+            name: SensorPermissionState
+            data: 0
+            type: dword
+
+        - name: "Ensuring LocationConfig registry path exists"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc\Service\Configuration
+            state: present
+
+        - name: "Setting LocationConfig Status to 0"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Services\lfsvc\Service\Configuration
+            name: Status
+            data: 0
+            type: dword
+
+    - name: "Stopping and disabling Diagnostics Tracking Service"
+      ansible.windows.win_service:
+        name: DiagTrack
+        state: stopped
+        start_mode: disabled
+
+- name: "Setting up BGInfo"
+  block:
+    - name: "Creating BGInfo directory"
+      ansible.windows.win_file:
+        path: C:\opt\Prominic.NET\backgrounds
+        state: directory
+
+    - name: "Downloading Prominic.bgi"
+      ansible.windows.win_get_url:
+        url: https://www.m4kr.net/downloads/Prominic.bgi
+        dest: C:\opt\Prominic.NET\backgrounds\Prominic.bgi
+
+    - name: "Creating Post-Provisioning Directory"
+      ansible.windows.win_file:
+        path: C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+        state: directory
+
+    - name: "Downloading Bginfo64.lnk"
+      ansible.windows.win_get_url:
+        url: https://www.m4kr.net/downloads/Bginfo64.lnk
+        dest: C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\Bginfo64.lnk
+
+    - name: "Downloading ProminicBackgroundv2.bmp"
+      ansible.windows.win_get_url:
+        url: https://www.m4kr.net/downloads/ProminicBackgroundv2.bmp
+        dest: C:\opt\Prominic.NET\backgrounds\ProminicBackgroundv2.bmp
+
+    - name: "Downloading ProminicBackground.jpg"
+      ansible.windows.win_get_url:
+        url: https://www.m4kr.net/downloads/ProminicBackground.jpg
+        dest: C:\opt\Prominic.NET\backgrounds\ProminicBackground.jpg
+
+- name: "Setting up SSH"
+  block:
+    - name: Update SSH default Shell
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\OpenSSH
+        name: DefaultShell
+        data: C:\tools\cygwin\bin\bash.exe
+        type: string
+
+    - name: Update SSH Default Shell Command Option
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\OpenSSH
+        name: DefaultShellCommandOption
+        data: "-c"
+        type: string
+
+    - name: "Creating SSH directory for STARTcloud"
+      ansible.windows.win_file:
+        path: C:\Users\Administrator\.ssh
+        state: directory
+
+    - name: "Preparing SSH Directory and Keys"
+      ansible.windows.win_copy:
+        src: ../../../../../../ssh_keys/id_rsa.pub
+        dest: C:\Users\Administrator\.ssh\authorized_keys
+
+    - name: "Creating SSH directory for STARTcloud"
+      ansible.windows.win_file:
+        path: C:\Users\STARTcloud\.ssh
+        state: directory
+
+    - name: "Preparing SSH Directory and Keys"
+      ansible.windows.win_copy:
+        src: ../../../../../../ssh_keys/id_rsa.pub
+        dest: C:\Users\STARTcloud\.ssh\authorized_keys
+
+    - name: "Configuring SSH Service"
+      ansible.windows.win_powershell:
+        script: Set-Service -Name 'sshd' -StartupType Automatic
+
+    - name: "Configuring Uptime for SSH monitoring"
+      block:
+        - name: "Preparing Uptime"
+          ansible.windows.win_copy:
+            src: uptime
+            dest: "{{ item }}"
+          loop:
+            - C:\Windows\system32\uptime.exe
+            - C:\Windows\system32\uptime
+            - C:\tools\cygwin\bin\uptime.exe
+            - C:\tools\cygwin\bin\uptime
+
+        - name: "Setting permissions on uptime"
+          ansible.windows.win_shell: |
+            icacls "{{ item }}" /grant Everyone:F
+          loop:
+            - C:\Windows\system32\uptime.exe
+            - C:\Windows\system32\uptime
+            - C:\tools\cygwin\bin\uptime.exe
+            - C:\tools\cygwin\bin\uptime
+
+- name: "Removing Appx packages (and their hindering file assocations)"
+  ansible.windows.win_shell: |
+    Get-AppxPackage -name "*OneDriveSync*" | Remove-AppxPackage
+
+- name: "Disabling Firewall Profiles"
+  ansible.windows.win_shell: |
+    Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+
+- name: "Installing Windows Updates"
+  block:
+    - name: "Create InstallUpdates.ps1"
+      ansible.windows.win_copy:
+        dest: C:\Windows\Temp\packer\InstallUpdates.ps1
+        content: |
+          Import-Module PSWindowsUpdate
+          Get-WindowsUpdate -MicrosoftUpdate
+          Install-WindowsUpdate -AcceptAll -MicrosoftUpdate -IgnoreReboot
+
+    - name: "Creating scheduled task to install Windows Updates"
+      community.windows.win_scheduled_task:
+        name: InstallWindowsUpdatesTask
+        description: Install OpenSSH Server
+        actions:
+          - path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+            arguments: -ExecutionPolicy Bypass -File C:\Windows\Temp\packer\InstallUpdates.ps1"
+        triggers:
+          - type: registration
+        username: SYSTEM
+        state: present
+        enabled: true
+
+    - name: "Executing the scheduled task"
+      ansible.windows.win_shell: schtasks /Run /TN "InstallWindowsUpdatesTask"
+
+    - name: "Waiting for the scheduled task to complete"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        }
+
+    - name: "Waiting for the scheduled task to complete and check if it completed successfully"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        }
+        if ($task.LastTaskResult -eq 0) {
+          $completedSuccessfully = $true
+        } else {
+          $completedSuccessfully = $false
+        }
+        $completedSuccessfully
+      register: task_result
+
+    - name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: 7200
+
+- name: "Installing Windows Updates"
+  block:
+    - name: "Executing the scheduled task"
+      ansible.windows.win_shell: schtasks /Run /TN "InstallWindowsUpdatesTask"
+
+    - name: "Waiting for the scheduled task to complete"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        }
+
+    - name: "Waiting for the scheduled task to complete and check if it completed successfully"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        }
+        if ($task.LastTaskResult -eq 0) {
+          $completedSuccessfully = $true
+        } else {
+          $completedSuccessfully = $false
+        }
+        $completedSuccessfully
+      register: task_result
+
+    - name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: 7200
+
+- name: "Installing Windows Updates"
+  block:
+    - name: "Executing the scheduled task"
+      ansible.windows.win_shell: schtasks /Run /TN "InstallWindowsUpdatesTask"
+
+    - name: "Waiting for the scheduled task to complete"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        }
+
+    - name: "Waiting for the scheduled task to complete and check if it completed successfully"
+      ansible.windows.win_shell: |
+        $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        while ($task.State -eq "Running") {
+          Start-Sleep -Seconds 5
+          $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+        }
+        if ($task.LastTaskResult -eq 0) {
+          $completedSuccessfully = $true
+        } else {
+          $completedSuccessfully = $false
+        }
+        $completedSuccessfully
+      register: task_result
+
+    - name: "Deleting the scheduled task if it completed successfully"
+      community.windows.win_scheduled_task:
+        name: InstallWindowsUpdatesTask
+        state: absent
+
+    - name: "Rebooting to Apply Windows Updates"
+      ansible.windows.win_reboot:
+        reboot_timeout: 7200
+
+- name: "Disabling System Wide Proxy"
+  when: use_proxy
+  block:
+    - name: "Removing System Wide Proxy"
+      ansible.windows.win_environment:
+        name: HTTP_PROXY
+        state: absent
+        level: machine
+
+    - name: "Removing System Wide Proxy"
+      ansible.windows.win_environment:
+        name: HTTPS_PROXY
+        state: absent
+        level: machine
+
+    - name: "Resetting WinHTTP Proxy Settings"
+      ansible.windows.win_shell: |
+        netsh winhttp reset proxy
+
+- name: "Reducing Template and Cleaning up System"
+  block:
+    - name: "Clearing last used files and folders"
+      ansible.windows.win_shell: |
+        Remove-Item "$env:APPDATA\Microsoft\Windows\Recent\AutomaticDestinations\*.automaticDestinations-ms" -FORCE -ErrorAction SilentlyContinue
+
+    - name: "Cleaning Temp Files"
+      ansible.windows.win_shell: |
+        Takeown /d Y /R /f "C:\Windows\Temp\*"
+        Icacls "C:\Windows\Temp\*" /GRANT:r administrators:F /T /c /q 2>&1
+
+    - name: "Reducing Page File"
+      ansible.windows.win_shell: |
+        $System = GWMI Win32_ComputerSystem -EnableAllPrivileges
+        $System.AutomaticManagedPagefile = $False
+        $System.Put()
+        $CurrentPageFile = gwmi -query "select * from Win32_PageFileSetting where name='c:\\pagefile.sys'"
+        $CurrentPageFile.InitialSize = 512
+        $CurrentPageFile.MaximumSize = 512
+        $CurrentPageFile.Put()
+
+- name: "Verifying Health of Windows Installation"
+  when: verify
+  block:
+    - name: "Scaning health of the image"
+      ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /ScanHealth'
+
+    - name: "Starting component cleanup"
+      ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase'
+
+    - name: "Removing superseded components"
+      ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /SPSuperseded'
+
+    - name: Run System File Checker
+      ansible.windows.win_shell: 'sfc /scannow'
+
+- name: "Preparing for Sysprep"
+  when: verify
+  block:
+    - name: "Create sysprep.bat"
+      ansible.windows.win_copy:
+        dest: C:\Windows\Temp\packer\sysprep.bat
+        content: |
+          C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /quiet /shutdown /unattend:C:\Windows\Temp\packer\Autounattend.xml

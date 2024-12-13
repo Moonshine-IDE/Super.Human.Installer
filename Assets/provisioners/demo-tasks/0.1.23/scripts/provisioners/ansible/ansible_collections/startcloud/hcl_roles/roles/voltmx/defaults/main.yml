@@ -1,0 +1,16 @@
+---
+voltmx_installation_type: Development
+voltmx_installation_dir: /local/voltmx-foundry
+voltmx_installer_archive: VoltMXFoundrySetup-9.5.1.1_GA.tar.gz
+voltmx_installer_base_url: https://mydomain.com
+voltmx_admin_first_name: VoltMX
+voltmx_admin_last_name: Admin
+voltmx_admin_email: support@prominic.net
+voltmx_admin_pass: "SomeRandomPasswordSecureMe@!"
+voltmx_port_forwards:
+  -
+    guest: 8181
+    url: "voltmx"
+  -
+    guest: 8444
+    url: "voltmx"

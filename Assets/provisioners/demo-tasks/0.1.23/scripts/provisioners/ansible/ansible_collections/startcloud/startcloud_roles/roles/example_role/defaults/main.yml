@@ -1,0 +1,11 @@
+---
+## This File stores the lowest precendence of Variables.
+## These can be overridden by variables in the vars/main.yml, Playbook Variables, and Ansible Environmental Variables
+## If you are confused about how Variable precedence works,
+## please see this article: https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html
+python_simple_web_server_path: "{{ service_home_dir }}"
+startcloud_quick_start_port_forwards:
+  -
+    guest: 8000
+    url: "demo"
+startcloud_quick_start_proxy_url: "{{ startcloud_quick_start_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

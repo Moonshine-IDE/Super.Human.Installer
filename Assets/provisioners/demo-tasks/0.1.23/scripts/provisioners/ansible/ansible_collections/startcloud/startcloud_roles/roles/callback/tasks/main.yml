@@ -1,0 +1,12 @@
+---
+- 
+  name: "Send back VM completion request "
+  register: status
+  ignore_errors: true
+  uri: 
+    body: "action=spinupupdate&token={{ token }}&instanceurl={{ settings.hostname }}.{{ settings.domain }}&trackerid={{ trackerid }}&iscomplete=yes"
+    headers: 
+      Content-Type: application/x-www-form-urlencoded
+    method: POST
+    status_code: 200
+    url: "{{ callback_url }}"

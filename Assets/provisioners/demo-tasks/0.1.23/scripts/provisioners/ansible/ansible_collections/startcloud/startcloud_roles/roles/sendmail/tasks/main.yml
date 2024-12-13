@@ -1,0 +1,8 @@
+--- 
+- 
+  apt: 
+    name: 
+      - sendmail
+      - nano
+  name: "Installing Sendmail"
+  retries: 5

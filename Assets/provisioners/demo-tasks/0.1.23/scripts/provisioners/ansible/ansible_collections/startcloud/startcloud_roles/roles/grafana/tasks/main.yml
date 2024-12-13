@@ -1,0 +1,54 @@
+---
+- name: "Setting up Debian Installations"
+  when: "ansible_os_family == 'Debian'"
+  block:
+    - name: "Gathering DEB architecture"
+      ansible.builtin.command: dpkg --print-architecture
+      register: deb_architecture
+      changed_when: false
+
+    - name: "Printing DEB architecture"
+      ansible.builtin.debug:
+        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+
+    - name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true
+
+    - name: "Upgrading all apt packages"
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    - name: "Adding Additional Dependencies {{ packages }}"
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
+    - name: "Download Grafana GPG key"
+      ansible.builtin.get_url:
+        url: "https://packages.grafana.com/gpg.key"
+        dest: "/usr/share/keyrings/grafana.key"
+        mode: '0644'
+
+    - name: "Add Grafana APT repository"
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/grafana.key] https://packages.grafana.com/oss/deb stable main"
+        state: present
+
+    - name: "Update APT cache"
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: "Install Grafana"
+      ansible.builtin.apt:
+        name: grafana
+        state: present
+
+    - name: "Configure Grafana"
+      ansible.builtin.template:
+        src: grafana.ini.j2
+        dest: /etc/grafana/grafana.ini
+        mode: '0644'
+        notify: Restart Grafana

@@ -1,0 +1,370 @@
+--- 
+- 
+  apt_repository: 
+    repo: "deb http://us.archive.ubuntu.com/ubuntu/ hirsute universe"
+    state: present
+    update_cache: true
+    validate_certs: false
+  name: "Adding Universe Repo for LibreNMS"
+- 
+  apt: 
+    name: "{{ packages }}"
+  name: "Install Required LibreNMS Dependencies -- Takes about 10 Mins"
+  vars: 
+    packages: 
+      - acl
+      - curl
+      - composer
+      - fping
+      - git
+      - graphviz
+      - imagemagick
+      - mariadb-client
+      - mariadb-server
+      - mtr-tiny
+      - nginx-full
+      - nmap
+      - php7.4-cli
+      - php7.4-curl
+      - php7.4-fpm
+      - php7.4-gd
+      - php7.4-json
+      - php7.4-mbstring
+      - php7.4-mysql
+      - php7.4-snmp
+      - php7.4-xml
+      - php7.4-zip
+      - rrdtool
+      - rrdcached
+      - snmp
+      - snmpd
+      - whois
+      - unzip
+      - python3-pymysql
+      - python3-dotenv
+      - python3-redis
+      - python3-setuptools
+      - python3-systemd
+      - xmlstarlet
+      - git-core
+- 
+  name: "Add LibreNMS user"
+  user: 
+    create_home: false
+    home: /opt/librenms
+    name: librenms
+    shell: /bin/bash
+    system: true
+- 
+  git: 
+    dest: /opt/librenms
+    force: true
+    repo: "https://github.com/librenms/librenms.git"
+  name: "Git checkout LibreNMS"
+- 
+  file: 
+    group: librenms
+    mode: 505
+    owner: librenms
+    path: /opt/librenms
+    recurse: true
+  name: "Preparing LibreNMS folder permissions for user setup"
+- 
+  become: true
+  name: "Set permissions for LibreNMS packages"
+  shell: "{{ item }}"
+  with_items: 
+    - "zfs set acltype=posixacl rpool"
+    - "setfacl -d -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/"
+    - "setfacl -R -m g::rwx /opt/librenms/rrd /opt/librenms/logs /opt/librenms/bootstrap/cache/ /opt/librenms/storage/"
+- 
+  args: 
+    chdir: /opt/librenms/
+  become: true
+  become_user: librenms
+  name: "Installing PHP dependencies for LibrNMS"
+  shell: "/opt/librenms/scripts/composer_wrapper.php install --no-dev"
+- 
+  become: true
+  name: "Setting PHP timezone"
+  replace: 
+    dest: "{{ item }}"
+    regexp: "(;date.timezone =)"
+    replace: "date.timezone={{librenms_php_timezone}}"
+  with_items: 
+    - /etc/php/7.4/fpm/php.ini
+    - /etc/php/7.4/cli/php.ini
+- 
+  lineinfile: 
+    firstmatch: true
+    insertafter: true
+    line: "{{ item }}"
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regexp: "^[mysqld]"
+  name: "Setting Mariadb Configurations for LibreNMS"
+  with_items: 
+    - innodb_file_per_table=1
+    - lower_case_table_names=0
+- 
+  become: true
+  become_user: root
+  ignore_errors: true
+  mysql_user: 
+    host: "{{ item }}"
+    login_unix_socket: /var/run/mysqld/mysqld.sock
+    name: root
+    password: "{{ librenms_mysql_root_password }}"
+    priv: "*.*:ALL,GRANT"
+  name: "Set root user password"
+  with_items: 
+    - "{{ identifier }}"
+    - "127.0.0.1"
+    - ":1"
+    - localhost
+- 
+  become: true
+  become_user: root
+  name: "Copy .my.cnf file with root password credentials"
+  template: 
+    dest: /root/.my.cnf
+    mode: "0600"
+    owner: root
+    src: .my.cnf
+- 
+  name: "Starting Mariadb Service"
+  service: 
+    enabled: true
+    name: mariadb
+    state: restarted
+- 
+  become: true
+  mysql_user: 
+    name: librenms
+    password: "{{ librenms_mysql_password }}"
+    priv: "*.*:ALL"
+  name: "Create LibreNMS mysql user"
+- 
+  become: true
+  mysql_db: 
+    name: librenms
+    state: absent
+  name: "Delete Old librenms mysql database"
+  when: librenms_delete_old_db
+- 
+  become: true
+  mysql_db: 
+    collation: utf8mb4_unicode_ci
+    encoding: utf8mb4
+    name: librenms
+    state: present
+  name: "Create librenms mysql database"
+- 
+  become: true
+  mysql_user: 
+    host: "{{ identifier }}"
+    state: absent
+    user: ""
+  name: "Delete anonymous MySQL server user for $server_hostname"
+- 
+  become: true
+  mysql_user: 
+    state: absent
+    user: ""
+  name: "Delete anonymous MySQL server user for localhost"
+- 
+  become: true
+  mysql_db: 
+    db: test
+    state: absent
+  name: "Remove the MySQL test database"
+- 
+  copy: 
+    dest: "/etc/php/7.4/fpm/pool.d/{{ identifier }}.conf"
+    remote_src: true
+    src: /etc/php/7.4/fpm/pool.d/www.conf
+  name: "Copy PHP-FPM config as template for LibreNMS PHP-FPM Handler"
+  ignore_errors: true
+- 
+  become: true
+  name: "Setting up php-fpm for LibreNMS"
+  replace: 
+    dest: "/etc/php/7.4/fpm/pool.d/{{ identifier }}.conf"
+    regexp: "{{ item.regex }}"
+    replace: "{{ item.replace }}"
+  with_items: 
+    - 
+      regex: "^user = www-data"
+      replace: "user = librenms"
+    - 
+      regex: "^[www]"
+      replace: "[librenms]"
+    - 
+      regex: "^group = www-data"
+      replace: "group = librenms"
+    - 
+      regex: "listen = /run/php/php7.4-fpm.sock"
+      replace: "listen = /run/php/{{ identifier }}.sock"
+- 
+  become: true
+  name: "Adding Nginx Configuration for LibreNMS to Available Sites"
+  template: 
+    dest: "/etc/nginx/sites-available/{{ identifier }}.conf"
+    group: www-data
+    mode: 420
+    owner: www-data
+    src: librenms.conf
+- 
+  become: true
+  file: 
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  name: "Remove Default Nginx Configuration LibreNMS configuration"
+- 
+  become: true
+  file: 
+    path: /etc/nginx/sites-available/default
+    state: absent
+  name: "Remove Default Nginx Configuration LibreNMS configuration"
+- 
+  become: true
+  file: 
+    path: /etc/php/7.4/fpm/pool.d/www.conf
+    state: absent
+  name: "Remove Default PHP Configuration LibreNMS configuration"
+- 
+  become: true
+  file: 
+    dest: "/etc/nginx/sites-enabled/{{ identifier }}.conf"
+    group: www-data
+    owner: www-data
+    src: "/etc/nginx/sites-available/{{ identifier }}.conf"
+    state: link
+  name: "Enable LibreNMS configuration"
+- 
+  name: "Starting SNMPD Service"
+  service: 
+    enabled: true
+    name: "{{ item }}"
+    state: restarted
+  with_items: 
+    - nginx
+    - php7.4-fpm
+- 
+  become: true
+  file: 
+    dest: /usr/bin/lnms
+    src: /opt/librenms/lnms
+    state: link
+  name: "Enable lnms command completion for LibreNMS"
+- 
+  copy: 
+    dest: /etc/bash_completion.d/
+    remote_src: true
+    src: /opt/librenms/misc/lnms-completion.bash
+  name: "Move LNMS Bash Completion"
+- 
+  copy: 
+    dest: /etc/snmp/snmpd.conf
+    remote_src: true
+    src: /opt/librenms/snmpd.conf.example
+  name: "Configure snmpd"
+- 
+  become: true
+  name: "Set the Community String of {{ librenms_community_string }} for SNMP for LibreNMS"
+  replace: 
+    dest: /etc/snmp/snmpd.conf
+    regexp: RANDOMSTRINGGOESHERE
+    replace: "{{ librenms_community_string }}"
+- 
+  get_url: 
+    dest: /usr/bin/distro
+    mode: a+x
+    url: "https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro"
+  name: "SNMP Distro"
+- 
+  name: "Starting SNMPD Service"
+  service: 
+    enabled: true
+    name: snmpd
+    state: restarted
+- 
+  copy: 
+    dest: /etc/cron.d/librenms
+    remote_src: true
+    src: /opt/librenms/librenms.nonroot.cron
+  name: "Setup Cron Jobs for LibrNMS"
+- 
+  copy: 
+    dest: /etc/logrotate.d/librenms
+    remote_src: true
+    src: /opt/librenms/misc/librenms.logrotate
+  name: "Copy logrotate config for LibrNMS"
+- 
+  become: true
+  name: "Adding RRDCached Configuration for LibreNMS"
+  template: 
+    dest: "/etc/default/rrdcached "
+    src: rrdcached
+- 
+  ansible.builtin.file: 
+    group: librenms
+    owner: librenms
+    path: /var/lib/rrdcached/journal/
+    recurse: true
+    state: directory
+  name: "Fix RRDCached Permissions"
+- 
+  name: "Starting RRDcached Service"
+  service: 
+    enabled: true
+    name: rrdcached
+    state: restarted
+- 
+  lineinfile: 
+    insertafter: true
+    line: "$config['rrdcached'] = \"unix:/run/rrdcached.sock\";"
+    path: /opt/librenms/config.php.default
+    regexp: "^[mysqld]"
+  name: "Include RRDCached in Config"
+- 
+  get_url: 
+    dest: /usr/bin/mysqltuner.pl
+    mode: a+x
+    url: "http://mysqltuner.pl/"
+  name: "Install MySQL Tuner"
+- 
+  git: 
+    dest: /opt/librenms/html/plugins/Weathermap/
+    force: true
+    repo: "https://github.com/librenms-plugins/Weathermap.git"
+  name: "Git checkout WeatherMap"
+- 
+  file: 
+    group: librenms
+    owner: librenms
+    path: /opt/librenms/html/plugins/Weathermap/
+    recurse: true
+  name: "Preparing WeatherMap folder permissions for user setup"
+- 
+  file: 
+    group: librenms
+    mode: 509
+    owner: librenms
+    path: /opt/librenms/html/plugins/Weathermap/configs
+    recurse: true
+  name: "Preparing WeatherMap folder permissions for user setup"
+  file: 
+    group: librenms
+    mode: u=rwX,g=rX,o=rX
+    owner: librenms
+    path: /opt/librenms/html/
+    recurse: true
+  name: "Preparing HTML Directories"
+- 
+  cron: 
+    day: "*"
+    hour: "*"
+    job: "librenms /opt/librenms/html/plugins/Weathermap/map-poller.php >> /dev/null 2>&1"
+    minute: "5"
+    name: "Generate WeatherMap Data Every 5 Minutes"
+  name: "Set Cron to Generate WeatherMap Data Every 5 Minutes"

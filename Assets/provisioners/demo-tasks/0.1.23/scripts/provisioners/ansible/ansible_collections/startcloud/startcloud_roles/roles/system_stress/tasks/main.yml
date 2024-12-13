@@ -1,0 +1,22 @@
+---
+- 
+  name: "Ensuring apt cache is updated"
+  apt:
+    cache_valid_time: 3600
+    update_cache: true
+  when: "ansible_os_family == 'Debian'"
+
+#-
+#  name: "Installing sysbench repo"
+#  shell: "{{ item }}"
+#  args:
+#    executable: "/bin/bash"
+#  with_items:
+#    - "curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash"
+
+- 
+  name: "Adding Additional Dependencies {{ packages }}"
+  apt:
+    name: "{{ stress_packages }}"
+    state: present 
+  when: "ansible_os_family == 'Debian'"
