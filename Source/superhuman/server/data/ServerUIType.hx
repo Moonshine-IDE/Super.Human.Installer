@@ -30,11 +30,8 @@
 
 package superhuman.server.data;
 
-typedef ServiceTypeData = {
+enum abstract ServerUIType( String ) from String to String {
 
-    value:String,
-	description:String,
-	provisionerType:String,
-	serverType:String,
-	isEnabled:Bool
+    var Domino = "domino";
+    var AdditionalDomino = "additional-domino";
 }

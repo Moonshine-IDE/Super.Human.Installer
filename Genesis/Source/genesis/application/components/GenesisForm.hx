@@ -84,8 +84,13 @@ class GenesisFormRow extends LayoutGroup implements IValidator {
     }
 
     var _content:GenesisFormRowContent;
-    public var content( get, never ):GenesisFormRowContent;
+    public var content( get, set ):GenesisFormRowContent;
     function get_content() return _content;
+    function set_content( value:GenesisFormRowContent ):GenesisFormRowContent {
+        if ( _content == value ) return value;
+        _content = value;
+        return value;
+    }
 
     public function new() {
         

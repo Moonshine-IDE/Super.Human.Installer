@@ -31,6 +31,7 @@
 package;
 
 import superhuman.components.applications.SetupApplicationsPage;
+import superhuman.components.additionals.AdditionalServerPage;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.io.Bytes;
@@ -91,7 +92,7 @@ import sys.FileSystem;
 import sys.io.File;
 import superhuman.application.ApplicationData;
 import superhuman.application.Applications;
-
+import superhuman.server.data.ServerUIType;
 using champaign.core.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
@@ -109,6 +110,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SERVICE_TYPE = "page-service-type";
 	static public final PAGE_CONFIG = "page-config";
 	static public final PAGE_CONFIG_ADVANCED = "page-config-advanced";
+	static public final PAGE_ADDITIONAL_SERVER = "page-additional-server";
 	static public final PAGE_HELP = "page-help";
 	static public final PAGE_LOADING = "page-loading";
 	static public final PAGE_ROLES = "page-roles";
@@ -153,6 +155,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _vagrantFile:String;
 	var _setupBrowserPage:SetupBrowserPage;
 	var _setupApplicationsPage:SetupApplicationsPage;
+	var _additionalServerPage:AdditionalServerPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -272,14 +275,17 @@ class SuperHumanInstaller extends GenesisApplication {
 			{value: "Standalone Domino Server", 
 			 description: "A new, independent Domino Server", 
 			 provisionerType: ProvisionerType.DemoTasks,
+			 serverType: ServerUIType.Domino,
 			 isEnabled: true},
 			{value: "Additional Domino Server", 
 			 description: "Join a new server to an existing Domino environment", 
-			 provisionerType: "",
-			 isEnabled: false},
+			 provisionerType: ProvisionerType.DemoTasks,
+			 serverType: ServerUIType.AdditionalDomino,
+			 isEnabled: true},
 			{value: "Volt MX Go Foundry Server", 
 			 description: "Coming soon!", 
 			 provisionerType: "",
+			 serverType: "",
 			 isEnabled: false}
 		];
 
@@ -375,6 +381,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		_advancedConfigPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelAdvancedConfigureServer );
 		_advancedConfigPage.addEventListener( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION, _saveAdvancedServerConfiguration );
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
+
+		_additionalServerPage = new AdditionalServerPage();
+		//this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 
 		_settingsPage = new SettingsPage();
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
