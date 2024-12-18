@@ -31,7 +31,7 @@
 package;
 
 import superhuman.components.applications.SetupApplicationsPage;
-import superhuman.components.additionals.AdditionalServerPage;
+//import superhuman.components.additionals.AdditionalServerPage;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.io.Bytes;
@@ -155,7 +155,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _vagrantFile:String;
 	var _setupBrowserPage:SetupBrowserPage;
 	var _setupApplicationsPage:SetupApplicationsPage;
-	var _additionalServerPage:AdditionalServerPage;
+	//var _additionalServerPage:AdditionalServerPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -382,7 +382,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_advancedConfigPage.addEventListener( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION, _saveAdvancedServerConfiguration );
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
-		_additionalServerPage = new AdditionalServerPage();
+		//_additionalServerPage = new AdditionalServerPage();
 		//this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 
 		_settingsPage = new SettingsPage();
