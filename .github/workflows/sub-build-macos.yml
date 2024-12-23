@@ -73,7 +73,7 @@ jobs:
           replace: "${{ inputs.version }}"
 
       - name: Set up Haxe
-        uses: krdlab/setup-haxe@master
+        uses: Moonshine-IDE/setup-haxe-action@master
         with:
           haxe-version: ${{ env.haxe_version }}
   
