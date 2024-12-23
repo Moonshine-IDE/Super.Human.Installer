@@ -79,11 +79,6 @@
 	<haxeflag value="include('prominic')" name="--macro"/>
 	<haxeflag value="include('genesis.application')" name="--macro"/>
 	<haxeflag value="include('superhuman')" name="--macro"/>
-	<haxeflag value="include('feathers')" name="--macro"/>
-	
-	<haxeflag value="addGlobalMetadata('feathers', '@:rtti', true, true, false)" name="--macro"/>
-	<haxeflag value="addGlobalMetadata('openfl', '@:rtti', true, true, false)" name="--macro"/>
-	<haxeflag value="addGlobalMetadata('lime', '@:rtti', true, true, false)" name="--macro"/>
 
 	<haxedef name="HXCPP_STACK_LINE" />
 	<haxedef name="HXCPP_STACK_TRACE"/>
