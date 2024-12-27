@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 domino_rest_api_archive: Domino_REST_API_V1_Installer.tar.gz
 domino_rest_api_version: 1
 domino_rest_api_debug: true

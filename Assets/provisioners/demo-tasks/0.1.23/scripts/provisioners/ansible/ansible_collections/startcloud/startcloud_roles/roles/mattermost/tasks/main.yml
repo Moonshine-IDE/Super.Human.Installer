@@ -1,110 +1,116 @@
----
-- block:
-  - name: get mattermost package
-    ansible.builtin.unarchive:
-      src: "https://releases.mattermost.com/{{ mattermost_version }}/mattermost-team-{{ mattermost_version }}-linux-amd64.tar.gz"
-      dest: "/opt"
-      owner: root
-      group: root
-      mode: "0755"
-      remote_src: "yes"
-  - name: rename mattermost path to appropriate path
-    ansible.builtin.command: "mv /opt/mattermost '{{ mattermost_root_dir }}'"
-    args:
-      creates: "{{ mattermost_root_dir }}"
-      removes: "/opt/mattermost"
-  - name: setup mysql fulltext index
-    ansible.builtin.copy:
-      src: "mattermost.cnf"
-      dest: "/etc/mysql/conf.d/mattermost.cnf"
-      owner: root
-      group: root
-      mode: "0644"
-  - name: restart mysql service
-    ansible.builtin.service: "name=mysql.service state=restarted"
-  - name: setup database
-    ansible.builtin.shell: 'mysql -uroot -e "{{ item }}"'
-    loop:
-      - "CREATE DATABASE IF NOT EXISTS {{ mattermost_db_name }} CHARSET utf8mb4"
-      - "CREATE USER IF NOT EXISTS '{{ mattermost_db_user }}'@'localhost' IDENTIFIED BY '{{ mattermost_db_password }}'"
-      - "GRANT ALL PRIVILEGES ON {{ mattermost_db_name }}.* TO '{{ mattermost_db_user }}'@'localhost'"
-  - name: create mattermost group account
-    ansible.builtin.group:
-      name: "{{ mattermost_group }}"
-      state: "present"
-  - name: create mattermost user account
-    ansible.builtin.user:
-      name: "{{ mattermost_user }}"
-      group: "{{ mattermost_group }}"
-      shell: "/usr/sbin/nologin"
-      home: "/nonexistent"
-      system: true
-  - name: create mattermost data dir
-    ansible.builtin.file:
-      path: "{{ mattermost_root_dir }}/data"
-      state: directory
-  - name: setup mattermost dir owner and group
-    ansible.builtin.file:
-      path: "{{ mattermost_root_dir }}"
-      owner: "{{ mattermost_user }}"
-      group: "{{ mattermost_group }}"
-      state: directory
-      recurse: true
-  - name: setup mattermost dir permissions
-    ansible.builtin.file:
-      path: "{{ mattermost_root_dir }}"
-      state: directory
-      mode: g+w
-      recurse: true
-  - name: setup mattermost config database DriverName
-    ansible.builtin.replace:
-      path: "{{ mattermost_root_dir }}/config/config.json"
-      regexp: '"DriverName": "postgres"'
-      replace: '"DriverName": "mysql"'
-  - name: setup mattermost config database DataSource
-    ansible.builtin.replace:
-      path: "{{ mattermost_root_dir }}/config/config.json"
-      regexp: '"DataSource": "[^"]*"'
-      replace: '"DataSource": "{{ mattermost_db_user }}:{{ mattermost_db_password }}@tcp(localhost:3306)/{{ mattermost_db_name }}?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"'
-  - name: setup mattermost config SiteURL
-    ansible.builtin.replace:
-      path: "{{ mattermost_root_dir }}/config/config.json"
-      regexp: '"SiteURL": ""'
-      replace: '"SiteURL": "https://{{ mattermost_domain_name }}"'
-  - name: setup mattermost config ListenAddress
-    ansible.builtin.replace:
-      path: "{{ mattermost_root_dir }}/config/config.json"
-      regexp: '"ListenAddress": ":8065"'
-      replace: '"ListenAddress": ":{{ mattermost_port }}"'
-  - name: setup mattermost config permission
-    ansible.builtin.file:
-      path: "{{ mattermost_root_dir }}/config/config.json"
-      owner: "{{ mattermost_user }}"
-      group: "{{ mattermost_group }}"
-      mode: "0600"
-  - name: setup mattermost systemd service
-    ansible.builtin.template:
-      src: "mattermost.service.j2"
-      dest: "/lib/systemd/system/{{ mattermost_team_name }}_mattermost.service"
-      owner: root
-      group: root
-      mode: "0644"
-  - name: reload systemd service
-    ansible.builtin.command: "systemctl daemon-reload"
-  - name: enable mattermost service
-    ansible.builtin.command: "systemctl enable {{ mattermost_team_name }}_mattermost.service"
-  - name: start mattermost service
-    ansible.builtin.command: "systemctl start {{ mattermost_team_name }}_mattermost.service"
-  - name: install nginx production config
-    ansible.builtin.template:
-      src: "nginx_production.conf.j2"
-      dest: "/etc/nginx/sites-available/{{ mattermost_domain_name }}"
-      owner: root
-      group: root
-      mode: "0644"
-  - name: reload nginx
-    ansible.builtin.command: "systemctl reload nginx"
-  - name: setup db index
-    ansible.builtin.script: "alter_db_index.sh {{ mattermost_db_name }}"
-  tags:
-    - mattermost
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - 
+      name: "Installing Mattermost"
+      block:
+      - name: get mattermost package
+        ansible.builtin.unarchive:
+          src: "https://releases.mattermost.com/{{ mattermost_version }}/mattermost-team-{{ mattermost_version }}-linux-amd64.tar.gz"
+          dest: "/opt"
+          owner: root
+          group: root
+          mode: "0755"
+          remote_src: "yes"
+      - name: rename mattermost path to appropriate path
+        ansible.builtin.command: "mv /opt/mattermost '{{ mattermost_root_dir }}'"
+        args:
+          creates: "{{ mattermost_root_dir }}"
+          removes: "/opt/mattermost"
+      - name: setup mysql fulltext index
+        ansible.builtin.copy:
+          src: "mattermost.cnf"
+          dest: "/etc/mysql/conf.d/mattermost.cnf"
+          owner: root
+          group: root
+          mode: "0644"
+      - name: restart mysql service
+        ansible.builtin.service: "name=mysql.service state=restarted"
+      - name: setup database
+        ansible.builtin.shell: 'mysql -uroot -e "{{ item }}"'
+        loop:
+          - "CREATE DATABASE IF NOT EXISTS {{ mattermost_db_name }} CHARSET utf8mb4"
+          - "CREATE USER IF NOT EXISTS '{{ mattermost_db_user }}'@'localhost' IDENTIFIED BY '{{ mattermost_db_password }}'"
+          - "GRANT ALL PRIVILEGES ON {{ mattermost_db_name }}.* TO '{{ mattermost_db_user }}'@'localhost'"
+      - name: create mattermost group account
+        ansible.builtin.group:
+          name: "{{ mattermost_group }}"
+          state: "present"
+      - name: create mattermost user account
+        ansible.builtin.user:
+          name: "{{ mattermost_user }}"
+          group: "{{ mattermost_group }}"
+          shell: "/usr/sbin/nologin"
+          home: "/nonexistent"
+          system: true
+      - name: create mattermost data dir
+        ansible.builtin.file:
+          path: "{{ mattermost_root_dir }}/data"
+          state: directory
+      - name: setup mattermost dir owner and group
+        ansible.builtin.file:
+          path: "{{ mattermost_root_dir }}"
+          owner: "{{ mattermost_user }}"
+          group: "{{ mattermost_group }}"
+          state: directory
+          recurse: true
+      - name: setup mattermost dir permissions
+        ansible.builtin.file:
+          path: "{{ mattermost_root_dir }}"
+          state: directory
+          mode: g+w
+          recurse: true
+      - name: setup mattermost config database DriverName
+        ansible.builtin.replace:
+          path: "{{ mattermost_root_dir }}/config/config.json"
+          regexp: '"DriverName": "postgres"'
+          replace: '"DriverName": "mysql"'
+      - name: setup mattermost config database DataSource
+        ansible.builtin.replace:
+          path: "{{ mattermost_root_dir }}/config/config.json"
+          regexp: '"DataSource": "[^"]*"'
+          replace: '"DataSource": "{{ mattermost_db_user }}:{{ mattermost_db_password }}@tcp(localhost:3306)/{{ mattermost_db_name }}?charset=utf8mb4,utf8&readTimeout=30s&writeTimeout=30s"'
+      - name: setup mattermost config SiteURL
+        ansible.builtin.replace:
+          path: "{{ mattermost_root_dir }}/config/config.json"
+          regexp: '"SiteURL": ""'
+          replace: '"SiteURL": "https://{{ mattermost_domain_name }}"'
+      - name: setup mattermost config ListenAddress
+        ansible.builtin.replace:
+          path: "{{ mattermost_root_dir }}/config/config.json"
+          regexp: '"ListenAddress": ":8065"'
+          replace: '"ListenAddress": ":{{ mattermost_port }}"'
+      - name: setup mattermost config permission
+        ansible.builtin.file:
+          path: "{{ mattermost_root_dir }}/config/config.json"
+          owner: "{{ mattermost_user }}"
+          group: "{{ mattermost_group }}"
+          mode: "0600"
+      - name: setup mattermost systemd service
+        ansible.builtin.template:
+          src: "mattermost.service.j2"
+          dest: "/lib/systemd/system/{{ mattermost_team_name }}_mattermost.service"
+          owner: root
+          group: root
+          mode: "0644"
+      - name: reload systemd service
+        ansible.builtin.command: "systemctl daemon-reload"
+      - name: enable mattermost service
+        ansible.builtin.command: "systemctl enable {{ mattermost_team_name }}_mattermost.service"
+      - name: start mattermost service
+        ansible.builtin.command: "systemctl start {{ mattermost_team_name }}_mattermost.service"
+      - name: install nginx production config
+        ansible.builtin.template:
+          src: "nginx_production.conf.j2"
+          dest: "/etc/nginx/sites-available/{{ mattermost_domain_name }}"
+          owner: root
+          group: root
+          mode: "0644"
+      - name: reload nginx
+        ansible.builtin.command: "systemctl reload nginx"
+      - name: setup db index
+        ansible.builtin.script: "alter_db_index.sh {{ mattermost_db_name }}"
+      tags:
+        - mattermost
+    

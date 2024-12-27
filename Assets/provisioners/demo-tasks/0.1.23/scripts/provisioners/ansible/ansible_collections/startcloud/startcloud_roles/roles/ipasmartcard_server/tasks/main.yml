@@ -1,251 +1,252 @@
----
-# tasks file for ipasmartcard_server role
-
-- name: Uninstall smartcard server
-  ansible.builtin.fail:
-    msg: "Uninstalling smartcard for IPA is not supported"
-  when: state|default('present') == 'absent'
-
-- name: Import variables specific to distribution
-  ansible.builtin.include_vars: "{{ item }}"
-  with_first_found:
-    - "vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}.yml"
-    - "vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"
-    - "vars/{{ ansible_facts['distribution'] }}.yml"
-    # os_family is used as a fallback for distros which are not currently
-    # supported, but are based on a supported distro family. For example,
-    # Oracle, Rocky, Alma and Alibaba linux, which are all "RedHat" based.
-    - "vars/{{ ansible_facts['os_family'] }}-{{ ansible_facts['distribution_version'] }}.yml"
-    - "vars/{{ ansible_facts['os_family'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"
-    - "vars/{{ ansible_facts['os_family'] }}.yml"
-    # If neither distro nor family is supported, try a default configuration.
-    - "vars/default.yml"
-
-- name: Server configuration
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
+    - name: Uninstall smartcard server
+      ansible.builtin.fail:
+        msg: "Uninstalling smartcard for IPA is not supported"
+      when: state|default('present') == 'absent'
 
-  # CA CERTS
+    - name: Import variables specific to distribution
+      ansible.builtin.include_vars: "{{ item }}"
+      with_first_found:
+        - "vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_version'] }}.yml"
+        - "vars/{{ ansible_facts['distribution'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"
+        - "vars/{{ ansible_facts['distribution'] }}.yml"
+        # os_family is used as a fallback for distros which are not currently
+        # supported, but are based on a supported distro family. For example,
+        # Oracle, Rocky, Alma and Alibaba linux, which are all "RedHat" based.
+        - "vars/{{ ansible_facts['os_family'] }}-{{ ansible_facts['distribution_version'] }}.yml"
+        - "vars/{{ ansible_facts['os_family'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"
+        - "vars/{{ ansible_facts['os_family'] }}.yml"
+        # If neither distro nor family is supported, try a default configuration.
+        - "vars/default.yml"
 
-  # Fail on empty "ipasmartcard_server_ca_certs"
-  - name: Fail on empty "ipasmartcard_server_ca_certs"
-    ansible.builtin.fail:
-      msg: "No CA certs given in 'ipasmartcard_server_ca_certs'"
-    when: ipasmartcard_server_ca_certs is not defined or
-          ipasmartcard_server_ca_certs | length < 1
+    - name: Server configuration
+      block:
 
-  # Validate ipasmartcard_server_ca_certs
+      # CA CERTS
 
-  - name: Validate CA certs "{{ ipasmartcard_server_ca_certs }}"
-    ipasmartcard_server_validate_ca_certs:
-      ca_cert_files: "{{ ipasmartcard_server_ca_certs }}"
-    register: result_validate_ca_certs
+      # Fail on empty "ipasmartcard_server_ca_certs"
+      - name: Fail on empty "ipasmartcard_server_ca_certs"
+        ansible.builtin.fail:
+          msg: "No CA certs given in 'ipasmartcard_server_ca_certs'"
+        when: ipasmartcard_server_ca_certs is not defined or
+              ipasmartcard_server_ca_certs | length < 1
 
-  # INSTALL bind-utils
+      # Validate ipasmartcard_server_ca_certs
 
-  - name: Ensure bind utilities packages are installed
-    ansible.builtin.package:
-      name: "{{ ipasmartcard_server_bindutils_packages }}"
-      state: present
-    when: ipaserver_install_packages | bool
+      - name: Validate CA certs "{{ ipasmartcard_server_ca_certs }}"
+        ipasmartcard_server_validate_ca_certs:
+          ca_cert_files: "{{ ipasmartcard_server_ca_certs }}"
+        register: result_validate_ca_certs
 
-  # KINIT
+      # INSTALL bind-utils
 
-  - name: Set default principal if not given
-    ansible.builtin.set_fact:
-      ipaadmin_principal: admin
-    when: ipaadmin_principal is undefined
+      - name: Ensure bind utilities packages are installed
+        ansible.builtin.package:
+          name: "{{ ipasmartcard_server_bindutils_packages }}"
+          state: present
+        when: ipaserver_install_packages | bool
 
-  - name: Athenticate with kinit and password for "{{ ipaadmin_principal }}"
-    ansible.builtin.command: kinit "{{ ipaadmin_principal }}"
-    args:
-      stdin: "{{ ipaadmin_password }}"
-    when: ipaadmin_password is defined
+      # KINIT
 
-  - name: Authenticate with kinit and keytab for "{{ ipaadmin_principal }}"
-    ansible.builtin.command: kinit -kt "{{ ipaadmin_keytab }}" "{{ ipaadmin_principal }}"
-    when: ipaadmin_keytab is defined
+      - name: Set default principal if not given
+        ansible.builtin.set_fact:
+          ipaadmin_principal: admin
+        when: ipaadmin_principal is undefined
 
-  # IS MASTER
+      - name: Athenticate with kinit and password for "{{ ipaadmin_principal }}"
+        ansible.builtin.command: kinit "{{ ipaadmin_principal }}"
+        args:
+          stdin: "{{ ipaadmin_password }}"
+        when: ipaadmin_password is defined
 
-  - name: Check that this is an IPA master
-    ansible.builtin.command: ipa server-show --raw "{{ ipaserver_hostname | default(ansible_facts['fqdn']) }}"
-    register: result_ipa_server_show
+      - name: Authenticate with kinit and keytab for "{{ ipaadmin_principal }}"
+        ansible.builtin.command: kinit -kt "{{ ipaadmin_keytab }}" "{{ ipaadmin_principal }}"
+        when: ipaadmin_keytab is defined
 
-  - name: Fail if not an IPA server
-    ansible.builtin.fail:
-      msg: "Not an IPA server"
-    when: result_ipa_server_show.failed
+      # IS MASTER
 
-  - name: Get Domain from server-find server name
-    ansible.builtin.set_fact:
-      ipaserver_domain: "{{ (result_ipa_server_show.stdout | regex_search('cn: (.+)', '\\1'))[0].split('.')[1:] | join('.') }}"
-    when: ipaserver_domain is not defined
+      - name: Check that this is an IPA master
+        ansible.builtin.command: ipa server-show --raw "{{ ipaserver_hostname | default(ansible_facts['fqdn']) }}"
+        register: result_ipa_server_show
 
-  - name: Get ipa-ca records
-    ansible.builtin.command: "dig +short ipa-ca.{{ ipaserver_domain }}"
-    register: result_get_ipaca_records
+      - name: Fail if not an IPA server
+        ansible.builtin.fail:
+          msg: "Not an IPA server"
+        when: result_ipa_server_show.failed
 
-  - name: Fail if ipa-ca records are not resolvable
-    ansible.builtin.fail:
-      msg: "ipa-ca records are not resolvable"
-    when: result_get_ipaca_records.failed or
-          result_get_ipaca_records.stdout | length == 0
+      - name: Get Domain from server-find server name
+        ansible.builtin.set_fact:
+          ipaserver_domain: "{{ (result_ipa_server_show.stdout | regex_search('cn: (.+)', '\\1'))[0].split('.')[1:] | join('.') }}"
+        when: ipaserver_domain is not defined
 
-  # GET VARS FROM IPA
+      - name: Get ipa-ca records
+        ansible.builtin.command: "dig +short ipa-ca.{{ ipaserver_domain }}"
+        register: result_get_ipaca_records
 
-  - name: Get VARS from IPA
-    ipasmartcard_server_get_vars:
-    register: ipasmartcard_server_vars
+      - name: Fail if ipa-ca records are not resolvable
+        ansible.builtin.fail:
+          msg: "ipa-ca records are not resolvable"
+        when: result_get_ipaca_records.failed or
+              result_get_ipaca_records.stdout | length == 0
 
-  # ENABLE NSS OCSP
+      # GET VARS FROM IPA
 
-  - name: Enable the OCSP directive in nss.conf
-    ansible.builtin.script: ipasmartcard_server_enable_ocsp_directive.sh
-                            "{{ ipasmartcard_server_vars.NSS_OCSP_DIRECTIVE }}"
-                            "{{ ipasmartcard_server_vars.HTTPD_NSS_CONF }}"
-    when: ipasmartcard_server_vars.NSS_OCSP_ENABLED | length > 0
+      - name: Get VARS from IPA
+        ipasmartcard_server_get_vars:
+        register: ipasmartcard_server_vars
 
-  # MARK NSS HTTPD CERT AS TRUSTED
+      # ENABLE NSS OCSP
 
-  - name: Mark HTTPD CERT as trusted
-    ansible.builtin.script: ipasmartcard_server_mark_httpd_cert_as_trusted.sh
-                            "{{ ipasmartcard_server_vars.NSS_OCSP_DIRECTIVE }}"
-                            "{{ ipasmartcard_server_vars.HTTPD_NSS_CONF }}"
-                            "{{ ipasmartcard_server_vars.NSS_NICKNAME_DIRECTIVE }}"
-                            "{{ ipasmartcard_server_vars.HTTPD_ALIAS_DIR }}"
-    when: ipasmartcard_server_vars.NSS_OCSP_ENABLED | length > 0
+      - name: Enable the OCSP directive in nss.conf
+        ansible.builtin.script: ipasmartcard_server_enable_ocsp_directive.sh
+                                "{{ ipasmartcard_server_vars.NSS_OCSP_DIRECTIVE }}"
+                                "{{ ipasmartcard_server_vars.HTTPD_NSS_CONF }}"
+        when: ipasmartcard_server_vars.NSS_OCSP_ENABLED | length > 0
 
-  # ENABLE SSL OCSP
+      # MARK NSS HTTPD CERT AS TRUSTED
 
-  - name: Enable the OCSP directive in ssl.conf
-    ansible.builtin.script: ipasmartcard_server_enable_ocsp_directive.sh
-                            "{{ ipasmartcard_server_vars.OCSP_DIRECTIVE }}"
-                            "{{ ipasmartcard_server_vars.HTTPD_SSL_CONF }}"
-    when: ipasmartcard_server_vars.OCSP_ENABLED | length > 0
+      - name: Mark HTTPD CERT as trusted
+        ansible.builtin.script: ipasmartcard_server_mark_httpd_cert_as_trusted.sh
+                                "{{ ipasmartcard_server_vars.NSS_OCSP_DIRECTIVE }}"
+                                "{{ ipasmartcard_server_vars.HTTPD_NSS_CONF }}"
+                                "{{ ipasmartcard_server_vars.NSS_NICKNAME_DIRECTIVE }}"
+                                "{{ ipasmartcard_server_vars.HTTPD_ALIAS_DIR }}"
+        when: ipasmartcard_server_vars.NSS_OCSP_ENABLED | length > 0
 
-  # Restart apache
+      # ENABLE SSL OCSP
 
-  - name: Restart apache
-    ansible.builtin.service:
-      name: httpd
-      state: restarted
+      - name: Enable the OCSP directive in ssl.conf
+        ansible.builtin.script: ipasmartcard_server_enable_ocsp_directive.sh
+                                "{{ ipasmartcard_server_vars.OCSP_DIRECTIVE }}"
+                                "{{ ipasmartcard_server_vars.HTTPD_SSL_CONF }}"
+        when: ipasmartcard_server_vars.OCSP_ENABLED | length > 0
 
-  # RECORD HTTPD OCSP STATUS
+      # Restart apache
 
-  # Store the NSS OCSP upgrade state
+      - name: Restart apache
+        ansible.builtin.service:
+          name: httpd
+          state: restarted
 
-  - name: Store NSS OCSP upgrade state
-    ansible.builtin.command: "{{ ipasmartcard_server_vars.python_interpreter }}"
-    args:
-      stdin: |
-        from ipaserver.install import sysupgrade
-        sysupgrade.set_upgrade_state("httpd", "{{ ipasmartcard_server_vars.NSS_OCSP_DIRECTIVE }}", True)
-    when: ipasmartcard_server_vars.NSS_OCSP_ENABLED | length > 0
+      # RECORD HTTPD OCSP STATUS
 
-  # Store the SSL OCSP upgrade state
+      # Store the NSS OCSP upgrade state
 
-  - name: Store SSL OCSP upgrade state
-    ansible.builtin.command: "{{ ipasmartcard_server_vars.python_interpreter }}"
-    args:
-      stdin: |
-        from ipaserver.install import sysupgrade
-        sysupgrade.set_upgrade_state("httpd", "{{ ipasmartcard_server_vars.OCSP_DIRECTIVE }}", True)
-    when: ipasmartcard_server_vars.OCSP_ENABLED | length > 0
+      - name: Store NSS OCSP upgrade state
+        ansible.builtin.command: "{{ ipasmartcard_server_vars.python_interpreter }}"
+        args:
+          stdin: |
+            from ipaserver.install import sysupgrade
+            sysupgrade.set_upgrade_state("httpd", "{{ ipasmartcard_server_vars.NSS_OCSP_DIRECTIVE }}", True)
+        when: ipasmartcard_server_vars.NSS_OCSP_ENABLED | length > 0
 
-  # check whether PKINIT is configured on the master
+      # Store the SSL OCSP upgrade state
 
-  - name: Enable PKINIT
-    ansible.builtin.command: ipa-pkinit-manage enable
+      - name: Store SSL OCSP upgrade state
+        ansible.builtin.command: "{{ ipasmartcard_server_vars.python_interpreter }}"
+        args:
+          stdin: |
+            from ipaserver.install import sysupgrade
+            sysupgrade.set_upgrade_state("httpd", "{{ ipasmartcard_server_vars.OCSP_DIRECTIVE }}", True)
+        when: ipasmartcard_server_vars.OCSP_ENABLED | length > 0
 
-  # Enable OK-AS-DELEGATE flag on the HTTP principal
-  # This enables smart card login to WebUI
+      # check whether PKINIT is configured on the master
 
-  - name: Enable OK-AS-DELEGATE flag on the HTTP principal
-    ipaservice:
-      name: "HTTP/{{ ipaserver_hostname | default(ansible_facts['fqdn']) }}"
-      ok_to_auth_as_delegate: yes
+      - name: Enable PKINIT
+        ansible.builtin.command: ipa-pkinit-manage enable
 
-  # HTTPD IFP
+      # Enable OK-AS-DELEGATE flag on the HTTP principal
+      # This enables smart card login to WebUI
 
-  - name: Allow HTTPD ifp
-    when: ipasmartcard_server_vars.allow_httpd_ifp
-    block:
+      - name: Enable OK-AS-DELEGATE flag on the HTTP principal
+        ipaservice:
+          name: "HTTP/{{ ipaserver_hostname | default(ansible_facts['fqdn']) }}"
+          ok_to_auth_as_delegate: yes
 
-    # Allow Apache to access SSSD IFP
-    - name: Allow Apache to access SSSD IFP
-      ansible.builtin.command: "{{ ipasmartcard_server_vars.python_interpreter }}"
-      args:
-        stdin: |
-          import SSSDConfig
-          from ipaclient.install.client import sssd_enable_ifp
-          from ipaplatform.paths import paths
-          c = SSSDConfig.SSSDConfig()
-          c.import_config()
-          sssd_enable_ifp(c, allow_httpd=True)
-          c.write(paths.SSSD_CONF)
-      when: ipasmartcard_server_vars.OCSP_ENABLED | length > 0
+      # HTTPD IFP
 
-    # Restart sssd
+      - name: Allow HTTPD ifp
+        when: ipasmartcard_server_vars.allow_httpd_ifp
+        block:
 
-    - name: Restart sssd
-      ansible.builtin.service:
-        name: sssd
-        state: restarted
+        # Allow Apache to access SSSD IFP
+        - name: Allow Apache to access SSSD IFP
+          ansible.builtin.command: "{{ ipasmartcard_server_vars.python_interpreter }}"
+          args:
+            stdin: |
+              import SSSDConfig
+              from ipaclient.install.client import sssd_enable_ifp
+              from ipaplatform.paths import paths
+              c = SSSDConfig.SSSDConfig()
+              c.import_config()
+              sssd_enable_ifp(c, allow_httpd=True)
+              c.write(paths.SSSD_CONF)
+          when: ipasmartcard_server_vars.OCSP_ENABLED | length > 0
 
-  # Ensure /etc/sssd/pki exists
+        # Restart sssd
 
-  - name: Prepare for authselect
-    when: ipasmartcard_server_vars.USE_AUTHSELECT
-    block:
-    - name: Ensure /etc/sssd/pki exists
-      ansible.builtin.file:
-        path: /etc/sssd/pki
-        state: directory
-        mode: 0711
+        - name: Restart sssd
+          ansible.builtin.service:
+            name: sssd
+            state: restarted
 
-    - name: Ensure /etc/sssd/pki/sssd_auth_ca_db.pem is absent
-      ansible.builtin.file:
-        path: /etc/sssd/pki/sssd_auth_ca_db.pem
-        state: absent
+      # Ensure /etc/sssd/pki exists
 
-  # Upload smartcard CA certificates to systemwide db
+      - name: Prepare for authselect
+        when: ipasmartcard_server_vars.USE_AUTHSELECT
+        block:
+        - name: Ensure /etc/sssd/pki exists
+          ansible.builtin.file:
+            path: /etc/sssd/pki
+            state: directory
+            mode: 0711
 
-  - name: Upload smartcard CA certificates to systemwide db
-    ansible.builtin.script: ipasmartcard_server_add_ca_to_systemwide_db.sh
-                            "{{ item }}"
-                            "{{ ipasmartcard_server_vars.NSS_DB_DIR }}"
-    with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
+        - name: Ensure /etc/sssd/pki/sssd_auth_ca_db.pem is absent
+          ansible.builtin.file:
+            path: /etc/sssd/pki/sssd_auth_ca_db.pem
+            state: absent
 
-  # Newer version of sssd use OpenSSL and read the CA certs
-  # from /etc/sssd/pki/sssd_auth_ca_db.pem
+      # Upload smartcard CA certificates to systemwide db
 
-  - name: Add CA certs to /etc/sssd/pki/sssd_auth_ca_db.pem
-    ansible.builtin.script: ipasmartcard_server_add_ca_to_sssd_auth_ca_db.sh
-                            "{{ item }}"
-                            /etc/sssd/pki/sssd_auth_ca_db.pem
-    with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
-    when: ipasmartcard_server_vars.USE_AUTHSELECT
+      - name: Upload smartcard CA certificates to systemwide db
+        ansible.builtin.script: ipasmartcard_server_add_ca_to_systemwide_db.sh
+                                "{{ item }}"
+                                "{{ ipasmartcard_server_vars.NSS_DB_DIR }}"
+        with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
 
-  # Install smartcard signing CA certs
+      # Newer version of sssd use OpenSSL and read the CA certs
+      # from /etc/sssd/pki/sssd_auth_ca_db.pem
 
-  - name: Install smartcard signing CA certs
-    ansible.builtin.command: ipa-cacert-manage install "{{ item }}" -t CT,C,C
-    with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
+      - name: Add CA certs to /etc/sssd/pki/sssd_auth_ca_db.pem
+        ansible.builtin.script: ipasmartcard_server_add_ca_to_sssd_auth_ca_db.sh
+                                "{{ item }}"
+                                /etc/sssd/pki/sssd_auth_ca_db.pem
+        with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
+        when: ipasmartcard_server_vars.USE_AUTHSELECT
 
-  # Update ipa CA certificate store
+      # Install smartcard signing CA certs
 
-  - name: Update ipa CA certificate store
-    ansible.builtin.command: ipa-certupdate
+      - name: Install smartcard signing CA certs
+        ansible.builtin.command: ipa-cacert-manage install "{{ item }}" -t CT,C,C
+        with_items: "{{ result_validate_ca_certs.ca_cert_files }}"
 
-  # Restart krb5kdc
+      # Update ipa CA certificate store
 
-  - name: Restart krb5kdc
-    ansible.builtin.service:
-      name: krb5kdc
-      state: restarted
+      - name: Update ipa CA certificate store
+        ansible.builtin.command: ipa-certupdate
 
-  ### ALWAYS ###
+      # Restart krb5kdc
 
-  always:
-  - name: Destroy Kereberos tickets
-    ansible.builtin.command: kdestroy -A
+      - name: Restart krb5kdc
+        ansible.builtin.service:
+          name: krb5kdc
+          state: restarted
+
+      ### ALWAYS ###
+
+      always:
+      - name: Destroy Kereberos tickets
+        ansible.builtin.command: kdestroy -A

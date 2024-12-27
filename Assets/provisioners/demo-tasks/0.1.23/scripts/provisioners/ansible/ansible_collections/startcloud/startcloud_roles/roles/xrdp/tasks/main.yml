@@ -1,198 +1,202 @@
 ---
 -
-  name: "Creating Downloads dir"
-  ansible.builtin.file:
-    mode: '0755'
-    path: "{{ item }}"
-    state: directory
-    owner: '{{ service_user }}'
-    group: '{{ service_group }}'
-  with_items:
-    - "/{{ service_home_dir }}/Downloads"
-
--
-  name: "Configuring xRDP Logo Image"
-  ansible.builtin.copy: 
-    dest: "{{item.dest}}"
-    mode: "0755"
-    owner: '{{ service_user }}'
-    group: '{{ service_group }}'
-    src: "{{item.src}}"
-  with_items: 
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Creating Downloads dir"
+      ansible.builtin.file:
+        mode: '0755'
+        path: "{{ item }}"
+        state: directory
+        owner: '{{ service_user }}'
+        group: '{{ service_group }}'
+      with_items:
+        - "/{{ service_home_dir }}/Downloads"
+    
+    -
+      name: "Configuring xRDP Logo Image"
+      ansible.builtin.copy: 
+        dest: "{{item.dest}}"
+        mode: "0755"
+        owner: '{{ service_user }}'
+        group: '{{ service_group }}'
+        src: "{{item.src}}"
+      with_items: 
+        - 
+          dest: "/{{ service_home_dir }}/Downloads/griffon_logo_xrdp.bmp"
+          src: griffon_logo_xrdp.bmp
+    
+    -
+      delay: 5
+      ansible.builtin.get_url: 
+        dest: "/tmp/{{ cnergy_script }}"
+        url: "{{ cnergy_download_url }}{{ cnergy_script }}.zip"
+      name: "Downloading XRDP Scripts"
+      register: xrdp_scripts
+      retries: 5
+      until: "xrdp_scripts is success"
+    
     - 
-      dest: "/{{ service_home_dir }}/Downloads/griffon_logo_xrdp.bmp"
-      src: griffon_logo_xrdp.bmp
-
--
-  delay: 5
-  ansible.builtin.get_url: 
-    dest: "/tmp/{{ cnergy_script }}"
-    url: "{{ cnergy_download_url }}{{ cnergy_script }}.zip"
-  name: "Downloading XRDP Scripts"
-  register: xrdp_scripts
-  retries: 5
-  until: "xrdp_scripts is success"
-
-- 
-  name: "Unpacking XRDP scripts"
-  register: xrdp_unpack
-  ansible.builtin.unarchive: 
-    copy: false
-    dest: /tmp/
-    src: "{{ xrdp_scripts.dest }}"
-
--
-  name: "Setting Permissions"
-  ansible.builtin.file:
-    mode: '+x'
-    path: "/tmp/{{ cnergy_script }}.sh"
-    owner: '{{ service_user }}'
-    group: '{{ service_group }}'
-
--
-  name: "Installing XRDP"
-  become_user: '{{ service_user }}'
-  ansible.builtin.shell: "/tmp/{{ cnergy_script }}.sh -s -l"
-  args: 
-    executable: /usr/bin/bash
-  register: shell_output
-
--
-  name: "Installing XRDP Install Script Output"
-  ansible.builtin.debug: 
-    msg: shell_output
-    verbosity: 4
-
--
-  ansible.builtin.lineinfile: 
-    line: FuseMountName=/tmp/thinclient_drives
-    path: /etc/xrdp/sesman.ini
-    regexp: ^FuseMountName=
-  name: "Setting Thinclient to Tmp directory"
-
--
-  name: "Allowing Multiple Session for a user"
-  ansible.builtin.lineinfile: 
-    line: "unset DBUS_SESSION_BUS_ADDRESS && unset XDG_RUNTIME_DIR  && . $HOME/.profile test -x /etc/X11/Xsession"
-    path: /etc/xrdp/startwm.sh
-    regexp: "^test -x /etc/X11/Xsession"
-
--
-  name: "Updating xRDP with Custom Login"
-  ansible.builtin.lineinfile: 
-    line: "{{item.To}}"
-    path: /etc/xrdp/xrdp.ini
-    regexp: "{{item.From}}"
-    state: present
-  with_items: 
+      name: "Unpacking XRDP scripts"
+      register: xrdp_unpack
+      ansible.builtin.unarchive: 
+        copy: false
+        dest: /tmp/
+        src: "{{ xrdp_scripts.dest }}"
+    
+    -
+      name: "Setting Permissions"
+      ansible.builtin.file:
+        mode: '+x'
+        path: "/tmp/{{ cnergy_script }}.sh"
+        owner: '{{ service_user }}'
+        group: '{{ service_group }}'
+    
+    -
+      name: "Installing XRDP"
+      become_user: '{{ service_user }}'
+      ansible.builtin.shell: "/tmp/{{ cnergy_script }}.sh -s -l"
+      args: 
+        executable: /usr/bin/bash
+      register: shell_output
+    
+    -
+      name: "Installing XRDP Install Script Output"
+      ansible.builtin.debug: 
+        msg: shell_output
+        verbosity: 4
+    
+    -
+      ansible.builtin.lineinfile: 
+        line: FuseMountName=/tmp/thinclient_drives
+        path: /etc/xrdp/sesman.ini
+        regexp: ^FuseMountName=
+      name: "Setting Thinclient to Tmp directory"
+    
+    -
+      name: "Allowing Multiple Session for a user"
+      ansible.builtin.lineinfile: 
+        line: "unset DBUS_SESSION_BUS_ADDRESS && unset XDG_RUNTIME_DIR  && . $HOME/.profile test -x /etc/X11/Xsession"
+        path: /etc/xrdp/startwm.sh
+        regexp: "^test -x /etc/X11/Xsession"
+    
+    -
+      name: "Updating xRDP with Custom Login"
+      ansible.builtin.lineinfile: 
+        line: "{{item.To}}"
+        path: /etc/xrdp/xrdp.ini
+        regexp: "{{item.From}}"
+        state: present
+      with_items: 
+        - 
+          From: ls_top_window_bg_color=
+          To: ls_top_window_bg_color=990539
+        - 
+          From: ls_width=
+          To: ls_width=350
+        - 
+          From: ls_height=
+          To: ls_height=330
+        - 
+          From: ls_bg_color=
+          To: ls_bg_color=737373
+        - 
+          From: ls_title=
+          To: ls_title=STARTcloud.com
+        - 
+          From: ls_logo_x_pos=
+          To: ls_logo_x_pos=130
+        - 
+          From: ls_logo_y_pos=
+          To: ls_logo_y_pos=25
+        - 
+          From: ls_label_x_pos=
+          To: ls_label_x_pos=30
+        - 
+          From: ls_label_width=
+          To: ls_label_width=65
+        - 
+          From: ls_input_x_pos=
+          To: ls_input_x_pos=110
+        - 
+          From: ls_input_width=
+          To: ls_input_width=210
+        - 
+          From: ls_input_y_pos=
+          To: ls_input_y_pos=150
+        - 
+          From: ls_btn_ok_x_pos=
+          To: ls_btn_ok_x_pos=142
+        - 
+          From: ls_btn_ok_y_pos=
+          To: ls_btn_ok_y_pos=270
+        - 
+          From: ls_btn_ok_width=
+          To: ls_btn_ok_width=85
+        - 
+          From: ls_btn_ok_height=
+          To: ls_btn_ok_height=30
+        - 
+          From: ls_btn_cancel_x_pos=
+          To: ls_btn_cancel_x_pos=237
+        - 
+          From: ls_btn_cancel_y_pos=
+          To: ls_btn_cancel_y_pos=270
+        - 
+          From: ls_btn_cancel_width=
+          To: ls_btn_cancel_width=85
+        - 
+          From: ls_btn_cancel_height=
+          To: ls_btn_cancel_height=30
+        - 
+          From: rdpdr=true
+          To: rdpdr=false
+        - 
+          From: rdpdr=true
+          To: rdpdr=false
+        - 
+          From: cliprdr=true
+          To: cliprdr=false
+    
+    -
+      name: "Enabling xrdp"
+      ansible.builtin.service:
+        name: xrdp
+        enabled: true
+        state: stopped
+        daemon_reload: true
+    
+    -
+      name: "Enabling xrdp-sesman"
+      ansible.builtin.service:
+        name: xrdp-sesman
+        enabled: true
+        state: stopped
+        daemon_reload: true
+    
     - 
-      From: ls_top_window_bg_color=
-      To: ls_top_window_bg_color=990539
+      name: "Get current systemd default"
+      ansible.builtin.command: "systemctl get-default"
+      changed_when: false
+      register: systemdefault
+    
     - 
-      From: ls_width=
-      To: ls_width=350
-    - 
-      From: ls_height=
-      To: ls_height=330
-    - 
-      From: ls_bg_color=
-      To: ls_bg_color=737373
-    - 
-      From: ls_title=
-      To: ls_title=STARTcloud.com
-    - 
-      From: ls_logo_x_pos=
-      To: ls_logo_x_pos=130
-    - 
-      From: ls_logo_y_pos=
-      To: ls_logo_y_pos=25
-    - 
-      From: ls_label_x_pos=
-      To: ls_label_x_pos=30
-    - 
-      From: ls_label_width=
-      To: ls_label_width=65
-    - 
-      From: ls_input_x_pos=
-      To: ls_input_x_pos=110
-    - 
-      From: ls_input_width=
-      To: ls_input_width=210
-    - 
-      From: ls_input_y_pos=
-      To: ls_input_y_pos=150
-    - 
-      From: ls_btn_ok_x_pos=
-      To: ls_btn_ok_x_pos=142
-    - 
-      From: ls_btn_ok_y_pos=
-      To: ls_btn_ok_y_pos=270
-    - 
-      From: ls_btn_ok_width=
-      To: ls_btn_ok_width=85
-    - 
-      From: ls_btn_ok_height=
-      To: ls_btn_ok_height=30
-    - 
-      From: ls_btn_cancel_x_pos=
-      To: ls_btn_cancel_x_pos=237
-    - 
-      From: ls_btn_cancel_y_pos=
-      To: ls_btn_cancel_y_pos=270
-    - 
-      From: ls_btn_cancel_width=
-      To: ls_btn_cancel_width=85
-    - 
-      From: ls_btn_cancel_height=
-      To: ls_btn_cancel_height=30
-    - 
-      From: rdpdr=true
-      To: rdpdr=false
-    - 
-      From: rdpdr=true
-      To: rdpdr=false
-    - 
-      From: cliprdr=true
-      To: cliprdr=false
-
--
-  name: "Enabling xrdp"
-  ansible.builtin.service:
-    name: xrdp
-    enabled: true
-    state: stopped
-    daemon_reload: true
-
--
-  name: "Enabling xrdp-sesman"
-  ansible.builtin.service:
-    name: xrdp-sesman
-    enabled: true
-    state: stopped
-    daemon_reload: true
-
-- 
-  name: "Get current systemd default"
-  ansible.builtin.command: "systemctl get-default"
-  changed_when: false
-  register: systemdefault
-
-- 
-  name: "Set default to graphical target"
-  ansible.builtin.command: "systemctl set-default graphical.target"
-  when: "'graphical' not in systemdefault.stdout"
-
--
-  name: "Restarting xRDP on reboot"
-  ansible.builtin.cron: 
-    job: "sleep 30 && sudo service xrdp restart"
-    name: "Restart xRDP on reboot"
-    special_time: reboot
-
--
-  name: "Enabling xrdp"
-  ansible.builtin.service:
-    name: xrdp
-    enabled: true
-    state: restarted
-    daemon_reload: true
+      name: "Set default to graphical target"
+      ansible.builtin.command: "systemctl set-default graphical.target"
+      when: "'graphical' not in systemdefault.stdout"
+    
+    -
+      name: "Restarting xRDP on reboot"
+      ansible.builtin.cron: 
+        job: "sleep 30 && sudo service xrdp restart"
+        name: "Restart xRDP on reboot"
+        special_time: reboot
+    
+    -
+      name: "Enabling xrdp"
+      ansible.builtin.service:
+        name: xrdp
+        enabled: true
+        state: restarted
+        daemon_reload: true

@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 java_version: "LATEST"
 java_jvm: jre-8u251-linux-x64.tar.gz
 sdkman_update_alternatives:

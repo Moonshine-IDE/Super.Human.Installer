@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 traveler_archive: Traveler_12.0.2_Linux_ML.tar.gz
 traveler_base_version: base
 traveler_fixpack_archive: Traveler_12.0.2_Linux_ML.tar.gz

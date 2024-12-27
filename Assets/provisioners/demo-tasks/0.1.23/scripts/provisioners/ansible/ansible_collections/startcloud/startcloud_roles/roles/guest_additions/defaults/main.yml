@@ -1,2 +1,3 @@
 ---
+run_tasks: true
 vmware_install_open_vm_tools: false

@@ -1,67 +1,71 @@
 ---
 -
-  name: "Installing python3 packages for GPIO/SPI"
-  ansible.builtin.apt:
-    name:
-      - libnfc-bin
-      - libnfc-dev
-      - libnfc-examples
-      - libnfc-pn53x-examples
-      - libnfc6
-
--
-  name: "Configuring NFC"
-  ansible.builtin.template:
-    mode: a+x
-    dest: "{{ item.dest }}"
-    src: "{{ item.src }}"
-  with_items:
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
     -
-      src: libnfc.conf.j2
-      dest: "/etc/nfc/libnfc.conf"
-
-- 
-  name: "Cloning nfc-daemon"
-  ansible.builtin.git:
-    repo: https://github.com/whotwagner/nfc-daemon
-    dest: /src/nfc-daemon
-
--
-  name: "Making nfc-daemon"
-  make:
-    chdir: /src/nfc-daemon
-
-- 
-  name: "Installing nfc-daemon"
-  make:
-    chdir: /src/nfc-daemon
-    target: install
-  become: true
-
--
-  name: "Setting NFC-Daemon to start at boot"
-  ansible.builtin.template:
-    mode: a+x
-    dest: "{{ item.dest }}"
-    src: "{{ item.src }}"
-  with_items:
+      name: "Installing python3 packages for GPIO/SPI"
+      ansible.builtin.apt:
+        name:
+          - libnfc-bin
+          - libnfc-dev
+          - libnfc-examples
+          - libnfc-pn53x-examples
+          - libnfc6
+    
     -
-      src: nfc-daemon.service.j2
-      dest: "/etc/systemd/system/nfc-daemon.service"
+      name: "Configuring NFC"
+      ansible.builtin.template:
+        mode: a+x
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: libnfc.conf.j2
+          dest: "/etc/nfc/libnfc.conf"
+    
+    - 
+      name: "Cloning nfc-daemon"
+      ansible.builtin.git:
+        repo: https://github.com/whotwagner/nfc-daemon
+        dest: /src/nfc-daemon
+    
     -
-      src: run_script.j2
-      dest: "/usr/local/share/nfc-daemon/run_script"
+      name: "Making nfc-daemon"
+      make:
+        chdir: /src/nfc-daemon
+    
+    - 
+      name: "Installing nfc-daemon"
+      make:
+        chdir: /src/nfc-daemon
+        target: install
+      become: true
+    
     -
-      src: end_script.j2
-      dest: "/usr/local/share/nfc-daemon/end_script"
+      name: "Setting NFC-Daemon to start at boot"
+      ansible.builtin.template:
+        mode: a+x
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: nfc-daemon.service.j2
+          dest: "/etc/systemd/system/nfc-daemon.service"
+        -
+          src: run_script.j2
+          dest: "/usr/local/share/nfc-daemon/run_script"
+        -
+          src: end_script.j2
+          dest: "/usr/local/share/nfc-daemon/end_script"
+        -
+          src: libnfc-auth.py.j2
+          dest: "/usr/local/bin/libnfc-auth.py"
+    
     -
-      src: libnfc-auth.py.j2
-      dest: "/usr/local/bin/libnfc-auth.py"
-
--
-  name: "Enabling nfc-daemon at boot"
-  ansible.builtin.service:
-    name: nfc-daemon
-    enabled: true
-    state: stopped
-    daemon_reload: true
+      name: "Enabling nfc-daemon at boot"
+      ansible.builtin.service:
+        name: nfc-daemon
+        enabled: true
+        state: stopped
+        daemon_reload: true

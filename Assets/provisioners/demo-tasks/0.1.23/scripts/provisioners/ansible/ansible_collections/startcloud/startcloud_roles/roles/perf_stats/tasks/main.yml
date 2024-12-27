@@ -1,26 +1,29 @@
----
 -
-  name: "Installing Telegraf"
-  when: ansible_os_family == 'Debian'
-  ansible.builtin.apt:
-    name:
-      - telegraf
-
--
-  name: "Adding Telegraf Configurations"
-  when: ansible_os_family == 'Debian'
-  ansible.builtin.template:
-    mode: a+x
-    dest: "{{ item.dest }}"
-    src: "{{ item.src }}"
-  with_items:
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
     -
-      src: telegraf.cnf.j2
-      dest: "/etc/telegraf.cnf"
-
--
-  name: "Enabling Telegraf"
-  ansible.builtin.service:
-    name: telegraf
-    state: stopped
-    enabled: true
+      name: "Installing Telegraf"
+      when: ansible_os_family == 'Debian'
+      ansible.builtin.apt:
+        name:
+          - telegraf
+    
+    -
+      name: "Adding Telegraf Configurations"
+      when: ansible_os_family == 'Debian'
+      ansible.builtin.template:
+        mode: a+x
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: telegraf.cnf.j2
+          dest: "/etc/telegraf.cnf"
+    
+    -
+      name: "Enabling Telegraf"
+      ansible.builtin.service:
+        name: telegraf
+        state: stopped
+        enabled: true

@@ -1,115 +1,119 @@
 ---
 -
-  name: "Setting up Debian Installations"
-  when: "ansible_os_family == 'Debian'"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
     -
-      name: "Gathering DEB architecture"
-      ansible.builtin.command: dpkg --print-architecture
-      register: deb_architecture
-      changed_when: false
-
-    -
-      name: "Printing DEB architecture"
-      ansible.builtin.debug:
-        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-
-    -
-      name: "Ensuring apt cache is updated"
-      ansible.builtin.apt:
-        cache_valid_time: 3600
-        update_cache: true
-
-    -
-      name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: true
-
-    -
-      name: "Adding gpg, dpkg-dev, and gcc"
-      ansible.builtin.apt:
-        name:
-          - gcc
-          - dpkg-dev
-          - gpg
-        state: present
-
-    -
-      name: "Creating Application build directory"
-      ansible.builtin.file:
-        path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
-        state: directory
-        mode: "0755"
-
-    -
-      name: "Creating main.c file"
-      ansible.builtin.copy:
-        dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}/main.c"
-        mode: "0644"
-        content: |
-          #include <stdio.h>
-          int main() {
-              printf("hello packaged world\n");
-              return 0;
-          }
-
-    -
-      name: "Compiling program: {{ package_name }}"
-      ansible.builtin.shell: gcc -o {{ package_name }} main.c
-      args:
-        chdir: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
-
-    -
-      name: "Creating package directory"
-      ansible.builtin.file:
-        path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}"
-        state: directory
-        mode: "0755"
-      loop: "{{ package_arch }}"
-
-    -
-      name: "Creating usr/bin directory in package"
-      ansible.builtin.file:
-        path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/usr/bin"
-        state: directory
-        mode: "0755"
-      loop: "{{ package_arch }}"
-
-    -
-      name: "Copying binary to package: {{ package_name }}"
-      ansible.builtin.copy:
-        src: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
-        dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/usr/bin/startcloud"
-        mode: '0755'
-      loop: "{{ package_arch }}"
-
-    -
-      name: "Creating DEBIAN directory in package"
-      ansible.builtin.file:
-        path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/DEBIAN"
-        state: directory
-        mode: "0755"
-      loop: "{{ package_arch }}"
-
-    -
-      name: "Creating control file"
-      ansible.builtin.copy:
-        dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/DEBIAN/control"
-        mode: "0644"
-        content: |
-          Package: {{ package_name }}
-          Version: {{ package_version }}
-          Maintainer: {{ package_maintainer_email }}
-          Depends: {{ package_dependencies }}
-          Architecture: {{ package_arch }}
-          Homepage: {{ package_maintainer_address }}
-          Description: {{ package_description }}
-      loop: "{{ package_arch }}"
-
-    -
-      name: "Building deb package"
-      ansible.builtin.command:
-        cmd: "dpkg --build {{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}"
-        creates: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}.deb"
-      loop: "{{ package_arch }}"
+      name: "Setting up Debian Installations"
+      when: "ansible_os_family == 'Debian'"
+      block:
+        -
+          name: "Gathering DEB architecture"
+          ansible.builtin.command: dpkg --print-architecture
+          register: deb_architecture
+          changed_when: false
+    
+        -
+          name: "Printing DEB architecture"
+          ansible.builtin.debug:
+            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+    
+        -
+          name: "Ensuring apt cache is updated"
+          ansible.builtin.apt:
+            cache_valid_time: 3600
+            update_cache: true
+    
+        -
+          name: "Upgrading all apt packages"
+          ansible.builtin.apt:
+            upgrade: dist
+            update_cache: true
+    
+        -
+          name: "Adding gpg, dpkg-dev, and gcc"
+          ansible.builtin.apt:
+            name:
+              - gcc
+              - dpkg-dev
+              - gpg
+            state: present
+    
+        -
+          name: "Creating Application build directory"
+          ansible.builtin.file:
+            path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
+            state: directory
+            mode: "0755"
+    
+        -
+          name: "Creating main.c file"
+          ansible.builtin.copy:
+            dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}/main.c"
+            mode: "0644"
+            content: |
+              #include <stdio.h>
+              int main() {
+                  printf("hello packaged world\n");
+                  return 0;
+              }
+    
+        -
+          name: "Compiling program: {{ package_name }}"
+          ansible.builtin.shell: gcc -o {{ package_name }} main.c
+          args:
+            chdir: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
+    
+        -
+          name: "Creating package directory"
+          ansible.builtin.file:
+            path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}"
+            state: directory
+            mode: "0755"
+          loop: "{{ package_arch }}"
+    
+        -
+          name: "Creating usr/bin directory in package"
+          ansible.builtin.file:
+            path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/usr/bin"
+            state: directory
+            mode: "0755"
+          loop: "{{ package_arch }}"
+    
+        -
+          name: "Copying binary to package: {{ package_name }}"
+          ansible.builtin.copy:
+            src: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}"
+            dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/usr/bin/startcloud"
+            mode: '0755'
+          loop: "{{ package_arch }}"
+    
+        -
+          name: "Creating DEBIAN directory in package"
+          ansible.builtin.file:
+            path: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/DEBIAN"
+            state: directory
+            mode: "0755"
+          loop: "{{ package_arch }}"
+    
+        -
+          name: "Creating control file"
+          ansible.builtin.copy:
+            dest: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}/DEBIAN/control"
+            mode: "0644"
+            content: |
+              Package: {{ package_name }}
+              Version: {{ package_version }}
+              Maintainer: {{ package_maintainer_email }}
+              Depends: {{ package_dependencies }}
+              Architecture: {{ package_arch }}
+              Homepage: {{ package_maintainer_address }}
+              Description: {{ package_description }}
+          loop: "{{ package_arch }}"
+    
+        -
+          name: "Building deb package"
+          ansible.builtin.command:
+            cmd: "dpkg --build {{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}-1_{{ item }}"
+            creates: "{{ service_home_dir }}/{{ package_org }}/{{ package_name }}_{{ package_version }}.deb"
+          loop: "{{ package_arch }}"

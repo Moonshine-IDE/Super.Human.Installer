@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 
 mongodb_package: mongodb-org
 mongodb_package_state: present

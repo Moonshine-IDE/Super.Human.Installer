@@ -1,50 +1,53 @@
----
-# Variable configuration.
 -
-  name: "Variable configuration variables.yml"
-  ansible.builtin.include_tasks: variables.yml
-
-# Setup/install tasks.
--
-  name: "Setup/install tasks setup-RedHat.yml"
-  ansible.builtin.include_tasks: setup-RedHat.yml
-  when: ansible_os_family == 'RedHat'
-
--
-  name: "Setup/install tasks setup-Debian.yml"
-  ansible.builtin.include_tasks: setup-Debian.yml
-  when: ansible_os_family == 'Debian'
-
--
-  name: "Setup/install tasks setup-Archlinux.yml"
-  ansible.builtin.include_tasks: setup-Archlinux.yml
-  when: ansible_os_family == 'ArchLinux'
-
--
-  name: Check if MySQL packages were installed.
-  ansible.builtin.set_fact:
-    mysql_install_packages: "{{ (rh_mysql_install_packages is defined and rh_mysql_install_packages.changed)
-      or (deb_mysql_install_packages is defined and deb_mysql_install_packages.changed)
-      or (arch_mysql_install_packages is defined and arch_mysql_install_packages.changed) }}"
-
-# Configure MySQL.
-
--
-  name: "Include configure.yml"
-  ansible.builtin.include_tasks: configure.yml
-
--
-  name: "Include secure-installation.yml"
-  ansible.builtin.include_tasks: secure-installation.yml
-
--
-  name: "Include databases.yml"
-  ansible.builtin.include_tasks: databases.yml
-
--
-  name: "Include users.yml"
-  ansible.builtin.include_tasks: users.yml
-
--
-  name: "Include replication.yml"
-  ansible.builtin.include_tasks: replication.yml
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    # Variable configuration.
+    -
+      name: "Variable configuration variables.yml"
+      ansible.builtin.include_tasks: variables.yml
+    
+    # Setup/install tasks.
+    -
+      name: "Setup/install tasks setup-RedHat.yml"
+      ansible.builtin.include_tasks: setup-RedHat.yml
+      when: ansible_os_family == 'RedHat'
+    
+    -
+      name: "Setup/install tasks setup-Debian.yml"
+      ansible.builtin.include_tasks: setup-Debian.yml
+      when: ansible_os_family == 'Debian'
+    
+    -
+      name: "Setup/install tasks setup-Archlinux.yml"
+      ansible.builtin.include_tasks: setup-Archlinux.yml
+      when: ansible_os_family == 'ArchLinux'
+    
+    -
+      name: Check if MySQL packages were installed.
+      ansible.builtin.set_fact:
+        mysql_install_packages: "{{ (rh_mysql_install_packages is defined and rh_mysql_install_packages.changed)
+          or (deb_mysql_install_packages is defined and deb_mysql_install_packages.changed)
+          or (arch_mysql_install_packages is defined and arch_mysql_install_packages.changed) }}"
+    
+    # Configure MySQL.
+    
+    -
+      name: "Include configure.yml"
+      ansible.builtin.include_tasks: configure.yml
+    
+    -
+      name: "Include secure-installation.yml"
+      ansible.builtin.include_tasks: secure-installation.yml
+    
+    -
+      name: "Include databases.yml"
+      ansible.builtin.include_tasks: databases.yml
+    
+    -
+      name: "Include users.yml"
+      ansible.builtin.include_tasks: users.yml
+    
+    -
+      name: "Include replication.yml"
+      ansible.builtin.include_tasks: replication.yml

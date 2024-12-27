@@ -1,78 +1,80 @@
---- 
-
 -
-  name: "Creating /usr/share/phpmyadmin"
-  ansible.builtin.file:
-    dest: /usr/share/phpmyadmin
-    group: www-data
-    owner: www-data
-    state: directory
-
--
-  name: "Extracting phpMyAdmin"
-  become: true
-  ansible.builtin.unarchive: 
-    src: "https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.zip"
-    dest: /usr/share/phpmyadmin
-    remote_src: true
-    extra_opts: -j
-
--
-  name: "Checking if config.inc.php Exists"
-  changed_when: false
-  register: config_inc
-  ansible.builtin.stat: 
-    path: /usr/share/phpmyadmin/config.inc.php
-
--
-  name: "Checking if config.sample.inc.php Exists"
-  changed_when: false
-  register: config_inc_sample
-  ansible.builtin.stat: 
-    path: /usr/share/phpmyadmin/config.sample.inc.php
-
--
-  name: "Setting up PHP configuration"
-  become: true
-  command: "mv config.sample.inc.php config.inc.php"
-  when: not config_inc.stat.exists and config_inc_sample.stat.exists
-  args:
-    chdir: /usr/share/phpmyadmin
-
--
-  name: "Checking if nginx is installed"
-  changed_when: false
-  register: nginx_conf_dir
-  ansible.builtin.stat: 
-    path: /etc/nginx/conf.d
-
--
-  name: "Ensuring directory for global nginx configuration files exists"
-  ansible.builtin.file: 
-    path: /etc/nginx/global.d
-    state: directory
-  when: nginx_conf_dir.stat.exists
-
--
-  name: "Ensuring phpmyadmin configuration for nginx is installed"
-  notify: "restart nginx"
-  ansible.builtin.template: 
-    dest: /etc/nginx/global.d/phpmyadmin.conf
-    src: nginx.conf.j2
-  when: nginx_conf_dir.stat.exists
-
--
-  name: "Generating Unique Key"
-  ansible.builtin.set_fact: 
-    my_pass: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters') }}"
-
--
-  name: "Setting Unique Key"
-  ansible.builtin.lineinfile: 
-    dest: /usr/share/phpmyadmin/config.inc.php
-    line: "{{ item.line }}"
-    regexp: "{{ item.regexp }}"
-  with_items: 
-    - 
-      line: "$cfg['blowfish_secret'] = '{{ my_pass }}';"
-      regexp: "$cfg['blowfish_secret'] = '';"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Creating /usr/share/phpmyadmin"
+      ansible.builtin.file:
+        dest: /usr/share/phpmyadmin
+        group: www-data
+        owner: www-data
+        state: directory
+    
+    -
+      name: "Extracting phpMyAdmin"
+      become: true
+      ansible.builtin.unarchive: 
+        src: "https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.zip"
+        dest: /usr/share/phpmyadmin
+        remote_src: true
+        extra_opts: -j
+    
+    -
+      name: "Checking if config.inc.php Exists"
+      changed_when: false
+      register: config_inc
+      ansible.builtin.stat: 
+        path: /usr/share/phpmyadmin/config.inc.php
+    
+    -
+      name: "Checking if config.sample.inc.php Exists"
+      changed_when: false
+      register: config_inc_sample
+      ansible.builtin.stat: 
+        path: /usr/share/phpmyadmin/config.sample.inc.php
+    
+    -
+      name: "Setting up PHP configuration"
+      become: true
+      command: "mv config.sample.inc.php config.inc.php"
+      when: not config_inc.stat.exists and config_inc_sample.stat.exists
+      args:
+        chdir: /usr/share/phpmyadmin
+    
+    -
+      name: "Checking if nginx is installed"
+      changed_when: false
+      register: nginx_conf_dir
+      ansible.builtin.stat: 
+        path: /etc/nginx/conf.d
+    
+    -
+      name: "Ensuring directory for global nginx configuration files exists"
+      ansible.builtin.file: 
+        path: /etc/nginx/global.d
+        state: directory
+      when: nginx_conf_dir.stat.exists
+    
+    -
+      name: "Ensuring phpmyadmin configuration for nginx is installed"
+      notify: "restart nginx"
+      ansible.builtin.template: 
+        dest: /etc/nginx/global.d/phpmyadmin.conf
+        src: nginx.conf.j2
+      when: nginx_conf_dir.stat.exists
+    
+    -
+      name: "Generating Unique Key"
+      ansible.builtin.set_fact: 
+        my_pass: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters') }}"
+    
+    -
+      name: "Setting Unique Key"
+      ansible.builtin.lineinfile: 
+        dest: /usr/share/phpmyadmin/config.inc.php
+        line: "{{ item.line }}"
+        regexp: "{{ item.regexp }}"
+      with_items: 
+        - 
+          line: "$cfg['blowfish_secret'] = '{{ my_pass }}';"
+          regexp: "$cfg['blowfish_secret'] = '';"

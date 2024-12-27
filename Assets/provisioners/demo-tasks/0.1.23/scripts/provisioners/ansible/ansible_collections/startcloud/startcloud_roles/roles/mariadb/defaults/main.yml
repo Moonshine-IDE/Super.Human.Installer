@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 mariadb_admin_pass: SomeMariaDBeyPassword
 mariadb_admin_user: root
 startcloud_mariadb_port_forwards:

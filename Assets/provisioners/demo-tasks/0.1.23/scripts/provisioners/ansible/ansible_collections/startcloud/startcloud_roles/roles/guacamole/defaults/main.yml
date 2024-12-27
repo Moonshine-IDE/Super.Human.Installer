@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 ## Gucamole Variables
 guacamole_version: 1.5.0
 

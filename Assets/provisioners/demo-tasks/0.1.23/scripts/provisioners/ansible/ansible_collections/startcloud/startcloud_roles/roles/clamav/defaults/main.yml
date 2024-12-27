@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # See the defaults for OS-specific vars inside the vars/ directory.
 # clamav_packages: []
 # clamav_daemon_config_path: ''

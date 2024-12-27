@@ -1,6 +1,10 @@
 ---
+run_tasks: true
 show_help: true
 installer_dir: /vagrant/installers
 completed_dir: /vagrant/completed
 timezone: 'America/Chicago'
 debug_all: false
+provisioner_name: Ad-Hoc Playbook
+provisioner_version: v0.0.0
+core_provisioner_version: v0.0.0

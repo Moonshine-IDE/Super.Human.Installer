@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 show_help: true
 use_proxy: false
 proxy_port: 3128

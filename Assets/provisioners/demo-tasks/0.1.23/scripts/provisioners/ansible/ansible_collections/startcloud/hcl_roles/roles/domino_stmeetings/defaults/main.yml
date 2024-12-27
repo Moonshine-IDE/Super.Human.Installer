@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 sametime_archive: Sametime_Premium_12.0.zip
 sametime_archive_fixpack: Sametime_Premium_12.0_FP1.zip
 sametime_domino_major_version: "12"

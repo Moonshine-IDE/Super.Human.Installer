@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 kubernetes_packages:
   - name: kubelet
     state: present

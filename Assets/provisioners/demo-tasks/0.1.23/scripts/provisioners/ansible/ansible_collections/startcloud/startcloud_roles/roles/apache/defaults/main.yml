@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 apache_enablerepo: ""
 
 apache_listen_ip: "*"

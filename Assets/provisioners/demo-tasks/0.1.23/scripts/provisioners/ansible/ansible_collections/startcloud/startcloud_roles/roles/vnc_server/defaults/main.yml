@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # Generate a random VNC password and save it to /tmp
 vnc_server_password: "{{ lookup('password', '/tmp/vnc_password.txt') }}"
 # Private SSH key for VNC user

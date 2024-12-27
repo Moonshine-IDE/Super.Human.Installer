@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # defaults file for ipabackup
 
 ipabackup_gpg: no

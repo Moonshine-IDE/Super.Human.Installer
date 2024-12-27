@@ -1,51 +1,55 @@
 ---
 -
-  name: "Setting timezone to {{ timezone }}"
-  community.general.timezone:
-    name: "{{ timezone }}"
-
--
-  name: "Creating Directories"
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    mode: "0777"
-  with_items:
-    - "{{ completed_dir }}"
-    - "/root/.ansible/tmp"
-    - "/vagrant/support-bundle"
-    - "/tmp"
-
--
-  name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
-  ansible.builtin.copy:
-    content: "{{ vars }}"
-    dest: "/vagrant/support-bundle/ansible-system-variables.json"
-    force: false
-    mode: 'a+x'
-
--
-  name: "Printing out version used for {{ provisioner_name }}"
-  ansible.builtin.debug:
-    msg: "This Ansible Playbook was Generated with {{ provisioner_name }} v{{ provisioner_version }}"
-
--
-  name: "Printing out core_provisioner version used"
-  ansible.builtin.debug:
-    msg: "This Ansible Playbook was Generated with core_provisioner v{{ core_provisioner_version }}"
-
--
-  name: "Writing current variables to json in /vagrant/support-bundle/"
-  ansible.builtin.copy:
-    content: "{{ provisioner_version }}"
-    dest: "/vagrant/support-bundle/{{ provisioner_name }}-version.json"
-    force: false
-    mode: 'a+x'
-
--
-  name: "Writing current variables to /vagrant/support-bundle/core_provisioner-version.json"
-  ansible.builtin.copy:
-    content: "{{ core_provisioner_version }}"
-    dest: "/vagrant/support-bundle/core_provisioner-version.json"
-    force: false
-    mode: 'a+x'
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Setting timezone to {{ timezone }}"
+      community.general.timezone:
+        name: "{{ timezone }}"
+    
+    -
+      name: "Creating Directories"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0777"
+      with_items:
+        - "{{ completed_dir }}"
+        - "/root/.ansible/tmp"
+        - "/vagrant/support-bundle"
+        - "/tmp"
+    
+    -
+      name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
+      ansible.builtin.copy:
+        content: "{{ vars }}"
+        dest: "/vagrant/support-bundle/ansible-system-variables.json"
+        force: false
+        mode: 'a+x'
+    
+    -
+      name: "Printing out version used for {{ provisioner_name }}"
+      ansible.builtin.debug:
+        msg: "This Ansible Playbook was Generated with {{ provisioner_name }} v{{ provisioner_version }}"
+    
+    -
+      name: "Printing out core_provisioner version used"
+      ansible.builtin.debug:
+        msg: "This Ansible Playbook was Generated with core_provisioner v{{ core_provisioner_version }}"
+    
+    -
+      name: "Writing current variables to json in /vagrant/support-bundle/"
+      ansible.builtin.copy:
+        content: "{{ provisioner_version }}"
+        dest: "/vagrant/support-bundle/{{ provisioner_name }}-version.json"
+        force: false
+        mode: 'a+x'
+    
+    -
+      name: "Writing current variables to /vagrant/support-bundle/core_provisioner-version.json"
+      ansible.builtin.copy:
+        content: "{{ core_provisioner_version }}"
+        dest: "/vagrant/support-bundle/core_provisioner-version.json"
+        force: false
+        mode: 'a+x'

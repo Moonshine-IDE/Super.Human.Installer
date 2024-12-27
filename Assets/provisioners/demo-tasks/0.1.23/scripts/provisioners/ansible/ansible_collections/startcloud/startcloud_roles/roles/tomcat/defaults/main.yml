@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 tomcat_version: 9
 tomcat_user: tomcat
 tomcat_group: tomcat

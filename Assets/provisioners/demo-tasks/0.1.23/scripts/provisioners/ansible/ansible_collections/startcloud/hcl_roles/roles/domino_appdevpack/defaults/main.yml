@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 appdevpack_archive: domino-appdev-pack-1.0.15.tgz
 appdevpack_version: 1.0.15
 appdevpack_debug: true

@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 horizon_view_depenencies:
   - libcairomm-1.0-1v5
   - libcanberra-gtk-module

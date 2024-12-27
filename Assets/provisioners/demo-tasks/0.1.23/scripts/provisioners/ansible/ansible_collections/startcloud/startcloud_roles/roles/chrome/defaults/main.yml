@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 chrome_signing_key_url: https://dl-ssl.google.com/linux/linux_signing_key.pub
 chrome_driver_version: 2.41
 chrome_driver_server_installer_tar: chromedriver_linux64.zip

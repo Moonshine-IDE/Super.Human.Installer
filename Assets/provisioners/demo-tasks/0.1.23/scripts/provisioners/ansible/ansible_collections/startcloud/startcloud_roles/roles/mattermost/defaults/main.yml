@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 mattermost_user: mattermost
 mattermost_group: mattermost
 mattermost_db_user: "{{ mattermost_team_name }}_mattermost"

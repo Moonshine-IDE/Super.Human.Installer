@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 show_help: true
 vm_encrypted: false
 stress_packages:

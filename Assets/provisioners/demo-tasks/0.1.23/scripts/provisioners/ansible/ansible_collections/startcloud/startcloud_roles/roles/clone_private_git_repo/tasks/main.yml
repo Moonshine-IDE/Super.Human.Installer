@@ -1,128 +1,132 @@
 ---
 -
-  name: "Ensuring destination directory exists"
-  ansible.builtin.file:
-    path: "{{ git_dest }}"
-    state: directory
-    mode: '0755'
-
--
-  name: "Writing vault password to file"
-  when: github_deploy_key is not defined or github_deploy_key!= ""
-  ansible.builtin.copy:
-    content: "{{ git_vault_password }}"
-    dest: "{{ git_dest }}/{{ github_repo }}-vault-password"
-    mode: '0600'
-
--
-  name: "Placing Vault File"
-  when: github_deploy_key is not defined or github_deploy_key!= ""
-  ansible.builtin.copy:
-    mode: '0755'
-    decrypt: false
-    dest: "{{ git_dest }}/{{ github_token_file }}"
-    src: "{{ github_token_file }}"
-  tags: ['skip_ansible_lint']
-
--
-  name: "Decrypting github_token from variable"
-  when: github_deploy_key is not defined or github_deploy_key!= ""
-  ansible.builtin.command: "ansible-vault view --vault-password-file {{ git_dest }}/{{ github_repo }}-vault-password {{ git_dest }}/{{ github_token_file }}"
-  register: decrypted_vault_output
-  changed_when: false
-  no_log: true
-
--
-  name: "Cloning Git repository"
-  when: github_deploy_key is not defined or github_deploy_key!= ""
-  ansible.builtin.git:
-    repo: "https://{{ decrypted_vault_output.stdout | regex_replace('^github_token:\\s*', '') }}@github.com/{{ github_org }}/{{ github_repo }}.git"
-    dest: "{{ git_dest }}/{{ github_repo }}"
-    version: "{{ github_branch }}"
-    accept_hostkey: true
-    update: true
-    force: true
-
--
-  name: "Placing Deploy Key"
-  when: github_deploy_key is defined and github_deploy_key!= ""
-  ansible.builtin.copy:
-    mode: '0400'
-    decrypt: false
-    dest: "{{ git_dest }}/../{{ github_deploy_key }}"
-    src: "{{ github_deploy_key }}"
-  tags: ['skip_ansible_lint']
-
--
-  name: "Cloning the Git Repository"
-  when: github_deploy_key is defined and github_deploy_key!= ""
-  ansible.builtin.git:
-    repo: "git@github.com:{{ github_org }}/{{ github_repo }}.git"
-    dest: "{{ git_dest }}/{{ github_repo }}"
-    version: "{{ github_branch }}"
-    update: true
-    force: true
-    accept_hostkey: true
-    key_file: "{{ git_dest }}/../{{ github_deploy_key }}"
-
--
-  name: "Removing Deploy Key"
-  when: github_deploy_key is defined and github_deploy_key!= ""
-  become: true
-  ansible.builtin.file: 
-    path: "{{ git_dest }}/../{{ github_deploy_key }}"
-    state: absent
-
--
-  name: "Finding roles folder one level deep"
-  ansible.builtin.find:
-    paths: "{{ git_dest }}/{{ github_repo }}"
-    patterns: "roles"
-    file_type: directory
-    recurse: true
-    depth: 2
-  register: roles_folder
-
--
-  name: "Setting parent_folder if roles folder is found"
-  ansible.builtin.set_fact:
-    parent_folder: "{{ roles_folder.files[0].path | dirname }}"
-  when: roles_folder.matched > 0
-
--
-  name: "Copying roles to /vagrant/ansible/roles"
-  ansible.builtin.copy:
-    src: "{{ parent_folder }}/roles/"
-    dest: "/vagrant/ansible/roles/"
-    mode: '0755'
-    owner: root
-    group: root
-  when: roles_folder.matched > 0
-
--
-  name: "Gathering list of roles"
-  ansible.builtin.find:
-    paths: "{{ parent_folder }}/roles"
-    file_type: directory
-    recurse: false
-  register: found_roles
-  when: roles_folder.matched > 0
-
--
-  name: "Setting roles_to_run if not defined"
-  when: roles_folder.matched > 0
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
+    -
+      name: "Ensuring destination directory exists"
+      ansible.builtin.file:
+        path: "{{ git_dest }}"
+        state: directory
+        mode: '0755'
+
+    -
+      name: "Writing vault password to file"
+      when: github_deploy_key is not defined or github_deploy_key!= ""
+      ansible.builtin.copy:
+        content: "{{ git_vault_password }}"
+        dest: "{{ git_dest }}/{{ github_repo }}-vault-password"
+        mode: '0600'
+
+    -
+      name: "Placing Vault File"
+      when: github_deploy_key is not defined or github_deploy_key!= ""
+      ansible.builtin.copy:
+        mode: '0755'
+        decrypt: false
+        dest: "{{ git_dest }}/{{ github_token_file }}"
+        src: "{{ github_token_file }}"
+      tags: ['skip_ansible_lint']
+
+    -
+      name: "Decrypting github_token from variable"
+      when: github_deploy_key is not defined or github_deploy_key!= ""
+      ansible.builtin.command: "ansible-vault view --vault-password-file {{ git_dest }}/{{ github_repo }}-vault-password {{ git_dest }}/{{ github_token_file }}"
+      register: decrypted_vault_output
+      changed_when: false
+      no_log: true
+
+    -
+      name: "Cloning Git repository"
+      when: github_deploy_key is not defined or github_deploy_key!= ""
+      ansible.builtin.git:
+        repo: "https://{{ decrypted_vault_output.stdout | regex_replace('^github_token:\\s*', '') }}@github.com/{{ github_org }}/{{ github_repo }}.git"
+        dest: "{{ git_dest }}/{{ github_repo }}"
+        version: "{{ github_branch }}"
+        accept_hostkey: true
+        update: true
+        force: true
+
+    -
+      name: "Placing Deploy Key"
+      when: github_deploy_key is defined and github_deploy_key!= ""
+      ansible.builtin.copy:
+        mode: '0400'
+        decrypt: false
+        dest: "{{ git_dest }}/../{{ github_deploy_key }}"
+        src: "{{ github_deploy_key }}"
+      tags: ['skip_ansible_lint']
+
+    -
+      name: "Cloning the Git Repository"
+      when: github_deploy_key is defined and github_deploy_key!= ""
+      ansible.builtin.git:
+        repo: "git@github.com:{{ github_org }}/{{ github_repo }}.git"
+        dest: "{{ git_dest }}/{{ github_repo }}"
+        version: "{{ github_branch }}"
+        update: true
+        force: true
+        accept_hostkey: true
+        key_file: "{{ git_dest }}/../{{ github_deploy_key }}"
+
+    -
+      name: "Removing Deploy Key"
+      when: github_deploy_key is defined and github_deploy_key!= ""
+      become: true
+      ansible.builtin.file: 
+        path: "{{ git_dest }}/../{{ github_deploy_key }}"
+        state: absent
+
+    -
+      name: "Finding roles folder one level deep"
+      ansible.builtin.find:
+        paths: "{{ git_dest }}/{{ github_repo }}"
+        patterns: "roles"
+        file_type: directory
+        recurse: true
+        depth: 2
+      register: roles_folder
+
+    -
+      name: "Setting parent_folder if roles folder is found"
+      ansible.builtin.set_fact:
+        parent_folder: "{{ roles_folder.files[0].path | dirname }}"
+      when: roles_folder.matched > 0
+
+    -
+      name: "Copying roles to /vagrant/ansible/roles"
+      ansible.builtin.copy:
+        src: "{{ parent_folder }}/roles/"
+        dest: "/vagrant/ansible/roles/"
+        mode: '0755'
+        owner: root
+        group: root
+      when: roles_folder.matched > 0
+
+    -
+      name: "Gathering list of roles"
+      ansible.builtin.find:
+        paths: "{{ parent_folder }}/roles"
+        file_type: directory
+        recurse: false
+      register: found_roles
+      when: roles_folder.matched > 0
+
     -
       name: "Setting roles_to_run if not defined"
-      ansible.builtin.set_fact:
-        roles_to_run: "{{ found_roles.files | map(attribute='path') | map('basename') }}"
+      when: roles_folder.matched > 0
+      block:
+        -
+          name: "Setting roles_to_run if not defined"
+          ansible.builtin.set_fact:
+            roles_to_run: "{{ found_roles.files | map(attribute='path') | map('basename') }}"
 
--
-  name: "Running roles_to_run if defined"
-  when: roles_to_run is defined and roles_to_run | length != 0
-  block:
     -
-      name: "Including roles from Private Repo"
-      ansible.builtin.include_role:
-        name: "{{ item }}"
-      loop: "{{ roles_to_run }}"
+      name: "Running roles_to_run if defined"
+      when: roles_to_run is defined and roles_to_run | length != 0
+      block:
+        -
+          name: "Including roles from Private Repo"
+          ansible.builtin.include_role:
+            name: "{{ item }}"
+          loop: "{{ roles_to_run }}"

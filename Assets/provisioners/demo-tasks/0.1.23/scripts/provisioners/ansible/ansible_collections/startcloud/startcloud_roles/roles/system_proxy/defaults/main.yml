@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 proxy_systemwide: true
 proxy_systemwide_proxy: squid
 proxy:

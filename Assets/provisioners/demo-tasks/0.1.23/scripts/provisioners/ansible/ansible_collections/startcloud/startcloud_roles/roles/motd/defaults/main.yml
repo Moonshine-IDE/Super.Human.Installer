@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 remove_default_config: false
 restore_default_config: false
 add_footer: false
@@ -23,8 +24,10 @@ info:
 content: |
 
   --------------------------------------------------------------------------
+run_tasks: true
                       This system is managed by STARTcloud
   --------------------------------------------------------------------------
+run_tasks: true
              ___                 _      _       _  ____________
             / _ \_______  __ _  (_)__  (_)___  / |/ / __/_  __/
            / ___/ __/ _ \/  ' \/ / _ \/ / __/ /    / _/  / /   

@@ -1,4 +1,8 @@
 ---
+run_tasks: true
+provisioner_name: Ad-Hoc Playbook
+provisioner_version: v0.0.0
+core_provisioner_version: v0.0.0
 ## This File stores the lowest precendence of Variables.
 ## These can be overridden by variables in the vars/main.yml, Playbook Variables, and Ansible Environmental Variables
 ## If you are confused about how Variable precedence works,

@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 startcloud_keepalived_state: master
 startcloud_keepalived_virtual_router_id: 60
 startcloud_keepalived_auth_pass: true

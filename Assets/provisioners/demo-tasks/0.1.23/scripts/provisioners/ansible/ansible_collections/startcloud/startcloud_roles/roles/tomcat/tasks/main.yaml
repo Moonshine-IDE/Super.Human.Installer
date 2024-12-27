@@ -1,4 +1,8 @@
 ---
 -
-  name: "Installing Tomcat"
-  ansible.builtin.include_tasks: "tomcat-setup-{{ ansible_os_family }}.yml"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Installing Tomcat"
+      ansible.builtin.include_tasks: "tomcat-setup-{{ ansible_os_family }}.yml"

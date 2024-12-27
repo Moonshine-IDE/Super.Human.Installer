@@ -1,3 +1,4 @@
 ---
+run_tasks: true
 token: fjfdsakjhfjdnashjfn32390d2fe0fd9
 callback_url: https://domain.com/wp-admin/admin-ajax.php

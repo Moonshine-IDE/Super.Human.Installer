@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 openfortivpn_packages:
   - openconnect
   - network-manager-openconnect-gnome

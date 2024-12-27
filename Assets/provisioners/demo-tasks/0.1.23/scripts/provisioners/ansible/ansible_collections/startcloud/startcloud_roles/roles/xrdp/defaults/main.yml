@@ -1,3 +1,4 @@
 ---
+run_tasks: true
 cnergy_download_url: https://www.c-nergy.be/downloads/xRDP/
 cnergy_script: xrdp-installer-1.5

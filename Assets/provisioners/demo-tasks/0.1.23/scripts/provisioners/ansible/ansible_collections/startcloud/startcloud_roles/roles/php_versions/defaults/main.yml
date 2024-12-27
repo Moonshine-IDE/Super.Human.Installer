@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # The PHP version to be installed.
 php_version: '8.2'
 

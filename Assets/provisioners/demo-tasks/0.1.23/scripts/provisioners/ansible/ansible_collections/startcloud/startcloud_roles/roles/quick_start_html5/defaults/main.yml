@@ -1,5 +1,9 @@
 ---
+run_tasks: true
 python_simple_web_server_path: "{{ service_home_dir }}"
+provisioner_name: Ad-Hoc Playbook
+provisioner_version: v0.0.0
+core_provisioner_version: v0.0.0
 startcloud_quick_start_port_forwards:
   -
     guest: 8000

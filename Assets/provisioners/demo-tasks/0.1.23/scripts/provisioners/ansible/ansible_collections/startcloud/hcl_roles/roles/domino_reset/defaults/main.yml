@@ -1,2 +1,2 @@
 ---
-antivirus: clamav
+run_tasks: true

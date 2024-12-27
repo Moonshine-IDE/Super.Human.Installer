@@ -1,9 +1,11 @@
 ---
+run_tasks: true
 cert_dir: /secure
 selfsigned_enabled: false
-selfsigned_use_pregenerated: false
+generate_self_signed_certificate_authority: false
 letsencrypt_enabled: false
 cert_pass: ThisNeedstoBeSecure!
+ca_cert_pass: STARTSecure25@!
 countrycode: US
 domino_organization: DEMO
 
@@ -13,3 +15,20 @@ certbot_create_method: standalone
 certbot_admin_email: "{{ mailer_user }}"
 certbot_create_standalone_stop_services:
   - nginx
+
+dns_entries_list:
+    - nomadweb
+    - domino
+    - traveler
+    - verse
+    - console
+    - downloads
+    - logging
+    - welcome
+    - proxy
+    - sametime
+    - leap
+    - restapi
+    - guacamole
+    - voltmx
+    - www

@@ -1,261 +1,265 @@
 ---
-- name: Check if OS is supported
-  ansible.builtin.fail:
-    msg: "OS not supported for BigBlueButton installation"
-  when: ansible_distribution != "Ubuntu" or ansible_distribution_version != "{{ bbb_ubuntu_version }}"
-
-- name: Check if primary BigBluebutton server name is defined
-  assert:
-    that:
-      - bbb_server_names[0] != ""
-  tags:
-    - bbb-check_vars
-
-- name: Enable https support for ansible.builtin.apt
-  ansible.builtin.apt:
-    name: ansible.builtin.apt-transport-https
-    state: present
-  tags:
-    - ansible.builtin.apt_transport_https
-
-- name: Update ansible.builtin.apt cache
-  ansible.builtin.apt: update_cache=yes
-  tags:
-    - update_ansible.builtin.apt_cache
-
-- name: Install BigBluebutton required packages
-  ansible.builtin.apt: name={{ item }} state=present
-  with_items:
-    - language-pack-en
-    - software-properties-common
-  tags:
-    - bbb-dependencies
-
-- name: Check python-ansible.builtin.apt is present
-  ansible.builtin.apt: name=python-ansible.builtin.apt state=present
-  tags:
-    - bbb-role_dependencies
-
-- name: Update locale (ensure LANG=en_US.UTF-8)
-  ansible.builtin.lininfile: dest=/etc/default/locale regexp=^LANG line='LANG=en_US.UTF-8'
-  tags:
-    - set_locale
-
-- name: Update locale (ensure LC_ALL is absent)
-  ansible.builtin.lininfile: dest=/etc/default/locale regexp=^LC_ALL state=absent
-  tags:
-    - set_locale
-
-- name: Check BigBlueButton ansible.builtin.apt key is present
-  ansible.builtin.apt_key:
-    url: https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc
-    state: present
-  tags:
-    - bbb-ansible.builtin.apt_key
-
-- name: Check multiverse ansible.builtin.apt repositories are enabled
-  ansible.builtin.apt_repository: repo={{ item }} state=present
-  with_items:
-    - 'deb http://archive.ubuntu.com/ubuntu xenial multiverse'
-    - 'deb-src http://archive.ubuntu.com/ubuntu xenial multiverse'
-    - 'deb http://archive.ubuntu.com/ubuntu xenial-updates multiverse'
-    - 'deb-src http://archive.ubuntu.com/ubuntu xenial-updates multiverse'
-  tags:
-    - multiverse_repositories
-    - repositories
-
-- name: Check supplemental PPA repos are enabled
-  ansible.builtin.apt_repository: repo={{ item }} state=present
-  with_items:
-    - 'ppa:bigbluebutton/support'
-    - 'ppa:rmescandon/yq'
-  tags:
-    - ppa-repositories
-    - repositories
-
-- name: Check BigBlueButton repo is enabled
-  ansible.builtin.apt_repository: repo={{ item }} state=present
-  with_items:
-    - 'deb {{ bbb_ansible.builtin.apt_repo_url }} bigbluebutton-xenial main'
-  tags:
-    - bbb-repositories
-    - repositories
-
-# BigBlueButton UFW firewall configuration
-- ansible.builtin.include_tasks: firewall.yml
-  when: bbb_configure_firewall == True
-  tags:
-    - firewall
-
-- name: Check BigBlueButton is installed
-  ansible.builtin.apt: name=bigbluebutton state=present
-  tags:
-    - install_bbb
-
-- name: Check MongoDB ansible.builtin.apt key is present
-  ansible.builtin.apt_key:
-    url: "https://www.mongodb.org/static/pgp/server-3.4.asc"
-    state: present
-  when: bbb_install_html5 == True
-  tags:
-    - mongodb-ansible.builtin.apt_key
-
-- name: Check MongoDB repo is enabled
-  ansible.builtin.apt_repository: repo="deb [ arch=amd64,arm64 ] http://repo.mongodb.org/ansible.builtin.apt/ubuntu xenial/mongodb-org/3.4 multiverse" state=present
-  when: bbb_install_html5 == True
-  tags:
-    - mongodb-repositories
-    - repositories
-
-- name: Check NodeJS ansible.builtin.apt key is present
-  ansible.builtin.apt_key:
-    url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
-    state: present
-  when: bbb_install_html5 == True
-  tags:
-    - nodejs-ansible.builtin.apt_key
-
-- name: Check NodeJS repo is enabled
-  ansible.builtin.apt_repository: repo="deb https://deb.nodesource.com/node_8.x xenial main" state=present
-  when: bbb_install_html5 == True
-  tags:
-    - nodejs-repositories
-    - repositories
-- name: Install bbb-html5 and dependencies
-  ansible.builtin.apt:
-    name:
-      - bbb-html5
-      - mongodb-org
-      - curl
-      - nodejs
-    state: present
-  when: bbb_install_html5 == True
-  tags:
-    - install_bbb-html5
-
-- name: Install notes playback package
-  ansible.builtin.apt: name=bbb-playback-notes state=present
-  when: bbb_install_playback_notes == True
-  tags:
-    - install_bbb-playback-notes
-
-- name: Install podcast playback package
-  ansible.builtin.apt: name=bbb-playback-podcast state=present
-  when: bbb_install_playback_podcast == True
-  tags:
-    - install_bbb-playback-podcast
-
-- name: Install screenshare playback package
-  ansible.builtin.apt: name=bbb-playback-screenshare state=present
-  when: bbb_install_playback_screenshare == True
-  tags:
-    - install_bbb-playback-screenshare
-
-- name: Install bbb webhooks package
-  ansible.builtin.apt: name=bbb-webhooks state=present
-  when: bbb_install_webhooks == True
-  tags:
-    - install_bbb-webhooks
-
-- name: Install bbb-demo package
-  ansible.builtin.apt: name=bbb-demo state=present
-  when: bbb_install_demo == True
-  tags:
-    - install_bbb-demo
-
-- name: Install bbb-check package
-  ansible.builtin.apt: name=bbb-check state=present
-  when: bbb_install_check == True
-  tags:
-    - install_bbb-check
-
-- name: Set BigBlueButton server name
-  ansible.builtin.command: bbb-conf --setip "{{ bbb_server_names[0] }}"
-  tags:
-    - run_bbb-conf_setip
-
-- name: Get server local IP address
-  ansible.builtin.set_fact:
-    server_ip: "{{ ansible_default_ipv4.address }}"
-  tags:
-    - bbb-get_local_ip
-
-- name: Get server public IP address
-  ipify_facts:
-  register: public_ip
-  tags:
-    - bbb-get_public_ip
-
-- name: Get server public IP address
-  ansible.builtin.set_fact:
-    public_ip: "{{ public_ip.ansible_facts.ipify_public_ip }}"
-  tags:
-    - bbb-get_public_ip
-
-
-- name: Verify local IP vs public IP addresses
-  ansible.builtin.set_fact:
-    internal_ip: "{{ server_ip }}"
-  when: server_ip != public_ip
-  tags:
-    - bbb-check_server_ip
-
-- name: Verify local IP vs public IP addresses
-  ansible.builtin.set_fact:
-    server_ip: "{{ public_ip }}"
-  when: server_ip != public_ip
-  tags:
-    - bbb-check_server_ip
-
-- name: Update BwMon server IP address
-  ansible.builtin.replace:
-    path: /var/www/bigbluebutton/client/conf/config.xml
-    regexp: '<bwMon server="[^"]*"'
-    replace: '<bwMon server="{{ server_ip }}"'
-    backup: true
-  tags:
-    - update_bwmon_ip
-
-- name: BigBlueButton NAT configuration
-  ansible.builtin.include_tasks: nat.yml
-  when: bbb_configure_nat == True and internal_ip is defined
-- name: BigBlueButton letsencrypt configuration
-  ansible.builtin.include_tasks: letsencrypt.yml
-  when: bbb_configure_ssl == True
-- name: BigBlueButton ssl configuration
-  ansible.builtin.include_tasks: ssl.yml
-  when: bbb_configure_ssl == True
-- name: BigBlueButton sip configuration
-  ansible.builtin.include_tasks: sip.yml
-  when: bbb_sip_providers is defined
-  tags:
-    - bbb-sip
-
-- name: Restart BigBlueButton
-  ansible.builtin.command: bbb-conf --restart
-  tags:
-    - bbb-restart
-
-- name: Check BigBlueButton installation
-  ansible.builtin.command: bbb-conf --check
-  changed_when: false
-  register: bbb_check_out
-  tags:
-    - bbb-check_install
-- name: bbb-conf --check output
-  debug: msg="{{ bbb_check_out }}"
-  tags:
-    - bbb-check_install
-
-- name: Install Docker as dependencie
-  ansible.builtin.include_tasks: docker.yml
-  when: bbb_install_greenlight == True
-  tags:
-    - greenlight
-    - docker
-
-- name: Installing greenlight
-  ansible.builtin.include_tasks: greenlight.yml
-  when: bbb_install_greenlight == True
-  tags:
-    - greenlight
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: Check if OS is supported
+      ansible.builtin.fail:
+        msg: "OS not supported for BigBlueButton installation"
+      when: ansible_distribution != "Ubuntu" or ansible_distribution_version != "{{ bbb_ubuntu_version }}"
+    
+    - name: Check if primary BigBluebutton server name is defined
+      assert:
+        that:
+          - bbb_server_names[0] != ""
+      tags:
+        - bbb-check_vars
+    
+    - name: Enable https support for ansible.builtin.apt
+      ansible.builtin.apt:
+        name: ansible.builtin.apt-transport-https
+        state: present
+      tags:
+        - ansible.builtin.apt_transport_https
+    
+    - name: Update ansible.builtin.apt cache
+      ansible.builtin.apt: update_cache=yes
+      tags:
+        - update_ansible.builtin.apt_cache
+    
+    - name: Install BigBluebutton required packages
+      ansible.builtin.apt: name={{ item }} state=present
+      with_items:
+        - language-pack-en
+        - software-properties-common
+      tags:
+        - bbb-dependencies
+    
+    - name: Check python-ansible.builtin.apt is present
+      ansible.builtin.apt: name=python-ansible.builtin.apt state=present
+      tags:
+        - bbb-role_dependencies
+    
+    - name: Update locale (ensure LANG=en_US.UTF-8)
+      ansible.builtin.lininfile: dest=/etc/default/locale regexp=^LANG line='LANG=en_US.UTF-8'
+      tags:
+        - set_locale
+    
+    - name: Update locale (ensure LC_ALL is absent)
+      ansible.builtin.lininfile: dest=/etc/default/locale regexp=^LC_ALL state=absent
+      tags:
+        - set_locale
+    
+    - name: Check BigBlueButton ansible.builtin.apt key is present
+      ansible.builtin.apt_key:
+        url: https://ubuntu.bigbluebutton.org/repo/bigbluebutton.asc
+        state: present
+      tags:
+        - bbb-ansible.builtin.apt_key
+    
+    - name: Check multiverse ansible.builtin.apt repositories are enabled
+      ansible.builtin.apt_repository: repo={{ item }} state=present
+      with_items:
+        - 'deb http://archive.ubuntu.com/ubuntu xenial multiverse'
+        - 'deb-src http://archive.ubuntu.com/ubuntu xenial multiverse'
+        - 'deb http://archive.ubuntu.com/ubuntu xenial-updates multiverse'
+        - 'deb-src http://archive.ubuntu.com/ubuntu xenial-updates multiverse'
+      tags:
+        - multiverse_repositories
+        - repositories
+    
+    - name: Check supplemental PPA repos are enabled
+      ansible.builtin.apt_repository: repo={{ item }} state=present
+      with_items:
+        - 'ppa:bigbluebutton/support'
+        - 'ppa:rmescandon/yq'
+      tags:
+        - ppa-repositories
+        - repositories
+    
+    - name: Check BigBlueButton repo is enabled
+      ansible.builtin.apt_repository: repo={{ item }} state=present
+      with_items:
+        - 'deb {{ bbb_ansible.builtin.apt_repo_url }} bigbluebutton-xenial main'
+      tags:
+        - bbb-repositories
+        - repositories
+    
+    # BigBlueButton UFW firewall configuration
+    - ansible.builtin.include_tasks: firewall.yml
+      when: bbb_configure_firewall == True
+      tags:
+        - firewall
+    
+    - name: Check BigBlueButton is installed
+      ansible.builtin.apt: name=bigbluebutton state=present
+      tags:
+        - install_bbb
+    
+    - name: Check MongoDB ansible.builtin.apt key is present
+      ansible.builtin.apt_key:
+        url: "https://www.mongodb.org/static/pgp/server-3.4.asc"
+        state: present
+      when: bbb_install_html5 == True
+      tags:
+        - mongodb-ansible.builtin.apt_key
+    
+    - name: Check MongoDB repo is enabled
+      ansible.builtin.apt_repository: repo="deb [ arch=amd64,arm64 ] http://repo.mongodb.org/ansible.builtin.apt/ubuntu xenial/mongodb-org/3.4 multiverse" state=present
+      when: bbb_install_html5 == True
+      tags:
+        - mongodb-repositories
+        - repositories
+    
+    - name: Check NodeJS ansible.builtin.apt key is present
+      ansible.builtin.apt_key:
+        url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
+        state: present
+      when: bbb_install_html5 == True
+      tags:
+        - nodejs-ansible.builtin.apt_key
+    
+    - name: Check NodeJS repo is enabled
+      ansible.builtin.apt_repository: repo="deb https://deb.nodesource.com/node_8.x xenial main" state=present
+      when: bbb_install_html5 == True
+      tags:
+        - nodejs-repositories
+        - repositories
+    - name: Install bbb-html5 and dependencies
+      ansible.builtin.apt:
+        name:
+          - bbb-html5
+          - mongodb-org
+          - curl
+          - nodejs
+        state: present
+      when: bbb_install_html5 == True
+      tags:
+        - install_bbb-html5
+    
+    - name: Install notes playback package
+      ansible.builtin.apt: name=bbb-playback-notes state=present
+      when: bbb_install_playback_notes == True
+      tags:
+        - install_bbb-playback-notes
+    
+    - name: Install podcast playback package
+      ansible.builtin.apt: name=bbb-playback-podcast state=present
+      when: bbb_install_playback_podcast == True
+      tags:
+        - install_bbb-playback-podcast
+    
+    - name: Install screenshare playback package
+      ansible.builtin.apt: name=bbb-playback-screenshare state=present
+      when: bbb_install_playback_screenshare == True
+      tags:
+        - install_bbb-playback-screenshare
+    
+    - name: Install bbb webhooks package
+      ansible.builtin.apt: name=bbb-webhooks state=present
+      when: bbb_install_webhooks == True
+      tags:
+        - install_bbb-webhooks
+    
+    - name: Install bbb-demo package
+      ansible.builtin.apt: name=bbb-demo state=present
+      when: bbb_install_demo == True
+      tags:
+        - install_bbb-demo
+    
+    - name: Install bbb-check package
+      ansible.builtin.apt: name=bbb-check state=present
+      when: bbb_install_check == True
+      tags:
+        - install_bbb-check
+    
+    - name: Set BigBlueButton server name
+      ansible.builtin.command: bbb-conf --setip "{{ bbb_server_names[0] }}"
+      tags:
+        - run_bbb-conf_setip
+    
+    - name: Get server local IP address
+      ansible.builtin.set_fact:
+        server_ip: "{{ ansible_default_ipv4.address }}"
+      tags:
+        - bbb-get_local_ip
+    
+    - name: Get server public IP address
+      ipify_facts:
+      register: public_ip
+      tags:
+        - bbb-get_public_ip
+    
+    - name: Get server public IP address
+      ansible.builtin.set_fact:
+        public_ip: "{{ public_ip.ansible_facts.ipify_public_ip }}"
+      tags:
+        - bbb-get_public_ip
+    
+    
+    - name: Verify local IP vs public IP addresses
+      ansible.builtin.set_fact:
+        internal_ip: "{{ server_ip }}"
+      when: server_ip != public_ip
+      tags:
+        - bbb-check_server_ip
+    
+    - name: Verify local IP vs public IP addresses
+      ansible.builtin.set_fact:
+        server_ip: "{{ public_ip }}"
+      when: server_ip != public_ip
+      tags:
+        - bbb-check_server_ip
+    
+    - name: Update BwMon server IP address
+      ansible.builtin.replace:
+        path: /var/www/bigbluebutton/client/conf/config.xml
+        regexp: '<bwMon server="[^"]*"'
+        replace: '<bwMon server="{{ server_ip }}"'
+        backup: true
+      tags:
+        - update_bwmon_ip
+    
+    - name: BigBlueButton NAT configuration
+      ansible.builtin.include_tasks: nat.yml
+      when: bbb_configure_nat == True and internal_ip is defined
+    - name: BigBlueButton letsencrypt configuration
+      ansible.builtin.include_tasks: letsencrypt.yml
+      when: bbb_configure_ssl == True
+    - name: BigBlueButton ssl configuration
+      ansible.builtin.include_tasks: ssl.yml
+      when: bbb_configure_ssl == True
+    - name: BigBlueButton sip configuration
+      ansible.builtin.include_tasks: sip.yml
+      when: bbb_sip_providers is defined
+      tags:
+        - bbb-sip
+    
+    - name: Restart BigBlueButton
+      ansible.builtin.command: bbb-conf --restart
+      tags:
+        - bbb-restart
+    
+    - name: Check BigBlueButton installation
+      ansible.builtin.command: bbb-conf --check
+      changed_when: false
+      register: bbb_check_out
+      tags:
+        - bbb-check_install
+    - name: bbb-conf --check output
+      debug: msg="{{ bbb_check_out }}"
+      tags:
+        - bbb-check_install
+    
+    - name: Install Docker as dependencie
+      ansible.builtin.include_tasks: docker.yml
+      when: bbb_install_greenlight == True
+      tags:
+        - greenlight
+        - docker
+    
+    - name: Installing greenlight
+      ansible.builtin.include_tasks: greenlight.yml
+      when: bbb_install_greenlight == True
+      tags:
+        - greenlight

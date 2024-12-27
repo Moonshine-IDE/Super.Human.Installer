@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # Set this to 'true' and specify a Git repository if you want to deploy Drupal
 # to your server from an existing repository.
 drupal_deploy: false

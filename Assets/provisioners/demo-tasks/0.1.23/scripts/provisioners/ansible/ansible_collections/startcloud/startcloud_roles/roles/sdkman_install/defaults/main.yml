@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # defaults file for ansible-sdkman
 
 # Installation directory defaults to the HOME directory of the `service_user`

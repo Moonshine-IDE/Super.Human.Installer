@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 git_repo_url: "https://github.com/MyOrg/template_roles"
 git_dest: "/home/startcloud/template_role"
 git_vault_password: SomePass1234

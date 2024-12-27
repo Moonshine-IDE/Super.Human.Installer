@@ -1,10 +1,14 @@
 ---
 -
-  name: Include tasks
-  ansible.builtin.include_tasks: setup-RedHat.yml
-  when: ansible_os_family == 'RedHat'
-
--
-  name: Include tasks
-  ansible.builtin.include_tasks: setup-Debian.yml
-  when: ansible_os_family == 'Debian'
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: Include tasks
+      ansible.builtin.include_tasks: setup-RedHat.yml
+      when: ansible_os_family == 'RedHat'
+    
+    -
+      name: Include tasks
+      ansible.builtin.include_tasks: setup-Debian.yml
+      when: ansible_os_family == 'Debian'

@@ -1,60 +1,64 @@
 ---
 -
-  name: "Installing python3 packages for GPIO"
-  ansible.builtin.apt:
-    name:
-      - python3-smbus
-      - python3-gpiozero
-      - python3-rpi.gpio
-      - python3-pip
-      - python3-pil
-      - libjpeg-dev
-      - zlib1g-dev
-      - libfreetype6-dev
-      - liblcms2-dev
-      - libopenjp2-7
-      - python3-numpy
-      - build-essential
-      - python3-luma.lcd
-      - libsdl2-dev
-      - libsdl2-image-dev
-      - libsdl2-mixer-dev
-      - libsdl2-ttf-dev
-      - libportmidi-dev
-
--
-  name: "Adding x728 Scripts"
-  when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
-  ansible.builtin.template:
-    mode: a+x
-    dest: "{{ item.dest }}"
-    src: "{{ item.src }}"
-  with_items:
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
     -
-      src: display.py.j2
-      dest: "/usr/local/bin/display.py"
+      name: "Installing python3 packages for GPIO"
+      ansible.builtin.apt:
+        name:
+          - python3-smbus
+          - python3-gpiozero
+          - python3-rpi.gpio
+          - python3-pip
+          - python3-pil
+          - libjpeg-dev
+          - zlib1g-dev
+          - libfreetype6-dev
+          - liblcms2-dev
+          - libopenjp2-7
+          - python3-numpy
+          - build-essential
+          - python3-luma.lcd
+          - libsdl2-dev
+          - libsdl2-image-dev
+          - libsdl2-mixer-dev
+          - libsdl2-ttf-dev
+          - libportmidi-dev
+    
     -
-      src: x728bat_display.py.j2
-      dest: "/usr/local/bin/x728bat_display.py"
+      name: "Adding x728 Scripts"
+      when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
+      ansible.builtin.template:
+        mode: a+x
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: display.py.j2
+          dest: "/usr/local/bin/display.py"
+        -
+          src: x728bat_display.py.j2
+          dest: "/usr/local/bin/x728bat_display.py"
+        -
+          src: lcd-display.service.j2
+          dest: "/etc/systemd/system/lcd-display.service"
+    
     -
-      src: lcd-display.service.j2
-      dest: "/etc/systemd/system/lcd-display.service"
-
--
-  name: "Enabling LCD-Display Service"
-  ansible.builtin.service:
-    name: lcd-display
-    enabled: true
-    state: stopped
-    daemon_reload: true
-
--
-  name: "Enabling i2c-dev on Next Reboot"
-  when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
-  ansible.builtin.lineinfile:
-    line: "{{ item.line }}"
-    path:  /etc/modules
-    state: present
-    create: true
-  with_items:
-    - line: 'i2c-dev'
+      name: "Enabling LCD-Display Service"
+      ansible.builtin.service:
+        name: lcd-display
+        enabled: true
+        state: stopped
+        daemon_reload: true
+    
+    -
+      name: "Enabling i2c-dev on Next Reboot"
+      when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
+      ansible.builtin.lineinfile:
+        line: "{{ item.line }}"
+        path:  /etc/modules
+        state: present
+        create: true
+      with_items:
+        - line: 'i2c-dev'

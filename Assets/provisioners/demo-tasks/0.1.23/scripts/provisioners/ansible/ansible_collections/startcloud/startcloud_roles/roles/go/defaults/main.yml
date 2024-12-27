@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 go_version: "1.17.3"
 go_platform: linux
 go_arch: amd64

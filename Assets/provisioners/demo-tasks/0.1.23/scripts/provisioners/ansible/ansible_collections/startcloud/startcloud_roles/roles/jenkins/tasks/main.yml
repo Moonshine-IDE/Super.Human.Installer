@@ -1,272 +1,275 @@
---- 
-- 
-  apt: 
-    name: "{{ packages }}"
-  name: "Install Required Jenkins Dependencies -- Takes about 5 Mins"
-  vars: 
-    packages: 
-      - gnupg
-      - xmlstarlet
-      - git-core
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - 
+      apt: 
+        name: "{{ packages }}"
+      name: "Install Required Jenkins Dependencies -- Takes about 5 Mins"
+      vars: 
+        packages: 
+          - gnupg
+          - xmlstarlet
+          - git-core
+          
+    - 
+      name: "Creating Backup Directory for Script outputs"
+      file:
+        path: /backup
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: '0755'
+        state: directory
+    - 
+      apt_key: 
+        state: present
+        url: "https://pkg.jenkins.io/debian/jenkins.io.key"
+      name: "Install Jenkins Apt Key"
+    - 
+      file: 
+        path: /etc/apt/sources.list.d/jenkins.list
+        state: touch
+      name: "Create Jenkins Sources.list folder"
+    - 
+      lineinfile: 
+        line: "deb http://pkg.jenkins.io/debian-stable binary/"
+        path: /etc/apt/sources.list.d/jenkins.list
+      name: "Adding Jenkins to Sources.list"
+    
+    - 
+      apt: 
+        name: "{{ packages }}"
+        install_recommends: no
+        update_cache: true
+      name: "Jenkins -- Takes about 3 Minutes"
+      vars: 
+        packages: 
+          - jenkins
+    - 
+      name: "Starting Jenkins Service"
+      service: 
+        enabled: false
+        name: jenkins
+        state: restarted
+    - 
+      name: "Stopping Jenkins Service"
+      service: 
+        enabled: false
+        name: jenkins
+        state: stopped
+    - 
+      file: 
+        group: "{{ group }}"
+        mode: 0751
+        owner:  "{{ user }}"
+        path: /var/cache/jenkins
+        recurse: true
+      name: "Preparing Jenkins Cache folder permissions for user setup"
+    - 
+      file: 
+        group: "{{ group }}"
+        owner:  "{{ user }}"
+        path: /var/lib/jenkins
+        recurse: true
+      name: "Preparing Jenkins Library folder permissions for user setup"
+    - 
+      file: 
+        group: "{{ group }}"
+        owner:  "{{ user }}"
+        path: /var/run/jenkins
+        recurse: true
+      name: "Preparing Jenkins run folder permissions for user setup"
+    - 
+      file: 
+        group: "{{ group }}"
+        owner:  "{{ user }}"
+        path: /var/log/jenkins
+        recurse: true
+      name: "Preparing Jenkins log folder permissions for user setup"
+    - 
+      lineinfile: 
+        regexp: '^JAVA_ARGS='
+        line: 'JAVA_ARGS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
+        path: /etc/default/jenkins
+      name: "Skipping Initial Configuration"
+    
+    - 
+      lineinfile: 
+        insertafter: "^# user and group"
+        line: JENKINS_USER="{{ user }}"
+        path: /etc/default/jenkins
+        regexp: ^JENKINS_USER=
+      name: "Setting Jenkins to start as user"
+    - 
+      lineinfile: 
+        insertafter: "^# user and group"
+        line: JENKINS_GROUP="{{ user }}"
+        path: /etc/default/jenkins
+        regexp: ^JENKINS_GROUP=
+      name: "Setting Jenkins to start as user"
+    - 
+      name: "Starting Jenkins Service"
+      service: 
+        enabled: false
+        name: jenkins
+        state: started
+    - pause:
+        minutes: 1
+      name: Waiting for Jenkins Config.XML to generate before stopping service.  
+    - 
+      name: "Stopping Jenkins Service"
+      service: 
+        enabled: false
+        name: jenkins
+        state: stopped
+    - 
+      copy: 
+        dest: /var/lib/jenkins/config.xml.orig
+        src: /var/lib/jenkins/config.xml
+        remote_src: true
+      name: "Backing up Config.XML to Config.XML.orig"
       
-- 
-  name: "Creating Backup Directory for Script outputs"
-  file:
-    path: /backup
-    owner: "{{ user }}"
-    group: "{{ group }}"
-    mode: '0755'
-    state: directory
-- 
-  apt_key: 
-    state: present
-    url: "https://pkg.jenkins.io/debian/jenkins.io.key"
-  name: "Install Jenkins Apt Key"
-- 
-  file: 
-    path: /etc/apt/sources.list.d/jenkins.list
-    state: touch
-  name: "Create Jenkins Sources.list folder"
-- 
-  lineinfile: 
-    line: "deb http://pkg.jenkins.io/debian-stable binary/"
-    path: /etc/apt/sources.list.d/jenkins.list
-  name: "Adding Jenkins to Sources.list"
-
-- 
-  apt: 
-    name: "{{ packages }}"
-    install_recommends: no
-    update_cache: true
-  name: "Jenkins -- Takes about 3 Minutes"
-  vars: 
-    packages: 
-      - jenkins
-- 
-  name: "Starting Jenkins Service"
-  service: 
-    enabled: false
-    name: jenkins
-    state: restarted
-- 
-  name: "Stopping Jenkins Service"
-  service: 
-    enabled: false
-    name: jenkins
-    state: stopped
-- 
-  file: 
-    group: "{{ group }}"
-    mode: 0751
-    owner:  "{{ user }}"
-    path: /var/cache/jenkins
-    recurse: true
-  name: "Preparing Jenkins Cache folder permissions for user setup"
-- 
-  file: 
-    group: "{{ group }}"
-    owner:  "{{ user }}"
-    path: /var/lib/jenkins
-    recurse: true
-  name: "Preparing Jenkins Library folder permissions for user setup"
-- 
-  file: 
-    group: "{{ group }}"
-    owner:  "{{ user }}"
-    path: /var/run/jenkins
-    recurse: true
-  name: "Preparing Jenkins run folder permissions for user setup"
-- 
-  file: 
-    group: "{{ group }}"
-    owner:  "{{ user }}"
-    path: /var/log/jenkins
-    recurse: true
-  name: "Preparing Jenkins log folder permissions for user setup"
-- 
-  lineinfile: 
-    regexp: '^JAVA_ARGS='
-    line: 'JAVA_ARGS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
-    path: /etc/default/jenkins
-  name: "Skipping Initial Configuration"
-
-- 
-  lineinfile: 
-    insertafter: "^# user and group"
-    line: JENKINS_USER="{{ user }}"
-    path: /etc/default/jenkins
-    regexp: ^JENKINS_USER=
-  name: "Setting Jenkins to start as user"
-- 
-  lineinfile: 
-    insertafter: "^# user and group"
-    line: JENKINS_GROUP="{{ user }}"
-    path: /etc/default/jenkins
-    regexp: ^JENKINS_GROUP=
-  name: "Setting Jenkins to start as user"
-- 
-  name: "Starting Jenkins Service"
-  service: 
-    enabled: false
-    name: jenkins
-    state: started
-- pause:
-    minutes: 1
-  name: Waiting for Jenkins Config.XML to generate before stopping service.  
-- 
-  name: "Stopping Jenkins Service"
-  service: 
-    enabled: false
-    name: jenkins
-    state: stopped
-- 
-  copy: 
-    dest: /var/lib/jenkins/config.xml.orig
-    src: /var/lib/jenkins/config.xml
-    remote_src: true
-  name: "Backing up Config.XML to Config.XML.orig"
-  
-- 
-  become: true
-  name: "Configuring Jenkins"
-  shell: "cd /var/lib/jenkins && tail -n +2 config.xml.orig >config.xml && xmlstarlet edit --inplace -u '/hudson/useSecurity' -v 'false' config.xml && xmlstarlet edit --inplace -d '/hudson/authorizationStrategy' config.xml && xmlstarlet edit --inplace -d '/hudson/securityRealm' config.xml && xmlstarlet edit --inplace -u '/hudson/installStateName' -v 'RUNNING' config.xml &&  diff -u config.xml{.orig,} || true"
-
--
-   name: Check if /var/lib/jenkins/init.groovy.d exists
-   stat: 
-     path: /var/lib/jenkins/init.groovy.d
-   register: output_folder
-
-- 
-  name: Create output directory if not exists
-  file:
-    path: /var/lib/jenkins/init.groovy.d
-    state: directory
-    owner: "{{ user }}"
-    group: "{{ group }}"
-    mode: 0775
-  when: output_folder.stat.exists == false
-
--
-  become: true
-  name: "Disable the Security Check so we can download Plugins"
-  template: 
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: "{{ user }}"
-    group: "{{ group }}"
-    mode: '0644'
-  with_items:
-    - { src: basic-security.groovy.j2 , dest: "/var/lib/jenkins/init.groovy.d/basic-security.groovy" }
-- 
-  name: "Starting Jenkins Service"
-  service: 
-    enabled: true
-    name: jenkins
-    state: started
-- 
-  delay: 5
-  get_url: 
-    dest: "/home/{{ user }}/jenkins-cli.jar"
-    url: "http://localhost:8080/jnlpJars/jenkins-cli.jar"
-  name: "Downloading  Jenkins CLI from localhost"
-  register: jenkinscli_source
-  retries: 5
-  until: "jenkinscli_source is success"
-- 
-  name: Wait untils Jenkins web API is available
-  uri:
-    url: "http://localhost:8080/cli/"
-    status_code: 200
-  register: result
-  until: result.status == 200
-  retries: 600
-  delay: 2
-- 
-  name: add Xvfb Plugin details
-  template: 
-    src: org.jenkinsci.plugins.xvfb.Xvfb.xml
-    dest: /var/lib/jenkins/
-    owner: "{{ user }}"
-    group: "{{ group }}"
-    mode: u=rwX,g=rX,o=rX
-- 
-  become: true
-  name: "Installing Jenkins Plugins"
-  shell: "cd /home/{{ user }} && /usr/lib/jvm/java-11-openjdk-amd64/bin/java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit script-security git email-ext email-ext-recipients-column mailer"
-  retries: 5
-  delay: 5
-- 
-  git_config: 
-    name: user.email
-    scope: global
-    value: "{{ certbot_admin_email }}"
-  name: "Configure git Email"
-- 
-  git_config: 
-    name: user.name
-    scope: global
-    value: "{{ jenkins_git_user }}"
-  name: "Configure git User Name"
-- 
-  git_config: 
-    name: push.default
-    scope: global
-    value: simple
-  name: "Configure git Push"
-- 
-  git_config: 
-    name: core.autocrlf
-    scope: global
-    value: false
-  name: "Configure git AutoCRLF"
-- 
-  lineinfile: 
-    insertafter: "^#assistive_technologi"
-    line: "#" 
-    path: /etc/java-11-openjdk/accessibility.properties
-    regexp: "^assistive_technologi"
-  name: "Fixing Java Assistive Tech"
-- 
-  file: 
-    group: "{{ group }}"
-    owner:  "{{ user }}"
-    path: /home/"{{ user }}"
-    recurse: true
-  name: "Setting {{ user }} permissions"
-- 
-  name: Removing Groovy Startup Bypass
-  ansible.builtin.file:
-    path: /var/lib/jenkins/init.groovy.d/basic-security.groovy
-    state: absent
--
-  become: true
-  name: "Adding Jenkins Desktop Icon"
-  template: 
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: "{{ user }}"
-    group: "{{ group }}"
-    mode: '0755'
-  with_items:
-    - { src: "jenkins.desktop" , dest: "/usr/share/applications/jenkins.desktop" }
-    - { src: "jenkins.desktop" , dest: "/home/{{ user }}/Desktop/jenkins.desktop" }
-
--
-  command: "dbus-launch gio set {{item}}  \"metadata::trusted\" true"
-  name: "Ensuring that Desktop Icons are Launchable"
-  with_items:
-    - "/home/{{ user }}/Desktop/jenkins.desktop"
-    - "/usr/share/applications/jenkins.desktop"
-
--
-  become: true
-  name: "Adding Jenkins Jobs to Desktop"
-  copy:
-    src: "{{item.src}}"
-    dest: "{{item.dest}}"
-    owner: "{{ user }}"
-    group: "{{ user }}"
-    remote_src: true
-  with_items:
-    - { src: /vagrant/jobs , dest: "/home/{{user}}/Desktop" }
+    - 
+      become: true
+      name: "Configuring Jenkins"
+      shell: "cd /var/lib/jenkins && tail -n +2 config.xml.orig >config.xml && xmlstarlet edit --inplace -u '/hudson/useSecurity' -v 'false' config.xml && xmlstarlet edit --inplace -d '/hudson/authorizationStrategy' config.xml && xmlstarlet edit --inplace -d '/hudson/securityRealm' config.xml && xmlstarlet edit --inplace -u '/hudson/installStateName' -v 'RUNNING' config.xml &&  diff -u config.xml{.orig,} || true"
+    
+    -
+       name: Check if /var/lib/jenkins/init.groovy.d exists
+       stat: 
+         path: /var/lib/jenkins/init.groovy.d
+       register: output_folder
+    
+    - 
+      name: Create output directory if not exists
+      file:
+        path: /var/lib/jenkins/init.groovy.d
+        state: directory
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: 0775
+      when: output_folder.stat.exists == false
+    
+    -
+      become: true
+      name: "Disable the Security Check so we can download Plugins"
+      template: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: '0644'
+      with_items:
+        - { src: basic-security.groovy.j2 , dest: "/var/lib/jenkins/init.groovy.d/basic-security.groovy" }
+    - 
+      name: "Starting Jenkins Service"
+      service: 
+        enabled: true
+        name: jenkins
+        state: started
+    - 
+      delay: 5
+      get_url: 
+        dest: "/home/{{ user }}/jenkins-cli.jar"
+        url: "http://localhost:8080/jnlpJars/jenkins-cli.jar"
+      name: "Downloading  Jenkins CLI from localhost"
+      register: jenkinscli_source
+      retries: 5
+      until: "jenkinscli_source is success"
+    - 
+      name: Wait untils Jenkins web API is available
+      uri:
+        url: "http://localhost:8080/cli/"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 600
+      delay: 2
+    - 
+      name: add Xvfb Plugin details
+      template: 
+        src: org.jenkinsci.plugins.xvfb.Xvfb.xml
+        dest: /var/lib/jenkins/
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: u=rwX,g=rX,o=rX
+    - 
+      become: true
+      name: "Installing Jenkins Plugins"
+      shell: "cd /home/{{ user }} && /usr/lib/jvm/java-11-openjdk-amd64/bin/java -jar jenkins-cli.jar -s http://localhost:8080/ install-plugin xvfb xunit workflow-step-api scm-api structs junit script-security git email-ext email-ext-recipients-column mailer"
+      retries: 5
+      delay: 5
+    - 
+      git_config: 
+        name: user.email
+        scope: global
+        value: "{{ certbot_admin_email }}"
+      name: "Configure git Email"
+    - 
+      git_config: 
+        name: user.name
+        scope: global
+        value: "{{ jenkins_git_user }}"
+      name: "Configure git User Name"
+    - 
+      git_config: 
+        name: push.default
+        scope: global
+        value: simple
+      name: "Configure git Push"
+    - 
+      git_config: 
+        name: core.autocrlf
+        scope: global
+        value: false
+      name: "Configure git AutoCRLF"
+    - 
+      lineinfile: 
+        insertafter: "^#assistive_technologi"
+        line: "#" 
+        path: /etc/java-11-openjdk/accessibility.properties
+        regexp: "^assistive_technologi"
+      name: "Fixing Java Assistive Tech"
+    - 
+      file: 
+        group: "{{ group }}"
+        owner:  "{{ user }}"
+        path: /home/"{{ user }}"
+        recurse: true
+      name: "Setting {{ user }} permissions"
+    - 
+      name: Removing Groovy Startup Bypass
+      ansible.builtin.file:
+        path: /var/lib/jenkins/init.groovy.d/basic-security.groovy
+        state: absent
+    -
+      become: true
+      name: "Adding Jenkins Desktop Icon"
+      template: 
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: "{{ user }}"
+        group: "{{ group }}"
+        mode: '0755'
+      with_items:
+        - { src: "jenkins.desktop" , dest: "/usr/share/applications/jenkins.desktop" }
+        - { src: "jenkins.desktop" , dest: "/home/{{ user }}/Desktop/jenkins.desktop" }
+    
+    -
+      command: "dbus-launch gio set {{item}}  \"metadata::trusted\" true"
+      name: "Ensuring that Desktop Icons are Launchable"
+      with_items:
+        - "/home/{{ user }}/Desktop/jenkins.desktop"
+        - "/usr/share/applications/jenkins.desktop"
+    
+    -
+      become: true
+      name: "Adding Jenkins Jobs to Desktop"
+      copy:
+        src: "{{item.src}}"
+        dest: "{{item.dest}}"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        remote_src: true
+      with_items:
+        - { src: /vagrant/jobs , dest: "/home/{{user}}/Desktop" }

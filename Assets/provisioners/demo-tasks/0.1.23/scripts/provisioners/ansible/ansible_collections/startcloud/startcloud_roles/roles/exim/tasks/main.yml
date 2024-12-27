@@ -1,46 +1,50 @@
 ---
-# Include variables and define needed variables.
 -
-  name: Include OS-specific variables.
-  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    # Include variables and define needed variables.
+    -
+      name: Include OS-specific variables.
+      ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
 
-# Setup/install tasks.
--
-  name: Ensure exim is installed.
-  ansible.builtin.package:
-    name: "{{ exim_package }}"
-    state: present
+    # Setup/install tasks.
+    -
+      name: Ensure exim is installed.
+      ansible.builtin.package:
+        name: "{{ exim_package }}"
+        state: present
 
--
-  name: Configure exim (Debian only).
-  ansible.builtin.lineinfile:
-    dest: "{{ exim_configuration_file }}"
-    regexp: "{{ item.regexp }}"
-    line: "{{ item.line }}"
-    state: present
-    mode: "0644"
-  with_items:
-    - regexp: '^dc_eximconfig_configtype'
-      line: "dc_eximconfig_configtype='{{ exim_dc_eximconfig_configtype }}'"
-    - regexp: '^dc_localdelivery'
-      line: "dc_localdelivery='{{ exim_dc_localdelivery }}'"
-  notify: Restart exim
-  when: ansible_os_family == 'Debian'
+    -
+      name: Configure exim (Debian only).
+      ansible.builtin.lineinfile:
+        dest: "{{ exim_configuration_file }}"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+        mode: "0644"
+      with_items:
+        - regexp: '^dc_eximconfig_configtype'
+          line: "dc_eximconfig_configtype='{{ exim_dc_eximconfig_configtype }}'"
+        - regexp: '^dc_localdelivery'
+          line: "dc_localdelivery='{{ exim_dc_localdelivery }}'"
+      notify: Restart exim
+      when: ansible_os_family == 'Debian'
 
--
-  name: Configure primary_hostname (if set).
-  ansible.builtin.lineinfile:
-    dest: "{{ exim_configuration_file }}"
-    regexp: '^#?\s?primary_hostname'
-    line: "primary_hostname={{ exim_primary_hostname }}"
-    state: present
-    mode: "0644"
-  notify: Restart exim
-  when: exim_primary_hostname is defined and exim_primary_hostname
+    -
+      name: Configure primary_hostname (if set).
+      ansible.builtin.lineinfile:
+        dest: "{{ exim_configuration_file }}"
+        regexp: '^#?\s?primary_hostname'
+        line: "primary_hostname={{ exim_primary_hostname }}"
+        state: present
+        mode: "0644"
+      notify: Restart exim
+      when: exim_primary_hostname is defined and exim_primary_hostname
 
--
-  name: "Ensuring exim is running"
-  ansible.builtin.service:
-    name: "{{ exim_daemon }}"
-    state: started
-    enabled: true
+    -
+      name: "Ensuring exim is running"
+      ansible.builtin.service:
+        name: "{{ exim_daemon }}"
+        state: started
+        enabled: true

@@ -1,35 +1,39 @@
 ---
-- include_vars: "{{ loop_vars }}"
-  loop_control:
-    loop_var: loop_vars
-  name: "Add OS specific variables"
-  tags:
-    - configuration
-    - packages
-  with_first_found:
-    - files:
-        - "{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
-        - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
-        - "{{ ansible_distribution }}.yml"
-        - "{{ ansible_os_family }}.yml"
-        - "{{ ansible_system }}.yml"
-        - defaults.yml
-      paths:
-        - vars
-- include_tasks: "{{ loop_distribution }}"
-  loop_control:
-    loop_var: loop_distribution
-  name: "include distribution tasks"
-  tags:
-    - configuration
-    - packages
-  with_first_found:
-    - files:
-        - "{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
-        - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
-        - "{{ ansible_distribution }}.yml"
-        - "{{ ansible_os_family }}.yml"
-        - "{{ ansible_system }}.yml"
-        - defaults.yml
-      paths:
-        - distribution
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - include_vars: "{{ loop_vars }}"
+      loop_control:
+        loop_var: loop_vars
+      name: "Add OS specific variables"
+      tags:
+        - configuration
+        - packages
+      with_first_found:
+        - files:
+            - "{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
+            - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+            - "{{ ansible_distribution }}.yml"
+            - "{{ ansible_os_family }}.yml"
+            - "{{ ansible_system }}.yml"
+            - defaults.yml
+          paths:
+            - vars
+    - include_tasks: "{{ loop_distribution }}"
+      loop_control:
+        loop_var: loop_distribution
+      name: "include distribution tasks"
+      tags:
+        - configuration
+        - packages
+      with_first_found:
+        - files:
+            - "{{ ansible_distribution }}-{{ ansible_distribution_version }}.yml"
+            - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+            - "{{ ansible_distribution }}.yml"
+            - "{{ ansible_os_family }}.yml"
+            - "{{ ansible_system }}.yml"
+            - defaults.yml
+          paths:
+            - distribution

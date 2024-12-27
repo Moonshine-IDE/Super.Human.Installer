@@ -1,143 +1,147 @@
 ---
-- 
-  name: 'Removing unneeded packages'
-  ansible.builtin.apt:
-    name:
-    - libnet-ssleay-perl
-    - ufw
-    state: absent
-    force_apt_get: true
-
-- name: "Checking if Virtualmin has been installed and configured"
-  lineinfile: 
-    dest: /etc/webmin/virtual-server/config
-    line: "wizard_run=1"
-  check_mode: true
-  register: virtualmin
-  failed_when: virtualmin.changed
-
 -
-  name: "Checking if Virtualmin has been installed and configured"
-  register: virtualmin_installed
-  ansible.builtin.stat:
-    path: "{{completed_dir}}/vmininstalled"
-    get_md5: false
-
-- 
-  name: 'Downloading Virtualmin install script'
-  when: virtualmin and not virtualmin_installed.stat.exists
-  ansible.builtin.get_url:
-    url: http://software.virtualmin.com/gpl/scripts/install.sh
-    dest: /root/install.sh
-    mode: a+x
-
-- 
-  name: 'Installing Virtualmin (takes around 10 mins) you can see progress using $ sudo tail -f /root/virtualmin-install.log'
-  ansible.builtin.shell: >
-    nohup /root/install.sh --hostname {{ settings.hostname }}.{{ settings.domain }} -b LEMP --minimal --yes 2>&1 &
-    && touch {{ completed_dir }}/vmininstalled
-  async: 600 # 10 minutes in seconds
-  poll: 0
-  register: virtualmin_installation
-
-- 
-  name: "Checking if Virtualmin finished Installing"
-  ansible.builtin.wait_for:
-    path: "{{ completed_dir }}/vmininstalled"
-    delay: 5
-    timeout: 900 # 15 minutes to ensure a buffer beyond the installation time
-
-- 
-  name: 'Deleting Virtualmin install script'
-  ansible.builtin.file:
-    path: '/root/install.sh'
-    state: absent
-
-- 
-  name: 'Deleting Virtualmin log'
-  ansible.builtin.file:
-    path: '/root/virtualmin-install.log'
-    state: absent
-
-- 
-  name: 'Creating /etc/webmin/authentic-theme folder'
-  ansible.builtin.file:
-    path: /etc/webmin/authentic-theme
-    state: directory
-    mode: '0755'
-
-- 
-  name: 'Adding Configurations to /etc/webmin/miniserv.conf'
-  ansible.builtin.lineinfile:
-    path: /etc/webmin/miniserv.conf
-    line: '{{ item }}'
-  with_items:
-    - error_handler_404=404.cgi
-    - error_handler_403=403.cgi
-    - error_handler_401=401.cgi
-    - nolog=\/stats\.cgi\?xhr\-stats\=general
-
-- 
-  name: 'Changing from plain text passwords to hashed passwords'
-  ansible.builtin.lineinfile:
-    dest: "/etc/webmin/virtual-server/config"
-    regexp: "^hashpass=0"
-    line: "hashpass=1"
-
-- 
-  name: 'Adding mysql password to /etc/webmin/mysql/config'
-  ansible.builtin.lineinfile:
-    path: /etc/webmin/mysql/config
-    line: pass=your_password
-
-- 
-  name: 'Adding Configurations to /etc/webmin/virtual-server/config'
-  ansible.builtin.lineinfile:
-    path: /etc/webmin/virtual-server/config
-    line: '{{ item }}'
-  with_items:
-    - allow_symlinks=0
-    - mysql_user_size=80
-    - mysql_size=huge
-    - avail_virtualmin-dav=0
-    - wizard_run=1
-
-- 
-  name: 'Checking Virtualmin config'
-  ansible.builtin.command: virtualmin check-config
-
-- 
-  name: 'Adding Various Versions of PHP'
-  ansible.builtin.apt:
-    name:
-    - apt-transport-https
-    - ca-certificates
-    - lsb-release
-    - curl
-    state: present
-    force_apt_get: true
-
-- 
-  name: "Downloading GPG keys"
-  ansible.builtin.get_url:
-    url: https://packages.sury.org/php/apt.gpg
-    dest: /etc/apt/trusted.gpg.d/php.gpg
-    mode: '0644'
-
-- 
-  name: 'Installing virtualmin sury/PHP Repos'
-  tags: non-idem
-  ansible.builtin.shell: sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/sury-debian-php-$(lsb_release -sc).list' && apt-get update
-
-- 
-  name: 'Adding Various Versions of PHP'
-  ansible.builtin.apt:
-    name:
-    - php8.1-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
-    - php8.2-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
-    - php7.1-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}  
-    - php7.2-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
-    - php7.4-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
-    state: present
-    force_apt_get: true
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - 
+      name: 'Removing unneeded packages'
+      ansible.builtin.apt:
+        name:
+        - libnet-ssleay-perl
+        - ufw
+        state: absent
+        force_apt_get: true
+    
+    - name: "Checking if Virtualmin has been installed and configured"
+      lineinfile: 
+        dest: /etc/webmin/virtual-server/config
+        line: "wizard_run=1"
+      check_mode: true
+      register: virtualmin
+      failed_when: virtualmin.changed
+    
+    -
+      name: "Checking if Virtualmin has been installed and configured"
+      register: virtualmin_installed
+      ansible.builtin.stat:
+        path: "{{completed_dir}}/vmininstalled"
+        get_md5: false
+    
+    - 
+      name: 'Downloading Virtualmin install script'
+      when: virtualmin and not virtualmin_installed.stat.exists
+      ansible.builtin.get_url:
+        url: http://software.virtualmin.com/gpl/scripts/install.sh
+        dest: /root/install.sh
+        mode: a+x
+    
+    - 
+      name: 'Installing Virtualmin (takes around 10 mins) you can see progress using $ sudo tail -f /root/virtualmin-install.log'
+      ansible.builtin.shell: >
+        nohup /root/install.sh --hostname {{ settings.hostname }}.{{ settings.domain }} -b LEMP --minimal --yes 2>&1 &
+        && touch {{ completed_dir }}/vmininstalled
+      async: 600 # 10 minutes in seconds
+      poll: 0
+      register: virtualmin_installation
+    
+    - 
+      name: "Checking if Virtualmin finished Installing"
+      ansible.builtin.wait_for:
+        path: "{{ completed_dir }}/vmininstalled"
+        delay: 5
+        timeout: 900 # 15 minutes to ensure a buffer beyond the installation time
+    
+    - 
+      name: 'Deleting Virtualmin install script'
+      ansible.builtin.file:
+        path: '/root/install.sh'
+        state: absent
+    
+    - 
+      name: 'Deleting Virtualmin log'
+      ansible.builtin.file:
+        path: '/root/virtualmin-install.log'
+        state: absent
+    
+    - 
+      name: 'Creating /etc/webmin/authentic-theme folder'
+      ansible.builtin.file:
+        path: /etc/webmin/authentic-theme
+        state: directory
+        mode: '0755'
+    
+    - 
+      name: 'Adding Configurations to /etc/webmin/miniserv.conf'
+      ansible.builtin.lineinfile:
+        path: /etc/webmin/miniserv.conf
+        line: '{{ item }}'
+      with_items:
+        - error_handler_404=404.cgi
+        - error_handler_403=403.cgi
+        - error_handler_401=401.cgi
+        - nolog=\/stats\.cgi\?xhr\-stats\=general
+    
+    - 
+      name: 'Changing from plain text passwords to hashed passwords'
+      ansible.builtin.lineinfile:
+        dest: "/etc/webmin/virtual-server/config"
+        regexp: "^hashpass=0"
+        line: "hashpass=1"
+    
+    - 
+      name: 'Adding mysql password to /etc/webmin/mysql/config'
+      ansible.builtin.lineinfile:
+        path: /etc/webmin/mysql/config
+        line: pass=your_password
+    
+    - 
+      name: 'Adding Configurations to /etc/webmin/virtual-server/config'
+      ansible.builtin.lineinfile:
+        path: /etc/webmin/virtual-server/config
+        line: '{{ item }}'
+      with_items:
+        - allow_symlinks=0
+        - mysql_user_size=80
+        - mysql_size=huge
+        - avail_virtualmin-dav=0
+        - wizard_run=1
+    
+    - 
+      name: 'Checking Virtualmin config'
+      ansible.builtin.command: virtualmin check-config
+    
+    - 
+      name: 'Adding Various Versions of PHP'
+      ansible.builtin.apt:
+        name:
+        - apt-transport-https
+        - ca-certificates
+        - lsb-release
+        - curl
+        state: present
+        force_apt_get: true
+    
+    - 
+      name: "Downloading GPG keys"
+      ansible.builtin.get_url:
+        url: https://packages.sury.org/php/apt.gpg
+        dest: /etc/apt/trusted.gpg.d/php.gpg
+        mode: '0644'
+    
+    - 
+      name: 'Installing virtualmin sury/PHP Repos'
+      tags: non-idem
+      ansible.builtin.shell: sh -c 'echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/sury-debian-php-$(lsb_release -sc).list' && apt-get update
+    
+    - 
+      name: 'Adding Various Versions of PHP'
+      ansible.builtin.apt:
+        name:
+        - php8.1-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
+        - php8.2-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
+        - php7.1-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}  
+        - php7.2-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
+        - php7.4-{cgi,cli,fpm,pdo,gd,mbstring,mysqlnd,opcache,curl,xml,zip}
+        state: present
+        force_apt_get: true
 

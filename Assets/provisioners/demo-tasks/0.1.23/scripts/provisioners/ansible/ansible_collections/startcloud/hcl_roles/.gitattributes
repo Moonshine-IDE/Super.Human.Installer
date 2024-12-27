@@ -1,0 +1,13 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text eol=lf
+
+# Scripts should be enforced to use Linux-style newlines
+*.sh text eol=lf
+
+# YAML and jinja2 templates should be enforced to use Linux-style newlines
+*.yml text eol=lf
+*.yaml text eol=lf
+*.j2 text eol=lf
+
+#Private Key should be Linux-style newlines
+id_rsa text eol=lf

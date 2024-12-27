@@ -1,85 +1,89 @@
 ---
 -
-  name: "Gathering Networking Configurations"
-  when:
-    - not ansible_module_running_in_container
-    - ansible_virtualization_type != "virtualbox"
-  become: true
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
     -
-      name: "Executing shell command to sort network interfaces"
-      when: networks[0] is defined
-      changed_when: false
-      ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$"
-      args:
-        executable: /bin/bash
-      register: sorted_interfaces_output
-
-    -
-      name: "Parsing output to get interface names"
-      ansible.builtin.set_fact:
-        interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
-    -
-      name: "Setting first and second adapters"
-      ansible.builtin.set_fact:
-        first_adapter: "{{ interfaces[0] }}"
-
-    -
-      name: "Gathering details of the first adapter"
-      changed_when: false
-      ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
-      args:
-        executable: /bin/bash
-      register: first_ip
-
-    -
-      name: "Storing first adapter details as facts"
-      ansible.builtin.set_fact:
-        netoutput: "{{ first_ip.stdout.strip() | ansible.utils.ipaddr('address') }}"
-
--
-  name: "Virtualbox Networking"
-  when:
-    - not ansible_module_running_in_container
-    - ansible_virtualization_type == "virtualbox"
-  become: true
-  block:
-    -
-      name: "Grabbing External IP address"
-      ansible.builtin.shell: |
-        set -o pipefail
-        ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
-      args:
-        executable: /bin/bash
-      register: public_adapter_ip
-      changed_when: false
-
-    -
-      name: "Storing first adapter details as facts"
-      ansible.builtin.set_fact:
-        netoutput: "{{ public_adapter_ip }}"
+      name: "Gathering Networking Configurations"
+      when:
+        - not ansible_module_running_in_container
+        - ansible_virtualization_type != "virtualbox"
+      become: true
+      block:
+        -
+          name: "Executing shell command to sort network interfaces"
+          when: networks[0] is defined
+          changed_when: false
+          ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$"
+          args:
+            executable: /bin/bash
+          register: sorted_interfaces_output
     
--
-  name: "Generating Help File"
-  when:
-    - not ansible_module_running_in_container
-  become: true
-  block:
+        -
+          name: "Parsing output to get interface names"
+          ansible.builtin.set_fact:
+            interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
+        -
+          name: "Setting first and second adapters"
+          ansible.builtin.set_fact:
+            first_adapter: "{{ interfaces[0] }}"
+    
+        -
+          name: "Gathering details of the first adapter"
+          changed_when: false
+          ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
+          args:
+            executable: /bin/bash
+          register: first_ip
+    
+        -
+          name: "Storing first adapter details as facts"
+          ansible.builtin.set_fact:
+            netoutput: "{{ first_ip.stdout.strip() | ansible.utils.ipaddr('address') }}"
+    
+    -
+      name: "Virtualbox Networking"
+      when:
+        - not ansible_module_running_in_container
+        - ansible_virtualization_type == "virtualbox"
+      become: true
+      block:
+        -
+          name: "Grabbing External IP address"
+          ansible.builtin.shell: |
+            set -o pipefail
+            ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
+          args:
+            executable: /bin/bash
+          register: public_adapter_ip
+          changed_when: false
+    
+        -
+          name: "Storing first adapter details as facts"
+          ansible.builtin.set_fact:
+            netoutput: "{{ public_adapter_ip }}"
+        
     -
       name: "Generating Help File"
+      when:
+        - not ansible_module_running_in_container
       become: true
-      ansible.builtin.template:
-        mode: '0644'
-        dest: /tmp/cloud.txt
-        src: cloud.txt.j2
-    
-    -
-      name: "Registering Output of available Commands"
-      ansible.builtin.command: cat /tmp/cloud.txt
-      register: cloud_commands
-      changed_when: false
-    
-    -
-      name: "Outputting available Help Text"
-      ansible.builtin.debug:
-        var: cloud_commands.stdout_lines
+      block:
+        -
+          name: "Generating Help File"
+          become: true
+          ansible.builtin.template:
+            mode: '0644'
+            dest: /tmp/cloud.txt
+            src: cloud.txt.j2
+        
+        -
+          name: "Registering Output of available Commands"
+          ansible.builtin.command: cat /tmp/cloud.txt
+          register: cloud_commands
+          changed_when: false
+        
+        -
+          name: "Outputting available Help Text"
+          ansible.builtin.debug:
+            var: cloud_commands.stdout_lines

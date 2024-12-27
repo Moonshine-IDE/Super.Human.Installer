@@ -1,10 +1,10 @@
 {
   "serverSetup": {
     "server": {
-{% if existing_server_id is defined and is_additional_server %}
+{% if domino_server_id is defined and is_additional_server %}
       "type": "additional",
-      "IDFilePath": "{{ domino_home_dir }}/ids/{{ existing_server_id }}",
-      "useExistingServerID": {{ use_existing_server_id | lower }},
+      "IDFilePath": "{{ domino_home_dir }}/ids/{{ domino_server_id }}",
+      "useExistingServerID": {{ use_domino_server_id | lower }},
 {% else %}
       "type": "first",
 {% endif %}
@@ -15,13 +15,13 @@
       "minPasswordLength": 5,
       "serverTasks": "HTTP"
     },
-{% if existing_server is defined and is_additional_server %}
+{% if origin_server is defined and is_additional_server %}
     "existingServer": {
 {% if domino_use_proxy is defined and domino_use_proxy %}
       "httpTunnelProxy": "{{ proxy_server }}:{{ proxy_port }}",
 {% endif %}
-      "CN": "{{ existing_server }}.{{ settings.domain }}/O={{ domino_organization }}",
-      "hostNameOrIP": "{{ existing_server_ip }}"
+      "CN": "{{ origin_server }}.{{ settings.domain }}/O={{ domino_organization }}",
+      "hostNameOrIP": "{{ origin_server_ip }}"
     },
 {% endif %}
     "network": {
@@ -87,12 +87,21 @@
       "HTTPJVMMaxHeapSize": "{{ domino_http_jvm_max_heap_size }}",
       "HTTPJVMMaxHeapSizeSet": "{{ domino_http_jvm_max_heap_size_set }}"
     },
-{% if not is_additional_server and generate_server_id_count > 0 %}
+{% if domino_major_version >= 14%}
+{% if not is_additional_server and domino_server_id_creation_tool is defined and domino_server_id_creation_tool == "ots" and ots_generate_server_names is defined and ots_generate_server_names | length > 0 %}
     "autoRegister": {
-      "count": {{ generate_server_id_count }},
       "IDPath": "{{ domino_home_dir }}/ids",
-      "pattern": "server#"
+      "serverNames": {{ ots_generate_server_names | tojson }}
     },
+{% endif %}
+{% else %}
+{% if not is_additional_server and domino_server_id_creation_tool is defined and domino_server_id_creation_tool == "ots" and ots_generate_server_id_count > 0 %}
+    "autoRegister": {
+      "count": {{ ots_generate_server_id_count }},
+      "IDPath": "{{ domino_home_dir }}/ids",
+      "pattern": "{{ ots_generate_server_id_pattern }}#"
+    },
+{% endif %}
 {% endif %}
 {% if not is_additional_server %}
     "registerUsers": {
@@ -323,7 +332,7 @@
             "Type": "Connection",
             "PortName": "TCPIP",
             "Source": "CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}",
-            "Destination": "{{ existing_server }}.{{ settings.domain }}/O={{ domino_organization }}",
+            "Destination": "{{ origin_server }}.{{ settings.domain }}/O={{ domino_organization }}",
             "SourceDomain": "{{ domino_organization }}",
             "DestinationDomain": "{{ domino_organization }}",
             "ConnectionMode": "0",

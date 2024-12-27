@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # Used only for Debian/Ubuntu installation, as the -t option for apt.
 nginx_default_release: ""
 

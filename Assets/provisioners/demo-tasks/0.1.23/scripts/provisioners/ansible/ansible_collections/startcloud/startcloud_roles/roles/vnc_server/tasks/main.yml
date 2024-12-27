@@ -1,23 +1,27 @@
 ---
-- name: Load var file with package names based on the OS type
-  ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
-  vars:
-    params:
-      files:
-        - "{{ ansible_distribution }}_{{ ansible_distribution_release }}.yml"
-        - "{{ ansible_distribution }}.yml"
-        - "{{ ansible_os_family }}.yml"
-      paths:
-        - "{{ role_path }}/vars"
-
-- name: Install VNC server
-  ansible.builtin.include_tasks: install.yml
-
-- name: Disable screen locking
-  ansible.builtin.include_tasks: disable_screen_locking.yml
-
-- name: Create vnc user
-  ansible.builtin.include_tasks: create_vnc_user.yml
-
-- name: Configure SystemD
-  ansible.builtin.include_tasks: configure_systemd.yml
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - name: Load var file with package names based on the OS type
+      ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
+      vars:
+        params:
+          files:
+            - "{{ ansible_distribution }}_{{ ansible_distribution_release }}.yml"
+            - "{{ ansible_distribution }}.yml"
+            - "{{ ansible_os_family }}.yml"
+          paths:
+            - "{{ role_path }}/vars"
+    
+    - name: Install VNC server
+      ansible.builtin.include_tasks: install.yml
+    
+    - name: Disable screen locking
+      ansible.builtin.include_tasks: disable_screen_locking.yml
+    
+    - name: Create vnc user
+      ansible.builtin.include_tasks: create_vnc_user.yml
+    
+    - name: Configure SystemD
+      ansible.builtin.include_tasks: configure_systemd.yml

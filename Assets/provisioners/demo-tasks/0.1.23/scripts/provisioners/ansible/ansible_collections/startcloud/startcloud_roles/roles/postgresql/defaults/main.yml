@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # RHEL/CentOS only. Set a repository to use for PostgreSQL installation.
 postgresql_enablerepo: ""
 

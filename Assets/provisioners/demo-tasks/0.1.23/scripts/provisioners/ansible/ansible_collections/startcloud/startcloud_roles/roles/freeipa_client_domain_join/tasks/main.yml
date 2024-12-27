@@ -1,41 +1,45 @@
 ---
 -
-  name: "Ensuring apt cache is updated."
-  ansible.builtin.apt:
-    cache_valid_time: 3600
-    update_cache: true  
-  when: "ansible_os_family == 'Debian'"
-
--
-  name: "Installing freeipa-client"
-  ansible.builtin.apt:
-    name:
-      - freeipa-client
-      - adcli
-      - krb5-user
-      - realmd
-      - sssd-ad
-      - sssd-krb5
-      - sssd-tools
-      - chrony
--
-  name: "Backing Up old libnssckbi.so for Firefox to Trust Prominic.Global"
-  ansible.builtin.copy:
-    remote_src: True
-    src: /usr/lib/firefox/libnssckbi.so
-    dest: /usr/lib/firefox/libnssckbi.so.bak
-
--
-  name: "Removing old for libnssckbi.so Firefox to Trust Prominic.Global"
-  ansible.builtin.file: 
-    path: /usr/lib/firefox/libnssckbi.so
-    state: absent
-
-- 
-  name: "Creating symlink from p11-kit-trust.so for libnssckbi.so Firefox to Trust Prominic.Global"
-  ansible.builtin.file:
-    src: /usr/lib/aarch64-linux-gnu/pkcs11/p11-kit-trust.so
-    dest: /usr/lib/firefox/libnssckbi.so
-    owner: "root"
-    group: "root"
-    state: link
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Ensuring apt cache is updated."
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true  
+      when: "ansible_os_family == 'Debian'"
+    
+    -
+      name: "Installing freeipa-client"
+      ansible.builtin.apt:
+        name:
+          - freeipa-client
+          - adcli
+          - krb5-user
+          - realmd
+          - sssd-ad
+          - sssd-krb5
+          - sssd-tools
+          - chrony
+    -
+      name: "Backing Up old libnssckbi.so for Firefox to Trust Prominic.Global"
+      ansible.builtin.copy:
+        remote_src: True
+        src: /usr/lib/firefox/libnssckbi.so
+        dest: /usr/lib/firefox/libnssckbi.so.bak
+    
+    -
+      name: "Removing old for libnssckbi.so Firefox to Trust Prominic.Global"
+      ansible.builtin.file: 
+        path: /usr/lib/firefox/libnssckbi.so
+        state: absent
+    
+    - 
+      name: "Creating symlink from p11-kit-trust.so for libnssckbi.so Firefox to Trust Prominic.Global"
+      ansible.builtin.file:
+        src: /usr/lib/aarch64-linux-gnu/pkcs11/p11-kit-trust.so
+        dest: /usr/lib/firefox/libnssckbi.so
+        owner: "root"
+        group: "root"
+        state: link

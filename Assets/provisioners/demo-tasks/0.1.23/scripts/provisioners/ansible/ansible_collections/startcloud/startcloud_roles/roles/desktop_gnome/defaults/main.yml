@@ -1,2 +1,4 @@
+---
+run_tasks: true
 desktop_update_polkit: 
 desktop_extensions_enabled: true

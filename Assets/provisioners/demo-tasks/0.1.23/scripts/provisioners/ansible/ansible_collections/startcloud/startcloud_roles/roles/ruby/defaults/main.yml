@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 workspace: /root
 
 # Whether this role should install Bundler.

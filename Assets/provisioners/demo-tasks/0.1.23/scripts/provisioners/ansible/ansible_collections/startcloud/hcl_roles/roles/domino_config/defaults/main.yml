@@ -1,10 +1,14 @@
 ---
+run_tasks: true
 show_help: true
 debug_autoconfigure: false
-existing_server_id: "server.id"
-use_existing_server_id: false
-existing_server: ""
-existing_server_ip: ""
+domino_server_id: "server.id"
+use_domino_server_id: true
+domino_server_id_creation_tool: ots
+ots_generate_server_id_count: 1
+ots_generate_server_id_pattern: mail
+origin_server: ""
+origin_server_ip: ""
 domino_config:
   delete_input_file_after_processing: "false"
   start_server_after_configuration: "true"

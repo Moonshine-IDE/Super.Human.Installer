@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 nfs_exports: []
 
 nfs_rpcbind_state: started

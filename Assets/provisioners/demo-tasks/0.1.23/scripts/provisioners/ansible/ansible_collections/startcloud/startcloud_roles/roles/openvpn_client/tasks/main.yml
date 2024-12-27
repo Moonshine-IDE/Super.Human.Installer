@@ -1,38 +1,41 @@
----
 -
-  name: Ensure /etc/openvpn/client exists
-  ansible.builtin.file:
-    path: /etc/openvpn/client
-    state: directory
-    owner: root
-    group: "{{ openvpn_group }}"
-    mode: "0750"
-
--
-  name: Place client.conf
-  ansible.builtin.template:
-    src: client.conf.j2
-    dest: "{{ openvpn_configuration_directory }}/client.conf"
-    owner: root
-    group: "{{ openvpn_group }}"
-    mode: "0640"
-
--
-  name: copy certificates and keys from the server to the client
-  ansible.builtin.copy:
-    src: /etc/openvpn/easy-rsa/pki/{{ item }}
-    dest: /etc/openvpn/client/{{ item | basename }}
-    mode: "0640"
-    remote_src: true
-  loop:
-    - ca.crt
-    - issued/client.crt
-    - private/client.key
-    - ta.key
-
--
-  name: "Enabling OpenVPN"
-  when: "ansible_os_family == 'Debian'"
-  service:
-    name: openvpn
-    enabled: true
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: Ensure /etc/openvpn/client exists
+      ansible.builtin.file:
+        path: /etc/openvpn/client
+        state: directory
+        owner: root
+        group: "{{ openvpn_group }}"
+        mode: "0750"
+    
+    -
+      name: Place client.conf
+      ansible.builtin.template:
+        src: client.conf.j2
+        dest: "{{ openvpn_configuration_directory }}/client.conf"
+        owner: root
+        group: "{{ openvpn_group }}"
+        mode: "0640"
+    
+    -
+      name: copy certificates and keys from the server to the client
+      ansible.builtin.copy:
+        src: /etc/openvpn/easy-rsa/pki/{{ item }}
+        dest: /etc/openvpn/client/{{ item | basename }}
+        mode: "0640"
+        remote_src: true
+      loop:
+        - ca.crt
+        - issued/client.crt
+        - private/client.key
+        - ta.key
+    
+    -
+      name: "Enabling OpenVPN"
+      when: "ansible_os_family == 'Debian'"
+      service:
+        name: openvpn
+        enabled: true

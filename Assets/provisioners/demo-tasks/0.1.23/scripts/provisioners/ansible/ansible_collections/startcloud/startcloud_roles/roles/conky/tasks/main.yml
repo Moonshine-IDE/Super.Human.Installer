@@ -1,23 +1,27 @@
 ---
 -
-  name: "Installing Conky"
-  when: ansible_os_family == 'Debian'
-  ansible.builtin.apt:
-    name:
-      - conky-all
-
--
-  name: Set Conky Start for All Users
-  ansible.builtin.copy:
-    src: /usr/share/applications/conky.desktop
-    dest: /etc/xdg/autostart/
-    mode: "0644"
-
--
-  name: "Setting Conky Configuration"
-  when: ansible_os_family == 'Debian'
-  ansible.builtin.template:
-    src: conky.conf.j2
-    dest: /etc/conky/conky.conf
-    mode: "0644"
-    force: true
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Installing Conky"
+      when: ansible_os_family == 'Debian'
+      ansible.builtin.apt:
+        name:
+          - conky-all
+    
+    -
+      name: Set Conky Start for All Users
+      ansible.builtin.copy:
+        src: /usr/share/applications/conky.desktop
+        dest: /etc/xdg/autostart/
+        mode: "0644"
+    
+    -
+      name: "Setting Conky Configuration"
+      when: ansible_os_family == 'Debian'
+      ansible.builtin.template:
+        src: conky.conf.j2
+        dest: /etc/conky/conky.conf
+        mode: "0644"
+        force: true

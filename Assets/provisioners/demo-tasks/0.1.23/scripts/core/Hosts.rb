@@ -5,6 +5,7 @@ require 'open3'
 require 'yaml'
 require 'fileutils'
 
+
 if File.file?("#{File.dirname(__FILE__)}/../version.rb")
   # Load the Current Provisioner Version Module
   require File.expand_path("#{File.dirname(__FILE__)}/../version.rb")
@@ -13,8 +14,10 @@ end
 # This class takes the Hosts.yaml and set's the neccessary variables to run provider specific sequences to boot a VM.
 class Hosts
   def Hosts.configure(config, settings)
-    # Load your Secrets file
-    secrets = load_secrets
+    secrets = Hosts.load_secrets
+
+    ENV['ATLAS_TOKEN'] = secrets['ATLAS_TOKEN'] if secrets && secrets.key?('ATLAS_TOKEN')
+
     # Main loop to configure VM
     settings['hosts'].each_with_index do |host, index|
       configure_plugins(host)
@@ -23,11 +26,13 @@ class Hosts
       if host['settings'].has_key?('parallel') && host['settings']['parallel']
         ENV['VAGRANT_NO_PARALLEL'] = 'no'
       end
+      
+      ENV['VAGRANT_SERVER_URL'] = host['settings']['box_url'] if host['settings'].has_key?('box_url')
 
-      provider = host['settings']['provider-type']
+      provider = host['settings']['provider_type']
       config.vm.define "#{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}" do |server|
         server.vm.box = host['settings']['box']
-        config.vm.box_url = "#{host['settings']['box_url']}/#{host['settings']['box']}"
+        config.vm.box_url = host['settings']['box_url'].to_s.empty? ? "https://vagrantcloud.com/#{host['settings']['box']}" : "#{host['settings']['box_url']}/#{host['settings']['box']}"
         server.vm.box_version = host['settings']['box_version']
         server.vm.boot_timeout = host['settings']['setup_wait']
         server.ssh.username = host['settings']['vagrant_user']
@@ -35,8 +40,8 @@ class Hosts
         default_ssh_key = "./core/ssh_keys/id_rsa"
         vagrant_ssh_key = host['settings']['vagrant_user_private_key_path']
         server.ssh.private_key_path = File.exist?(vagrant_ssh_key) ? [vagrant_ssh_key, default_ssh_key] : default_ssh_key
-        server.ssh.insert_key = false # host['settings']['vagrant_insert_key'], Note we are no longer automatically forcing the key in via Vagrants SSH insertion function
-        server.ssh.forward_agent = host['settings']['ssh_forward_agent']
+        server.ssh.insert_key = false # host['settings']['vagrant_ssh_insert_key'], Note we are no longer automatically forcing the key in via Vagrants SSH insertion function
+        server.ssh.forward_agent = host['settings']['vagrant_ssh_forward_agent']
         config.vm.communicator = :ssh
         config.winrm.username = host['settings']['vagrant_user']
         config.winrm.password = host['settings']['vagrant_user_pass']
@@ -341,6 +346,7 @@ class Hosts
                     else
                       :once
                     end
+
                   server.vm.provision :ansible_local, run: run_value do |ansible|
                     ansible.playbook = localplaybook['playbook']
                     ansible.compatibility_mode = localplaybook['compatibility_mode'].to_s
@@ -462,7 +468,7 @@ class Hosts
       end
 
       ## Save variables to .vagrant directory
-      if host.has_key?('networks') && host['settings']['provider-type'] == 'virtualbox' &&  host['settings']['post_provision']
+      if host.has_key?('networks') && host['settings']['provider_type'] == 'virtualbox' &&  host['settings']['post_provision']
         host['networks'].each_with_index do |network, netindex|
           config.trigger.after [:up] do |trigger|
             trigger.info = "Post-Provisioning Vagrant Operations"
@@ -474,8 +480,8 @@ class Hosts
               puts "#{ prefix } https://github.com/STARTcloud/#{Provisioner::NAME}/releases/tag/v#{Provisioner::VERSION}"
 
               puts "#{ prefix } Transferring Debugging files back to Host"
-              transfer_cmd = "vagrant scp :/vagrant/support-bundle/adapters.yml .vagrant/provisioned-adapters.yml"
-              transfer_cmd = "vagrant ssh -c 'cat /vagrant/support-bundle/adapters.yml' > .vagrant/provisioned-adapters.yml" if not Vagrant.has_plugin?("vagrant-scp-sync")
+              transfer_cmd = "vagrant scp :/vagrant/support-bundle/provisioned-adapters.yml .vagrant/provisioned-adapters.yml"
+              transfer_cmd = "vagrant ssh -c 'cat /vagrant/support-bundle/provisioned-adapters.yml' > .vagrant/provisioned-adapters.yml" if not Vagrant.has_plugin?("vagrant-scp-sync")
               system(transfer_cmd)
 
               ansible_log = "vagrant scp :/home/#{host['settings']['vagrant_user']}/ansible.log #{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}-ansible.log"
@@ -519,13 +525,13 @@ class Hosts
                   ## For CI/CD Automation Purposes Only
                   if host['settings']['debug_build']
                     puts "#{ prefix } Transferring Hosts Template back to Host"
-                    id_transfer_cmd = "vagrant ssh -c 'cat /vagrant/ansible/Hosts.template.yml.SHI' > Hosts.template.yml.SHI"
-                    id_transfer_cmd = "vagrant scp :/vagrant/ansible/Hosts.template.yml.SHI Hosts.template.yml.SHI" if Vagrant.has_plugin?("vagrant-scp-sync")
+                    id_transfer_cmd = "vagrant ssh -c 'cat /vagrant/ansible/auto-SHI-Hosts.yml' > ./templates/auto-SHI-Hosts.yml"
+                    id_transfer_cmd = "vagrant scp :/vagrant/ansible/auto-SHI-Hosts.yml ./templates/auto-SHI-Hosts.yml" if Vagrant.has_plugin?("vagrant-scp-sync")
                     system(id_transfer_cmd)
                   end
 
                   ## Copy the Updated Key from the VM, and then Delete the default Template Key from the VM
-                  if host['settings']['vagrant_insert_key']
+                  if host['settings']['vagrant_ssh_insert_key']
                     puts "#{ prefix } Transferring New SSH key"
                     id_transfer_cmd = "vagrant ssh -c 'cat /home/startcloud/.ssh/id_ssh_rsa' > #{host['settings']['vagrant_user_private_key_path']}"
                     id_transfer_cmd = "vagrant scp :/home/startcloud/.ssh/id_ssh_rsa #{host['settings']['vagrant_user_private_key_path']}" if Vagrant.has_plugin?("vagrant-scp-sync")
@@ -541,7 +547,7 @@ class Hosts
         end
       end
 
-      if host['zones'] && host['zones'].has_key?('post_provision_boot') && host['zones']['post_provision_boot'] && host['settings']['provider-type'] == 'zones'
+      if host['zones'] && host['zones'].has_key?('post_provision_boot') && host['zones']['post_provision_boot'] && host['settings']['provider_type'] == 'zones'
         config.trigger.after [:up, :provision] do |trigger|
           trigger.info = "post_provision_boot is true, Waiting for instance to stop"
           trigger.ruby do |env, machine|
@@ -597,19 +603,48 @@ class Hosts
   end
 
   def self.load_secrets
-    secrets_path = "#{File.dirname(__FILE__)}/../.secrets.yml"
-    YAML.load(File.read(secrets_path)) if File.file?(secrets_path)
+    secrets_dir = File.dirname(__FILE__)
+    secrets_path = File.join(secrets_dir, '../secrets.yml')
+    hidden_secrets_path = File.join(secrets_dir, '../.secrets.yml')
+    
+    secrets = {}
+    
+    # Load secrets.yml if it exists
+    if File.file?(secrets_path)
+      secrets.merge!(YAML.load(File.read(secrets_path)) || {})
+    end
+    
+    # Load .secrets.yml if it exists, overwriting any duplicate keys
+    if File.file?(hidden_secrets_path)
+      secrets.merge!(YAML.load(File.read(hidden_secrets_path)) || {})
+    end
+    
+    secrets
+  end
+
+  def self.rsync_version_low?
+    return false unless Vagrant::Util::Platform.darwin?
+    `rsync --version`.include?('2.6.9') || `rsync --version` < '2.6.9'
   end
 
   def self.configure_plugins(host)
-    plugins = Array(host['plugins'])
-    return if plugins.empty?
-
-    plugins.each do |plugin|
-      next if Vagrant.has_plugin?(plugin)
-
-      system("vagrant plugin install #{plugin}")
-      exit system('vagrant', *ARGV)
+    plugins = host['plugins'] || {}
+    install_plugins = Array(plugins['install'])
+    remove_plugins = Array(plugins['remove'])
+  
+    # Remove plugins
+    remove_plugins.each do |plugin|
+      if Vagrant.has_plugin?(plugin['name'])
+        system("vagrant plugin uninstall #{plugin['name']}")
+      end
+    end
+  
+    # Install plugins
+    install_plugins.each do |plugin|
+      next if Vagrant.has_plugin?(plugin['name'])
+  
+      version_option = plugin['version'] == 'latest' ? '' : "--plugin-version #{plugin['version']}"
+      system("vagrant plugin install #{plugin['name']} #{version_option}")
     end
   end
 

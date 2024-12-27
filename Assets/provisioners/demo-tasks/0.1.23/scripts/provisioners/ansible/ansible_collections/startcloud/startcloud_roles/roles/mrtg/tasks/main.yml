@@ -1,33 +1,36 @@
----
 -
-  name: "Setting up Debian Installations"
-  when: "ansible_os_family == 'Debian'"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
     -
-      name: "Gathering DEB architecture"
-      ansible.builtin.command: dpkg --print-architecture
-      register: deb_architecture
-      changed_when: false
-
-    -
-      name: "Printing DEB architecture"
-      ansible.builtin.debug:
-        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-
-    -
-      name: "Ensuring apt cache is updated"
-      ansible.builtin.apt:
-        cache_valid_time: 3600
-        update_cache: true
-
-    -
-      name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: true
-
-    -
-      name: "Adding Additional Dependencies {{ packages }}"
-      ansible.builtin.apt:
-        name: "{{ packages }}"
-        state: present
+      name: "Setting up Debian Installations"
+      when: "ansible_os_family == 'Debian'"
+      block:
+        -
+          name: "Gathering DEB architecture"
+          ansible.builtin.command: dpkg --print-architecture
+          register: deb_architecture
+          changed_when: false
+    
+        -
+          name: "Printing DEB architecture"
+          ansible.builtin.debug:
+            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+    
+        -
+          name: "Ensuring apt cache is updated"
+          ansible.builtin.apt:
+            cache_valid_time: 3600
+            update_cache: true
+    
+        -
+          name: "Upgrading all apt packages"
+          ansible.builtin.apt:
+            upgrade: dist
+            update_cache: true
+    
+        -
+          name: "Adding Additional Dependencies {{ packages }}"
+          ansible.builtin.apt:
+            name: "{{ packages }}"
+            state: present

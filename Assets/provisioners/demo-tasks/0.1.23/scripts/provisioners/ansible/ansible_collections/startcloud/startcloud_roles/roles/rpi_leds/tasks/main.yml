@@ -1,11 +1,15 @@
 ---
 -
-  name: "Enabling RTC on Next Reboot"
-  when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
-  ansible.builtin.lineinfile:
-    line: "{{ item.line }}"
-    path:  /etc/modules
-    state: present
-    create: true
-  with_items:
-    - line: 'rtc-ds1307'
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Enabling RTC on Next Reboot"
+      when: ansible_os_family == 'Debian' and (deb_architecture.stdout == 'arm64' or deb_architecture.stdout == 'armhf')
+      ansible.builtin.lineinfile:
+        line: "{{ item.line }}"
+        path:  /etc/modules
+        state: present
+        create: true
+      with_items:
+        - line: 'rtc-ds1307'

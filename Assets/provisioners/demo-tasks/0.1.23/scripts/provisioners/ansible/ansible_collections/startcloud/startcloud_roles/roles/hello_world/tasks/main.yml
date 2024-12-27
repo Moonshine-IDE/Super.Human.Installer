@@ -1,5 +1,9 @@
 ---
-# This playbook prints a simple debug message of {{ hello_world }} from Hosts.yml
-- name: "This playbook prints a simple debug message of {{ hello_world }} from Hosts.yml"
-  ansible.builtin.debug:
-    msg: "{{ hello_world }}"
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    # This playbook prints a simple debug message of {{ hello_world }} from Hosts.yml
+    - name: "This playbook prints a simple debug message of {{ hello_world }} from Hosts.yml"
+      ansible.builtin.debug:
+        msg: "{{ hello_world }}"

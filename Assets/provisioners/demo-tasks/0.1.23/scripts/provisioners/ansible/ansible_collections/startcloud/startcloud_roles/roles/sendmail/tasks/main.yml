@@ -1,8 +1,12 @@
---- 
-- 
-  apt: 
-    name: 
-      - sendmail
-      - nano
-  name: "Installing Sendmail"
-  retries: 5
+---
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - 
+      apt: 
+        name: 
+          - sendmail
+          - nano
+      name: "Installing Sendmail"
+      retries: 5

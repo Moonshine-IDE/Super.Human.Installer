@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 leap_archive: Leap-1.0.5.zip
 leap_version: 1.0.5
 leap_debug: false

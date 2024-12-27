@@ -1,16 +1,20 @@
 ---
 -
-  delay: 5
-  get_url:
-    dest: "/tmp/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle"
-    url: "https:///downloads/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle"
-  name: "Downloading VMWare View Horizon Client for Linux"
-  register: leptonica_source
-  retries: 5
-
-- 
-  become: true
-  name: "Installing VMWare View Horizon Client for Linux"
-  command: "sudo env TERM=dumb VMWARE_EULAS_AGREED=yes &&  bash ./VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle  --eulas-agreed --required --console"
-  args:
-    chdir: "/tmp"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      delay: 5
+      get_url:
+        dest: "/tmp/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle"
+        url: "https:///downloads/VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle"
+      name: "Downloading VMWare View Horizon Client for Linux"
+      register: leptonica_source
+      retries: 5
+    
+    - 
+      become: true
+      name: "Installing VMWare View Horizon Client for Linux"
+      command: "sudo env TERM=dumb VMWARE_EULAS_AGREED=yes &&  bash ./VMware-Horizon-Client-2103-8.2.0-17742757.x64.bundle  --eulas-agreed --required --console"
+      args:
+        chdir: "/tmp"

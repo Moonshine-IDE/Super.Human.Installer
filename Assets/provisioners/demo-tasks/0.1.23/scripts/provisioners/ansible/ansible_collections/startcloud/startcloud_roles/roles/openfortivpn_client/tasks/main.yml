@@ -1,41 +1,44 @@
----
 -
-  name: "Adding Additional Dependencies {{ packages }}"
-  ansible.builtin.apt:
-    name: "{{ openfortivpn_packages }}"
-    state: present
-
--
-  name: "Placing s1.nmconnection"
-  ansible.builtin.template:
-    src: s1.nmconnection.j2
-    dest: "/etc/NetworkManager/system-connections/s1.nmconnection"
-    owner: root
-    mode: "0600"
-
--
-  name: "Placing s2.nmconnection"
-  ansible.builtin.template:
-    src: s2.nmconnection.j2
-    dest: "/etc/NetworkManager/system-connections/s2.nmconnection"
-    owner: root
-    mode: "0600"
-
-#-
-#  name: "Copying certificates and keys from the server to the client"
-#  ansible.builtin.copy:
-#    src: /etc/openvpn/easy-rsa/pki/{{ item }}
-#    dest: /etc/openvpn/client/{{ item | basename }}
-#    mode: "0640"
-#    remote_src: true
-#  loop:
-#    - ca.crt
-#    - issued/client.crt
-#    - private/client.key
-#    - ta.key
-
-#-
-#  name: "Enabling OpenVPN"
-#  service:
-#    name: openvpn
-#    enabled: true
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Adding Additional Dependencies {{ packages }}"
+      ansible.builtin.apt:
+        name: "{{ openfortivpn_packages }}"
+        state: present
+    
+    -
+      name: "Placing s1.nmconnection"
+      ansible.builtin.template:
+        src: s1.nmconnection.j2
+        dest: "/etc/NetworkManager/system-connections/s1.nmconnection"
+        owner: root
+        mode: "0600"
+    
+    -
+      name: "Placing s2.nmconnection"
+      ansible.builtin.template:
+        src: s2.nmconnection.j2
+        dest: "/etc/NetworkManager/system-connections/s2.nmconnection"
+        owner: root
+        mode: "0600"
+    
+    #-
+    #  name: "Copying certificates and keys from the server to the client"
+    #  ansible.builtin.copy:
+    #    src: /etc/openvpn/easy-rsa/pki/{{ item }}
+    #    dest: /etc/openvpn/client/{{ item | basename }}
+    #    mode: "0640"
+    #    remote_src: true
+    #  loop:
+    #    - ca.crt
+    #    - issued/client.crt
+    #    - private/client.key
+    #    - ta.key
+    
+    #-
+    #  name: "Enabling OpenVPN"
+    #  service:
+    #    name: openvpn
+    #    enabled: true

@@ -1,83 +1,86 @@
----
 -
-  name: "Setting up Debian Installations"
-  when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
   block:
     -
-      name: "Gathering DEB architecture"
-      ansible.builtin.command: dpkg --print-architecture
-      register: deb_architecture
-      changed_when: false
-
+      name: "Setting up Debian Installations"
+      when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+      block:
+        -
+          name: "Gathering DEB architecture"
+          ansible.builtin.command: dpkg --print-architecture
+          register: deb_architecture
+          changed_when: false
+    
+        -
+          name: "Printing DEB architecture"
+          ansible.builtin.debug:
+            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+    
+        -
+          name: "Ensuring apt cache is updated"
+          ansible.builtin.apt:
+            cache_valid_time: 3600
+            update_cache: true
+    
+        -
+          name: "Upgrading all apt packages"
+          ansible.builtin.apt:
+            upgrade: dist
+            update_cache: true
+    
+        -
+          name: "Adding Additional Dependencies {{ packages }}"
+          ansible.builtin.apt:
+            name: "{{ packages }}"
+            state: present
+    
     -
-      name: "Printing DEB architecture"
-      ansible.builtin.debug:
-        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
-
+      name: "Starting monit service"
+      systemd:
+        name: monit.service
+        state: started
+    
     -
-      name: "Ensuring apt cache is updated"
-      ansible.builtin.apt:
-        cache_valid_time: 3600
-        update_cache: true
-
+      name: "Adding nginx monitoring"
+      blockinfile:
+        path: /etc/monit/monitrc
+        marker_begin: "nginx BEGIN"
+        marker_end: "nginx END"
+        block: |
+          check process nginx with pidfile /var/run/nginx.pid
+            group www
+            group nginx
+            start program = "/etc/init.d/nginx start"
+            stop program = "/etc/init.d/nginx stop"
+            if 5 restarts with 5 cycles then timeout
+            depend nginx_bin
+            depend nginx_rc
+          check file nginx_bin with path /usr/sbin/nginx
+            group nginx
+            include /etc/monit/templates/rootbin
+          check file nginx_rc with path /etc/init.d/nginx
+            group nginx
+            include /etc/monit/templates/rootbin
+    
     -
-      name: "Upgrading all apt packages"
-      ansible.builtin.apt:
-        upgrade: dist
-        update_cache: true
-
-    -
-      name: "Adding Additional Dependencies {{ packages }}"
-      ansible.builtin.apt:
-        name: "{{ packages }}"
+      name: "Configuring Monit web interface"
+      lineinfile:
+        path: /etc/monit/monitrc
+        regexp: '^# set httpd port 2812'
+        line: 'set httpd port 2812 and'
         state: present
-
--
-  name: "Starting monit service"
-  systemd:
-    name: monit.service
-    state: started
-
--
-  name: "Adding nginx monitoring"
-  blockinfile:
-    path: /etc/monit/monitrc
-    marker_begin: "nginx BEGIN"
-    marker_end: "nginx END"
-    block: |
-      check process nginx with pidfile /var/run/nginx.pid
-        group www
-        group nginx
-        start program = "/etc/init.d/nginx start"
-        stop program = "/etc/init.d/nginx stop"
-        if 5 restarts with 5 cycles then timeout
-        depend nginx_bin
-        depend nginx_rc
-      check file nginx_bin with path /usr/sbin/nginx
-        group nginx
-        include /etc/monit/templates/rootbin
-      check file nginx_rc with path /etc/init.d/nginx
-        group nginx
-        include /etc/monit/templates/rootbin
-
--
-  name: "Configuring Monit web interface"
-  lineinfile:
-    path: /etc/monit/monitrc
-    regexp: '^# set httpd port 2812'
-    line: 'set httpd port 2812 and'
-    state: present
-
--
-  name: "Allowing admin access to Monit web interface"
-  lineinfile:
-    path: /etc/monit/monitrc
-    regexp: '^# allow admin:monit'
-    line: 'allow admin:monit'
-    state: present
-
--
-  name: "Restarting monit service"
-  systemd:
-    name: monit.service
-    state: restarted
+    
+    -
+      name: "Allowing admin access to Monit web interface"
+      lineinfile:
+        path: /etc/monit/monitrc
+        regexp: '^# allow admin:monit'
+        line: 'allow admin:monit'
+        state: present
+    
+    -
+      name: "Restarting monit service"
+      systemd:
+        name: monit.service
+        state: restarted

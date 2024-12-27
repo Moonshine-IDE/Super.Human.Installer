@@ -1,147 +1,151 @@
---- 
-- 
-  apt: 
-    name: "{{ packages }}"
-  name: "Installing Required SikuliX Dependencies -- Takes about 5 Mins"
-  vars: 
-    packages: 
-      - g++
-      - autoconf
-      - libglib2.0-dev
-      - automake
-      - libtool
-      - autoconf-archive
-      - libcanberra-gtk0
-      - libcanberra-gtk-module
-      - libopencv4.5-java
-      - pkg-config
-      - libcairo2-dev
-      - libpango1.0-dev
-      - libicu-dev
-      - zlib1g-dev
-      - libtiff5-dev
-      - libjpeg8-dev
-      - python3-unittest2
-      - python3-psutil
-      - xvfb
-      - preload
-      - leptonica-progs
-      - tesseract-ocr
-      - dos2unix
-- 
-  find: 
-    paths: /usr/lib/jni
-    patterns: libopencv_java*.so
-    recurse: true
-  name: "Copying OpenCV Binaries to Java Working Directory"
-  register: file_to_copy
-- 
-  file: 
-    dest: /usr/lib/libopencv_java.so
-    src: "{{ item.path }}"
-    state: link
-  name: "Adding OpenCV to Bin"
-  with_items: "{{ file_to_copy.files }}"
-- 
-  file: 
-    group: "{{ user }}"
-    mode: "u=rwX,g=rX,o=rX"
-    owner: "{{ user }}"
-    path: /jars
-    state: directory
-  name: "Creating Directory for Sikulix Jars"
-- 
-  file: 
-    group: "{{ user }}"
-    mode: "u=rwX,g=rX,o=rX"
-    owner: "{{ user }}"
-    path: "/home/{{ user }}/.Sikulix/Extensions/"
-    state: directory
-  name: "Creating directory for Sikulix Extensions"
-- 
-  file: 
-    group: "{{ user }}"
-    mode: "u=rwX,g=rX,o=rX"
-    owner: "{{ user }}"
-    path: "/home/{{ user }}/.Sikulix/SikulixStore/"
-    state: directory
-  name: "Creating Directory for Sikulix Extensions"
-- 
-  delay: 5
-  get_url: 
-    dest: "/home/{{ user }}/.Sikulix/Extensions/jruby-complete-{{ jruby_version }}.jar"
-    url: "https://repo1.maven.org/maven2/org/jruby/jruby-complete/{{ jruby_version }}/jruby-complete-{{ jruby_version }}.jar"
-  name: "Downloading jruby sources for {{ user }}"
-  register: jruby_source_vagrant
-  retries: 5
-  until: "jruby_source_vagrant is success"
-- 
-  delay: 5
-  get_url: 
-    dest: "/home/{{ user }}/.Sikulix/Extensions/jython-standalone-{{ jython_version }}.jar"
-    url: "https://repo1.maven.org/maven2/org/python/jython-standalone/{{ jython_version }}/jython-standalone-{{ jython_version }}.jar"
-  name: "Downloading jython sources for {{ user }}"
-  register: jython_source_vagrant
-  retries: 5
-  until: "jython_source_vagrant is success"
-- 
-  delay: 5
-  get_url: 
-    dest: /jars/sikulixapi.jar
-    url: "{{ sikulixapi_download_url }}{{ sikulixapi_jar }}"
-  name: "Downloading SikulixJarAPI sources"
-  register: SikulixJarAPI_source
-  retries: 5
-  until: "SikulixJarAPI_source is success"
-- 
-  delay: 5
-  get_url: 
-    dest: /jars/sikulix.jar
-    url: "{{ sikulix_download_url }}{{ sikulix_jar }}"
-  name: "Downloading SikulixJar sources"
-  register: SikulixJar_source
-  retries: 5
-  until: "SikulixJar_source is success"
-### Desktop Icons
+---
 -
-  become: true
-  name: "Creating Menu Icons for All Users"
-  template:
-    src: "{{item.src}}"
-    dest: "{{item.dest}}"
-    mode: '0755'
-  with_items:
-    - { src: Sikuli.desktop , dest: "/usr/share/applications/Sikulix.desktop" }
--
-  become: true
-  name: "Creating Menu Icons for All Users moving Image"
-  copy:
-    src: "{{item.src}}"
-    dest: "{{item.dest}}"
-    mode: '0777'
-  with_items:
-    - { src: ../templates/Sikuli.png , dest: "/usr/share/applications/Sikuli.png" }
--
-  become: true
-  name: "Adding Scripts to Desktop"
-  copy:
-    src: "{{item.src}}"
-    dest: "{{item.dest}}"
-    owner: "{{ user }}"
-    group: "{{ user }}"
-    remote_src: true
-  with_items:
-    - { src: /vagrant/scripts , dest: "/home/{{user}}/Desktop" }
--
-  command: "dbus-launch gio set {{item}}  \"metadata::trusted\" true"
-  name: "Ensuring that Desktop Icons are Launchable"
-  with_items:
-    - /usr/share/applications/Sikulix.desktop
-- 
-  file: 
-    group: "{{ user }}"
-    mode: "u=wrX,g=rX,o=rX"
-    owner: "{{ user }}"
-    path: /jars
-    recurse: true
-  name: "Changing perm of Jar files"
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - 
+      apt: 
+        name: "{{ packages }}"
+      name: "Installing Required SikuliX Dependencies -- Takes about 5 Mins"
+      vars: 
+        packages: 
+          - g++
+          - autoconf
+          - libglib2.0-dev
+          - automake
+          - libtool
+          - autoconf-archive
+          - libcanberra-gtk0
+          - libcanberra-gtk-module
+          - libopencv4.5-java
+          - pkg-config
+          - libcairo2-dev
+          - libpango1.0-dev
+          - libicu-dev
+          - zlib1g-dev
+          - libtiff5-dev
+          - libjpeg8-dev
+          - python3-unittest2
+          - python3-psutil
+          - xvfb
+          - preload
+          - leptonica-progs
+          - tesseract-ocr
+          - dos2unix
+    - 
+      find: 
+        paths: /usr/lib/jni
+        patterns: libopencv_java*.so
+        recurse: true
+      name: "Copying OpenCV Binaries to Java Working Directory"
+      register: file_to_copy
+    - 
+      file: 
+        dest: /usr/lib/libopencv_java.so
+        src: "{{ item.path }}"
+        state: link
+      name: "Adding OpenCV to Bin"
+      with_items: "{{ file_to_copy.files }}"
+    - 
+      file: 
+        group: "{{ user }}"
+        mode: "u=rwX,g=rX,o=rX"
+        owner: "{{ user }}"
+        path: /jars
+        state: directory
+      name: "Creating Directory for Sikulix Jars"
+    - 
+      file: 
+        group: "{{ user }}"
+        mode: "u=rwX,g=rX,o=rX"
+        owner: "{{ user }}"
+        path: "/home/{{ user }}/.Sikulix/Extensions/"
+        state: directory
+      name: "Creating directory for Sikulix Extensions"
+    - 
+      file: 
+        group: "{{ user }}"
+        mode: "u=rwX,g=rX,o=rX"
+        owner: "{{ user }}"
+        path: "/home/{{ user }}/.Sikulix/SikulixStore/"
+        state: directory
+      name: "Creating Directory for Sikulix Extensions"
+    - 
+      delay: 5
+      get_url: 
+        dest: "/home/{{ user }}/.Sikulix/Extensions/jruby-complete-{{ jruby_version }}.jar"
+        url: "https://repo1.maven.org/maven2/org/jruby/jruby-complete/{{ jruby_version }}/jruby-complete-{{ jruby_version }}.jar"
+      name: "Downloading jruby sources for {{ user }}"
+      register: jruby_source_vagrant
+      retries: 5
+      until: "jruby_source_vagrant is success"
+    - 
+      delay: 5
+      get_url: 
+        dest: "/home/{{ user }}/.Sikulix/Extensions/jython-standalone-{{ jython_version }}.jar"
+        url: "https://repo1.maven.org/maven2/org/python/jython-standalone/{{ jython_version }}/jython-standalone-{{ jython_version }}.jar"
+      name: "Downloading jython sources for {{ user }}"
+      register: jython_source_vagrant
+      retries: 5
+      until: "jython_source_vagrant is success"
+    - 
+      delay: 5
+      get_url: 
+        dest: /jars/sikulixapi.jar
+        url: "{{ sikulixapi_download_url }}{{ sikulixapi_jar }}"
+      name: "Downloading SikulixJarAPI sources"
+      register: SikulixJarAPI_source
+      retries: 5
+      until: "SikulixJarAPI_source is success"
+    - 
+      delay: 5
+      get_url: 
+        dest: /jars/sikulix.jar
+        url: "{{ sikulix_download_url }}{{ sikulix_jar }}"
+      name: "Downloading SikulixJar sources"
+      register: SikulixJar_source
+      retries: 5
+      until: "SikulixJar_source is success"
+    ### Desktop Icons
+    -
+      become: true
+      name: "Creating Menu Icons for All Users"
+      template:
+        src: "{{item.src}}"
+        dest: "{{item.dest}}"
+        mode: '0755'
+      with_items:
+        - { src: Sikuli.desktop , dest: "/usr/share/applications/Sikulix.desktop" }
+    -
+      become: true
+      name: "Creating Menu Icons for All Users moving Image"
+      copy:
+        src: "{{item.src}}"
+        dest: "{{item.dest}}"
+        mode: '0777'
+      with_items:
+        - { src: ../templates/Sikuli.png , dest: "/usr/share/applications/Sikuli.png" }
+    -
+      become: true
+      name: "Adding Scripts to Desktop"
+      copy:
+        src: "{{item.src}}"
+        dest: "{{item.dest}}"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        remote_src: true
+      with_items:
+        - { src: /vagrant/scripts , dest: "/home/{{user}}/Desktop" }
+    -
+      command: "dbus-launch gio set {{item}}  \"metadata::trusted\" true"
+      name: "Ensuring that Desktop Icons are Launchable"
+      with_items:
+        - /usr/share/applications/Sikulix.desktop
+    - 
+      file: 
+        group: "{{ user }}"
+        mode: "u=wrX,g=rX,o=rX"
+        owner: "{{ user }}"
+        path: /jars
+        recurse: true
+      name: "Changing perm of Jar files"

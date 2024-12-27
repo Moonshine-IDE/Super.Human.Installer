@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 # Default values for variables used in the haxe_install role
 
 # Version of Haxe to install

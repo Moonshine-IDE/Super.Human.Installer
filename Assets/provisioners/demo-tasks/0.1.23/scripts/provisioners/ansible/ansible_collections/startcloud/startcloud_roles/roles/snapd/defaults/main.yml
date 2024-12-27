@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 
 snapd_purge: true
 

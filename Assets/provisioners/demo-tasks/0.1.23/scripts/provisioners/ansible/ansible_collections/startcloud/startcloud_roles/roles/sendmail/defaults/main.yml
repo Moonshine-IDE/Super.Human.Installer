@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 python_simple_web_server_path: "{{ service_home_dir }}"
 startcloud_quick_start_port_forwards:
   -

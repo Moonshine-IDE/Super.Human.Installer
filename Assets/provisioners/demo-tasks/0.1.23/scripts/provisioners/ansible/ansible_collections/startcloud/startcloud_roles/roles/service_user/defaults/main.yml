@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 service_user: java_user
 service_group: java_group
 service_home_dir: /local/notesjava

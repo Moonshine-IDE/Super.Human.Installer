@@ -1,22 +1,26 @@
 ---
-- 
-  name: "Adding ZFS Unlock Service"
-  ansible.builtin.template:
-    mode: a+x
-    dest: "{{ item.dest }}"
-    src: "{{ item.src }}"
-  with_items:
-    -
-      src: zfs-unlock.service.j2
-      dest: "/etc/systemd/system/zfs-unlock.service"
-    -
-      src: zfs-unlock-user-data.sh.j2
-      dest: "/usr/local/sbin/zfs-unlock-user-data.sh"
-
-- 
-  name: "Enabling ZFS Unlock"
-  ansible.builtin.service:
-    name: zfs-unlock
-    enabled:  yes
-    state: stopped
-    daemon_reload: true
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    - 
+      name: "Adding ZFS Unlock Service"
+      ansible.builtin.template:
+        mode: a+x
+        dest: "{{ item.dest }}"
+        src: "{{ item.src }}"
+      with_items:
+        -
+          src: zfs-unlock.service.j2
+          dest: "/etc/systemd/system/zfs-unlock.service"
+        -
+          src: zfs-unlock-user-data.sh.j2
+          dest: "/usr/local/sbin/zfs-unlock-user-data.sh"
+    
+    - 
+      name: "Enabling ZFS Unlock"
+      ansible.builtin.service:
+        name: zfs-unlock
+        enabled:  yes
+        state: stopped
+        daemon_reload: true

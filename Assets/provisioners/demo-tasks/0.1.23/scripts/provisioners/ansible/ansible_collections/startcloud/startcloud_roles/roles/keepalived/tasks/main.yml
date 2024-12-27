@@ -1,51 +1,54 @@
----
 -
-  name: "Installing keepalived"
-  ansible.builtin.apt:
-    pkg:
-      - keepalived
-
--
-  name: "Executing shell command to sort network interfaces"
-  when: networks[0] is defined
-  changed_when: false
-  ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$"
-  args:
-    executable: /bin/bash
-  register: sorted_interfaces_output
--
-  name: "Parsing output to get interface names"
-  ansible.builtin.set_fact:
-    interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
-
--
-  name: "Setting first and second adapters"
-  ansible.builtin.set_fact:
-    first_adapter: "{{ interfaces[0] }}"
-    second_adapter: "{{ interfaces[1] }}"
-
--
-  name: "Gathering details of the first adapter"
-  changed_when: false
-  ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
-  args:
-    executable: /bin/bash
-  register: first_ip
-
--
-  name: "Configuring keepalived"
-  become: true
-  ansible.builtin.template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    mode: "644"
-  loop:
-    - { src: 'keepalived.conf.j2', dest: '/etc/keepalived/keepalived.conf'}
-
--
-  name: "Enabling and Starting service keepalived"
-  ansible.builtin.service:
-    enabled: true
-    name: keepalived
-    state: restarted
-  tags: keepalived
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Installing keepalived"
+      ansible.builtin.apt:
+        pkg:
+          - keepalived
+    
+    -
+      name: "Executing shell command to sort network interfaces"
+      when: networks[0] is defined
+      changed_when: false
+      ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$"
+      args:
+        executable: /bin/bash
+      register: sorted_interfaces_output
+    -
+      name: "Parsing output to get interface names"
+      ansible.builtin.set_fact:
+        interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
+    
+    -
+      name: "Setting first and second adapters"
+      ansible.builtin.set_fact:
+        first_adapter: "{{ interfaces[0] }}"
+        second_adapter: "{{ interfaces[1] }}"
+    
+    -
+      name: "Gathering details of the first adapter"
+      changed_when: false
+      ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
+      args:
+        executable: /bin/bash
+      register: first_ip
+    
+    -
+      name: "Configuring keepalived"
+      become: true
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "644"
+      loop:
+        - { src: 'keepalived.conf.j2', dest: '/etc/keepalived/keepalived.conf'}
+    
+    -
+      name: "Enabling and Starting service keepalived"
+      ansible.builtin.service:
+        enabled: true
+        name: keepalived
+        state: restarted
+      tags: keepalived

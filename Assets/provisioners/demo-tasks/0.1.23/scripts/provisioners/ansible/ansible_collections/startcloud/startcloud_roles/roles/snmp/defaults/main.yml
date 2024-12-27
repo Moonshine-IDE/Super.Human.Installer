@@ -1,4 +1,5 @@
 ---
+run_tasks: true
 snmp_access_adress: "0.0.0.0"
 snmp_additional_packages: []
 snmp_agentadress_adress:

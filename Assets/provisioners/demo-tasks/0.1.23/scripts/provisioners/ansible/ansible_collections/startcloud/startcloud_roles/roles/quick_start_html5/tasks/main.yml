@@ -1,143 +1,147 @@
 ---
-## This Ansible playbook demonstrates the setup of a Python Simple HTTP server within a virtual environment,
-## including directory creation, package installation, service configuration, and support bundle generation.
-# It's designed to be easily understood and replicated by team members.
-
 -
-  name: "Creating Installation Directories" # Creates directories for images and ids under the Python Simple Web Server path.
-  ansible.builtin.file:
-    path: "{{ item }}" # Specifies the path for each directory.
-    state: directory # Ensures the directory exists.
-    mode: '0755' # Sets the directory permissions.
-  with_items: # Directories to be created, interpolated with variables from default/main.yml, and overridden by vars/main.yml, which is overriden by the variables in the playbook.
-    - "{{ python_simple_web_server_path }}/images"
-    - "{{ python_simple_web_server_path }}/ids"
-
--
-  name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
-  ansible.builtin.pip:
-    name: "uploadserver" # Specifies the pip package name.
-    extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
-
--
-  name: "Grabbing External IP address"
-  ansible.builtin.shell: |
-    set -o pipefail
-    ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
-  args:
-    executable: /bin/bash
-  register: netoutput
-  changed_when: false
-
--
-  name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
-  become: true # Executes the task with elevated privileges.
-  ansible.builtin.template:
-    owner: "{{ item.owner }}" # Sets the owner of the file.
-    src: "{{ item.src }}" # Specifies the source file.
-    dest: "{{ item.dest }}" # Specifies the destination file.
-    mode: '0644' # Sets the file permissions.
-  loop:
-    - { src: 'pythonserve.service.j2', dest: '/etc/systemd/system/pythonserve.service', owner: '{{ service_user }}' }
-    - { src: 'environment.j2', dest: '/etc/pythonserv', owner: '{{ service_user }}' }
-    - { src: 'index.html.j2', dest: '{{ python_simple_web_server_path }}/welcome.html', owner: '{{ service_user }}' }
-    - { src: 'styles.css', dest: '{{ python_simple_web_server_path }}/styles.css', owner: '{{ service_user }}' }
-    - { src: 'cockpit.conf.j2', dest: '/etc/cockpit/cockpit.conf', owner: '{{ service_user }}' }
-
--
-  name: "Copying Root CA to {{ service_home_dir }}"
-  ansible.builtin.copy:
-    mode: '0644'
-    src: "{{ item }}"
-    dest: "{{ service_home_dir }}"
-    remote_src: true
-    owner: "{{ service_user }}"
-  with_items:
-    - "{{ cert_dir }}/ca/ca-certificate.pem"
-
--
-  name: "Starting Python Simple HTTP server" # Starts the Python Simple HTTP server service.
-  ansible.builtin.service:
-    name: pythonserve # Specifies the service name.
-    state: started # Ensures the service is running.
-    enabled: true # Enables the service to start on boot.
-
--
-  name: "Ansible Playbook Into Support Bundle" # Archives the Ansible roles directory into a ZIP file for support purposes.
-  community.general.archive:
-    mode: '0777'  # Sets the file permissions for the archive.
-    path: "/vagrant/ansible" # Specifies the directory to archive.
-    dest: "/vagrant/support-bundle/ansible-roles.zip" # Specifies the destination of the archive.
-    format: zip # Uses ZIP format for the archive.
-
--
-  name: "Recording Installers" # Records the contents of the /vagrant/installers directory.
-  ansible.builtin.command: tree -J /vagrant/installers # Executes the tree command to list directory contents.
-  register: installers # Stores the output for later use.
-  changed_when: false # Indicates that this task does not change the system state.
-
--
-  name: "Writing included installers to /vagrant/support-bundle/installers.json" # Writes the recorded installers to a JSON file.
-  ansible.builtin.copy:
-    content: "{{ installers.stdout_lines }}" # Uses the stored output as the content.
-    dest: "/vagrant/support-bundle/installers.json" # Specifies the destination file.
-    force: false # Does not overwrite existing files.
-    mode: 'a+x'  # Appends to the file and sets execute permission.
-
--
-  name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log" # Copies the Domino One Touch autoconfigure log to the support bundle.
-  become: true # Executes the task with elevated privileges.
-  when: domino_home_dir is defined # Only runs if the domino_home_dir variable is defined.
-  ansible.builtin.copy:
-    src: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log" # Specifies the source file.
-    dest: "/vagrant/support-bundle/autoconfigure.log" # Specifies the destination file.
-    force: false # Does not overwrite existing files.
-    mode: 'a+x' # Appends to the file and sets execute permission.
-    remote_src: true # Indicates the source file is on the remote system.
-
--
-  name: "Recording Completed Roles"  # Records the contents of the /vagrant/completed directory.
-  ansible.builtin.command: tree -J /vagrant/completed # Executes the tree command to list directory contents.
-  register: completed # Stores the output for later use.
-  changed_when: false # Indicates that this task does not change the system state.
-
--
-  name: "Writing current completed roles to /vagrant/support-bundle/completed.json" # Writes the recorded completed roles to a JSON file.
-  ansible.builtin.copy:
-    content: "{{ completed.stdout_lines }}" # Uses the stored output as the content.
-    dest: "/vagrant/support-bundle/completed.json"  # Specifies the destination file.
-    force: false # Does not overwrite existing files.
-    mode: 'a+x' # Appends to the file and sets execute permission.
-
--
-  name: "Checking Python Simple HTTP server is listening on port {{ startcloud_quick_start_port_forwards[0].guest }}" # Checks if the Python Simple HTTP server is listening on a specific port.
-  ansible.builtin.wait_for:
-    port: "{{ startcloud_quick_start_port_forwards[0].guest }}" # Specifies the port to check.
-    delay: 5 # Waits for 5 seconds before checking.
-    timeout: 60 # Sets a 60-second timeout for the check.
-    msg: "Timeout waiting for {{ startcloud_quick_start_port_forwards[0].guest }} to respond" # Custom message displayed if the check times out.
-  register: port_check # Stores the result for later use.
-  ignore_errors: true # Ignores errors if the port check fails.
-
--
-  name: "Zip Support Bundle" # Archives the support bundle directory into a ZIP file.
-  community.general.archive:
-    mode: '0777' # Sets the file permissions for the archive.
-    path: "/vagrant/support-bundle" # Specifies the directory to archive.
-    dest: "{{ python_simple_web_server_path }}/support-bundle.zip" # Specifies the destination of the archive.
-    format: zip # Uses ZIP format for the archive.
-
--
-  name: Zip Support Bundle
-  community.general.archive:
-    mode: '0777'
-    path: "/vagrant/support-bundle"
-    dest: "/vagrant/support-bundle.zip"
-    format: zip
-
--
-  name: "Restarting Cockpit" # Restarts the Cockpit service.
-  ansible.builtin.systemd:
-    state: restarted # Restarts the service.
-    daemon_reload: true # Reloads the systemd manager configuration.
-    name: cockpit # Specifies the service name.
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    ## This Ansible playbook demonstrates the setup of a Python Simple HTTP server within a virtual environment,
+    ## including directory creation, package installation, service configuration, and support bundle generation.
+    # It's designed to be easily understood and replicated by team members.
+    
+    -
+      name: "Creating Installation Directories" # Creates directories for images and ids under the Python Simple Web Server path.
+      ansible.builtin.file:
+        path: "{{ item }}" # Specifies the path for each directory.
+        state: directory # Ensures the directory exists.
+        mode: '0755' # Sets the directory permissions.
+      with_items: # Directories to be created, interpolated with variables from default/main.yml, and overridden by vars/main.yml, which is overriden by the variables in the playbook.
+        - "{{ python_simple_web_server_path }}/images"
+        - "{{ python_simple_web_server_path }}/ids"
+    
+    -
+      name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
+      ansible.builtin.pip:
+        name: "uploadserver" # Specifies the pip package name.
+        extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
+    
+    -
+      name: "Grabbing External IP address"
+      ansible.builtin.shell: |
+        set -o pipefail
+        ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
+      args:
+        executable: /bin/bash
+      register: netoutput
+      changed_when: false
+    
+    -
+      name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
+      become: true # Executes the task with elevated privileges.
+      ansible.builtin.template:
+        owner: "{{ item.owner }}" # Sets the owner of the file.
+        src: "{{ item.src }}" # Specifies the source file.
+        dest: "{{ item.dest }}" # Specifies the destination file.
+        mode: '0644' # Sets the file permissions.
+      loop:
+        - { src: 'pythonserve.service.j2', dest: '/etc/systemd/system/pythonserve.service', owner: '{{ service_user }}' }
+        - { src: 'environment.j2', dest: '/etc/pythonserv', owner: '{{ service_user }}' }
+        - { src: 'index.html.j2', dest: '{{ python_simple_web_server_path }}/welcome.html', owner: '{{ service_user }}' }
+        - { src: 'styles.css', dest: '{{ python_simple_web_server_path }}/styles.css', owner: '{{ service_user }}' }
+        - { src: 'cockpit.conf.j2', dest: '/etc/cockpit/cockpit.conf', owner: '{{ service_user }}' }
+    
+    -
+      name: "Copying Root CA to {{ service_home_dir }}"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "{{ item }}"
+        dest: "{{ service_home_dir }}"
+        remote_src: true
+        owner: "{{ service_user }}"
+      with_items:
+        - "{{ cert_dir }}/ca/ca-certificate.pem"
+    
+    -
+      name: "Starting Python Simple HTTP server" # Starts the Python Simple HTTP server service.
+      ansible.builtin.service:
+        name: pythonserve # Specifies the service name.
+        state: started # Ensures the service is running.
+        enabled: true # Enables the service to start on boot.
+    
+    -
+      name: "Ansible Playbook Into Support Bundle" # Archives the Ansible roles directory into a ZIP file for support purposes.
+      community.general.archive:
+        mode: '0777'  # Sets the file permissions for the archive.
+        path: "/vagrant/ansible" # Specifies the directory to archive.
+        dest: "/vagrant/support-bundle/ansible-roles.zip" # Specifies the destination of the archive.
+        format: zip # Uses ZIP format for the archive.
+    
+    -
+      name: "Recording Installers" # Records the contents of the /vagrant/installers directory.
+      ansible.builtin.command: tree -J /vagrant/installers # Executes the tree command to list directory contents.
+      register: installers # Stores the output for later use.
+      changed_when: false # Indicates that this task does not change the system state.
+    
+    -
+      name: "Writing included installers to /vagrant/support-bundle/installers.json" # Writes the recorded installers to a JSON file.
+      ansible.builtin.copy:
+        content: "{{ installers.stdout_lines }}" # Uses the stored output as the content.
+        dest: "/vagrant/support-bundle/installers.json" # Specifies the destination file.
+        force: false # Does not overwrite existing files.
+        mode: 'a+x'  # Appends to the file and sets execute permission.
+    
+    -
+      name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log" # Copies the Domino One Touch autoconfigure log to the support bundle.
+      become: true # Executes the task with elevated privileges.
+      when: domino_home_dir is defined # Only runs if the domino_home_dir variable is defined.
+      ansible.builtin.copy:
+        src: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log" # Specifies the source file.
+        dest: "/vagrant/support-bundle/autoconfigure.log" # Specifies the destination file.
+        force: false # Does not overwrite existing files.
+        mode: 'a+x' # Appends to the file and sets execute permission.
+        remote_src: true # Indicates the source file is on the remote system.
+    
+    -
+      name: "Recording Completed Roles"  # Records the contents of the /vagrant/completed directory.
+      ansible.builtin.command: tree -J /vagrant/completed # Executes the tree command to list directory contents.
+      register: completed # Stores the output for later use.
+      changed_when: false # Indicates that this task does not change the system state.
+    
+    -
+      name: "Writing current completed roles to /vagrant/support-bundle/completed.json" # Writes the recorded completed roles to a JSON file.
+      ansible.builtin.copy:
+        content: "{{ completed.stdout_lines }}" # Uses the stored output as the content.
+        dest: "/vagrant/support-bundle/completed.json"  # Specifies the destination file.
+        force: false # Does not overwrite existing files.
+        mode: 'a+x' # Appends to the file and sets execute permission.
+    
+    -
+      name: "Checking Python Simple HTTP server is listening on port {{ startcloud_quick_start_port_forwards[0].guest }}" # Checks if the Python Simple HTTP server is listening on a specific port.
+      ansible.builtin.wait_for:
+        port: "{{ startcloud_quick_start_port_forwards[0].guest }}" # Specifies the port to check.
+        delay: 5 # Waits for 5 seconds before checking.
+        timeout: 60 # Sets a 60-second timeout for the check.
+        msg: "Timeout waiting for {{ startcloud_quick_start_port_forwards[0].guest }} to respond" # Custom message displayed if the check times out.
+      register: port_check # Stores the result for later use.
+      ignore_errors: true # Ignores errors if the port check fails.
+    
+    -
+      name: "Zip Support Bundle" # Archives the support bundle directory into a ZIP file.
+      community.general.archive:
+        mode: '0777' # Sets the file permissions for the archive.
+        path: "/vagrant/support-bundle" # Specifies the directory to archive.
+        dest: "{{ python_simple_web_server_path }}/support-bundle.zip" # Specifies the destination of the archive.
+        format: zip # Uses ZIP format for the archive.
+    
+    -
+      name: Zip Support Bundle
+      community.general.archive:
+        mode: '0777'
+        path: "/vagrant/support-bundle"
+        dest: "/vagrant/support-bundle.zip"
+        format: zip
+    
+    -
+      name: "Restarting Cockpit" # Restarts the Cockpit service.
+      ansible.builtin.systemd:
+        state: restarted # Restarts the service.
+        daemon_reload: true # Reloads the systemd manager configuration.
+        name: cockpit # Specifies the service name.
