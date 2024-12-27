@@ -538,6 +538,7 @@ class HostsFileGenerator {
         var versionGreaterThan22:Bool = provisioner.data.version > "0.1.22";
         
         var defaultProvisionerFieldValue:String = versionGreaterThan22 ? null : "";
+        var defaultRoleFieldValue:Dynamic = versionGreaterThan22 ? false : "";
 
         var replace = {
 
@@ -547,9 +548,19 @@ class HostsFileGenerator {
          	SERVER_HOSTNAME: provisioner.server.url.hostname,
          	SERVER_DOMAIN: provisioner.server.url.domainName,
          	SERVER_ID: provisioner.server.id,
+            SHOW_CONSOLE: true,
+            POST_PROVISION: false,
+            BOX_URL: 'https://boxvault.startcloud.com',
+            SYNC_METHOD: 'rsync',
+            SYNCBACK_ID_FILES: true,
+            DEBUG_ALL_ANSIBLE_TASKS: true,
          	RESOURCES_CPU: provisioner.server.numCPUs.value,
          	RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
          	
+            USE_HTTP_PROXY: false,
+            HTTP_PROXY_HOST: '255.255.255.255',
+            HTTP_PROXY_PORT: 3128,
+
          	//vagrant_user
          	SERVER_DEFAULT_USER: "startcloud",
          	SERVER_DEFAULT_USER_PASS: "STARTcloud24@!",
@@ -583,9 +594,9 @@ class HostsFileGenerator {
             DOMINO_INSTALLER_MINOR_VERSION: defaultProvisionerFieldValue,
             DOMINO_INSTALLER_PATCH_VERSION: defaultProvisionerFieldValue,
             
-            DOMINO_MAJOR_VERSION: "",
-            DOMINO_MINOR_VERSION: "",
-            DOMINO_PATCH_VERSION: "",
+            DOMINO_MAJOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_MINOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_PATCH_VERSION: defaultProvisionerFieldValue,
             
             //Domino fixpack Variables
             DOMINO_FP_HASH: defaultProvisionerFieldValue,
@@ -629,21 +640,22 @@ class HostsFileGenerator {
             DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
             
             //roles
-            ROLE_LEAP: "",
-            ROLE_NOMADWEB: "",
-            ROLE_TRAVELER: "",
-            ROLE_TRAVELER_HTMO: "",
-            ROLE_VERSE: "",
-            ROLE_APPDEVPACK: "",
-            ROLE_RESTAPI: "",
-            ROLE_VOLTMX: "",
-            ROLE_VOLTMX_DOCKER: "",
-            ROLE_STARTCLOUD_QUICK_START: "",
-            ROLE_STARTCLOUD_HAPROXY: "",
-            ROLE_STARTCLOUD_VAGRANT_README: "",
-            ROLE_DOMINO_RESET: "",
-            ROLE_MARIADB: "",
-            ROLE_DOCKER: "",
+            ROLE_LEAP: defaultRoleFieldValue,
+            ROLE_NOMADWEB: defaultRoleFieldValue,
+            ROLE_TRAVELER: defaultRoleFieldValue,
+            ROLE_TRAVELER_HTMO: defaultRoleFieldValue,
+            ROLE_VERSE: defaultRoleFieldValue,
+            ROLE_APPDEVPACK: defaultRoleFieldValue,
+            ROLE_RESTAPI: defaultRoleFieldValue,
+            ROLE_DOMINO_RESTAPI: defaultRoleFieldValue,
+            ROLE_VOLTMX: defaultRoleFieldValue,
+            ROLE_VOLTMX_DOCKER: defaultRoleFieldValue,
+            ROLE_STARTCLOUD_QUICK_START: defaultRoleFieldValue,
+            ROLE_STARTCLOUD_HAPROXY: defaultRoleFieldValue,
+            ROLE_STARTCLOUD_VAGRANT_README: defaultRoleFieldValue,
+            ROLE_DOMINO_RESET: defaultRoleFieldValue,
+            ROLE_MARIADB: defaultRoleFieldValue,
+            ROLE_DOCKER: defaultRoleFieldValue,
             
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: provisioner.server.setupWait.value,
@@ -782,6 +794,7 @@ class HostsFileGenerator {
                 replace.DOMINO_REST_API_INSTALLER = installerName;
                 replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_RESTAPI = replaceWith;
+                replace.ROLE_DOMINO_RESTAPI = replaceWith;
             }
 			
             //"- name: startcloud_quick_start";

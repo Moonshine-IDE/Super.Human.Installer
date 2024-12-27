@@ -2,10 +2,10 @@ package superhuman.server.provisioners.roles;
 
 class RolesUtil  
 {
-	public static function getDominoRole(provisionerVersion:String, role:String, enabled:Bool = true):String
+	public static function getDominoRole(provisionerVersion:String, role:String, enabled:Bool = true):Dynamic
 	{
 		var rolePrefix:String = enabled ? "- name: " : "#- name: ";
-		var dominoRole:String = "";
+		var dominoRole:Dynamic = "";
 		
 		if (provisionerVersion < "0.1.22")
 		{
@@ -17,26 +17,26 @@ class RolesUtil
 		}
 		else 
 		{
-			dominoRole = rolePrefix + "startcloud.hcl_roles.domino_" + role;
+			dominoRole = enabled;//rolePrefix + "startcloud.hcl_roles.domino_" + role;
 		}
 		
 		return dominoRole;
 	}
 	
-	public static function getOtherRole(provisionerVersion:String, role:String, enabled:Bool = true):String
+	public static function getOtherRole(provisionerVersion:String, role:String, enabled:Bool = true):Dynamic
 	{
 		var rolePrefix:String = enabled ? "- name: " : "#- name: ";
-		var dominoRole:String = "";
+		var otherRole:Dynamic = "";
 		
 		if (provisionerVersion <= "0.1.22")
 		{
-			dominoRole = rolePrefix + "startcloud_" + role;
+			otherRole = rolePrefix + "startcloud_" + role;
 		}
 		else 
 		{
-			dominoRole = rolePrefix + "startcloud.startcloud_roles." + role;
+			otherRole = enabled;//rolePrefix + "startcloud.startcloud_roles." + role;
 		}
 		
-		return dominoRole;
+		return otherRole;
 	}
 }
