@@ -104,12 +104,12 @@ jobs:
           cd /Users/runner/hostedtoolcache/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
-          haxelib install lime 8.2.1
+          haxelib install lime 8.2.2
           haxelib install format
           haxelib install hxp
           haxelib install yaml
           haxelib git lime-samples https://github.com/openfl/lime-samples
-          haxelib install openfl 9.4.0
+          haxelib install openfl 9.4.1
           haxelib run openfl setup
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
