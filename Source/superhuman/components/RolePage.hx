@@ -434,7 +434,7 @@ class RolePickerItem extends LayoutGroup {
                 {	
                 		//Only latest added hotfix will be taken into account 
     		            _roleImpl.role.files.installerHotFixVersion = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, v);
-                		
+                		_roleImpl.role.files.installerHotFixHash = v;
                 		_roleImpl.role.files.hotfixes.push( path );
         			}
     
@@ -490,6 +490,7 @@ class RolePickerItem extends LayoutGroup {
                 if ( !_roleImpl.role.files.fixpacks.contains( path ) ) 
                 {
                 		_roleImpl.role.files.installerFixpackVersion = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, v);
+                        _roleImpl.role.files.installerFixpackHash = v;
                 		_roleImpl.role.files.fixpacks.push( path );
             		}
                 updateData();

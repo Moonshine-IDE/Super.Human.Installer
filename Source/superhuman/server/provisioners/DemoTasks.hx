@@ -729,19 +729,20 @@ class HostsFileGenerator {
 		  	
             if ( r.value == "leap" ) {
 
-            		replace.LEAP_INSTALLED_CHECK = r.enabled;
-            		//"- name: hcl_domino_leap" : "- name: domino_leap";
-            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+                //"- name: hcl_domino_leap" : "- name: domino_leap";
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
  
+                replace.LEAP_HASH = installerHash;
+                replace.LEAP_INSTALLED_CHECK = r.enabled;
                 replace.LEAP_INSTALLER = installerName;
                 replace.LEAP_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
                 replace.ROLE_LEAP = replaceWith;
              }
 
             if ( r.value == "nomadweb" ) {
-
-            		//"- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
-            	 	replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+                
+                //"- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
 				
                 replace.NOMADWEB_HASH = installerHash;
                 replace.NOMADWEB_INSTALLER = installerName;
@@ -751,8 +752,8 @@ class HostsFileGenerator {
 
             if ( r.value == "traveler" ) {
 
-            		//"- name: hcl_domino_traveler" : "- name: domino_traveler"
-            	    replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+                //"- name: hcl_domino_traveler" : "- name: domino_traveler"
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
             	    
                 replace.TRAVELER_INSTALLER = installerName;
                 replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
@@ -761,15 +762,15 @@ class HostsFileGenerator {
 
             if ( r.value == "traveler" ) {
 
-            		//"- name: hcl_domino_traveler_htmo" : "- name: domino_traveler_htmo"
-            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "traveler_htmo", r.enabled);
+                //"- name: hcl_domino_traveler_htmo" : "- name: domino_traveler_htmo"
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "traveler_htmo", r.enabled);
                 replace.ROLE_TRAVELER_HTMO = replaceWith;
             }
 
             if ( r.value == "verse" ) {
 
-            		//"- name: hcl_domino_verse" : "- name: domino_verse"
-            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+                //"- name: hcl_domino_verse" : "- name: domino_verse"
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
        
                 replace.VERSE_INSTALLER = installerName;
                 replace.VERSE_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
@@ -778,8 +779,8 @@ class HostsFileGenerator {
 
             if ( r.value == "appdevpack" ) {
 
-            		//"- name: hcl_domino_appdevpack" : "- name: domino_appdevpack"
-            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
+                //"- name: hcl_domino_appdevpack" : "- name: domino_appdevpack"
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
             		
                 replace.APPDEVPACK_INSTALLER = installerName;
                 replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
@@ -788,8 +789,8 @@ class HostsFileGenerator {
 
             if ( r.value == "domino-rest-api" ) {
 
-            		//"- name: hcl_domino_rest_api" : "- name: domino_rest_api"
-            		replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "rest_api", r.enabled);
+                //"- name: hcl_domino_rest_api" : "- name: domino_rest_api"
+                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "rest_api", r.enabled);
 
                 replace.DOMINO_REST_API_INSTALLER = installerName;
                 replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
