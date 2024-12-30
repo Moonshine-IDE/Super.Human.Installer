@@ -5,6 +5,7 @@
 hosts:
   -
     settings:
+      debug_build: false
       # Identifiers
       hostname: ::SERVER_HOSTNAME::
       domain: ::SERVER_DOMAIN::
@@ -28,19 +29,19 @@ hosts:
       box_version: 0.0.9
 
       # Provider Specific Settings
-      provider-type: virtualbox
+      provider_type: virtualbox
       os_type: 'Debian_64'
       firmware_type: UEFI
 
       # Setup Variables
-      setup_wait: 300
+      setup_wait: 420
 
       # Vagrant Configurations
       vagrant_user: ::SERVER_DEFAULT_USER:: #  startcloud
       vagrant_user_pass: ::SERVER_DEFAULT_USER_PASS:: # 'STARTcloud24@!' 
       vagrant_user_private_key_path: ./id_rsa
-      vagrant_insert_key: true
-      ssh_forward_agent: true
+      vagrant_ssh_insert_key: true
+      vagrant_ssh_forward_agent: true
 
     plugins:
       install:
@@ -65,6 +66,7 @@ hosts:
         route: default
         provisional: false
         bridge: ::NETWORK_BRIDGE::
+        nic_type: virtio
         mac: auto
         dns:
           - nameserver: ::NETWORK_DNS_NAMESERVER_1::
@@ -178,6 +180,12 @@ hosts:
         syncback: ::SYNCBACK_ID_FILES::
 
     vars:
+      # Secrets Override: If you don't want to use a secrets file you can override secrets here
+      #secrets:
+      #  domino_installer_base_url: ::DOWNLOAD_BASE_URL::
+      #  domino_installer_url_user: ::DOWNLOAD_AUTH_USER::
+      #  domino_installer_url_pass: ::DOWNLOAD_AUTH_PASS::
+      
       debug_all: ::DEBUG_ALL_ANSIBLE_TASKS::
       selfsigned_enabled: ::CERT_SELFSIGNED::
       haproxy_ssl_redirect: true
