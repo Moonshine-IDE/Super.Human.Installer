@@ -551,7 +551,7 @@ class HostsFileGenerator {
             SHOW_CONSOLE: true,
             POST_PROVISION: false,
             BOX_URL: 'https://boxvault.startcloud.com',
-            SYNC_METHOD: 'scp',
+            SYNC_METHOD: 'rsync',
             SYNCBACK_ID_FILES: true,
             DEBUG_ALL_ANSIBLE_TASKS: true,
          	RESOURCES_CPU: provisioner.server.numCPUs.value,
