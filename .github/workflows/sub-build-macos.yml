@@ -117,7 +117,7 @@ jobs:
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
 
       - name: List dependencies
-        run: haxelibe list
+        run: haxelib list
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
