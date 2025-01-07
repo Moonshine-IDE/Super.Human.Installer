@@ -76,7 +76,7 @@ jobs:
         uses: Moonshine-IDE/setup-haxe-action@master
         with:
           haxe-version: ${{ env.haxe_version }}
-  
+
       - name: Show haxe info
         run: |
           echo "Haxe version:"
@@ -115,6 +115,9 @@ jobs:
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
+
+      - name: List dependencies
+        run: haxelibe list
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}

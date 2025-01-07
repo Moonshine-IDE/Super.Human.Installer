@@ -41,7 +41,7 @@ env:
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
   haxe_version: 4.3.6
-  bin_path: Export/${{ inputs.env }}/windows/bin/
+  bin_path: X:/Export/${{ inputs.env }}/windows/bin/
 
 jobs:
   build:
@@ -64,6 +64,14 @@ jobs:
 
       - name: Checkout LFS objects
         run: git lfs checkout
+
+      - name: Map disk
+        shell: cmd
+        run: |
+          echo "Mapping drive X: to current directory..."
+          subst X: "%CD%"
+          echo "Directory mapped to X:"
+          dir X:
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
@@ -116,13 +124,8 @@ jobs:
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
 
-      - name: Map disk
-        shell: cmd
-        run: |
-          echo "Mapping drive X: to current directory..."
-          subst X: "%CD%"
-          echo "Directory mapped to X:"
-          dir X:
+      - name: List dependencies
+        run: haxelibe list
 
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
@@ -146,6 +149,9 @@ jobs:
           name: ${{ env.app_name }}-windows-bin
           path: ${{ env.bin_path }}
 
+      - name: Print NSIS version
+        run: makensis -version
+
       - name: Create NSIS installer
         run: >
           makensis 
@@ -157,7 +163,7 @@ jobs:
           /DPRODUCT_EXE=${{ env.app_name }}.exe
           /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
           /DROOT_KEY=HKCU
-          Templates/installer/nsis-installer.nsi
+          X:/Templates/installer/nsis-installer.nsi
 
       - name: Sign installer
         uses: Moonshine-IDE/digicert-sign-action@v1.0
