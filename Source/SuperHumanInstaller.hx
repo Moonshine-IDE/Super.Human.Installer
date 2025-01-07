@@ -31,7 +31,7 @@
 package;
 
 import superhuman.components.applications.SetupApplicationsPage;
-//import superhuman.components.additionals.AdditionalServerPage;
+import superhuman.components.additionals.AdditionalServerPage;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.io.Bytes;
@@ -155,7 +155,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _vagrantFile:String;
 	var _setupBrowserPage:SetupBrowserPage;
 	var _setupApplicationsPage:SetupApplicationsPage;
-	//var _additionalServerPage:AdditionalServerPage;
+	var _additionalServerPage:AdditionalServerPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -382,8 +382,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		_advancedConfigPage.addEventListener( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION, _saveAdvancedServerConfiguration );
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
-		//_additionalServerPage = new AdditionalServerPage();
-		//this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
+		_additionalServerPage = new AdditionalServerPage();
+		this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 
 		_settingsPage = new SettingsPage();
 		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
@@ -405,12 +405,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
 		
-		_setupApplicationsPage = new SetupApplicationsPage();
+		//_setupApplicationsPage = new SetupApplicationsPage();
 		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
 		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
 		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
-		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
-		this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
+		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
+		//this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
 		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
