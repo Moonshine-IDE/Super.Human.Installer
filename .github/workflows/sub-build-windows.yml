@@ -76,7 +76,7 @@ jobs:
         uses: Moonshine-IDE/setup-haxe-action@master
         with:
           haxe-version: ${{ env.haxe_version }}
-  
+
       - name: Show haxe info
         run: |
           echo "Haxe version:"
@@ -116,15 +116,26 @@ jobs:
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
 
+      - name: Map disk
+        shell: cmd
+        run: |
+          echo "Mapping drive X: to current directory..."
+          subst X: "%CD%"
+          echo "Directory mapped to X:"
+          dir X:
+
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        run: >
-          haxelib run openfl build project.xml windows 
-          ${{ env.haxe_flag }} 
-          -Dlogverbose 
-          -Dlogcolor 
-          -Dgitsha=${{ github.sha }} 
-          -Dgitbranch=${{ github.ref_name }}
+        shell: cmd
+        run: |
+          echo "Switching to drive X and building..."
+          X:
+          haxelib run openfl build project.xml windows ^
+            %haxe_flag% ^
+            -Dlogverbose ^
+            -Dlogcolor ^
+            -Dgitsha=${{ github.sha }} ^
+            -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
         run: ls -r ${{ env.bin_path }}
