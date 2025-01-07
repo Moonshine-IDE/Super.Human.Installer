@@ -580,7 +580,7 @@ class HostsFileGenerator {
             //vars
             SERVER_ORGANIZATION: provisioner.server.organization.value,
             USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
-            DOMINO_ADMIN_PASSWORD: defaultProvisionerFieldValue,
+            DOMINO_ADMIN_PASSWORD: "password",
             DOMINO_SERVER_CLUSTERMATES: 0,
             CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
 			
