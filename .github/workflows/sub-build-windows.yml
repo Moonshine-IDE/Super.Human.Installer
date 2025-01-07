@@ -166,6 +166,7 @@ jobs:
           X:/Templates/installer/nsis-installer.nsi
 
       - name: Sign installer
+        if: ${{ inputs.env == 'Production' }}
         uses: Moonshine-IDE/digicert-sign-action@v1.0
         with:
           bin-path: Templates/installer/${{ env.app_name }}-Setup.exe
