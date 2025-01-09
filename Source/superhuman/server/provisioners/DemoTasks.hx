@@ -540,6 +540,11 @@ class HostsFileGenerator {
         var defaultProvisionerFieldValue:String = versionGreaterThan22 ? null : "";
         var defaultRoleFieldValue:Dynamic = versionGreaterThan22 ? false : "";
 
+        var syncMethod = "rsync";
+        #if mac
+            syncMethod = "scp";
+        #end 
+
         var replace = {
 
             USER_EMAIL: provisioner.server.userEmail.value,
@@ -551,7 +556,7 @@ class HostsFileGenerator {
             SHOW_CONSOLE: true,
             POST_PROVISION: false,
             BOX_URL: 'https://boxvault.startcloud.com',
-            SYNC_METHOD: 'rsync',
+            SYNC_METHOD: syncMethod,
             SYNCBACK_ID_FILES: true,
             DEBUG_ALL_ANSIBLE_TASKS: true,
          	RESOURCES_CPU: provisioner.server.numCPUs.value,
