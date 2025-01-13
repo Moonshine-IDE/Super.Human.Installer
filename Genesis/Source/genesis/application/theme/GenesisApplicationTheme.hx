@@ -646,7 +646,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     }
 
     function _setLabelJustifyStyles(label:Label) {
-        var textLayout = _themeTypography.Default;
+        var textLayout = new TextFormat();
         textLayout.align = TextFormatAlign.JUSTIFY;
         label.textFormat = textLayout;
     }
