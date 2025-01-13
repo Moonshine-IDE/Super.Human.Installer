@@ -540,10 +540,7 @@ class HostsFileGenerator {
         var defaultProvisionerFieldValue:String = versionGreaterThan22 ? null : "";
         var defaultRoleFieldValue:Dynamic = versionGreaterThan22 ? false : "";
 
-        var syncMethod = "rsync";
-        #if mac
-            syncMethod = "scp";
-        #end 
+        var syncMethod = provisioner.server.syncMethod;
 
         var replace = {
 

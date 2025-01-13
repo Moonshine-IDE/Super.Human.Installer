@@ -119,6 +119,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final LABEL_SMALL_CENTERED:String = "label-small-centered";
     public static final LABEL_TITLE:String = "label-title";
     public static final LABEL_ERROR:String = "label-error";
+    public static final LABEL_JUSTIFY:String = "label-fustify";
     public static final LAYOUT_GROUP_CREATE_ACCOUNT:String = "layout-group-create-account";
     public static final LAYOUT_GROUP_FOOTER:String = "layout-group-footer";
     public static final LAYOUT_GROUP_HEADER:String = "layout-group-header";
@@ -323,6 +324,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Label, LABEL_SMALL_CENTERED, _setLabelSmallCenteredStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_TITLE, _setLabelTitleStyles );
         this.styleProvider.setStyleFunction( Label, LABEL_ERROR, _setLabelErrorStyles );
+        this.styleProvider.setStyleFunction( Label, LABEL_JUSTIFY, _setLabelJustifyStyles );
         this.styleProvider.setStyleFunction( Label, null, _setLabelStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, APPLICATION, _setApplicationLayoutGroupStyles );
         this.styleProvider.setStyleFunction( LayoutGroup, LAYOUT_GROUP_CREATE_ACCOUNT, _setLayoutGroupCreateAccountStyles );
@@ -641,6 +643,12 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
         label.textFormat = _themeTypography.Huge;
 
+    }
+
+    function _setLabelJustifyStyles(label:Label) {
+        var textLayout = _themeTypography.Default;
+        textLayout.align = TextFormatAlign.JUSTIFY;
+        label.textFormat = textLayout;
     }
 
     function _setLayoutGroupCreateAccountStyles( group:LayoutGroup ) {

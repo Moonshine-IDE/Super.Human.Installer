@@ -30,6 +30,10 @@
 
 package superhuman.components;
 
+import superhuman.server.SyncMethod;
+import feathers.controls.Button;
+import feathers.controls.Check;
+import feathers.layout.VerticalLayout;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -68,6 +72,8 @@ class ConfigPage extends Page {
     var _buttonSafeId:GenesisFormButton;
     var _buttonSave:GenesisFormButton;
     var _dropdownCoreComponentVersion:GenesisFormPupUpListView;
+    var _syncMethodCheck:Check;
+
     var _form:GenesisForm;
     var _inputHostname:GenesisFormTextInput;
     var _inputOrganization:GenesisFormTextInput;
@@ -80,8 +86,11 @@ class ConfigPage extends Page {
     var _rowHostname:GenesisFormRow;
     var _rowOrganization:GenesisFormRow;
     var _rowPreviousSafeId:GenesisFormRow;
-    var _rowRoles:GenesisFormRow;
     var _rowSafeId:GenesisFormRow;
+    var _rowRoles:GenesisFormRow;
+    var _rowSyncMethod:GenesisFormRow;
+    var _rowWarningSync:GenesisFormRow;
+
     var _server:Server;
     var _titleGroup:LayoutGroup;
 
@@ -213,6 +222,45 @@ class ConfigPage extends Page {
         _rowRoles.content.addChild( _buttonRoles );
         _form.addChild( _rowRoles );
 
+        _rowSyncMethod = new GenesisFormRow();
+
+        _rowSyncMethod.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.text' );
+
+        _syncMethodCheck = new Check( LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.check' ) );
+        _syncMethodCheck.text = _server.syncMethod;
+        _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
+        _syncMethodCheck.variant = GenesisApplicationTheme.CHECK_MEDIUM;
+        _syncMethodCheck.addEventListener(TriggerEvent.TRIGGER, _syncMethodCheckTriggered);
+
+        _rowSyncMethod.content.addChild( _syncMethodCheck );
+        _form.addChild( _rowSyncMethod );
+
+        #if mac
+        _rowWarningSync = new GenesisFormRow();
+
+        var warningHorizontalGroupLayout:HorizontalLayout = new HorizontalLayout();
+		    warningHorizontalGroupLayout.verticalAlign = MIDDLE;
+            warningHorizontalGroupLayout.gap = GenesisApplicationTheme.GRID;
+		
+		var warningGroup:LayoutGroup = new LayoutGroup();	
+            warningGroup.layout = warningHorizontalGroupLayout;
+
+        var buttonWarningSync:Button = new Button();
+            buttonWarningSync.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
+            buttonWarningSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+            warningGroup.addChild(buttonWarningSync);
+
+        var labelWarningSync:Label = new Label();
+            labelWarningSync.layoutData = new HorizontalLayoutData(100);
+            labelWarningSync.variant = GenesisApplicationTheme.LABEL_JUSTIFY;
+            labelWarningSync.wordWrap = true;
+            labelWarningSync.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
+            warningGroup.addChild(labelWarningSync);
+
+        _rowWarningSync.content.addChild(warningGroup);
+        _form.addChild( _rowWarningSync );
+        #end
+
         var line = new HLine();
         line.width = _w;
         this.addChild( line );
@@ -327,6 +375,11 @@ class ConfigPage extends Page {
         evt.server = this._server;
         this.dispatchEvent( evt );
 
+    }
+
+    function _syncMethodCheckTriggered( e:TriggerEvent ) {
+        _syncMethodCheck.text = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
+        _server.syncMethod = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
     }
 
     function _inputHostnameChanged( e:Event ) {

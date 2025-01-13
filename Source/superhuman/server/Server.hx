@@ -222,7 +222,8 @@ class Server {
     var _vagrantUpExecutor:AbstractExecutor;
     var _vagrantUpExecutorElapsedTimer:Timer;
     var _vagrantUpExecutorStopTimer:Timer;
-    
+    var _syncMethod:SyncMethod = SyncMethod.Rsync;
+
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
 
@@ -350,6 +351,10 @@ class Server {
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
 
+    public var syncMethod(get, set):SyncMethod;
+    function get_syncMethod() return _syncMethod;
+    function set_syncMethod( value:SyncMethod ):SyncMethod { _syncMethod = value; return _syncMethod; }
+    
     function new() {
 
         _id = Math.floor( Math.random() * 9000 ) + 1000;
