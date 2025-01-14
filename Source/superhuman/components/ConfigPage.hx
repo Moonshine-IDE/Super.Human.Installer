@@ -133,10 +133,11 @@ class ConfigPage extends Page {
         _rowCoreComponentVersion = new GenesisFormRow();
         _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
         _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection() );
+        _dropdownCoreComponentVersion.addEventListener(Event.CHANGE, _dropdownCoreComponentVersionChangeHandler);
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
-        	_dropdownCoreComponentVersion.selectedIndex = 0;
+        _dropdownCoreComponentVersion.selectedIndex = 0;
         for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).length ) {
             var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).get( i );
             if ( d.data.version == _server.provisioner.version ) {
@@ -222,7 +223,9 @@ class ConfigPage extends Page {
         _rowRoles.content.addChild( _buttonRoles );
         _form.addChild( _rowRoles );
 
+        
         _rowSyncMethod = new GenesisFormRow();
+        _rowSyncMethod.visible = _rowSyncMethod.includeInLayout = _server.provisioner.version > "0.1.22";
 
         _rowSyncMethod.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.text' );
 
@@ -237,6 +240,7 @@ class ConfigPage extends Page {
 
         #if mac
         _rowWarningSync = new GenesisFormRow();
+        _rowWarningSync.visible = _rowWarningSync.includeInLayout = _server.provisioner.version > "0.1.22";
 
         var warningHorizontalGroupLayout:HorizontalLayout = new HorizontalLayout();
 		    warningHorizontalGroupLayout.verticalAlign = MIDDLE;
@@ -448,6 +452,15 @@ class ConfigPage extends Page {
         _server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
         _safeIdLocated();
 
+    }
+
+    function _dropdownCoreComponentVersionChangeHandler(event:Event):Void {
+        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        _rowSyncMethod.visible = _rowSyncMethod.includeInLayout = dvv.data.version > "0.1.22";
+        _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
+        #if mac
+        _rowWarningSync.visible = _rowWarningSync.includeInLayout = dvv.data.version > "0.1.22";
+        #end
     }
 
 }
