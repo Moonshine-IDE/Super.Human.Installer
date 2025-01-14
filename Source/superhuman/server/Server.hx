@@ -134,6 +134,7 @@ class Server {
         sc._setupWait.value = data.env_setup_wait;
         sc._userEmail.value = data.user_email;
         sc._userSafeId.value = data.user_safeid;
+        sc._syncMethod = data.syncMethod == null ? SyncMethod.Rsync : data.syncMethod;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
         sc._combinedVirtualMachine.value = { home: sc._serverDir, serverId: sc._id, vagrantMachine: { vagrantId: null, serverId: sc._id }, virtualBoxMachine: { virtualBoxId: null, serverId: sc._id } };
@@ -475,6 +476,7 @@ class Server {
             dhcp4: this._dhcp4.value,
             provisioner: this._provisioner.data,
             disable_bridge_adapter: this._disableBridgeAdapter.value,
+            syncMethod: this._syncMethod
 
         };
 

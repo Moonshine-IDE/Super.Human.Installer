@@ -63,5 +63,6 @@ typedef ServerData = {
     roles:Array<RoleData>,
 
     ?provisioner:ProvisionerData,
+    syncMethod:SyncMethod,
 
 }
