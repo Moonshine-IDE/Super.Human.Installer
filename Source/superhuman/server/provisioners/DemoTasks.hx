@@ -551,7 +551,7 @@ class HostsFileGenerator {
          	SERVER_DOMAIN: provisioner.server.url.domainName,
          	SERVER_ID: provisioner.server.id,
             SHOW_CONSOLE: false,
-            POST_PROVISION: true,
+            POST_PROVISION: false,
             BOX_URL: 'https://boxvault.startcloud.com',
             SYNC_METHOD: syncMethod,
             SYNCBACK_ID_FILES: true,
