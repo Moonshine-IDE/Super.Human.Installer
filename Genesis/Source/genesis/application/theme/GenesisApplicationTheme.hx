@@ -265,6 +265,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
             ConsoleText:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             ConsoleTextError:  new TextFormat( "_typewriter", 14, _themeColors.Error ),
             LabelTextError: new TextFormat("_typewriter", 14, _themeColors.Error, true),
+            LabelTextJustify: new TextFormat("_typewriter", 14, _themeColors.Text, false, null, null, null, null, TextFormatAlign.JUSTIFY),
             ConsoleTextSelected:  new TextFormat( "_typewriter", 14, _themeColors.TextConsole ),
             Default : new TextFormat( "_sans", 14, _themeColors.Text ),
             DefaultCentered : new TextFormat( "_sans", 14, _themeColors.Text, null, null, null, null, null, TextFormatAlign.CENTER ),
@@ -646,8 +647,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     }
 
     function _setLabelJustifyStyles(label:Label) {
-        var textLayout = new TextFormat();
-        textLayout.align = TextFormatAlign.JUSTIFY;
+        var textLayout = _themeTypography.LabelTextJustify;
         label.textFormat = textLayout;
     }
 
@@ -1011,6 +1011,7 @@ typedef Typography = {
     var ConsoleText:TextFormat;
     var ConsoleTextError:TextFormat;
     var LabelTextError:TextFormat;
+    var LabelTextJustify:TextFormat;
     var ConsoleTextSelected:TextFormat;
     var Default:TextFormat;
     var DefaultCentered:TextFormat;

@@ -252,7 +252,7 @@ class ConfigPage extends Page {
 
         var labelWarningSync:Label = new Label();
             labelWarningSync.layoutData = new HorizontalLayoutData(100);
-            labelWarningSync.variant = GenesisApplicationTheme.LABEL_JUSTIFY;
+            labelWarningSync.variant = GenesisApplicationTheme.LABEL_DEFAULT;
             labelWarningSync.wordWrap = true;
             labelWarningSync.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
             warningGroup.addChild(labelWarningSync);
