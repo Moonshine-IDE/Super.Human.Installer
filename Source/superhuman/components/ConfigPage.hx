@@ -462,6 +462,8 @@ class ConfigPage extends Page {
     
     function _dropdownCoreComponentVersionChangeHandler(event:Event):Void {
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        if (dvv == null || _rowSyncMethod == null) return;
+
         _rowSyncMethod.visible = _rowSyncMethod.includeInLayout = dvv.data.version > "0.1.22";
         _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
         #if mac
