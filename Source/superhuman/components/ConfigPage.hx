@@ -383,7 +383,6 @@ class ConfigPage extends Page {
 
     function _syncMethodCheckTriggered( e:TriggerEvent ) {
         _syncMethodCheck.text = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
-        _server.syncMethod = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
     }
 
     function _inputHostnameChanged( e:Event ) {
@@ -427,7 +426,7 @@ class ConfigPage extends Page {
         // Making sure the event is fired
         var a = _server.roles.value.copy();
         _server.roles.value = a;
-
+        _server.syncMethod = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
         _server.hostname.value = StringTools.trim( _inputHostname.text );
         _server.organization.value = StringTools.trim( _inputOrganization.text );
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
@@ -454,6 +453,13 @@ class ConfigPage extends Page {
 
     }
 
+    override function _cancel( ?e:Dynamic ) {
+        super._cancel(e);
+
+        _syncMethodCheck.text = _server.syncMethod;
+        _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
+    }
+    
     function _dropdownCoreComponentVersionChangeHandler(event:Event):Void {
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
         _rowSyncMethod.visible = _rowSyncMethod.includeInLayout = dvv.data.version > "0.1.22";
