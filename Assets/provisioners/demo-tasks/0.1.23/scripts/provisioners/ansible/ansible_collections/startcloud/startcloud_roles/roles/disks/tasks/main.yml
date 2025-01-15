@@ -25,7 +25,12 @@
         -
           name: "Extending the unecrypted Root Partition"
           ansible.builtin.shell: "{{ item }}"
-          ignore_errors: true
+          register: extend_root_partition
+          failed_when: 
+            - extend_root_partition.rc != 0
+            - "'NOCHANGE' not in extend_root_partition.stdout"
+            - "'Bad magic number' not in extend_root_partition.stderr"
+          changed_when: extend_root_partition.rc == 0
           with_items:
             - "growpart /dev/{{ root_disk }} {{ root_partition_number }}"
             - "resize2fs /dev/{{ root_partition }}"

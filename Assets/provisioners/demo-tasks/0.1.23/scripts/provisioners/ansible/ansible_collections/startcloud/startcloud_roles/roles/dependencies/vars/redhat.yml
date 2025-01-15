@@ -34,7 +34,9 @@ packages:
   - cloud-init
   - dkms
   - uuid
-  - authbind
+#  - authbind
+#  - lynx
+#  - systemd-resolved
   - nano
   - vim
   - rsync
@@ -62,14 +64,12 @@ packages:
   - zlib-devel
   - glibc.i686
   - libstdc++
-  - lynx
   - lshw
   - memtest86+
   - htop
   - iotop
   - iftop
   - psmisc
-  - systemd-resolved
   - tree
   - jq
   - bc

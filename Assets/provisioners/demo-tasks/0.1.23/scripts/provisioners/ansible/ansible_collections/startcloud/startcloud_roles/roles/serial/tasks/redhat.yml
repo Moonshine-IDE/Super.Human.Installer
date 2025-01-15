@@ -27,7 +27,7 @@
     line: "{{ item.line }}"
   with_items:
     - { regexp: '^GRUB_CMDLINE_LINUX_DEFAULT=', line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"' }
-    - { regexp: '^GRUB_CMDLINE_LINUX=', line: 'GRUB_CMDLINE_LINUX="console=tty0 console=ttyS0,115200n8"' }
+    - { regexp: '^GRUB_CMDLINE_LINUX=', line: 'GRUB_CMDLINE_LINUX="console=tty0 console=ttyS0,115200n8 net.ifnames=0 biosdevname=0"' }
 
 -
   name: "Updating Grub packages"
