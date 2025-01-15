@@ -165,13 +165,13 @@ jobs:
           mac-installer-certkey: ${{ secrets.MAC_INSTALLER_CERTKEY }}
           mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
 
-      - name: Notarize installer
-        uses: Moonshine-ide/macos-notarize-action@v1.0
-        with:
-          app-path: ./${{ env.app_name }}-Setup.pkg
-          mac-notarization-apple-id: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
-          mac-notarization-team-id: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
-          mac-notarization-pass: ${{ secrets.MAC_NOTARIZATION_PASS }}
+      # - name: Notarize installer
+      #   uses: Moonshine-ide/macos-notarize-action@v1.0
+      #   with:
+      #     app-path: ./${{ env.app_name }}-Setup.pkg
+      #     mac-notarization-apple-id: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
+      #     mac-notarization-team-id: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
+      #     mac-notarization-pass: ${{ secrets.MAC_NOTARIZATION_PASS }}
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
