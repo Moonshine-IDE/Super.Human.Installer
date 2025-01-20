@@ -30,6 +30,8 @@
 
 package superhuman.config;
 
+import superhuman.server.SyncMethod;
+
 typedef SuperHumanPreferences = {
 
     ?disablevagrantlogging:Bool,
@@ -42,5 +44,5 @@ typedef SuperHumanPreferences = {
     ?windowwidth:Int,
     ?windowx:Int,
     ?windowy:Int,
-
+    ?syncmethod:SyncMethod,
 }

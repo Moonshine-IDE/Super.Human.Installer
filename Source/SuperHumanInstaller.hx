@@ -30,6 +30,7 @@
 
 package;
 
+import superhuman.server.SyncMethod;
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
 import openfl.desktop.ClipboardFormats;
@@ -226,6 +227,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			if ( _config.preferences.provisionserversonstart == null ) _config.preferences.provisionserversonstart = false;
 			if ( _config.preferences.disablevagrantlogging == null ) _config.preferences.disablevagrantlogging = false;
 			if ( _config.preferences.keepfailedserversrunning == null ) _config.preferences.keepfailedserversrunning = false;
+			if ( _config.preferences.syncmethod == null ) _config.preferences.syncmethod = SyncMethod.Rsync;
 
 			var a:Array<String> = [];
 			for ( r in _defaultRoles ) a.push( r.value );
@@ -443,6 +445,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				var pe = ParallelExecutor.create();
 				pe.add( 
 					Vagrant.getInstance().getVersion(),
+					Vagrant.getInstance().getRsyncVersion(),
 					VirtualBox.getInstance().getBridgedInterfaces(),
 					VirtualBox.getInstance().getHostInfo(),
 					VirtualBox.getInstance().getVersion(),
@@ -926,12 +929,14 @@ class SuperHumanInstaller extends GenesisApplication {
 				var build:String = #if neko "Neko" #elseif cpp "Native" #else "Unsupported" #end;
 				var isDebug:String = #if debug "Debug | " #else "" #end;
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
-				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
+				var rsyncVersion:String = Vagrant.getInstance().versionRsync != null ? "| Rsync: " + Vagrant.getInstance().versionRsync : "";
+				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} ${rsyncVersion}';
 
 				Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
 				Logger.debug( '${this}: VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
 				Logger.debug( '${this}: VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
 				Logger.debug( '${this}: VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
+				Logger.debug( '${this}: Rsync version: ${Vagrant.getInstance().versionRsync}' );
 
 				for ( s in ServerManager.getInstance().servers ) s.setServerStatus();
 

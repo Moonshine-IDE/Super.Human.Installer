@@ -30,11 +30,9 @@
 
 package superhuman.components.browsers;
 
-import superhuman.theme.SuperHumanInstallerTheme;
 import feathers.events.TriggerEvent;
 import genesis.application.managers.LanguageManager;
 import genesis.application.components.GenesisButton;
-import feathers.skins.RectangleSkin;
 import genesis.application.components.AdvancedAssetLoader;
 import feathers.controls.Button;
 import openfl.events.Event;

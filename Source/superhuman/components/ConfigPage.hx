@@ -88,8 +88,6 @@ class ConfigPage extends Page {
     var _rowPreviousSafeId:GenesisFormRow;
     var _rowSafeId:GenesisFormRow;
     var _rowRoles:GenesisFormRow;
-    var _rowSyncMethod:GenesisFormRow;
-    var _rowWarningSync:GenesisFormRow;
 
     var _server:Server;
     var _titleGroup:LayoutGroup;
@@ -133,7 +131,6 @@ class ConfigPage extends Page {
         _rowCoreComponentVersion = new GenesisFormRow();
         _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
         _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection() );
-        _dropdownCoreComponentVersion.addEventListener(Event.CHANGE, _dropdownCoreComponentVersionChangeHandler);
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
@@ -222,48 +219,6 @@ class ConfigPage extends Page {
         _buttonRoles.enabled = !_server.roles.locked;
         _rowRoles.content.addChild( _buttonRoles );
         _form.addChild( _rowRoles );
-
-        
-        _rowSyncMethod = new GenesisFormRow();
-        _rowSyncMethod.visible = _rowSyncMethod.includeInLayout = _server.provisioner.version > "0.1.22";
-
-        _rowSyncMethod.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.text' );
-
-        _syncMethodCheck = new Check( LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.check' ) );
-        _syncMethodCheck.text = _server.syncMethod;
-        _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
-        _syncMethodCheck.variant = GenesisApplicationTheme.CHECK_MEDIUM;
-        _syncMethodCheck.addEventListener(TriggerEvent.TRIGGER, _syncMethodCheckTriggered);
-
-        _rowSyncMethod.content.addChild( _syncMethodCheck );
-        _form.addChild( _rowSyncMethod );
-
-        #if mac
-        _rowWarningSync = new GenesisFormRow();
-        _rowWarningSync.visible = _rowWarningSync.includeInLayout = _server.provisioner.version > "0.1.22";
-
-        var warningHorizontalGroupLayout:HorizontalLayout = new HorizontalLayout();
-		    warningHorizontalGroupLayout.verticalAlign = MIDDLE;
-            warningHorizontalGroupLayout.gap = GenesisApplicationTheme.GRID;
-		
-		var warningGroup:LayoutGroup = new LayoutGroup();	
-            warningGroup.layout = warningHorizontalGroupLayout;
-
-        var buttonWarningSync:Button = new Button();
-            buttonWarningSync.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
-            buttonWarningSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
-            warningGroup.addChild(buttonWarningSync);
-
-        var labelWarningSync:Label = new Label();
-            labelWarningSync.layoutData = new HorizontalLayoutData(100);
-            labelWarningSync.variant = GenesisApplicationTheme.LABEL_DEFAULT;
-            labelWarningSync.wordWrap = true;
-            labelWarningSync.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
-            warningGroup.addChild(labelWarningSync);
-
-        _rowWarningSync.content.addChild(warningGroup);
-        _form.addChild( _rowWarningSync );
-        #end
 
         var line = new HLine();
         line.width = _w;
@@ -381,10 +336,6 @@ class ConfigPage extends Page {
 
     }
 
-    function _syncMethodCheckTriggered( e:TriggerEvent ) {
-        _syncMethodCheck.text = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
-    }
-
     function _inputHostnameChanged( e:Event ) {
 
         var a = Server.getComputedName( _inputHostname.text, _inputOrganization.text );
@@ -405,9 +356,7 @@ class ConfigPage extends Page {
             _labelPreviousSafeId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.useprevious', p );
 
         } else {
-
             _rowPreviousSafeId.visible = _rowPreviousSafeId.includeInLayout = false;
-
         }
 
     }
@@ -426,7 +375,7 @@ class ConfigPage extends Page {
         // Making sure the event is fired
         var a = _server.roles.value.copy();
         _server.roles.value = a;
-        _server.syncMethod = _syncMethodCheck.selected ? SyncMethod.Rsync : SyncMethod.SCP;
+        _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         _server.hostname.value = StringTools.trim( _inputHostname.text );
         _server.organization.value = StringTools.trim( _inputOrganization.text );
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
@@ -452,23 +401,4 @@ class ConfigPage extends Page {
         _safeIdLocated();
 
     }
-
-    override function _cancel( ?e:Dynamic ) {
-        super._cancel(e);
-
-        _syncMethodCheck.text = _server.syncMethod;
-        _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
-    }
-    
-    function _dropdownCoreComponentVersionChangeHandler(event:Event):Void {
-        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-        if (dvv == null || _rowSyncMethod == null) return;
-
-        _rowSyncMethod.visible = _rowSyncMethod.includeInLayout = dvv.data.version > "0.1.22";
-        _syncMethodCheck.selected = _server.syncMethod == SyncMethod.Rsync;
-        #if mac
-        _rowWarningSync.visible = _rowWarningSync.includeInLayout = dvv.data.version > "0.1.22";
-        #end
-    }
-
 }

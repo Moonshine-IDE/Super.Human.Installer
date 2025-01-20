@@ -30,6 +30,7 @@
 
 package genesis.application.theme;
 
+import feathers.controls.Radio;
 import openfl.display.Bitmap;
 import feathers.skins.TriangleSkin;
 import feathers.controls.Alert;
@@ -107,6 +108,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_BROWSER_WARNING:String = "button-browser-warning";
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
+    public static final RADIO_MEDIUM:String = "radio-medium";
     public static final INVALID:String = "invalid";
     public static final LABEL_DEFAULT:String = "label-default";
     public static final LABEL_CENTERED:String = "label-centered";
@@ -299,6 +301,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( ButtonBar, Alert.CHILD_VARIANT_BUTTON_BAR, _setAlertButtonBarStyles );
         this.styleProvider.setStyleFunction( Check, CHECK_LARGE, _setCheckLargeStyles );
         this.styleProvider.setStyleFunction( Check, CHECK_MEDIUM, _setCheckMediumStyles );
+        this.styleProvider.setStyleFunction( Radio, RADIO_MEDIUM, _setRadioMediumStyles );
         this.styleProvider.setStyleFunction( Form, null, _setFormStyles );
         this.styleProvider.setStyleFunction( FormItem, null, _setFormItemStyles );
         this.styleProvider.setStyleFunction( GenesisForm, null, _setGenesisFormStyles );
@@ -397,6 +400,15 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         check.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
         check.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
         check.horizontalAlign = HorizontalAlign.LEFT;
+
+    }
+
+    function _setRadioMediumStyles( radio:Radio ) {
+
+        radio.textFormat = _themeTypography.Medium;
+        radio.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
+        radio.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
+        radio.horizontalAlign = HorizontalAlign.LEFT;
 
     }
 

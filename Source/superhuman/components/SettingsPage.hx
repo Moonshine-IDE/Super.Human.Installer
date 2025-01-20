@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+import superhuman.server.SyncMethod;
+import superhuman.components.filesync.FileSyncSetting;
 import superhuman.application.ApplicationData;
 import superhuman.components.applications.ApplicationsList;
 import feathers.data.ArrayCollection;
@@ -73,6 +75,8 @@ class SettingsPage extends Page {
     var _rowKeepFailedServersRunning:GenesisFormRow;
     var _rowKeepServersRunning:GenesisFormRow;
     var _rowProvision:GenesisFormRow;
+    var _rowSyncMethod:GenesisFormRow;
+    var _fileSyncSetting:FileSyncSetting;
     var _rowBrowsers:GenesisFormRow;
     var _rowApplications:GenesisFormRow;
 
@@ -137,12 +141,20 @@ class SettingsPage extends Page {
         _rowProvision = new GenesisFormRow();
         _rowProvision.text = LanguageManager.getInstance().getString( 'settingspage.servers.title' );
         _form.addChild( _rowProvision );
-        
+ 
         _rowKeepServersRunning = new GenesisFormRow();
         _cbKeepServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.servers.keeprunning' ) );
         _rowProvision.content.addChild( _cbKeepServersRunning );
         _form.addChild( _rowKeepServersRunning );
+       
+        _rowSyncMethod = new GenesisFormRow();
+        _rowSyncMethod.text = LanguageManager.getInstance().getString( 'settingspage.syncMethods' );
 
+        _fileSyncSetting = new FileSyncSetting();
+        _fileSyncSetting.width = _width;
+        _rowSyncMethod.content.addChild(_fileSyncSetting);
+        _form.addChild( _rowSyncMethod );
+        
         _rowAdvanced = new GenesisFormRow();
         _rowAdvanced.text = LanguageManager.getInstance().getString( 'settingspage.advanced.title' );
         _cbDisableVagrantLogging = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.disablevagrantlogging' ) );
@@ -204,16 +216,18 @@ class SettingsPage extends Page {
     public function updateData() {
 
         if ( _cbApplicationWindow != null ) {
-
             _cbApplicationWindow.selected = SuperHumanInstaller.getInstance().config.preferences.savewindowposition;
             _cbSystemSleep.selected = SuperHumanInstaller.getInstance().config.preferences.preventsystemfromsleep;
        //     _cbProvision.selected = SuperHumanInstaller.getInstance().config.preferences.provisionserversonstart;
             _cbKeepServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepserversrunning;
             _cbDisableVagrantLogging.selected = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
             _cbKeepFailedServersRunning.selected = SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning;
-
         }
-    }
+
+        if (_fileSyncSetting != null) {
+       	 	_fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
+		}
+     }
 
      public function setBrowsers(browsers:Array<BrowserData>) {
     		_browsers = new ArrayCollection(browsers);	
@@ -258,6 +272,7 @@ class SettingsPage extends Page {
         SuperHumanInstaller.getInstance().config.preferences.keepserversrunning = _cbKeepServersRunning.selected;
         SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning = _cbKeepFailedServersRunning.selected;
+        SuperHumanInstaller.getInstance().config.preferences.syncmethod = _fileSyncSetting.selectedSyncMethod;
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 

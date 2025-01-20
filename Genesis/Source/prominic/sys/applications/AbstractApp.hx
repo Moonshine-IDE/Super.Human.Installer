@@ -57,6 +57,7 @@ abstract class AbstractApp {
     var _pathAdditions:Array<String> = _DEFAULT_PATH_ADDITIONS;
     var _status:AppStatus;
     var _version:Null<VersionInfo>;
+    var _versionRsync:Null<VersionInfo>;
 
     public var executable( get, never ):String;
     function get_executable() return _executable;
@@ -78,6 +79,9 @@ abstract class AbstractApp {
 
     public var version( get, never ):Null<VersionInfo>;
     function get_version() return _version;
+
+    public var versionRsync( get, never ):Null<VersionInfo>;
+    function get_versionRsync() return _versionRsync;
 
     public function new() {
 

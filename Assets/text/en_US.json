@@ -385,6 +385,7 @@
             "save": "Save",
             "cancel": "Cancel"
         },
+        "syncMethods": "File synchronization method",
         "browser": {
         		"title": "Browser",
         		"defaultbrowser": "Setup default Browser",

@@ -1,7 +1,8 @@
 package superhuman.components.filesync;
 
+import feathers.controls.Radio;
+import feathers.core.ToggleGroup;
 import superhuman.server.SyncMethod;
-import superhuman.events.SuperHumanApplicationEvent;
 import genesis.application.theme.GenesisApplicationTheme;
 import genesis.application.components.AdvancedAssetLoader;
 import feathers.layout.HorizontalLayoutData;
@@ -12,25 +13,34 @@ import openfl.events.Event;
 @:build(mxhx.macros.MXHXComponent.build())
 class FileSyncSetting extends LayoutGroup {
 
-    /*public function new() 
+    final _width:Float = GenesisApplicationTheme.GRID * 100;
+
+    var _radioGroupSyncMethod:ToggleGroup;
+
+    public var selectedSyncMethod( get, set ):SyncMethod;
+    var _selectedSyncMethod:SyncMethod;
+    function get_selectedSyncMethod():SyncMethod return _selectedSyncMethod;
+    function set_selectedSyncMethod( value:SyncMethod ):SyncMethod {
+        _selectedSyncMethod = value;  
+        
+        _radioGroupSyncMethod.selectedIndex = value == SyncMethod.SCP ? 0 : 1;
+        return _selectedSyncMethod;
+    }
+
+    public function new() 
     {
         super();
 
-        scpCheck.addEventListener(Event.CHANGE, _scpCheckChanged);
-        rsyncCheck.addEventListener(Event.CHANGE, _rsyncCheckChanged);
-        buttonWarningSync.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
-        labelWarningSync.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
+        _radioGroupSyncMethod = new ToggleGroup();
+        _radioGroupSyncMethod.addEventListener(Event.CHANGE, _radioGroupChange);
+
+        scpCheck.toggleGroup = _radioGroupSyncMethod;
+        rsyncCheck.toggleGroup = _radioGroupSyncMethod;
     }
 
-    function _scpCheckChanged(event:Event) {
-        var scpCheckEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SYNC_METHOD_CHANGE);
-        scpCheckEvent.syncMethod = SyncMethod.SCP;
-        this.dispatchEvent(scpCheckEvent);
+    function _radioGroupChange(event:Event) {
+        var group = cast(event.currentTarget, ToggleGroup);
+        var radio = cast(group.selectedItem, Radio);
+        selectedSyncMethod = group.selectedIndex == 0 ? SyncMethod.SCP : SyncMethod.Rsync;
     }
-
-    function _rsyncCheckChanged(event:Event) {
-        var rsyncCheckEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SYNC_METHOD_CHANGE);
-        rsyncCheckEvent.syncMethod = SyncMethod.Rsync;
-        this.dispatchEvent(rsyncCheckEvent);
-    }*/
 }

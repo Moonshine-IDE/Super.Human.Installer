@@ -49,6 +49,7 @@ class Vagrant extends AbstractApp {
     static final _machineReadPattern = ~/((\d+),(.*),(.+),(.+))/gm;
     static final _machineReadPatternForStatus = ~/(\d+,.*,(\w|-)+,(\w|-|\/|\\|\.)*,*(.)+)/gm;
     static final _versionPattern = ~/(\d+\.\d+\.\d+)/;
+    static final _rsyncVersionPattern = ~/rsync\s+version\s+(\d+\.\d+\.\d+).*/;
     #if windows
     static final _SSH_SCRIPT:String = "ssh.bat";
     #else
@@ -80,6 +81,7 @@ class Vagrant extends AbstractApp {
     var _onSuspend:ChainedList<(VagrantMachine)->Void, Vagrant>;
     var _onUp:ChainedList<(VagrantMachine, Float)->Void, Vagrant>;
     var _onVersion:ChainedList<()->Void, Vagrant>;
+    var _onVersionRsync:ChainedList<()->Void, Vagrant>;
     var _stopAllFinished:Bool = false;
     var _tempGlobalStatusData:String;
     var _vagrantFilename:String;
@@ -160,6 +162,7 @@ class Vagrant extends AbstractApp {
         _name = "Vagrant";
         #if ( mac || linux )
         _pathAdditions.push( "/opt/vagrant/bin" );
+        _pathAdditions.push("/opt/local/bin");
         #end
         _currentMachine = null;
 
@@ -174,6 +177,7 @@ class Vagrant extends AbstractApp {
         _onSuspend = new ChainedList( this );
         _onUp = new ChainedList( this );
         _onVersion = new ChainedList( this );
+        _onVersionRsync = new ChainedList( this );
 
         _mutexGlobalStatusStderr = new Mutex();
         _mutexGlobalStatusStdout = new Mutex();
@@ -424,6 +428,23 @@ class Vagrant extends AbstractApp {
 
     }
 
+     /**
+     * Creates a 'rsync -v' executor.
+     * @return Executor
+     */
+     public function getRsyncVersion():AbstractExecutor {
+
+        // Return the already running executor if it exists
+        if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.VersionRsync ) )
+            return ExecutorManager.getInstance().get( VagrantExecutorContext.VersionRsync );
+
+        final executor = new Executor( 'rsync', [ "--version" ] );
+        executor.onStop.add(_versionRsyncExecutorStopped).onStdOut.add( _versionRsyncExecutorStandardOutput );
+        ExecutorManager.getInstance().set( VagrantExecutorContext.VersionRsync, executor );
+        return executor;
+
+    }
+
     public function getUp( machine:VagrantMachine, ?provision:Bool = false, ?args:Array<String> ):AbstractExecutor {
 
         // Return the already running executor for the given machine if it exists
@@ -658,6 +679,34 @@ class Vagrant extends AbstractApp {
 
     }
 
+    function _versionRsyncExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
+
+        var a = data.split( SysTools.lineEnd );
+
+        if ( data.length > 0 && a.length > 0 ) {
+            for (p in a) {
+                if ( _rsyncVersionPattern.match(p) ) {
+
+                    this._versionRsync = _rsyncVersionPattern.matched(1);
+                    break;
+                }
+            }
+        }
+
+    }
+
+    function _versionRsyncExecutorStopped( executor:AbstractExecutor ) {
+        
+        Logger.debug( '${this}: _versionRsyncExecutorStopped(): ${executor.exitCode}' );
+
+        for ( f in _onVersionRsync ) f();
+
+        ExecutorManager.getInstance().remove( VagrantExecutorContext.VersionRsync );
+
+        executor.dispose();
+
+    }
+
     function _upExecutorStopped( executor:AbstractExecutor ) {
 
         Logger.debug( '${this}: upExecutor stopped with exitCode: ${executor.exitCode}' );
@@ -828,5 +877,5 @@ enum abstract VagrantExecutorContext( String ) to String {
     var Suspend = "Vagrant_Suspend_";
     var Up = "Vagrant_Up_";
     var Version = "Vagrant_Version";
-
+    var VersionRsync = "Vagrant_VersionRsync";
 }
