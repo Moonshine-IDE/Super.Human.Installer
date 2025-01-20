@@ -42,7 +42,6 @@ class Footer extends LayoutGroup {
     var _iconWarning:Button;
     var _labelSysInfo:Label;
     var _spacer:LayoutGroup;
-    var _spacerWarning:LayoutGroup;
 
     public var appInfo( get, set ):String;
     var _appInfo:String;
@@ -73,9 +72,9 @@ class Footer extends LayoutGroup {
     function get_warning():String return _warning;
     function set_warning( value:String ):String {
         _warning = value;
-        if ( _iconWarning != null ) {
-            _iconWarning.text = _warning;
-            _spacerWarning.includeInLayout = _spacerWarning.visible = ( _warning != null && _warning != "" );
+        if ( _warning != null ) {
+            _iconWarning.toolTip = _warning;
+            _iconWarning.includeInLayout = _iconWarning.visible = (_warning != null && _warning != "" );
         }
         return _warning;
     }
@@ -91,6 +90,13 @@ class Footer extends LayoutGroup {
         _labelSysInfo.text = ( _sysInfo != null ) ? _sysInfo : "";
         this.addChild( _labelSysInfo );
 
+        _iconWarning = new Button();
+        _iconWarning.includeInLayout = _iconWarning.visible = ( _warning != null && _warning != "" );
+        _iconWarning.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
+        _iconWarning.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _iconWarning.toolTip = ( _warning != null ) ? _warning : "";
+        this.addChild( _iconWarning );
+        
         _spacer = new LayoutGroup();
         _spacer.layoutData = new HorizontalLayoutData( 100 );
         _spacer.includeInLayout = _spacer.visible = ( _sysInfo != null && _sysInfo != "" );
@@ -101,17 +107,6 @@ class Footer extends LayoutGroup {
         _label.text = ( _appInfo != null ) ? _appInfo : "";
         this.addChild( _label );
 
-        _spacerWarning = new LayoutGroup();
-        _spacerWarning.layoutData = new HorizontalLayoutData( 100 );
-        _spacerWarning.includeInLayout = _spacerWarning.visible = ( _warning != null && _warning != "" );
-        this.addChild( _spacerWarning );
-
-        _iconWarning = new Button();
-        _iconWarning.includeInLayout = _iconWarning.visible = ( _warning != null && _warning != "" );
-        _iconWarning.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
-        _iconWarning.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
-        _iconWarning.toolTip = ( _warning != null ) ? _warning : "";
-        this.addChild( _iconWarning );
     }
 
 }

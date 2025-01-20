@@ -129,7 +129,7 @@
             },
             "syncmethod": {
                 "text": "File synchronization method",
-                "warning": "File synchronization requires rsync version higher than 2.6.9. Please upgrade rsync using MacPorts or Homebrew package managers. \nAlternatively, you can use the SCP plugin, though it may result in slower transfer speeds compared to rsync.",
+                "warning": "File synchronization requires rsync version higher than 2.6.9. Please upgrade rsync using MacPorts or Homebrew package managers. \nAlternatively, you can use the SCP plugin, though it may result in slower transfer speeds compared to rsync. You can switch between rsync and scp synchronization methods at any time in application Settings.",
                 "rsync": "Rsync",
                 "scp": "SCP"
             },

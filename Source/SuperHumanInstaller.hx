@@ -30,6 +30,7 @@
 
 package;
 
+import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
@@ -929,8 +930,16 @@ class SuperHumanInstaller extends GenesisApplication {
 				var build:String = #if neko "Neko" #elseif cpp "Native" #else "Unsupported" #end;
 				var isDebug:String = #if debug "Debug | " #else "" #end;
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
-				var rsyncVersion:String = Vagrant.getInstance().versionRsync != null ? "| Rsync: " + Vagrant.getInstance().versionRsync : "";
+
+				var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
+				var rsyncVersion:String = rsyncVersionInfo != "" ? "| Rsync: " + rsyncVersionInfo : "";
+
 				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} ${rsyncVersion}';
+
+				if (rsyncVersionInfo <= "2.6.9")
+				{
+					_footer.warning = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
+				}
 
 				Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
 				Logger.debug( '${this}: VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
