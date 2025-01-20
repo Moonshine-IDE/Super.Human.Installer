@@ -30,6 +30,7 @@
 
 package prominic.sys.applications.hashicorp;
 
+import prominic.sys.applications.bin.Which;
 import champaign.core.ds.ChainedList;
 import champaign.core.logging.Logger;
 import prominic.sys.applications.bin.Shell;
@@ -89,6 +90,13 @@ class Vagrant extends AbstractApp {
     var _mutexGlobalStatusStderr:Mutex;
     var _mutexGlobalStatusStdout:Mutex;
     var _mutexGlobalStatusStop:Mutex;
+
+    private static var _rsyncPath:String = null;
+    private static final _rsyncLocations:Array<String> = [
+        "/opt/local/bin/rsync",  // MacPorts
+        "/usr/local/bin/rsync",  // Homebrew
+        "/usr/bin/rsync"         // System default
+    ];
 
     public var currentWorkingDir( get, set ):String;
     function get_currentWorkingDir() return _currentWorkingDir;
@@ -328,7 +336,7 @@ class Vagrant extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( '${VagrantExecutorContext.RSync}${machine.serverId}' ) )
             return ExecutorManager.getInstance().get( '${VagrantExecutorContext.RSync}${machine.serverId}' );
 
-        var args:Array<String> = [ "rsync" ];
+        var args:Array<String> = [ findRsyncPath() ];
         if ( machine.vagrantId != null ) args.push( machine.vagrantId );
 
         var extraArgs:Array<Dynamic> = [];
@@ -438,7 +446,7 @@ class Vagrant extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.VersionRsync ) )
             return ExecutorManager.getInstance().get( VagrantExecutorContext.VersionRsync );
 
-        final executor = new Executor( 'rsync', [ "--version" ] );
+        final executor = new Executor( findRsyncPath(), [ "--version" ] );
         executor.onStop.add(_versionRsyncExecutorStopped).onStdOut.add( _versionRsyncExecutorStandardOutput );
         ExecutorManager.getInstance().set( VagrantExecutorContext.VersionRsync, executor );
         return executor;
@@ -697,6 +705,10 @@ class Vagrant extends AbstractApp {
 
     function _versionRsyncExecutorStopped( executor:AbstractExecutor ) {
         
+        // Clear the cached path when checking version
+        // This ensures we'll look for rsync again next time
+        _rsyncPath = null;
+        
         Logger.debug( '${this}: _versionRsyncExecutorStopped(): ${executor.exitCode}' );
 
         for ( f in _onVersionRsync ) f();
@@ -705,6 +717,40 @@ class Vagrant extends AbstractApp {
 
         executor.dispose();
 
+    }
+
+    private function findRsyncPath():String {
+        if (_rsyncPath != null) return _rsyncPath;
+        
+        // First try which command to find rsync in PATH
+        final whichExecutor = new Executor(Which.getInstance().path + Which.getInstance()._executable, ["rsync"]);
+        var whichOutput:String = null;
+        whichExecutor.onStdOut.add((executor, data) -> {
+            whichOutput = data;
+        });
+        whichExecutor.onStop.add((executor) -> {
+            if (executor.exitCode == 0 && whichOutput != null) {
+                var output = StringTools.trim(whichOutput);
+                if (output != "" && sys.FileSystem.exists(output)) {
+                    _rsyncPath = output;
+                }
+            }
+        });
+        whichExecutor.execute();
+        
+        if (_rsyncPath != null) return _rsyncPath;
+
+        // Then check common installation locations
+        for (path in _rsyncLocations) {
+            if (sys.FileSystem.exists(path)) {
+                _rsyncPath = path;
+                return _rsyncPath;
+            }
+        }
+
+        // If nothing else found, fall back to "rsync" and let the system resolve it
+        _rsyncPath = "rsync";
+        return _rsyncPath;
     }
 
     function _upExecutorStopped( executor:AbstractExecutor ) {
@@ -846,7 +892,6 @@ class Vagrant extends AbstractApp {
         executor.dispose();
 
     }
-
 }
 
 typedef VagrantMetadata = {
