@@ -641,10 +641,12 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
+                _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unconfigured' );
 
             case ServerStatus.Ready:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
+                _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );
