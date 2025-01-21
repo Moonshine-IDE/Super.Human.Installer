@@ -446,12 +446,18 @@ class SuperHumanInstaller extends GenesisApplication {
 				var pe = ParallelExecutor.create();
 				pe.add( 
 					Vagrant.getInstance().getVersion(),
-					Vagrant.getInstance().getRsyncVersion(),
 					VirtualBox.getInstance().getBridgedInterfaces(),
 					VirtualBox.getInstance().getHostInfo(),
 					VirtualBox.getInstance().getVersion(),
 					VirtualBox.getInstance().getListVMs( true )
 				 );
+
+				var rsyncExecutor = Vagrant.getInstance().getRsyncVersion();
+				if (rsyncExecutor != null)
+				{
+					pe.add(rsyncExecutor);
+				}
+
 				if ( !SuperHumanGlobals.IGNORE_VAGRANT_STATUS ) pe.add( Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ) );
 				pe.onStop.add( _checkPrerequisitesFinished ).execute();
 
@@ -932,7 +938,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
 
 				var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
-				var rsyncVersion:String = rsyncVersionInfo != "" ? "| Rsync: " + rsyncVersionInfo : "";
+				var rsyncVersion:String = rsyncVersionInfo != "" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
 
 				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} ${rsyncVersion}';
 

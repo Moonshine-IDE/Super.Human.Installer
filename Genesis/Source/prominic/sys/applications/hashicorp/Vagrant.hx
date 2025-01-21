@@ -453,7 +453,14 @@ class Vagrant extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.VersionRsync ) )
             return ExecutorManager.getInstance().get( VagrantExecutorContext.VersionRsync );
 
-        final executor = new Executor( findRsyncPath(), [ "--version" ] );
+        var rsyncPath = findRsyncPath();
+        if ( rsyncPath == null ) 
+        {
+            this._versionRsync = "";
+            return null;
+        }
+
+        final executor = new Executor( rsyncPath, [ "--version" ] );
         executor.onStop.add(_versionRsyncExecutorStopped).onStdOut.add( _versionRsyncExecutorStandardOutput );
         ExecutorManager.getInstance().set( VagrantExecutorContext.VersionRsync, executor );
         return executor;
@@ -757,7 +764,7 @@ class Vagrant extends AbstractApp {
 
         #if windows
         // On Windows, if rsync is not found, throw a more descriptive error
-        throw "Rsync is not installed. Please install cwRsync from https://www.itefix.net/cwrsync or use alternatives like Cygwin/MSYS2 with rsync package.";
+        return null;
         #else
         // If nothing else found, fall back to "rsync" and let the system resolve it
         _rsyncPath = "rsync";
