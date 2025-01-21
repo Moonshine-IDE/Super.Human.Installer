@@ -236,7 +236,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         this.addChild( buttonGroup );
 
         _buttonStart = new GenesisButton();
-        _buttonStart.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_START, 20, 20 );
+        _buttonStart.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_START ) ); //GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_START, 20, 20 );
         _buttonStart.width = CONTROL_BUTTON_WIDTH;
         _buttonStart.height = CONTROL_BUTTON_HEIGHT;
         _buttonStart.enabled = true;

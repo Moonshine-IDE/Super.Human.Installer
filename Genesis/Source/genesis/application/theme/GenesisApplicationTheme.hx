@@ -154,7 +154,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final ICON_REFRESH:String = "ICON_REFRESH";
     public static final ICON_SETTINGS:String = "ICON_SETTINGS";
     public static final ICON_SETTINGS_WARNING:String = "ICON_SETTINGS_WARNING";
-    public static final ICON_START:String = "ICON_START";
+    public static final ICON_START:String = "assets/images/common/start.png";
     public static final ICON_STOP:String = "ICON_STOP";
     public static final ICON_SUSPEND:String = "ICON_SUSPEND";
     public static final ICON_UPLOAD:String = "ICON_UPLOAD";

@@ -31,7 +31,6 @@
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets path="Assets/images">
-		<image path="/common/start.png" id="ICON_START" />
 		<image path="/common/stop.png" id="ICON_STOP"/>
 		<image path="/common/checkbox_large.png" id="ICON_CHECKBOX_LARGE"/>
 		<image path="/common/checkbox_large_selected.png" id="ICON_CHECKBOX_LARGE_SELECTED"/>
