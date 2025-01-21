@@ -93,9 +93,16 @@ class Vagrant extends AbstractApp {
 
     private static var _rsyncPath:String = null;
     private static final _rsyncLocations:Array<String> = [
+        #if windows
+        "C:\\Program Files\\cwRsync\\bin\\rsync.exe",
+        "C:\\Program Files (x86)\\cwRsync\\bin\\rsync.exe",
+        "C:\\msys64\\usr\\bin\\rsync.exe",
+        "C:\\cygwin64\\bin\\rsync.exe",
+        #else
         "/opt/local/bin/rsync",  // MacPorts
         "/usr/local/bin/rsync",  // Homebrew
         "/usr/bin/rsync"         // System default
+        #end
     ];
 
     public var currentWorkingDir( get, set ):String;
@@ -748,7 +755,15 @@ class Vagrant extends AbstractApp {
             }
         }
 
+      /*  #if windows
+        // On Windows, if rsync is not found, throw a more descriptive error
+        throw "Rsync is not installed. Please install cwRsync from https://www.itefix.net/cwrsync or use alternatives like Cygwin/MSYS2 with rsync package.";
+        #else
         // If nothing else found, fall back to "rsync" and let the system resolve it
+        _rsyncPath = "rsync";
+        return _rsyncPath;
+        #end*/
+
         _rsyncPath = "rsync";
         return _rsyncPath;
     }
