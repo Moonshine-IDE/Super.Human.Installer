@@ -755,17 +755,14 @@ class Vagrant extends AbstractApp {
             }
         }
 
-      /*  #if windows
+        #if windows
         // On Windows, if rsync is not found, throw a more descriptive error
         throw "Rsync is not installed. Please install cwRsync from https://www.itefix.net/cwrsync or use alternatives like Cygwin/MSYS2 with rsync package.";
         #else
         // If nothing else found, fall back to "rsync" and let the system resolve it
         _rsyncPath = "rsync";
         return _rsyncPath;
-        #end*/
-
-        _rsyncPath = "rsync";
-        return _rsyncPath;
+        #end
     }
 
     function _upExecutorStopped( executor:AbstractExecutor ) {
