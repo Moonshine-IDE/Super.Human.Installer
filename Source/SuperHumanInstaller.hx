@@ -938,11 +938,11 @@ class SuperHumanInstaller extends GenesisApplication {
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
 
 				var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
-				var rsyncVersion:String = rsyncVersionInfo != "" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
+				var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
 
 				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} ${rsyncVersion}';
 
-				if (rsyncVersionInfo <= "2.6.9")
+				if (rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9")
 				{
 					_footer.warning = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
 				}
