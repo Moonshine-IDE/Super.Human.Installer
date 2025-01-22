@@ -566,7 +566,7 @@ class RolePickerFileItem extends LayoutGroup {
 
         _deleteButton = new Button();
         _deleteButton.variant = GenesisApplicationTheme.BUTTON_SMALL;
-        _deleteButton.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_DESTROY_SMALL ) );
+        _deleteButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DESTROY_SMALL );
         _deleteButton.layoutData = new HorizontalLayoutData();
         _deleteButton.toolTip = LanguageManager.getInstance().getString( 'rolepage.role.removefile' );
         _deleteButton.addEventListener( TriggerEvent.TRIGGER, _deleteButtonTriggered );

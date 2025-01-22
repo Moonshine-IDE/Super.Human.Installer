@@ -117,17 +117,17 @@ class Console extends LayoutGroup implements IConsole {
         _topGroup.addChild( _titleLabel );
 
         _clearButton = new Button( LanguageManager.getInstance().getString( 'console.buttonclear' ) );
-        _clearButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CLEAR, 20, 20 );
+        _clearButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CLEAR );
         _clearButton.addEventListener( TriggerEvent.TRIGGER, _clearButtonTriggered );
         _topGroup.addChild( _clearButton );
 
         _copyButton = new Button( LanguageManager.getInstance().getString( 'console.buttoncopy' ) );
-        _copyButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_COPY, 20, 20 );
+        _copyButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_COPY );
         _copyButton.addEventListener( TriggerEvent.TRIGGER, _copyButtonTriggered );
         _topGroup.addChild( _copyButton );
 
         _closeButton = new Button( LanguageManager.getInstance().getString( 'console.buttonclose' ) );
-        _closeButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CLOSE, 20, 20 );
+        _closeButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CLOSE );
         _closeButton.addEventListener( TriggerEvent.TRIGGER, _closeButtonTriggered );
         _topGroup.addChild( _closeButton );
 
