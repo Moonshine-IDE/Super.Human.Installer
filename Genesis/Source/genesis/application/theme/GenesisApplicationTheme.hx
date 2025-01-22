@@ -30,6 +30,7 @@
 
 package genesis.application.theme;
 
+import feathers.controls.BitmapImage;
 import feathers.controls.Radio;
 import openfl.display.Bitmap;
 import feathers.skins.TriangleSkin;
@@ -90,9 +91,12 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     }
 
-    public static function getCommonIcon(id:String):AssetLoader
+    public static function getCommonIcon(id:String, width:Float, height:Float):BitmapImage
     {
-		return new AssetLoader( GenesisApplicationTheme.getAssetPath( id ) );
+        var bitmapImage = new BitmapImage(Assets.getBitmapData(id, true), AUTO , true); 
+            bitmapImage.width = width;
+            bitmapImage.height = height;
+		return bitmapImage;
     }
     
     public static final APPLICATION:String = "application";
@@ -393,8 +397,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setCheckMediumStyles( check:Check ) {
 
         check.textFormat = _themeTypography.Medium;
-        check.icon = getCommonIcon( ICON_CHECKBOX_LARGE );
-        check.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED );
+        check.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
+        check.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -402,8 +406,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setRadioMediumStyles( radio:Radio ) {
 
         radio.textFormat = _themeTypography.Medium;
-        radio.icon = getCommonIcon( ICON_CHECKBOX_LARGE );
-        radio.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED );
+        radio.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
+        radio.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
         radio.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -542,8 +546,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setGenesisFormCheckBoxStyles( cb:GenesisFormCheckBox ) {
 
         cb.textFormat = _themeTypography.Default;
-        cb.icon = getCommonIcon( ICON_CHECKBOX_LARGE );
-        cb.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED );
+        cb.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
+        cb.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
         cb.horizontalAlign = HorizontalAlign.LEFT;
 
     }
