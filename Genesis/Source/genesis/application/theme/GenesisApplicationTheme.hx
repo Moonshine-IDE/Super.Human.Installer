@@ -91,12 +91,9 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     }
 
-    public static function getCommonIcon(id:String, width:Float, height:Float):BitmapImage
+    public static function getCommonIcon(id:String, width:Float, height:Float):AdvancedAssetLoader
     {
-        var bitmapImage = new BitmapImage(Assets.getBitmapData(id, true), AUTO , true); 
-            bitmapImage.width = width;
-            bitmapImage.height = height;
-		return bitmapImage;
+		return new AdvancedAssetLoader(id);
     }
     
     public static final APPLICATION:String = "application";
