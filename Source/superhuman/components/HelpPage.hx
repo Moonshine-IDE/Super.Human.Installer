@@ -61,7 +61,7 @@ class HelpPage extends Page {
 
         _content.width = _w;
 
-        _image = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.IMAGE_HELP ) );
+        _image = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.IMAGE_HELP ) ;
         this.addChild( _image );
 
         _titleLabel = new Label( LanguageManager.getInstance().getString( 'helppage.title', GenesisApplication.getInstance().title ) );

@@ -83,15 +83,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     public static final CORNER_RADIUS:Int = 3;
     public static final GRID:Int = 6;
+    public static final SPACER:Int = 3;
     public static final DISABLED_ALPHA:Float = .33;
 
-    public static function getAssetPath( id:String ):String {
-        
-        return Assets.getPath( id );
-
-    }
-
-    public static function getCommonIcon(id:String, width:Float, height:Float):AdvancedAssetLoader
+    public static function getCommonIcon(id:String):AdvancedAssetLoader
     {
 		return new AdvancedAssetLoader(id);
     }
@@ -385,8 +380,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setCheckLargeStyles( check:Check ) {
 
         check.textFormat = _themeTypography.Large;
-        check.icon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE ) : getAssetPath( ICON_CHECKBOX_LARGE ) );
-        check.selectedIcon = new AdvancedAssetLoader( ( _mode == ThemeMode.Dark ) ? getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) : getAssetPath( ICON_CHECKBOX_LARGE_SELECTED ) );
+        check.icon = ( _mode == ThemeMode.Dark ) ? GenesisApplicationTheme.getCommonIcon( ICON_CHECKBOX_LARGE ) : GenesisApplicationTheme.getCommonIcon( ICON_CHECKBOX_LARGE );
+        check.selectedIcon = ( _mode == ThemeMode.Dark ) ? GenesisApplicationTheme.getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED ) : GenesisApplicationTheme.getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED );
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -394,8 +389,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setCheckMediumStyles( check:Check ) {
 
         check.textFormat = _themeTypography.Medium;
-        check.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
-        check.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
+        check.icon = getCommonIcon( ICON_CHECKBOX_LARGE );
+        check.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED);
         check.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -403,8 +398,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setRadioMediumStyles( radio:Radio ) {
 
         radio.textFormat = _themeTypography.Medium;
-        radio.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
-        radio.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
+        radio.icon = getCommonIcon( ICON_CHECKBOX_LARGE);
+        radio.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED );
         radio.horizontalAlign = HorizontalAlign.LEFT;
 
     }
@@ -543,8 +538,8 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     function _setGenesisFormCheckBoxStyles( cb:GenesisFormCheckBox ) {
 
         cb.textFormat = _themeTypography.Default;
-        cb.icon = getCommonIcon( ICON_CHECKBOX_LARGE, 32, 18 );
-        cb.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED, 32, 18 );
+        cb.icon = getCommonIcon( ICON_CHECKBOX_LARGE );
+        cb.selectedIcon = getCommonIcon( ICON_CHECKBOX_LARGE_SELECTED );
         cb.horizontalAlign = HorizontalAlign.LEFT;
 
     }

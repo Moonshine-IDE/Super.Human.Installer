@@ -58,7 +58,7 @@ class AboutPage extends Page {
 
         super.initialize();
 
-        _image = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.IMAGE_GENESIS_DIRECTORY ) );
+        _image =  GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.IMAGE_GENESIS_DIRECTORY);
         this.addChild( _image );
 
         _label = new Label( LanguageManager.getInstance().getString( 'aboutpage.title', GenesisApplication.getInstance().title ) );

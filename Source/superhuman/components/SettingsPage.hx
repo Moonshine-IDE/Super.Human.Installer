@@ -37,7 +37,6 @@ import superhuman.components.applications.ApplicationsList;
 import feathers.data.ArrayCollection;
 import superhuman.components.browsers.BrowsersList;
 import superhuman.browser.BrowserData;
-import superhuman.browser.Browsers;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -135,7 +134,7 @@ class SettingsPage extends Page {
         _form.addChild( _rowSystemSleep );
         
         var spacer = new LayoutGroup();
-        spacer.height = GenesisApplicationTheme.GRID * 2;
+        spacer.height = GenesisApplicationTheme.SPACER;
         _form.addChild( spacer );
 
         _rowProvision = new GenesisFormRow();
@@ -167,7 +166,7 @@ class SettingsPage extends Page {
         _form.addChild( _rowKeepFailedServersRunning );
         
         spacer = new LayoutGroup();
-        spacer.height = GenesisApplicationTheme.GRID * 2;
+        spacer.height = GenesisApplicationTheme.SPACER;
         _form.addChild( spacer );
 
         _rowBrowsers = new GenesisFormRow();
@@ -180,7 +179,7 @@ class SettingsPage extends Page {
         _form.addChild(_rowBrowsers);
 
         spacer = new LayoutGroup();
-        spacer.height = GenesisApplicationTheme.GRID * 2;
+        spacer.height = GenesisApplicationTheme.SPACER;
         _form.addChild( spacer );
         
         _rowApplications = new GenesisFormRow();

@@ -57,7 +57,7 @@ class SupportPage extends Page {
 
         super.initialize();
 
-        _image = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.IMAGE_SUPPORT ) );
+        _image = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.IMAGE_SUPPORT );
         this.addChild( _image );
 
         _label = new Label( LanguageManager.getInstance().getString( 'supportpage.title' ) );
@@ -82,7 +82,7 @@ class SupportPage extends Page {
         this.addChild( _githubLabel );
 
         _visitGitHubButton = new Button( LanguageManager.getInstance().getString( 'supportpage.visitgithub' ) );
-        _visitGitHubButton.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_GITHUB ) );
+        _visitGitHubButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_GITHUB );
         _visitGitHubButton.addEventListener( TriggerEvent.TRIGGER, _visitGitHubButtonTriggered );
         this.addChild( _visitGitHubButton );
 

@@ -184,7 +184,7 @@ class ConfigPage extends Page {
         _buttonSafeId = new GenesisFormButton();
         _buttonSafeId.toolTip = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.tooltip' );
         _buttonSafeId.addEventListener( TriggerEvent.TRIGGER, _buttonSafeIdTriggered );
-        _buttonSafeId.icon = ( _server.safeIdExists() ) ? new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OK ) ) : new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _buttonSafeId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING ) ;
         _buttonSafeId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
         _buttonSafeId.enabled = !_server.userSafeId.locked;
         _rowSafeId.content.addChild( _buttonSafeId );
@@ -215,7 +215,7 @@ class ConfigPage extends Page {
         _rowRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.text' );
         _buttonRoles = new GenesisFormButton( LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.button' ) );
         _buttonRoles.addEventListener( TriggerEvent.TRIGGER, _buttonRolesTriggered );
-        _buttonRoles.icon = ( _server.areRolesValid() ) ? new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OK ) ) : new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
         _buttonRoles.enabled = !_server.roles.locked;
         _rowRoles.content.addChild( _buttonRoles );
         _form.addChild( _rowRoles );
@@ -270,9 +270,9 @@ class ConfigPage extends Page {
 
             _buttonSafeId.variant = null;
             _buttonRoles.variant = null;
-            _buttonRoles.icon = ( _server.areRolesValid() ) ? new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OK ) ) : new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+            _buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
             _buttonRoles.update();
-            _buttonSafeId.icon = ( _server.safeIdExists() ) ? new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OK ) ) : new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+            _buttonSafeId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
             _buttonSafeId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
 
             if ( !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {
@@ -346,7 +346,7 @@ class ConfigPage extends Page {
     function _safeIdLocated() {
 
         _buttonSafeId.setValidity( true );
-        _buttonSafeId.icon = ( _buttonSafeId.isValid() ) ? new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_OK ) ) : new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _buttonSafeId.icon = ( _buttonSafeId.isValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
         _buttonSafeId.text = ( _buttonSafeId.isValid() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
 
         if ( !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {

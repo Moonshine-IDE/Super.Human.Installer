@@ -212,7 +212,7 @@ class RolePickerItem extends LayoutGroup {
         _check.variant = GenesisApplicationTheme.CHECK_MEDIUM;
         _labelGroup.addChild( _check );
 
-        _helpImage = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_HELP ) );
+        _helpImage = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_HELP );
         _helpImage.alpha = .33;
         _helpImage.toolTip = _roleImpl.description;
         _labelGroup.addChild( _helpImage );
@@ -566,7 +566,7 @@ class RolePickerFileItem extends LayoutGroup {
 
         _deleteButton = new Button();
         _deleteButton.variant = GenesisApplicationTheme.BUTTON_SMALL;
-        _deleteButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DESTROY_SMALL, 20, 20 );
+        _deleteButton.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DESTROY_SMALL );
         _deleteButton.layoutData = new HorizontalLayoutData();
         _deleteButton.toolTip = LanguageManager.getInstance().getString( 'rolepage.role.removefile' );
         _deleteButton.addEventListener( TriggerEvent.TRIGGER, _deleteButtonTriggered );

@@ -30,6 +30,7 @@
 
 package;
 
+import openfl.Assets;
 import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
 import superhuman.components.applications.SetupApplicationsPage;
@@ -334,7 +335,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
 
-		this._header.logo = GenesisApplicationTheme.getAssetPath( SuperHumanInstallerTheme.IMAGE_ICON );
+		this._header.logo = Assets.getPath( SuperHumanInstallerTheme.IMAGE_ICON );
 
 		ExecutorManager.getInstance().onExecutorListChanged.add( _onExecutorListChanged );
 

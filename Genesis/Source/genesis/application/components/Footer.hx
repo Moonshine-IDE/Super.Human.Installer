@@ -93,7 +93,7 @@ class Footer extends LayoutGroup {
         _iconWarning = new Button();
         _iconWarning.includeInLayout = _iconWarning.visible = ( _warning != null && _warning != "" );
         _iconWarning.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
-        _iconWarning.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _iconWarning.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
         _iconWarning.toolTip = ( _warning != null ) ? _warning : "";
         this.addChild( _iconWarning );
         

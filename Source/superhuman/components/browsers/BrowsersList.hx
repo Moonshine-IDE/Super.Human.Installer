@@ -149,7 +149,7 @@ class BrowserItem extends LayoutGroupItemRenderer {
         
         _buttonIconExists = new Button();
         _buttonIconExists.variant = GenesisApplicationTheme.BUTTON_BROWSER_WARNING;
-        _buttonIconExists.icon = new AdvancedAssetLoader( GenesisApplicationTheme.getAssetPath( GenesisApplicationTheme.ICON_WARNING ) );
+        _buttonIconExists.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
         _buttonIconExists.visible = _buttonIconExists.includeInLayout = false;
         _statusGroup.addChild(_buttonIconExists);
         
