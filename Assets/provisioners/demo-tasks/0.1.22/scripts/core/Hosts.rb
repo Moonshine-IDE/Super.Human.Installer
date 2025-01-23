@@ -10,7 +10,7 @@ class Hosts
   def Hosts.configure(config, settings)
 
     ## Load your Secrets file
-    secrets = YAML::load(File.read("#{File.dirname(__FILE__)}/.secrets.yml")) if File.exists?("#{File.dirname(__FILE__)}/.secrets.yml")
+    secrets = YAML::load(File.read("#{File.dirname(__FILE__)}/.secrets.yml")) if File.exist?("#{File.dirname(__FILE__)}/.secrets.yml")
 
     # Main loop to configure VM
     settings['hosts'].each_with_index do |host, index|
@@ -172,11 +172,19 @@ class Hosts
 
         ##### Begin Virtualbox Configurations #####
         server.vm.provider :virtualbox do |vb|
-          if host['settings']['memory'] =~ /gb|g|/
-            host['settings']['memory']= 1024 * host['settings']['memory'].tr('^0-9', '').to_i
-          elsif host['settings']['memory'] =~ /mb|m|/
-            host['settings']['memory']= host['settings']['memory'].tr('^0-9', '')
+          # Convert memory value to MB
+          memory_mb = if host['settings']['memory'].to_s =~ /gb|g/i
+            1024 * host['settings']['memory'].to_s.tr('^0-9', '').to_i
+          elsif host['settings']['memory'].to_s =~ /mb|m/i
+            host['settings']['memory'].to_s.tr('^0-9', '').to_i
+          else
+            host['settings']['memory'].to_s.tr('^0-9', '').to_i
           end
+
+          # Ensure memory is within reasonable limits (minimum 512MB, maximum 512GB)
+          memory_mb = [[memory_mb, 512].max, 524288].min
+          host['settings']['memory'] = memory_mb
+
           vb.name = "#{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}"
           vb.gui = host['settings']['show_console']
           vb.customize ['modifyvm', :id, '--ostype', host['settings']['os_type']]
