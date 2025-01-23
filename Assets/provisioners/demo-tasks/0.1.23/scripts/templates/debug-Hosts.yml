@@ -49,6 +49,18 @@ hosts:
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
 
+    plugins:
+      install:
+        -
+          name: vagrant-scp-sync
+          version: latest
+#        -
+#          name: vagrant-zones
+#          version: latest
+      remove:
+        -
+          name: vagrant-scp
+
     zones:
       vmtype: production
       brand: bhyve
@@ -72,17 +84,6 @@ hosts:
       clean_shutdown_time: 200
       snapshot_script: '/opt/vagrant/bin/Snapshooter.sh'
       cpu_configuration: simple
-
-      install:
-        -
-          name: vagrant-scp-sync
-          version: latest
-#        -
-#          name: vagrant-zones
-#          version: latest
-      remove:
-        -
-          name: vagrant-scp
 
     networks:
       # if ::NO_BRIDGE_INTERFACE::
@@ -185,6 +186,7 @@ hosts:
         type: virtualbox
         disabled: true
         automount: true
+
       -
         description: "Directory for Ansible Scripts"
         map: ./provisioners/ansible/
@@ -196,16 +198,31 @@ hosts:
           - '--delete'
           - '-z'
           - '--copy-links'
+
+      -
+        description: "Directory for Ansible Scripts"
+        map: ./provisioners/ansible_collections/
+        to: /vagrant/ansible_collections/
+        type: rsync
+        args:
+          - '--verbose'
+          - '--archive'
+          - '--delete'
+          - '-z'
+          - '--copy-links'
+
       -
         description: "Directory for Application Installers"
         map: ./installers/
         to: /vagrant/installers/
         type: rsync
+
       -
         description: "Directory for Pre-Signed SSLs"
         map: ./ssls/
         to: /secure/
         type: rsync
+
       -
         description: "Directory for Server and User IDs"
         map: ./id-files/

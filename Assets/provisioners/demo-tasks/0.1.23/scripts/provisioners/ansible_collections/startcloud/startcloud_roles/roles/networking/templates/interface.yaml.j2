@@ -2,7 +2,7 @@
 ---
 network:
   ethernets:
-    #renderer: NetworkManager
+    renderer: networkd
     {{ network_name }}:
       accept-ra: false
     {% if networks[0].dhcp4 == false %}

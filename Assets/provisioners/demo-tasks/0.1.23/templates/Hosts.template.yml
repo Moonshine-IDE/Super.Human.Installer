@@ -163,6 +163,17 @@ hosts:
           - '-z'
           - '--copy-links'
       -
+        description: "Directory for Ansible Scripts"
+        map: ./provisioners/ansible_collections/
+        to: /vagrant/ansible_collections/
+        type: ::SYNC_METHOD::
+        args:
+          - '--verbose'
+          - '--archive'
+          - '--delete'
+          - '-z'
+          - '--copy-links'
+      -
         description: "Directory for Application Installers"
         map: ./installers/
         to: /vagrant/installers/

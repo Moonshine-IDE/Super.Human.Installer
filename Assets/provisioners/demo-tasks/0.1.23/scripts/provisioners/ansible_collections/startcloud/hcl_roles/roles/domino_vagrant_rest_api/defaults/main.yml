@@ -2,9 +2,9 @@
 run_tasks: true
 rest_app_home_dir: "/opt/rest-interface"
 rest_config_file: "/config/application.yml"
-rest_vagrant_crud_version: 1.1.0
+rest_vagrant_crud_version: 1.2.0
 rest_vagrant_crud_archive: VagrantCRUD_centos7.zip
-rest_interface_jar: rest-interface-1.1.0.jar
+rest_interface_jar: rest-interface-1.2.0.jar
 rest_vagrant_crud_git_repo: https://github.com/Moonshine-IDE/Vagrant-REST-Interface/releases/download/
 domino_vagrant_rest_api_port_forwards:
   -
