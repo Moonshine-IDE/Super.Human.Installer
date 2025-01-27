@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [0.11.0]
+
+The 0.11.0 release of Super.Human.Installer updates Domino provisioner to version [0.1.23](https://github.com/STARTcloud/hcl_domino_standalone_provisioner).
+
+### Added
+* Added option in Settings to switch between SCP and Rsync file synchronization methods [#118](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/118#issuecomment-2605447368)
+
+### Changed
+* Update Domino provisioner to version 0.1.23 ([#118](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/118))
+* Update Ubuntu box version to [0.0.9](https://portal.cloud.hashicorp.com/vagrant/discover/STARTcloud/debian12-server) for provisioner 0.1.22 ([#125](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/125))
+
 ## Super Human Installer [0.10.0]
 
 The 0.10.0 release of Super.Human.Installer update Domino provisioner to version [0.1.22](https://github.com/DominoVagrant/demo-tasks/compare/demo-tasks/v0.1.21...demo-tasks/v0.1.22). 
