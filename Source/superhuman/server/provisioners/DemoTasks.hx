@@ -671,7 +671,10 @@ class HostsFileGenerator {
 			var installerName:String = r.files.installerFileName == null ? defaultProvisionerFieldValue : r.files.installerFileName;
 			var installerVersion:Dynamic = r.files.installerVersion;
 			var hotfixVersion:Dynamic = r.files.installerHotFixVersion;
+            var hotfixHash:Dynamic = r.files.installerHotFixHash;
 			var fixpackVersion:Dynamic = r.files.installerFixpackVersion;
+            var fixpackHash:Dynamic = r.files.installerFixpackHash;
+
 			var installerHash:Dynamic = r.files.installerHash;
 			
 			if (r.value == "domino")
@@ -708,6 +711,16 @@ class HostsFileGenerator {
 						replace.DOMINO_INSTALLER_PATCH_VERSION = installerVersion.patchVersion;
 						replace.DOMINO_PATCH_VERSION = installerVersion.patchVersion;
 					}
+
+                    if (fixpackHash != null)
+                    {
+                        replace.DOMINO_FP_HASH = fixpackHash;
+                    }
+
+                    if (hotfixHash != null)
+                    {
+                        replace.DOMINO_HF_HASH = hotfixHash;
+                    }
 				}
 				
 				if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
