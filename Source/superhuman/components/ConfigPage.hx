@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import genesis.application.components.GenesisFormRow;
 import superhuman.server.SyncMethod;
 import feathers.controls.Button;
 import feathers.controls.Check;

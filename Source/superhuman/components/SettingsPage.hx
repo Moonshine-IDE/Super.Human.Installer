@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import genesis.application.components.GenesisFormRow;
 import superhuman.server.SyncMethod;
 import superhuman.components.filesync.FileSyncSetting;
 import superhuman.application.ApplicationData;

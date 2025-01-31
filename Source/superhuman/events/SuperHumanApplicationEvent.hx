@@ -30,6 +30,7 @@
 
 package superhuman.events;
 
+import superhuman.server.data.ServiceTypeData;
 import superhuman.application.ApplicationData;
 import superhuman.browser.BrowserData;
 import genesis.application.events.GenesisApplicationEvent;
@@ -57,6 +58,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final CONFIGURE_SERVER:String = "configureServer";
     public static final COPY_TO_CLIPBOARD:String = "copyToClipboard";
     public static final CREATE_SERVER:String = "createServer";
+    public static final CREATE_ADDITIONAL_DOMINO_SERVER:String = "createAdditionalDominoServer";
     public static final DELETE_SERVER:String = "deleteServer";
     public static final DESTROY_SERVER:String = "destroyServer";
     public static final DOWNLOAD_VAGRANT:String = "downloadVagrant";
@@ -88,6 +90,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var text:String;
     public var browserData:BrowserData;
     public var appData:ApplicationData;
+    public var serviceTypeData:ServiceTypeData;
     
     public function new( type:String ) {
 

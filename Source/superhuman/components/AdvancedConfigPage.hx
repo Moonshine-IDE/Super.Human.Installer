@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import genesis.application.components.GenesisFormRow;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;

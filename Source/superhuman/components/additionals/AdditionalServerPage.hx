@@ -1,18 +1,15 @@
 package superhuman.components.additionals;
 
-import prominic.helpers.PathUtil;
+import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.server.definitions.ProvisionerDefinition;
+import superhuman.managers.ProvisionerManager;
+import superhuman.server.Server;
 import lime.ui.FileDialogType;
-import haxe.io.Path;
-import lime.ui.FileDialog;
-import sys.FileSystem;
 import genesis.application.components.Page;
 import  superhuman.application.ApplicationData;
-import feathers.layout.HorizontalLayoutData;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
-import superhuman.events.SuperHumanApplicationEvent;
 import feathers.events.TriggerEvent;
-import lime.system.System;
 
 @:build(mxhx.macros.MXHXComponent.build())
 class AdditionalServerPage extends Page
@@ -27,20 +24,19 @@ class AdditionalServerPage extends Page
 		
 		firstLine.width = _width;
 
-		appNotDetectedGroup.width = _width;
-		appNameGroup.width = _width;
-		exectPathGroup.width = _width;
-		validatePathGroup.width = _width;
-		
-		textInputAppName.prompt = LanguageManager.getInstance().getString( 'settingspage.applications.appname' );
-		textInputPath.prompt = LanguageManager.getInstance().getString('settingspage.applications.executableapppath');
-		
-		validatePath.text = LanguageManager.getInstance().getString('settingspage.applications.validateapppath');
-		validatePath.addEventListener( TriggerEvent.TRIGGER, _validateButtonTriggered);
-		
-		locatePath.text = LanguageManager.getInstance().getString('settingspage.applications.locateapplication');
-		locatePath.addEventListener( TriggerEvent.TRIGGER, _locateButtonTriggered);
-		
+		rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
+		dropdownCoreComponentVersion.dataProvider = ProvisionerManager.getBundledProvisionerCollection();
+		dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
+            return item.name;
+        };
+
+		rowCoreComponentHostname.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.text' );
+		rowExistingDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.text' );
+		rowExistingServerIp.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.text' );
+
+		rowNewServerId.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.newserveridfile.text' );
+		buttonNewServerId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
+
 		secondLine.width = _width;
 		
 		buttonSave.text = LanguageManager.getInstance().getString( 'settingspage.buttons.save' );
@@ -50,72 +46,19 @@ class AdditionalServerPage extends Page
 		buttonClose.addEventListener( TriggerEvent.TRIGGER, _buttonCloseTriggered );
 	}
 	
-	public function setAppData(data:ApplicationData) {
-		_appData = data;
-		
-		labelTitle.text = LanguageManager.getInstance().getString( 'settingspage.applications.titleapppath', data.appName );
-		textInputAppName.text = data.appName;
-		textInputPath.text = data.displayPath;
-	}
+	private var _server:Server;
+	
+	public function setServer( server:Server ) {
+        _server = server;
+
+		labelTitle.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
+    }
+
 	
 	function _saveButtonTriggered(e:TriggerEvent) {
-		_appData.appName = textInputAppName.text;		
-		_appData.executablePath = PathUtil.getValidatedAppPath(textInputPath.text);
-		if (_appData.executablePath != null)
-		{
-			_appData.exists = _appData.executablePath != null;
-			_appData.displayPath = textInputPath.text;
-		}
-		else
-		{
-			_appData.exists = false;
-			_appData.displayPath = "";
-		}
-		
-		this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP ) );
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {
-        this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP ) );
-    }
-    
-    function _validateButtonTriggered( e:TriggerEvent ) {
-    		_appData.executablePath = PathUtil.getValidatedAppPath(textInputPath.text);
-		_appData.exists = _appData.executablePath != null;
-    		_showError();
-    }
-    
-    function _locateButtonTriggered( e:TriggerEvent ) {
-
-        var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        var fd = new FileDialog();
-        
-        var currentDir:String; 
-	
-        fd.onSelect.add( path -> {
-			
-        		path = Path.removeTrailingSlashes(path);
-            currentDir = Path.directory( path );
-            
-            if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
-
-			_appData.executablePath = PathUtil.getValidatedAppPath(path);
-			_appData.exists = _appData.executablePath != null;
-			_appData.displayPath = path;
-			
-			textInputPath.text = path;
-			_showError();
-        } );
-
-        fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'settingspage.applications.titleapppath', _appData.appName ) );
-    }
-    
-    function _showError() {
-    		#if mac
-    			notDetected.text = LanguageManager.getInstance().getString('settingspage.applications.appnotdetectedmac');
-    		#else
-    			notDetected.text = LanguageManager.getInstance().getString('settingspage.applications.appnotdetectedother');
-    		#end
-    		appNotDetectedGroup.visible = appNotDetectedGroup.includeInLayout = !_appData.exists;
+        this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE ) );
     }
 }

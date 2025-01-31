@@ -90,8 +90,10 @@ class ServerManager {
 
     public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
-        if ( type == ProvisionerType.DemoTasks ) return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory ) );
-
+        if ( type == ProvisionerType.DemoTasks ) 
+        {
+            return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory ) );
+        }
         return null;
 
     }

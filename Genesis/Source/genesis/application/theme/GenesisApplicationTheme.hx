@@ -30,9 +30,9 @@
 
 package genesis.application.theme;
 
-import feathers.controls.BitmapImage;
+import genesis.application.components.GenesisFormRowContent;
+import genesis.application.components.GenesisFormRow;
 import feathers.controls.Radio;
-import openfl.display.Bitmap;
 import feathers.skins.TriangleSkin;
 import feathers.controls.Alert;
 import feathers.controls.AssetLoader;
@@ -73,8 +73,6 @@ import genesis.application.components.MainMenuButton;
 import genesis.application.components.Page;
 import genesis.application.components.ProgressBar;
 import genesis.application.components.Toast;
-import lime.system.System;
-import openfl.Assets;
 import openfl.display.GradientType;
 import openfl.filters.DropShadowFilter;
 import openfl.text.TextFormatAlign;

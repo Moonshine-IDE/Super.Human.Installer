@@ -30,6 +30,8 @@
 
 package superhuman.components.serviceType;
 
+import superhuman.server.data.ServerUIType;
+import superhuman.server.ServerType;
 import superhuman.server.provisioners.ProvisionerType;
 import feathers.controls.GridViewColumn;
 import genesis.application.theme.GenesisApplicationTheme;
@@ -126,8 +128,16 @@ class ServiceTypePage extends Page {
     }
     
     function _continueButtonTriggered(e:TriggerEvent) {
-    		var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
-        		event.provisionerType = ProvisionerType.DemoTasks;
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
+        
+        var selectedServiceType = _serviceTypeGrid.selectedItem;
+        if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) 
+        {
+            event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER);
+        }
+        event.provisionerType = ProvisionerType.DemoTasks;
+        event.serviceTypeData = selectedServiceType;
+
         this.dispatchEvent( event );
 	}
 	

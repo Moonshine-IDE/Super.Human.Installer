@@ -143,6 +143,22 @@
             "info":"Fields marked with * are mandatory\nSome settings cannot be edited unless the server has been destroyed first"
         }
     },
+    "additionalserverconfigpage": {
+        "form": {
+            "hostname": {
+                "text": "Hostname (Should match new ID)*"
+            },
+            "existingdominoservername": {
+                "text": "Existing Domino server name*"
+            },
+            "existingserveripaddress": {
+                "text": "Existing server IP address"
+            },
+            "newserveridfile": {
+                "text": "New server ID file"
+            }
+        }
+    },
     "serveradvancedconfigpage":{
         "title":"Advanced Configuration (#%1)",
         "form":{

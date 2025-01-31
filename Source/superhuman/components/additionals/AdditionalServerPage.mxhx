@@ -5,7 +5,7 @@
 			
 	<f:LayoutGroup>
 		<f:layout>
-			<f:HorizontalLayout horizontalAlign="RIGHT" verticalAlign="MIDDLE"/>
+			<f:HorizontalLayout horizontalAlign="LEFT" verticalAlign="MIDDLE"/>
 		</f:layout>
 		<f:Label id="labelTitle" variant="label-large" text="Title">
 			<f:layoutData>
@@ -16,45 +16,59 @@
 	
 	<components:HLine id="firstLine"/>
 	
-	<f:LayoutGroup id="appNotDetectedGroup" visible="false" includeInLayout="false">
-		<f:layout>
-			<f:HorizontalLayout horizontalAlign="CENTER" verticalAlign="MIDDLE"/>
-		</f:layout>
-		<f:Label id="notDetected" variant="label-error" text="Title" />
-	</f:LayoutGroup>
-	
-	<f:LayoutGroup id="appNameGroup">
-		<f:layout>
-			<f:HorizontalLayout verticalAlign="MIDDLE" />
-		</f:layout>
-		<f:TextInput id="textInputAppName" enabled="false">
-			<f:layoutData>
-				<f:HorizontalLayoutData percentWidth="100"/>
-			</f:layoutData>
-		</f:TextInput>
-	</f:LayoutGroup>
-	
-	<f:LayoutGroup id="exectPathGroup">
-		<f:layout>
-			<f:HorizontalLayout verticalAlign="MIDDLE" gap="4"/>
-		</f:layout>
-		<f:TextInput id="textInputPath">
-			<f:layoutData>
-				<f:HorizontalLayoutData percentWidth="100"/>
-			</f:layoutData>
-		</f:TextInput>
-		<f:Button id="validatePath" variant="button-select-file" height="30"/>
-	</f:LayoutGroup>
-	<f:LayoutGroup id="validatePathGroup">
-		<f:layout>
-			<f:HorizontalLayout horizontalAlign="CENTER" verticalAlign="MIDDLE"/>
-		</f:layout>
-		<f:Button id="locatePath" variant="button-select-file" height="30">
-			<f:layoutData>
-				<f:HorizontalLayoutData percentWidth="80"/>
-			</f:layoutData>
-		</f:Button>
-	</f:LayoutGroup>
+	<components:GenesisForm id="form">
+		<components:GenesisFormRow id="rowCoreComponentVersion">
+			<components:content>
+				<components:GenesisFormRowContent>
+					<components:layoutData>
+						<f:HorizontalLayoutData percentWidth="60"/>
+					</components:layoutData>
+					<components:GenesisFormPupUpListView id="dropdownCoreComponentVersion" />
+				</components:GenesisFormRowContent>
+			</components:content>
+		</components:GenesisFormRow>
+		<components:GenesisFormRow id="rowCoreComponentHostname">
+			<components:content>
+				<components:GenesisFormRowContent>
+					<components:layoutData>
+						<f:HorizontalLayoutData percentWidth="60"/>
+					</components:layoutData>
+					<components:GenesisFormTextInput id="inputHostname" minLength="1" restrict="a-zA-Z0-9.-" />
+				</components:GenesisFormRowContent>
+			</components:content>
+		</components:GenesisFormRow>
+		<components:GenesisFormRow id="rowExistingDominoServer">
+			<components:content>
+				<components:GenesisFormRowContent>
+					<components:layoutData>
+						<f:HorizontalLayoutData percentWidth="60"/>
+					</components:layoutData>
+					<components:GenesisFormTextInput id="inputExistingDominoServer" minLength="1" restrict="a-zA-Z0-9.-" />
+				</components:GenesisFormRowContent>
+			</components:content>
+		</components:GenesisFormRow>
+		<components:GenesisFormRow id="rowExistingServerIp">
+			<components:content>
+				<components:GenesisFormRowContent>
+					<components:layoutData>
+						<f:HorizontalLayoutData percentWidth="60"/>
+					</components:layoutData>
+					<components:GenesisFormTextInput id="inputExistingServerIp" />
+				</components:GenesisFormRowContent>
+			</components:content>
+		</components:GenesisFormRow>
+		<components:GenesisFormRow id="rowNewServerId">
+			<components:content>
+				<components:GenesisFormRowContent>
+					<components:layoutData>
+						<f:HorizontalLayoutData percentWidth="60"/>
+					</components:layoutData>
+					<components:GenesisFormButton id="buttonNewServerId" />
+				</components:GenesisFormRowContent>
+			</components:content>
+		</components:GenesisFormRow>
+	</components:GenesisForm>
+
 	<components:HLine id="secondLine"/>
 	
 	<f:LayoutGroup>

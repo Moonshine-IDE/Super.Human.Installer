@@ -367,6 +367,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_serviceTypePage = new ServiceTypePage(_serviceTypesCollection);
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_SERVER, _createServer);
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER, _createAdditionalDominoServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
 		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
 		
@@ -383,6 +384,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
 		_additionalServerPage = new AdditionalServerPage();
+		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
 		this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 
 		_settingsPage = new SettingsPage();
@@ -583,6 +585,14 @@ class SuperHumanInstaller extends GenesisApplication {
 		_configPage.setServer( server );
 		_configPage.updateContent( true );
 		this.selectedPageId = PAGE_CONFIG;
+
+	}
+
+	function _showConfigureAdditionalServer( server:Server ) {
+
+		_additionalServerPage.setServer( server );
+		//_configPage.updateContent( true );
+		this.selectedPageId = PAGE_ADDITIONAL_SERVER;
 
 	}
 
@@ -1117,21 +1127,19 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
-
 		Logger.info( '${this}: Creating new server...' );
 
-		var newServerData:ServerData = ServerManager.getInstance().getDefaultServerData( e.provisionerType );
-		var server = ServerManager.getInstance().createServer( newServerData );
-		server.onUpdate.add( onServerPropertyChanged );
-
-		Logger.info( '${this}: New ${server} created' );
-
-		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.servercreated', 'with id ${server.id}' ) );
-
-		_saveConfig();
+		var server:Server = _createServerAndSaveConfig( e.provisionerType );
 
 		_showConfigureServer( server );
+	}
 
+	function _createAdditionalDominoServer( e:SuperHumanApplicationEvent ) {
+		Logger.info( '${this}: Creating Additional Domino server...' );
+
+		var server:Server = _createServerAndSaveConfig( e.provisionerType );
+
+		_showConfigureAdditionalServer( server );
 	}
 
 	function _copyToClipboard( e:SuperHumanApplicationEvent ) {
@@ -1246,6 +1254,20 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+	}
+
+	function _createServerAndSaveConfig(provisionerType:ProvisionerType) {
+		var newServerData:ServerData = ServerManager.getInstance().getDefaultServerData( provisionerType );
+		var server = ServerManager.getInstance().createServer( newServerData );
+		server.onUpdate.add( onServerPropertyChanged );
+
+		Logger.info( '${this}: New ${server} created' );
+
+		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.servercreated', 'with id ${server.id}' ) );
+
+		_saveConfig();
+
+		return server;
 	}
 
 	override function _showCrashAlert() {
