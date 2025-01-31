@@ -31,11 +31,18 @@ class AdditionalServerPage extends Page
         };
 
 		rowCoreComponentHostname.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.text' );
+		inputHostname.prompt = LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.prompt' );
+
 		rowExistingDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.text' );
+		inputExistingDominoServer.prompt = LanguageManager.getInstance().getString( 'serverconfigpage.form.orgcert.prompt' );
+
 		rowExistingServerIp.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.text' );
+		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkip.prompt' );
 
 		rowNewServerId.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.newserveridfile.text' );
+
 		buttonNewServerId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
+		//buttonNewServerId.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK );
 
 		secondLine.width = _width;
 		
