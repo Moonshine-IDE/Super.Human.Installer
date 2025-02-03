@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [1.0.0]
+
+The 1.0.0 release of Super.Human.Installer brings support for HCL Domino 14 and includes important fixes for Vagrant 2.4.3 compatibility.
+
+### Added
+* Support for HCL Domino 14 installation and configuration ([#133](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/133))
+
+### Fixed
+* Compatibility fixes for Vagrant 2.4.3 ([#126](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/126))
+
 ## Super Human Installer [0.11.0]
 
 The 0.11.0 release of Super.Human.Installer updates Domino provisioner to version [0.1.23](https://github.com/STARTcloud/hcl_domino_standalone_provisioner).
