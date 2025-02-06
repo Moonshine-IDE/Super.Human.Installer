@@ -30,6 +30,7 @@
 
 package superhuman.managers;
 
+import superhuman.server.AdditionalServer;
 import feathers.data.ArrayCollection;
 import champaign.core.logging.Logger;
 import prominic.sys.applications.hashicorp.Vagrant;
@@ -80,9 +81,11 @@ class ServerManager {
 
     }
 
-    public function createServer( serverData:ServerData ):Server {
+    public function createServer( serverData:ServerData, type:ProvisionerType = ProvisionerType.DemoTasks ):Server {
 
-        var server = Server.create( serverData, serverRootDirectory );
+        var server = type == ProvisionerType.DemoTasks ? 
+                             Server.create( serverData, serverRootDirectory ) : 
+                             AdditionalServer.create( serverData, serverRootDirectory );
         _servers.add( server );
         return server;
 
@@ -94,6 +97,11 @@ class ServerManager {
         {
             return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory ) );
         }
+        else if ( type == ProvisionerType.AdditionalProvisioner ) 
+        {
+            return superhuman.server.provisioners.AdditionalProvisioner.getDefaultServerData( superhuman.server.provisioners.AdditionalProvisioner.getRandomServerId( _serverRootDirectory ) );
+        }
+        
         return null;
 
     }

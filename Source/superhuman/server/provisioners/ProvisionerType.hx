@@ -35,5 +35,5 @@ enum abstract ProvisionerType( String ) from String to String {
     var Custom = "custom";
     var Default = "default";
     var DemoTasks = "demo-tasks";
-
+    var AdditionalProvisioner = "additional-provisioner";
 }

@@ -38,23 +38,22 @@ import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.Template;
 import haxe.io.Path;
-import lime.system.System;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
+import superhuman.server.hostsFileGenerator.DemoTasksHostsFileGenerator;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
 using champaign.core.tools.ObjectTools;
 
-@:allow( superhuman.server.provisioners.HostsFileGenerator )
+@:allow( superhuman.server.hostsFileGenerator.DemoTasksHostsFileGenerator )
 class DemoTasks extends AbstractProvisioner {
 
     static final _CURRENT_TASK_IDENTIFIER_PATTERN:EReg = ~/(?:TASK \x{5b})(\S+)(?:.+)(?:\x{3a})(?:.*)/m;
     static final _IP_ADDRESS_PATTERN:EReg = ~/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
-    static final _SAFE_ID_FILE:String = "safe.ids";
     static final _DEFAULT_SAFE_ID_LOCATION:String = "safe-id-to-cross-certify";
     static final _TASK_IDENTIFIER_PATTERN:EReg = ~/(?:\s{6})(?:- name: )(\S+)/;
     static final _VERSION_PATTERN:EReg = ~/(\d{1,3}\.\d{1,3}\.\d{1,3})/;
@@ -71,9 +70,9 @@ class DemoTasks extends AbstractProvisioner {
     static final _TEMPLATE_STARTCLOUD_QUICK_START:String = "startcloud_quick_start.template.yml";
     static final _TEMPLATE_STARTCLOUD_VAGRANT_README:String = "startcloud_vagrant_readme.template.yml";
 
+    static public final _SAFE_ID_FILE:String = "safe.ids";
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
-    static public final PROVISIONER_TYPE:ProvisionerType = ProvisionerType.DemoTasks;
     static public final PROVISIONING_PROOF_FILE:String = ".vagrant/provisioned-briged-ip.txt";
     static public final WEB_ADDRESS_FILE:String = ".vagrant/done.txt";
 
@@ -133,7 +132,7 @@ class DemoTasks extends AbstractProvisioner {
 		// Range: 1025 - 9999
 		var r = Math.floor( Math.random() * 8974 ) + 1025;
 
-		if ( FileSystem.exists( '${serverDirectory}${PROVISIONER_TYPE}/${r}' ) ) return getRandomServerId( serverDirectory );
+		if ( FileSystem.exists( '${serverDirectory}${ProvisionerType.DemoTasks}/${r}' ) ) return getRandomServerId( serverDirectory );
 
 		return r;
 
@@ -281,7 +280,7 @@ class DemoTasks extends AbstractProvisioner {
         _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
 
         //if ( _version >= "0.1.18" ) return HostsFileGenerator.generateContentForV18( _hostsTemplate, this );
-        return HostsFileGenerator.generateContent( _hostsTemplate, this );
+        return DemoTasksHostsFileGenerator.generateContent( _hostsTemplate, this );
 
     }
 
@@ -526,318 +525,4 @@ class DemoTasks extends AbstractProvisioner {
     		return "id-files/user-safe-ids";
     }
 
-}
-
-class HostsFileGenerator {
-
-    static public function generateContent( sourceTemplate:String, provisioner:DemoTasks ):String {
-
-        var output:String = null;
-			
-        var versionGreaterThan20:Bool = provisioner.data.version > "0.1.20";
-        var versionGreaterThan22:Bool = provisioner.data.version > "0.1.22";
-        
-        var defaultProvisionerFieldValue:String = versionGreaterThan22 ? null : "";
-        var defaultRoleFieldValue:Dynamic = versionGreaterThan22 ? false : "";
-
-        var syncMethod = provisioner.server.syncMethod;
-
-        var replace = {
-
-            USER_EMAIL: provisioner.server.userEmail.value,
-            
-            //settings
-         	SERVER_HOSTNAME: provisioner.server.url.hostname,
-         	SERVER_DOMAIN: provisioner.server.url.domainName,
-         	SERVER_ID: provisioner.server.id,
-            SHOW_CONSOLE: false,
-            POST_PROVISION: false,
-            BOX_URL: 'https://boxvault.startcloud.com',
-            SYNC_METHOD: syncMethod,
-            SYNCBACK_ID_FILES: true,
-            DEBUG_ALL_ANSIBLE_TASKS: true,
-         	RESOURCES_CPU: provisioner.server.numCPUs.value,
-         	RESOURCES_RAM: Std.string( provisioner.server.memory.value ) + "G",
-         	
-            USE_HTTP_PROXY: false,
-            HTTP_PROXY_HOST: '255.255.255.255',
-            HTTP_PROXY_PORT: 3128,
-
-         	//vagrant_user
-         	SERVER_DEFAULT_USER: "startcloud",
-         	SERVER_DEFAULT_USER_PASS: "STARTcloud24@!",
-         	
-         	//network
-         	NETWORK_ADDRESS: ( provisioner.server.dhcp4.value ) ? "192.168.2.1" : provisioner.server.networkAddress.value,
-         	NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
-         	NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
-            // Always true, never false
-         	NETWORK_DHCP4: true,
-         	NETWORK_BRIDGE: provisioner.server.networkBridge.value,
-         	
-         	//dns
-         	NETWORK_DNS_NAMESERVER_1: ( provisioner.server.dhcp4.value ) ? "1.1.1.1" : provisioner.server.nameServer1.value,
-         	NETWORK_DNS_NAMESERVER_2: ( provisioner.server.dhcp4.value ) ? "1.0.0.1" : provisioner.server.nameServer2.value,
-           
-            //vars
-            SERVER_ORGANIZATION: provisioner.server.organization.value,
-            USER_SAFE_ID: superhuman.server.provisioners.DemoTasks._SAFE_ID_FILE,
-            DOMINO_ADMIN_PASSWORD: "password",
-            DOMINO_SERVER_CLUSTERMATES: 0,
-            CERT_SELFSIGNED: ( provisioner.server.url.hostname + "." + provisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
-			
-		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
-			
-            //Domino Variables
-            DOMINO_HASH: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_MAJOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_MINOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_PATCH_VERSION: defaultProvisionerFieldValue,
-            
-            DOMINO_MAJOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_MINOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_PATCH_VERSION: defaultProvisionerFieldValue,
-            
-            //Domino fixpack Variables
-            DOMINO_FP_HASH: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
-            DOMINO_INSTALLER_FIXPACK_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_FIXPACK: defaultProvisionerFieldValue,
-            
-            //Domino Hotfix Variables
-            DOMINO_HF_HASH: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_HOTFIX_INSTALL: false,
-            DOMINO_INSTALLER_HOTFIX_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_HOTFIX: defaultProvisionerFieldValue,
-            
-            //Leap Variables
-            LEAP_HASH: defaultProvisionerFieldValue,
-            LEAP_INSTALLED_CHECK: false,
-            LEAP_INSTALLER: defaultProvisionerFieldValue,
-            LEAP_INSTALLER_VERSION: defaultProvisionerFieldValue,
-		    
-            //Nomad Web Variables
-            NOMADWEB_HASH: defaultProvisionerFieldValue,
-            NOMADWEB_INSTALLER: defaultProvisionerFieldValue,
-            NOMADWEB_VERSION: defaultProvisionerFieldValue,
-            
-            //Traveler Variables
-            TRAVELER_INSTALLER: defaultProvisionerFieldValue,
-            TRAVELER_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            TRAVELER_FP_INSTALLER: defaultProvisionerFieldValue,
-            TRAVELER_FP_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            
-            //Verse Variables
-            VERSE_INSTALLER: defaultProvisionerFieldValue,
-            VERSE_INSTALLER_VERSION: defaultProvisionerFieldValue,
-      		
-            //AppDev Web Pack Variables
-            APPDEVPACK_INSTALLER: defaultProvisionerFieldValue,
-            APPDEVPACK_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            
-            //Domino Rest API Variables
-            DOMINO_REST_API_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
-            
-            //roles
-            ROLE_LEAP: defaultRoleFieldValue,
-            ROLE_NOMADWEB: defaultRoleFieldValue,
-            ROLE_TRAVELER: defaultRoleFieldValue,
-            ROLE_TRAVELER_HTMO: defaultRoleFieldValue,
-            ROLE_VERSE: defaultRoleFieldValue,
-            ROLE_APPDEVPACK: defaultRoleFieldValue,
-            ROLE_RESTAPI: defaultRoleFieldValue,
-            ROLE_DOMINO_RESTAPI: defaultRoleFieldValue,
-            ROLE_VOLTMX: defaultRoleFieldValue,
-            ROLE_VOLTMX_DOCKER: defaultRoleFieldValue,
-            ROLE_STARTCLOUD_QUICK_START: defaultRoleFieldValue,
-            ROLE_STARTCLOUD_HAPROXY: defaultRoleFieldValue,
-            ROLE_STARTCLOUD_VAGRANT_README: defaultRoleFieldValue,
-            ROLE_DOMINO_RESET: defaultRoleFieldValue,
-            ROLE_MARIADB: defaultRoleFieldValue,
-            ROLE_DOCKER: defaultRoleFieldValue,
-            
-            ENV_OPEN_BROWSER: false,
-            ENV_SETUP_WAIT: provisioner.server.setupWait.value,
-        };
-
-        for ( r in provisioner.server.roles.value ) {
-
-			var roleValue = r.value;
-			var replaceWith:String = "";
-			var installerHash:String = r.files.installerHash == null ? defaultProvisionerFieldValue : "\"" + r.files.installerHash + "\"";
-			var installerName:String = r.files.installerFileName == null ? defaultProvisionerFieldValue : r.files.installerFileName;
-			var installerVersion:Dynamic = r.files.installerVersion;
-			var hotfixVersion:Dynamic = r.files.installerHotFixVersion;
-            var hotfixHash:Dynamic = r.files.installerHotFixHash;
-			var fixpackVersion:Dynamic = r.files.installerFixpackVersion;
-            var fixpackHash:Dynamic = r.files.installerFixpackHash;
-
-			var installerHash:Dynamic = r.files.installerHash;
-			
-			if (r.value == "domino")
-			{
-				replace.DOMINO_HASH = installerHash;
-				replace.DOMINO_INSTALLER = installerName;
-						
-				if (installerVersion != null)
-				{
-					if (installerVersion.hash != null)
-					{
-						replace.DOMINO_HASH = installerHash;
-					}
-					
-					if (installerVersion.fullVersion != null)
-					{
-						replace.DOMINO_INSTALLER_VERSION = installerVersion.fullVersion;
-					}
-					
-					if (installerVersion.majorVersion != null)
-					{
-						replace.DOMINO_INSTALLER_MAJOR_VERSION = installerVersion.majorVersion;
-						replace.DOMINO_MAJOR_VERSION = installerVersion.majorVersion;
-					}
-					
-					if (installerVersion.minorVersion != null)
-					{
-						replace.DOMINO_INSTALLER_MINOR_VERSION = installerVersion.minorVersion;
-						replace.DOMINO_MINOR_VERSION = installerVersion.minorVersion;
-					}
-					
-					if (installerVersion.patchVersion != null)
-					{
-						replace.DOMINO_INSTALLER_PATCH_VERSION = installerVersion.patchVersion;
-						replace.DOMINO_PATCH_VERSION = installerVersion.patchVersion;
-					}
-
-                    if (fixpackHash != null)
-                    {
-                        replace.DOMINO_FP_HASH = fixpackHash;
-                    }
-
-                    if (hotfixHash != null)
-                    {
-                        replace.DOMINO_HF_HASH = hotfixHash;
-                    }
-				}
-				
-				if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
-				{
-					var hotfixesPath = new Path(r.files.hotfixes[0]);
-					
-					replace.DOMINO_INSTALLER_HOTFIX_INSTALL = true;
-					replace.DOMINO_INSTALLER_HOTFIX = hotfixesPath.file + "." + hotfixesPath.ext;
-					replace.DOMINO_INSTALLER_HOTFIX_VERSION = hotfixVersion == null ? defaultProvisionerFieldValue : hotfixVersion.fullVersion;
-				}
-					
-				if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
-				{
-					var fixPacksPath = new Path(r.files.fixpacks[0]);
-					
-					replace.DOMINO_INSTALLER_FIXPACK_INSTALL = true;
-					replace.DOMINO_INSTALLER_FIXPACK = fixPacksPath.file + "." + fixPacksPath.ext;
-					replace.DOMINO_INSTALLER_FIXPACK_VERSION = fixpackVersion == null ? defaultProvisionerFieldValue : fixpackVersion.fullVersion;
-				}
-			}
-		  	
-            if ( r.value == "leap" ) {
-
-                //"- name: hcl_domino_leap" : "- name: domino_leap";
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
- 
-                replace.LEAP_HASH = installerHash;
-                replace.LEAP_INSTALLED_CHECK = r.enabled;
-                replace.LEAP_INSTALLER = installerName;
-                replace.LEAP_INSTALLER_VERSION = installerVersion == null ? "" : installerVersion.fullVersion;
-                replace.ROLE_LEAP = replaceWith;
-             }
-
-            if ( r.value == "nomadweb" ) {
-                
-                //"- name: hcl_domino_nomadweb" : "- name: domino_nomadweb";
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
-				
-                replace.NOMADWEB_HASH = installerHash;
-                replace.NOMADWEB_INSTALLER = installerName;
-                replace.NOMADWEB_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_NOMADWEB = replaceWith;
-            }
-
-            if ( r.value == "traveler" ) {
-
-                //"- name: hcl_domino_traveler" : "- name: domino_traveler"
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
-            	    
-                replace.TRAVELER_INSTALLER = installerName;
-                replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_TRAVELER = replaceWith;
-            }
-
-            if ( r.value == "traveler" ) {
-
-                //"- name: hcl_domino_traveler_htmo" : "- name: domino_traveler_htmo"
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "traveler_htmo", r.enabled);
-                replace.ROLE_TRAVELER_HTMO = replaceWith;
-            }
-
-            if ( r.value == "verse" ) {
-
-                //"- name: hcl_domino_verse" : "- name: domino_verse"
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
-       
-                replace.VERSE_INSTALLER = installerName;
-                replace.VERSE_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_VERSE = replaceWith;
-            }
-
-            if ( r.value == "appdevpack" ) {
-
-                //"- name: hcl_domino_appdevpack" : "- name: domino_appdevpack"
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, r.value, r.enabled);
-            		
-                replace.APPDEVPACK_INSTALLER = installerName;
-                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_APPDEVPACK = replaceWith;
-            }
-
-            if ( r.value == "domino-rest-api" ) {
-
-                //"- name: hcl_domino_rest_api" : "- name: domino_rest_api"
-                replaceWith = RolesUtil.getDominoRole(provisioner.data.version, "rest_api", r.enabled);
-
-                replace.DOMINO_REST_API_INSTALLER = installerName;
-                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_RESTAPI = replaceWith;
-                replace.ROLE_DOMINO_RESTAPI = replaceWith;
-            }
-			
-            //"- name: startcloud_quick_start";
-            replace.ROLE_STARTCLOUD_QUICK_START = RolesUtil.getOtherRole(provisioner.data.version, "quick_start");
-             //"- name: startcloud_haproxy";
-            replace.ROLE_STARTCLOUD_HAPROXY = RolesUtil.getOtherRole(provisioner.data.version, "haproxy");
-            //"- name: startcloud_vagrant_readme";
-            replace.ROLE_STARTCLOUD_VAGRANT_README = RolesUtil.getOtherRole(provisioner.data.version, "vagrant_readme");
-        }
-
-        var template = new Template( sourceTemplate );
-		output = template.execute( replace );
-
-        if ( provisioner.server.disableBridgeAdapter.value ) {
-
-            // Remove the contents of networks yaml tag
-            var r:EReg = ~/(?:networks:)((.|\n)*)(?:vbox:)/;
-            
-            if ( r.match( output ) ) {
-
-                output = r.replace( output, "vbox:" );
-
-            }
-
-        }
-
-        return output;
-
-    }
 }
