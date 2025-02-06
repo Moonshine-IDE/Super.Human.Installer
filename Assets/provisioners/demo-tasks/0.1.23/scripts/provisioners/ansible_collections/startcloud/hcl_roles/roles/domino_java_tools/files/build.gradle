@@ -8,54 +8,60 @@ plugins {
 }
 mainClassName = 'CheckNotesUser'
 
-String notesInstallation = '/Applications/HCL Notes.app/Contents/MacOS'
+String notesInstallation = project.findProperty('notesInstallation') ?: '/Applications/HCL Notes.app/Contents/MacOS/'
 if (!notesInstallation) {
-    throw new GradleException("Missing configured path for Notes installation.  Set notesInstallation in build.gradle.")
+	throw new GradleException("Missing configured path for Notes installation.  Set notesInstallation in gradle.properties.")
 }
-if (!(new File(notesInstallation).exists())) {
-    // try this as a Linux environment instead
-    notesInstallation = '{{ domino_install_dir }}'
-}
-if (!(new File(notesInstallation).exists())) {
-    throw new GradleException("Invalid configured path for Notes installation ($notesInstallation).  Check notesInstallation in build.gradle.")
+else if (!(new File(notesInstallation).exists())) {
+	throw new GradleException("Invalid configured path for Notes installation ($notesInstallation).  Check notesInstallation in gradle.properties.")
 }
 
-String notesJarPath = "$notesInstallation/jvm/lib/ext/Notes.jar"
-if (!(new File(notesJarPath).exists())) {
-    // Check for the new path
-    notesJarPath = "$notesInstallation/ndext/Notes.jar"
-    if (!(new File(notesJarPath).exists())) {
-        throw new GradleException("ERROR: Could not find Notes.jar in any known locations.")
-    }
-}
 
+String notesJarBaseDir = "$notesInstallation"
 String envPath = System.getenv('PATH')
 if (!envPath) {
-    logger.warn "Missing PATH environment variable."
-    envPath = ''  // default to empty string to avoid null errors later
+	logger.warn "Missing PATH environment variable."
+	envPath = ''  // default to empty string to avoid null errors later
 }
+
 
 // change envPath as needed
 if (notesInstallation.toLowerCase().startsWith('/applications/')) { // treat as macOS
-    if (!(new File(notesJarPath).exists())) {
-        // alternative location for macOS: /Applications/HCL Notes.app/Contents/Resources/jvm/lib/ext/Notes.jar
-        logger.info "Notes.jar not found at $notesJarPath"
-        notesJarPath = "$notesInstallation/../Resources/jvm/lib/ext/Notes.jar"
-    }
-    if (!(new File(notesJarPath).exists())) {
-        logger.info "Notes.jar not found at $notesJarPath"
-        throw new GradleException("ERROR: Could not find Notes.jar")
-    }
-    println("Notes JAR path: $notesJarPath")
+        // directory for additional JARs is inconsistent across version, so just use `/Applications/HCL Notes.app/Contents`
+        notesJarBaseDir = "$notesInstallation/.."
 }
 else { // treat as Windows
-    // update PATH
-    envPath = "$envPath;$notesInstallation"
-    println "Updated PATH: $envPath"
+	// update PATH
+	envPath = "$envPath;$notesInstallation"
+	println "Updated PATH: $envPath"
+}
+
+/**
+ * Method to find a file under the given path
+ * @param baseDir  the base directory to search
+ * @param findName  the name of the file to find.  TODO:  support patterns
+ * @return the absolute path of the file, or null if the file was not found.
+ */
+String findFile(String baseDir, String findName) {
+    String foundFile = null;
+    // search for a file with the given pattern.  If multiple copies are found, use the last
+    new File(baseDir).eachFileRecurse {File curFile ->
+        if (curFile.getName() == findName) {
+            foundFile = curFile.getAbsolutePath()
+            println "Found file '$findName' at '${curFile.getAbsolutePath()}'"
+        }
+    }
+
+    if (!foundFile) {
+        println ("Could not find '$findName' in '$baseDir'")
+    }
+
+    return foundFile
 }
 
 // build a jar path to use for Notes.jar
 // Supports local and Linux server executions
+String notesJarPath = findFile(notesJarBaseDir, 'Notes.jar')
 String jarClassPath = "./Notes.jar {{ domino_install_dir }}/jvm/lib/ext/Notes.jar ${notesJarPath.replaceAll(' ', '%20').replaceAll('^\\w+:', '/$0')}"
 
 logger.debug "Environment"
@@ -65,6 +71,12 @@ System.env.each {
 
 repositories {
     mavenCentral()
+    maven {
+        url "https://artifactory.openntf.org/openntf"
+    }
+    maven {
+        url "https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna"
+    }
 }
 sourceSets {
     main {
@@ -84,7 +96,14 @@ targetCompatibility = 1.8
 dependencies {
     // Local JAR dependency
     implementation files(notesJarPath)
+    // the paths to these files vary for the different Domino installations, so search for them instead
+    implementation files(findFile(notesJarBaseDir, 'lwpd.domino.napi.jar'))
+    implementation files(findFile(notesJarBaseDir, 'lwpd.commons.jar'))
+
+
     implementation 'org.json:json:20160212'  // For parsing setup.json
+    implementation 'com.mindoo.domino:domino-jna:0.9.53'
+    implementation 'net.java.dev.jna:jna:5.13.0'
 }
 
 /*
@@ -117,6 +136,11 @@ jar {
         }
     }
     // classpath needs to be specified in individual tasks
+    
+    // exclude signature files
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
 }
 
 /**
@@ -134,6 +158,10 @@ task jarCheckNotesUser(type: Jar) {
 
 task jarIndividual() {
     // placeholder for generated tasks
+}
+
+tasks.withType(Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // generate tasks to create individual jars

@@ -19,13 +19,16 @@
 hosts:
   -
     settings:
+      # Vagrant Debug
+      debug_build: true
+
       # Identifiers
       hostname: REPLACEME #test-standalone
       domain: REPLACEME #shi.com
       server_id: REPLACEME #'1234'
 
       # Resources
-      vcpus: 4
+      vcpus: 2
       memory: 8G
 
       # Console Access
@@ -47,31 +50,69 @@ hosts:
       setup_wait: 300
 
       # Vagrant Configurations
-      vagrant_user_private_key_path: ./id_rsa
       vagrant_user: startcloud
       vagrant_user_pass: REPLACEME #'STARTcloud24@!' 
+      vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
 
+    plugins:
+      install:
+        -
+          name: vagrant-scp-sync
+          version: latest
+#        -
+#          name: vagrant-zones
+#          version: latest
+      remove:
+        -
+          name: vagrant-scp
+
+    zones:
+      vmtype: production
+      brand: bhyve
+      on_demand_vnics: true
+      post_provision_boot: false
+      console_onboot: false
+      console: webvnc
+      debug: false
+      debug_boot: false
+      hostbridge: i440fx
+      acpi: on
+      autostart: true
+      setup_method: zlogin
+      diskif: virtio
+      netif: virtio-net-viona
+      booted_string: 'Web console:'
+      lcheck_string: ':~$'
+      alcheck_string: 'login:'
+      safe_restart: 'sudo shutdown -r'
+      safe_shutdown: 'sudo init 0 || true'
+      clean_shutdown_time: 200
+      snapshot_script: '/opt/vagrant/bin/Snapshooter.sh'
+      cpu_configuration: simple
+
     networks:
+      # if ::NO_BRIDGE_INTERFACE::
+      # TO SHI DEVs, if user wants to to disable the external bridged interface, then you should remove the below block
       -
         type: external
-        address: 192.168.1.255
+        address: 192.168.255.255
         netmask: 255.255.255.0
-        gateway: 192.168.1.1
-        autoconf: false 
+        gateway: 192.168.2.1
+        autoconf: false
         vlan:
         dhcp4: true
         dhcp6: false
-        is_control: true
+        is_control: false
         route: default
         provisional: false
         bridge:
         nic_type: virtio
         mac: auto
         dns:
-          - nameserver: 199.103.5.20
-          - nameserver: 199.103.7.51
+          - nameserver: 1.1.1.1
+          - nameserver: 1.0.0.1
 
     disks:
       boot:
@@ -85,14 +126,19 @@ hosts:
     
 
     provisioning:
+      shell:
+        enabled: false
+        scripts:
+          - './scripts/aliases.sh'
+
       ansible:
         enabled: true
         playbooks:
           - local:
               -
-                description: "This generates a Ansible Playbook on the VM with all the variables in Hosts.yml"
+                description: "This playbook imports Hosts.yml variables into a generated playbook: /vagrant/ansible/playbook.yml"
                 playbook: ansible/generate-playbook.yml
-                nsible_python_interpreter: /usr/bin/python3
+                ansible_python_interpreter: /usr/bin/python3
                 compatibility_mode: 2.0
                 install_mode: pip
                 ssh_pipelining: true
@@ -102,7 +148,7 @@ hosts:
                 remote_collections: false
                 collections: []
               -
-                description: "This generates and runs the previously generated playbook, This playbook configures the machine"
+                description: "This playbook configures the machine using the generated playbook: /vagrant/ansible/playbook.yml"
                 playbook: ansible/playbook.yml
                 ansible_python_interpreter: /usr/bin/python3
                 compatibility_mode: 2.0
@@ -130,16 +176,16 @@ hosts:
                 remote_collections: false
                 collections:
                   - startcloud.startcloud_roles
-    
 
     folders:
-      - 
+      -
         description: "Disables VBoxSF, do not enable"
         map: .
         to: /vagrant
         type: virtualbox
         disabled: true
         automount: true
+
       -
         description: "Directory for Ansible Scripts"
         map: ./provisioners/ansible/
@@ -151,16 +197,31 @@ hosts:
           - '--delete'
           - '-z'
           - '--copy-links'
+
+      -
+        description: "Directory for Ansible Scripts"
+        map: ./provisioners/ansible_collections/
+        to: /vagrant/ansible_collections/
+        type: rsync
+        args:
+          - '--verbose'
+          - '--archive'
+          - '--delete'
+          - '-z'
+          - '--copy-links'
+
       -
         description: "Directory for Application Installers"
         map: ./installers/
         to: /vagrant/installers/
         type: rsync
+
       -
         description: "Directory for Pre-Signed SSLs"
         map: ./ssls/
         to: /secure/
         type: rsync
+
       -
         description: "Directory for Server and User IDs"
         map: ./id-files/
@@ -169,10 +230,6 @@ hosts:
         syncback: true
 
     vars:
-      debug_all: true
-      selfsigned_enabled: true
-      haproxy_ssl_redirect: true
-
       # Uncomment and fill in these lines if you want to download the installers for this instance
       # Note that the installer names must match the names on the download server.
       #secrets:
@@ -180,90 +237,140 @@ hosts:
       #  domino_installer_url_user: "replaceme"
       #  domino_installer_url_pass: "replaceme"
 
+      ## Provisioner Debug
+      debug_all: true
+
+      ## SSL
+      selfsigned_enabled: true
+      haproxy_ssl_redirect: true
+      letsencrypt_enabled: false
+      letsencrypt_staging_enabled: false
+
+      ## Use Proxy for downloads and updates
+      use_proxy: false
+      proxy_server: 255.255.255.255
+      proxy_port: 3128
+
       
       # Domino Configuration Variables
       domino_organization: REPLACEME #TESTSTANDLONE
       # You need to add a file matching this name to id-files/user-safe-ids
-      user_safe_id: REPLACEME #safe.ids
       domino_admin_notes_id_password: password
-      ots_generate_server_id_count: 0
 
-      # Additional server options
+      ## Domino Configuration Variables
+      domino_organization: STARTcloud
+      #domino_admin_notes_id_password: password
+
+      ## Safe-ids to cross-certify
+      user_safe_id: REPLACEME #safe.ids
+
+      ## Additional server options
       is_additional_server: false
+      #domino_server_id: "additional-demo.startcloud.com.id"
+      #origin_server: "standalone-demo.startcloud.com"
+      #origin_server_ip: "192.168.2.255"
 
-      # Genesis Variables
+      # ots: Use One Touch Setup to generate the ID (server names are incremented, ie mail1 mail2 mail3 . .)
+      # asja: Use Custom Additional Server Java Applet to generate the additional server ID
+      domino_server_id_creation_tool: ots
+
+      # For use in Domino 14 and above
+      ots_generate_server_names:
+        - additional-demo.startcloud.com
+      
+      # For use in Domino 12 and below
+      #ots_generate_server_id_count:  1
+      #ots_generate_server_id_pattern: mail
+
+      #asja_generate_server_ids:
+      #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
+      #  - ::OTHER_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
+      #  - ::THIRD_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
+
+      ## Genesis Variables
       genesis_packages:
         - netmonitor
         - SuperHumanPortal
 
       # Domino Installer Variables
-      domino_hash: null
+      #domino_hash: 
       # REPLACEME:   Update Domino installer and version if needed, and update the versions as well
       # If you want to use a local copy, it must match the below name and be added to `./installers/domino/archives`
-      domino_server_installer_tar: Domino_12.0.1_Linux_English.tar
-      domino_major_version: 12
+      domino_server_installer_tar: Domino_14.0_Linux_English.tar
+      domino_major_version: 14
       domino_minor_version: 0
-      domino_patch_version: 1
+      domino_patch_version: 0
 
       # Domino fixpack Variables
-      domino_fp_hash: 
+      #domino_fp_hash: 
       domino_installer_fixpack_install: false
       domino_fixpack_version: 
       domino_server_fixpack_tar: 
 
       # Domino Hotfix Variables
-      domino_hf_hash: 
+      #domino_hf_hash: 
       domino_installer_hotfix_install: false
       domino_hotfix_version: 
       domino_server_hotfix_tar: 
 
       # Leap Variables
-      leap_hash: 
-      leap_archive: 
-      leap_version: 
+      #leap_hash: 
+      #leap_archive: 
+      #leap_version: 
 
       # Nomad Web Variables
-      nomadweb_hash: 
-      nomadweb_archive: 
-      nomadweb_version: 
+      #nomadweb_hash: 
+      #nomadweb_archive: 
+      #nomadweb_version: 
 
       # Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
-      traveler_archive: 
-      traveler_base_version: 
-      traveler_fixpack_archive: 
-      traveler_fixpack_version: 
+      #traveler_archive: 
+      #traveler_base_version: 
+      #traveler_fixpack_archive: 
+      #traveler_fixpack_version: 
 
       # Verse Variables
       #verse_hash: ::VERSE_HASH::
-      verse_archive: 
-      verse_base_version: 
+      #verse_archive: 
+      #verse_base_version: 
 
       # AppDev Web Pack Variables
       #appdevpack_hash: ::APPDEVPACK_HASH::
-      appdevpack_archive: 
-      appdevpack_version: 
+      #appdevpack_archive: 
+      #appdevpack_version: 
 
       # Domino Rest API Variables
       #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
-      domino_rest_api_version: 
-      domino_rest_api_archive: 
+      #domino_rest_api_version: 
+      #domino_rest_api_archive: 
+
+      ## Hosts entries for /etc/hosts
+      #etc_hosts_entries:
+      #  - hostname: standalone-demo.startcloud.com
+      #    aliases:
+      #      - standalone-demo
+      #    ip: 192.168.2.255
 
     roles:
       - name: startcloud.startcloud_roles.setup
       - name: startcloud.startcloud_roles.networking
         tags: always
+      - name: startcloud.startcloud_roles.disks
       - name: startcloud.startcloud_roles.hostname
       - name: startcloud.startcloud_roles.dependencies
+      - name: startcloud.startcloud_roles.mdns
       - name: startcloud.startcloud_roles.service_user
       - name: startcloud.startcloud_roles.sdkman_install
       - name: startcloud.startcloud_roles.sdkman_java
       - name: startcloud.startcloud_roles.sdkman_maven
       - name: startcloud.startcloud_roles.sdkman_gradle
       - name: startcloud.startcloud_roles.ssl
-      #- name: startcloud.hcl_roles.domino_reset 
+      - name: startcloud.hcl_roles.domino_reset 
+        vars:
+          run_tasks: false
       - name: startcloud.hcl_roles.domino_install
-      - name: startcloud.hcl_roles.domino_vagrant_rest_api 
+      - name: startcloud.hcl_roles.domino_vagrant_rest_api
       - name: startcloud.hcl_roles.domino_service_nash
       - name: startcloud.hcl_roles.domino_java_config
       - name: startcloud.hcl_roles.domino_java_tools
@@ -272,23 +379,39 @@ hosts:
       - name: startcloud.hcl_roles.domino_genesis
       - name: startcloud.hcl_roles.domino_genesis_applications
       - name: startcloud.hcl_roles.domino_cross_certify
-      #- name: startcloud.hcl_roles.domino_java_app_example ## Uncomment Me to build your own Domino Java Servlet
-      #- name: startcloud.hcl_roles.domino_leap
-      #- name: startcloud.hcl_roles.domino_nomadweb
-      #- name: startcloud.hcl_roles.domino_traveler
-      #- name: startcloud.hcl_roles.domino_traveler_htmo
-      #- name: startcloud.hcl_roles.domino_verse
-      #- name: startcloud.hcl_roles.domino_appdevpack
-      ## Note to SHI devs, This should be called ROLE_DOMINO_RESTAPI, as this is different than startcloud.hcl_roles.domino_vagrant_rest_api
-      #- name: startcloud.hcl_roles.domino_rest_api
+      - name: startcloud.hcl_roles.domino_java_app_example
+        vars:
+          run_tasks: true
+      - name: startcloud.hcl_roles.domino_leap
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_traveler
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_traveler_htmo
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_verse
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_appdevpack
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_rest_api
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_nomadweb
+        vars:
+          run_tasks: true
       - name: startcloud.hcl_roles.domino_vagrant_readme
-      #- name: startcloud.hcl_roles.mariadb
-      #- name: startcloud.hcl_roles.docker
-      #::ROLE_VOLTMX_DOCKER::  #TODO
-      #- name: startcloud.hcl_roles.voltmx
       - name: startcloud.startcloud_roles.quick_start # ::ROLE_STARTCLOUD_QUICK_START::
         tags: always
-      # TODO:  additional properties?
+        vars:
+          run_tasks: true
       - name: startcloud.startcloud_roles.haproxy
+        vars:
+          run_tasks: true
       - name: startcloud.startcloud_roles.vagrant_readme
+        vars:
+          run_tasks: true
       - name: startcloud.startcloud_roles.lockdown

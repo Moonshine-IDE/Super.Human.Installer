@@ -35,6 +35,12 @@
         - src/main/java/net/prominic/domino/vagrant/CreateNamesDatabase.java
         - src/main/java/net/prominic/domino/vagrant/CheckNotesUser.java
         - src/main/java/net/prominic/domino/vagrant/CheckDatabase.java
+        - src/main/java/net/prominic/domino/vagrant/CrossCertifyNotesID.java
+        - src/main/java/net/prominic/domino/vagrant/CreateAdditionalServerID.java
+        - src/main/java/net/prominic/domino/vagrant/CreateAdditionalServerJNA.java
+        - src/main/java/net/prominic/domino/vagrant/DirectServerRegistration.java
+        - src/main/java/net/prominic/domino/vagrant/HybridServerRegistration.java
+        - src/main/java/net/prominic/domino/vagrant/NotesAPI.java
       when: build_utility_jars and not build_tools_deployed.stat.exists
     
     -
@@ -58,19 +64,20 @@
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
       with_items:
-        - DominoVagrant_demo.javaproj
+        - domino_java_tools.javaproj
+        - build.gradle
       when: build_utility_jars and not build_tools_deployed.stat.exists
     
     -
-      name: "Copying Java helper applications gradle build files"
+      name: "Copy Gradle properties file"
       ansible.builtin.template:
         mode: '0644'
         src: "{{ item }}"
-        dest: "{{ installer_dir }}/domino-java-helpers/build.gradle"
+        dest: "{{ installer_dir }}/domino-java-helpers/gradle.properties"
         owner: "{{ service_user }}"
         group: "{{ service_group }}"
       with_items:
-        - build.gradle.j2
+        - gradle.properties.j2
     
     # -
     #   name: "Copying Java helper applications"
@@ -93,16 +100,6 @@
         group: "{{ service_group }}"
         mode: '0755'
         recurse: true
-    
-    -
-      name: "Creating Templated CrossCertify Java file"
-      when: build_utility_jars and not build_tools_deployed.stat.exists
-      ansible.builtin.template:
-        dest: "{{ installer_dir }}/domino-java-helpers/src/main/java/net/prominic/domino/vagrant/CrossCertifyNotesID.java"
-        mode: "a+x"
-        owner: "{{ service_user }}"
-        group: "{{ service_group }}"
-        src: "CrossCertifyNotesID.java.j2"
     
     -
       name: "Creating Templated JSON for Names.nsf ACLs"
