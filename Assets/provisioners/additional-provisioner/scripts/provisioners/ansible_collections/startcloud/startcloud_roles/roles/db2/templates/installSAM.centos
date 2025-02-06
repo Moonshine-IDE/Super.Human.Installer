@@ -1,0 +1,4928 @@
+#! /bin/sh
+#  ARICENT_PROLOG_BEGIN_TAG
+#  This is an automatically generated prolog.
+#
+# (C) Copyright 2019. Aricent Holdings Luxembourg S.a.r.l. All rights reserved.
+#
+#  ARICENT_PROLOG_END_TAG
+#
+# IBM_PROLOG_BEGIN_TAG 
+# This is an automatically generated prolog. 
+#  
+#  
+#  
+# Licensed Materials - Property of IBM 
+#  
+# Restricted Materials of IBM 
+#  
+# (C) COPYRIGHT International Business Machines Corp. 2002,2017 
+# All Rights Reserved 
+#  
+# US Government Users Restricted Rights - Use, duplication or 
+# disclosure restricted by GSA ADP Schedule Contract with IBM Corp. 
+#  
+# IBM_PROLOG_END_TAG 
+# @(#)38   1.5.1.34	 src/sam/install/installSAM.sh, clpkg.CHARM, sam_rsa41svc, rsa41svcs003g 5/19/17 12:18:07
+#
+# Licensed Materials - Property of IBM
+#=========================================================================
+# Use this script to install or upgrade SAMP
+#
+# Version: SAMP 4.1.0.5
+#
+# Syntax:
+#	  ./installSAM [options: see SAMP base reference]
+#
+# Output:
+#	 - rpm/pkg/installp program output from installation of each rpm/pkg/fileset  installed.
+#	   List of all rpms/pkg/filesets installed.
+#	   List of all subsystems active
+#        - detailed log of installation in /tmp/installSAM.<#>.log.
+#
+# Notes:
+#    - Solaris does not allow "if [ -e ... ] ; then ..." constructs,
+#      -> use "if [ -f ... ] ; then .." instead!
+#
+# Change Activity:
+#   20021018 ws Initial version
+#   20030108 ws added $1 for rpm install options
+#   20030218 ws add handling of arch 's390x' for 64 bit
+#   20030228 ws add handling rpm return code
+#   20031317 ws add conditional processing for version sam-1.1.1.0-0
+#   20030519 ws add power pc (ppc)
+#   20030616 ws fixed multiple version check
+#   20030701 ws V1.2 add NLS, convert shell type from ksh to bash
+#   20030730 ws V1.2 add arch ia64
+#   20030924 ws add opteron x86_64
+#   20030925 ws add packages for samnls and sam-policies
+#   20031203 ws use installSAM<lang>.properties file
+#   20031212 ws install rsct.core and rsct.basic together
+#   20040312 ws add AIX (installp)
+#   20040319 ws add sam.msg and rsct.*.msg packages
+#   20040402 ws use .msg in native language (no UCS-2)
+#   20040414 ws include license enablement
+#   20040420 ws merge with installp (AIX)
+#   20040623 ws sam 1.2 PTF1 sam-1.2.0.1
+#                    - fix RSCT version greater than version to be installed
+#                    - fix defect 110294 (check for softdog)
+#   20040928 ws sam 1.2 PTF2 sam-1.2.0.2
+#   20041213 ws sam 1.2 PTF3 sam-1.2.0.3 fix $PKG for AIX
+#   20041216 ws sam 1.2 PTF3 sam-1.2.0.3 fix do not check license files
+#   20050330 ws remove usage of AWK
+#   20050528 ws sam 2.1.0.0 integrate instsamadapter
+#   20051006 ws sam 2.1.0.1 fix order in which src and rsct msg RPMs are installed.
+#   20051108 ws sam 2.1.0.1 place error message at end, prevent further non msg packages
+#                    to be installed.
+#   20051118 ws sam 2.1.1.0 add silent install, etc.
+#   20051209 ws Issue message that java package does not exist only if Java untar is required.
+#   20051212 ws Add -d option (packages directory)
+#   20060203 ws Redo options.
+#   20060208 ws Fix PR1P0239MiS - --noupgrade option.
+#   20060208 ws Fix PR1P0240WBl - directory with prereqSAM.centos does not exist.
+#   20060208 ws Fix PR1P0246MiS - msg display although --silent specified.
+#   20060331 ws Show only active RMs at completion + use correct RSCT_VSN_PAT_XX.
+#   20060519 ws Fix false -d detection
+#   20060608 ws Fix PR1P0242RBa - StorageRM package is not installed with SAM base install
+#   20060613 ws Handle package xdrsl10 for s390 with SLES10
+#   20060801 ws fix PR1P0401WBl
+#   20060807 ws revise option --nonls, and add option -n <lang>
+#   20060816 ws add uninstallSAM from installed package (c001)
+#   20060824 ws add option --onlyupgrade
+#   20060912 ws Fix PR1P0535LOB - try and buy not detected.
+#   20060913 ws Allow try and buy over full, if --noliccheck.
+#   20061005 ws version 2.2.0.1 fix for bug reported by F.Ning:
+#                    allow installation of msg packages from directory w/o sam pkg
+#   20061016 ws fix problem that in some timezones samlicm returns 2037 rather than 2038
+#   20061025 ws also capture stdout.
+#   20061113 ws Fix RSCT version problem (more than 1 digit version) reported by Frank Ning.
+#   20061113 ws Java 1.5 for Linux
+#   20070228 ws Fix CSM/TSA RSCT installation problem reported by Frank Ning.
+#   20070306 ws Include handling of RSCT packages required by CSM
+#   20070314 ws pass --noliccheck option to prereqSAM.centos
+#   20070330 ws append to existing logfile (req. F.Ning)
+#   20070419 ws Fix for Java PMR 71010,001,866 VM aborting (RH selinux)
+#   20070508 ws Always replace Java in Linux
+#   20070604 ws Fix P2300610RKa Paused in Russian locale.
+#   20070605 ws Fix AIX NLS package not installed (rep. F.Ning)
+#   20070718 ws Fix P2300876ASc No LA/LI on new GA
+#   20071001 ws sam3100
+#   20071001 ws Add AIX6
+#   20071002 ws support SunOS, Linux repackaged
+#   20071015 ws unconditionally install rsct 64bit on p and x c002
+#   20071015 ws xdrsl10 for SUSE SLES10 on all platforms c003
+#   20071018 ws switch to RSCT 2.5.0.0
+#   20071023 ws drop AIX 5.2 support
+#   20080128 ws Fix P3100739JOE 
+#   20080130 ws Fix P3100776ASC Solaris lang packs
+#   20080130 ws Fix P3100696JOE link to java for AIX
+#   20080208 ws Fix P3100882VVa
+#   20080214 ws DCR11 - Install AIX RSCT
+#   20080319 ws Fix P3101257ASc - Solaris package names
+#   20080514 rb Changed sys file recognition from *.sys to *.sys*
+#   20080521 rb Fixed wrong ITLM file handling, included XDR ITLM file handling
+#   20080521 rb Commented out echo "Test: ..." debug outputs
+#   20080526 rb Commented out 'else' for "Test:" outputs as well
+#   20080529 rb Adjusted I15 comment to match current message
+#   20080530 rb Fixed false pkg names in checkSAMInst() and getSAMInstPkg() for Solaris (sam -> IBMsam)
+#   20080625 rb sam3200
+#   20080709 rb Ignoring errors when installing RSCT msg packages -> only a warning, should not prevent installation of sam
+#   20080710 rb Added extra check for copying ITLM file (only copy if $ITLM_FILE has non-zero length)
+#   20090312 oa Enable installation of xdrsl10 for SUSE SLES11 on all platforms c004
+#   20090318 rb Fix P31S0563JOE - AIX java link not created
+#   20090319 rb Fix P31S0199RBa - cp error msg on update install
+#   20090403 rb Fixed extractInstVersion() for Solaris: RC was not set
+#   20090403 rb Fixed RSCT upgrade problem: multiple pkg files in deliverable directory
+#   20090507 rb Restrict installation of xdrsl10 on SUSE SLES10/11 to s390 only c005
+#   20090612 rb Changed msg "Error: checkSAMInst() returned false. SAM not installed!" to "SAM is currently not installed."
+#   20090702 rb Added force option while creating java symlink on AIX
+#   20090703 rb Changed RSCT installation/upgrade logic for AIX
+#   20090817 rb DCR04-V32: Support capacity based pricing for DR features
+#   20090821 rb Added package installation for xdr rpm
+#   20091113 rb Fixed P31S0993MAf: error parsing java -fullversion
+#   20091123 rb Fixed P31S0993MAf: error parsing java -fullversion, added filtering of ')'
+#   20091210 rb Fixed P32S01139JWe: Perform installation of xdr.rpm for all zLinux distributions
+#   20100224 rb Copy Software Tagging files to destination directory (*.swtag, *.fxtag)
+#   20100308 rb Fix for P3201358YKu: Error during Solaris installation
+#   20100503 rb sam3210
+#   20100706 rb Added rsct.opt.stackdump package for x/z Linux and AIX
+#   20100712 rb Changed AIX Java version detection regex
+#   20100720 rb Added package sam.sappolicy (Linux + AIX only)
+#   20100726 rb Generic itlm feature file copying procedure
+#   20100727 rb efix installation procedure
+#   20100803 rb efix installation also when product already installed
+#   20100806 rb Changes for AIX 7 support
+#   20100823 rb Removed keyword local (not available on Solaris)
+#   20100921 rb Moved storagerm installation to general rsct installation section
+#   20100928 rb Fixed Java SR version discovery regex
+#   20101022 rb Run efix installation prior to license install
+#   20101022 rb sam3220
+#   20101025 rb Added --noscripts option for linux
+#   20101030 rb Fixed rc=2 when installing efixes
+#   20101215 rb Added XDR license migration from older releases (< 3.2.1)
+#   20110120 rb Added sam.policies.one and sam.policies.two
+#   20110128 rb Added HU language pack installation
+#   20110204 rb Do not print warning "package rsct.core.cimrm is not installed"
+#   20110314 rb Migration steps for SAP policy
+#   20110511 rb OPT_NOSAP for sam.policies.one and two
+#   20110517 rb Fixed P3220154SWE: noliccheck installs license w/o displaying lic text
+#   20110714 rb Removed HU language pack installation
+#   20110811 rb Fixed regex extracting version number (RHEL 6 issue)
+#   20111208 rb Fixed AIX6 package source path
+#   20120605 rb Delete /usr/sbin/rsct/share/IBM.RecoveryRM/version when upgrading
+#   20120704 rb Added separate upgrade check for RSCT in addition to upgrade check for TSA
+#   20120705 rb Fixed --force info msg for SunOS and added --nodeps info msg for AIX
+#   20120706 rb Fixed optional installation of sam.policies.*
+#   20120709 rb Added force option for sam.sappolicy, sam.policies.* and sam.adapter
+#   20120710 rb Added force option for xdr packages
+#   20121029 rb Added force option to msg packages, moved stackdump to general rsct section
+#   20121030 rb Allow --force together with --nodeps on Linux
+#   20121105 rb Added --forceAll for SAMP & RSCT on Linux
+#   20121115 rb Fixed initial install w/o --force or --forceAll
+#   20121120 rb Added --forceAll for SAMP & RSCT on AIX
+#   20121130 rb Accept --nodeps as NO-OP on AIX
+#   20121218 ej Fixed P32S0580MAf: syntax error on Solaris
+#   20130204 rb Changed minimum AIX Java prereq from version 14 to 15
+#   20130219 rb Fixed P4100075LOB: sam.policies pkgs not installed when called from arbitrary directory
+#   20130225 rb Removed error check for sam.adapter, license and RecRM version file deletion
+#   20130319 rb Added pre and post install script execution in efix procedure
+#   20130320 rb Fixed problem with log file count when installSAM has non default name (e.g. 2 suffixes)
+#   20130404 rb sam4100
+#   20130711 rb Added stackdump to AIX package upgrade check
+#   20130802 rb Blocked installation on Solaris
+#   20131115 rb Add Java backup directory removal procedure
+#   20140206 ej Added JavaX.jre as package to search for (AIX 7, IV54979)
+#   20140708 ej sam4101
+#   20140925 as Changes for 64bit and Ubuntu
+#   20141007 as RTC 31887 validateInstallPackage 
+#   20141015 as RTC 32050 missing chinese msg package
+#   20141022 as RTC 32162 Ubuntu message packages
+#   20141023 ej RTC 31965 Java prereq level check for AIX
+#   20150116 as RTC 33542 sam4102
+#   20150303 as RTC 34115 Fix check for 'rsct.opt.stackdump' on AIX
+#   20150312 as RTC 34919 added package install options in installn
+#   20150401 ej Do not install/upgrade RSCT, if it is installed completely at a higher level than packaged
+#   20150504 ej adjusted Ubuntu package names (- -> _), no stackdump on Ubuntu
+#   20151029 ej Allow T&B license file (sam41TB.lic)
+#   20151216 as RTC 40506 sam4103
+#   20160128 as RTC 41282 Fix message truncated
+#   20160301 as RTC 39821 Fix non-root permissions for 'java' directory
+#   20160607 as RTC 43591 Add option --useibmjre in installSAM/prereqSAM.centos
+#   20160705 ej RTC 44335 pLinux 64bit: check/handle installed rsct.core package
+#   20170505 vk Failed for Java version 641
+#   20180131 ms Java installation using actual packages name
+#   20190327 vk RTC 22480 SAM4105 changes
+#=========================================================================
+
+DISABLE_INST=0  # 1 causes installation to be suppressed
+DEBUG=0         # 1 causes additional messages to be displayed
+
+#PN=`echo $0 | sed s/'.*\/'//` # strip program name from call arg[0]
+#DIR=`echo $0 | sed s/$PN$//`  # strip directory from call arg[0]
+PN=`basename $0` # strip program name from call arg[0]
+DIR=`dirname $0` # strip directory from call arg[0]
+TMP_STDERR=/tmp/$PN.$$.err
+TMP_FIRST_STDERR="${TMP_STDERR}1"
+SCRIPT=$PN': '
+MSG_NAME=installSAM # messages are in installSAM.*.msg files
+INST_LOG=''
+
+RC_PREREQ_NOT_INST=21
+RC_PREREQ_UNABLE=23
+
+# required Java version (change also in prereqSAM.centos)
+# e.g. "142". Note it is "50"/"60"/"70" for higher Java levels (lslpp -l !)
+AIX_REQ_JAVA_VERSION=80
+# Since Java level detection is cumbersome and not consistent, now using the
+# lpp fileset levels on AIX
+AIX_ppc_JAVA_FIXLEVEL_6="265"   # "6.0.0.265"
+AIX_ppc_JAVA_FIXLEVEL_7="145"   # "7.0.0.145"
+AIX_ppc_JAVA_FIXLEVEL_71="25"   # "7.1.0.25"
+AIX_ppc_JAVA_FIXLEVEL_8="507"   # "8.0.0.507"
+
+# JAVA version value of the form "<v>.<r>.<m>.<f>"
+# Checked by default prereq check function: checkLinuxJAVA
+# Rule: Equal or higher version of Java is allowed (change also in prereqSAM.centos).
+Linux_aaa_ddd_v_l_PKG_JAVA="1.8.0.0"
+
+PLATFORM=""
+RSCT_DIR='/usr/sbin/rsct/bin/'
+LIC_DIR='/var/opt/sam/lic'
+ADAPTER_DIR='/opt/IBM/tsamp/sam'
+UNINST_DIR=${ADAPTER_DIR}/uninst  # c001
+ADAPTER=samadapter
+JAVA_PKG_VERSION=8.0-5.35
+
+LUM_FILE=''
+ANY_INST=0
+ERROR=0		   # error flag if multiple versions
+FIRST_ERROR=""     # capture text of first error
+FIRST_WARN=""      # capture text of first warning
+IS_ONLINE=0
+IS_SAM_INST=0
+USE_OPTIONS=0
+TB_LIC_PKG=0
+FULL_LIC_INST=0
+ADAPTER_RUNS=0
+
+HOST_NAME=`hostname`
+# English only messages:
+ENMSG_NOARCH="${SCRIPT}Cannot determine architecture - exit."
+ENMSG_NOOS="${SCRIPT}Cannot determine OS - exit."
+ENMSG_NOLANG="${SCRIPT}Cannot determine language - will use English."
+ENMSG_NOLIC="${SCRIPT}Cannot find license files - will show English license."
+ENMSG_NONLS="${SCRIPT}The language currently set is not supported :"
+ENMSG_LANGINST="${SCRIPT}If you want to cancel installSAM to set a supported language in the operating system, type 'y':"
+ENMSG_NODEFLANG="${SCRIPT}Default language not found - exit."
+ENMSG_CONTEN="${SCRIPT}Will try to continue in English."
+ENMSG_NOITLMFILE="${SCRIPT}ITLM sys file missing - exit."
+ENMSG_LOG_STARTED="${SCRIPT}>>> Installation on $HOST_NAME - log started :"
+ENMSG_LOG_STARTED="${SCRIPT}>>> Installation on $HOST_NAME - log appended :"
+ENMSG_LOG_ENDED="${SCRIPT}<<< Installation on $HOST_NAME - log  ended :"
+ENMSG_NO_DIR="${SCRIPT}Directory specified with option -d does not exist:"
+ENMSG_NO_PKGDIR="${SCRIPT}Directory specified with option -d does not contain packages:"
+ENMSG_NO_LOGDIR="${SCRIPT}Unable to create log file. Maybe the directory does not exist:"
+ENMSG_NO_PREREQ="${SCRIPT}Unable find script prereqSAM.centos in directory:"
+ENMSG_NO_PREREQCHECK="${SCRIPT}WARNING: prerequisite check was bypassed."
+ENMSG_LANG_OPTS_INVALID="${SCRIPT}ERROR: Options --nonls and -n <language> cannot not be used in combination."
+ENMSG_UINST="${SCRIPT}Provided uninstallSAM in directory: $UNINST_DIR for uninstallation" # c001
+
+USAGE1="Usage:" 
+USAGE2="      installSAM [--noliccheck] [--nonls] [--noupgrade] [--useibmjre path_to_ibm_jre] [-d inst_pkg_dir] [-l log_file] [-n language] [--silent]" 
+
+# Return codes from installSAM script
+RC_OK=0
+RC_INSTALLER_ERROR=1
+RC_VERSION_SAME=2
+RC_VERSION_INSTALLED_HIGHER=3
+RC_VERSION_INSTALLED_LOWER=4
+RC_NODE_ONLINE=5
+RC_NO_LICENSE=6
+RC_INST_UNABLE=7
+RC_LANG_NOT_SUPP=8           # -n <lang> only
+RC_PREREQ_PKG_NOT_INST=9     # -n <lang> only
+RC_ONLY_UPGRADE=10           # if option --onlyupgrade and non installed
+RC_ADAPTER=11
+
+# Return codes from compPkgInstVersion
+# return 1  if version of $Pkg > Inst
+# return 0  if version of $Pkg == Inst
+# return -1 if version of $Pkg < Inst
+# return 2  if supplied package could not be used
+# return 3  if installed package could not be used
+# return 4  if versions could not be compared
+RCVSN_PKG_EQ_INST=0
+RCVSN_PKG_GT_INST=1
+RCVSN_PKG_LT_INST=-1
+RCVSN_NO_PKG=2
+RCVSN_NO_INST=3
+RCVSN_CMP_FAIL=4
+
+# options:
+# --force --nodeps
+# --forceAll
+
+# internal: --noadapter
+# internal: --nolic
+# internal: --noprereqcheck
+# internal: --noaixrsct
+# internal: --force64
+OPTIONS=$*
+OPT_FORCE=''
+OPT_FORCEALL=''
+OPT_NOADAPTER=0
+OPT_NOSAP=0
+OPT_NOLIC=0
+OPT_NOPREREQCHECK=0
+OPT_NOAIXRSCT=0
+OPT_NOSCRIPTS=0
+OPT_FORCE_ARCH_64=''
+# additionally for silent install
+# --silent
+# --noliccheck
+# --noupgrade
+# --onlyupgrade
+# --nonls
+# --useibmjre
+# -d
+# -l
+# -n
+OPT_SILENT=0
+OPT_NOLICCHECK=0
+OPT_NOUPGRADE=0
+OPT_ONLYUPGRADE=0
+OPT_NONLS=0
+OPT_USE_IBM_JRE=0
+OPT_IBM_JRE_PATH=''
+OPT_DIR=''
+OPT_LOG_FILE=''
+OPT_LANG=''
+SUPP_LANG=''
+INST_LANG_ONLY=0
+#----------------------------------
+# functions
+#----------------------------------
+
+# function getcpcmd
+# get cp command with its path
+# Prereq: $OS must be set 'uname -s'
+# return cp command with path
+getcpcmd () {
+   CPCMD=cp
+   WRC=0
+   case "$OS" in
+       AIX|SunOS) CPCMD=`which cp 2>/dev/null`
+            WRC=$?
+       ;;
+       Linux) CPCMD=`which --skip-alias cp 2>/dev/null`
+            WRC=$?
+            if [ $WRC -ne 0 ] ; then
+               CPCMD=`which cp 2>/dev/null`
+               WRC=$?
+            fi
+       ;;
+   esac
+   if [ $WRC -ne 0 ] ; then
+      CPCMD=cp
+   fi
+   echo $CPCMD
+}
+
+# function makeLog
+# paramters:
+#  $1 prefix of log file
+# Make log file of the form: /tmp/$1.#.log
+# where # is a number that does not exist yet in
+# existing log files.
+# returns log file name.
+makeLog () {
+   NUM=`ls /tmp/$1.?*.log 2>/dev/null | sed 's/\.log$//g' | sed 's/^.*\.//g' | sort -nr | head -1`
+   if [ -n "$NUM" ] ; then
+      NUM=`expr $NUM + 1`
+   else
+      NUM=1
+   fi
+   INST_LOG=/tmp/$1.$NUM.log
+   echo $INST_LOG
+}
+
+# function logit
+# log and conditionally echo message
+# parameters:
+#  $1 message
+# Side effects:
+#  if OPT_SILENT==1 do not echo message
+#  log message in file installSAM.PID.log
+#
+logit () {
+  echo "$1" >> $INST_LOG
+  if [ $OPT_SILENT -eq 0 ] ; then
+     echo "$1"
+  fi
+}
+
+# function logitex
+# log and conditionally echo message, allow printf annotations
+# parameters:
+#  $1 message
+# Side effects:
+#  if OPT_SILENT==1 do not echo message
+#  log message in file installSAM.PID.log
+#
+logitex () {
+  printf "$1" >> $INST_LOG
+  if [ $OPT_SILENT -eq 0 ] ; then
+     printf "$1"
+  fi
+}
+
+# function instexit.
+# exit installation with return code.
+# parameters:
+#  $1 RC
+#  $2 if exists then skip processing acc. to flag
+#     "NONE" no output
+#     "NONLS" no NLS related text
+# Side effects:
+#  exits script after logging.
+#
+instexit () {
+  # remove first error file
+  if [ -r "$TMP_FIRST_STDERR" ] ; then
+     rm $TMP_FIRST_STDERR
+  fi
+  # remove stderr file
+  if [ -r "$TMP_STDERR" ] ; then
+     rm $TMP_STDERR
+  fi
+
+  #case "$1" in
+  #   $RC_INSTALLER_ERROR) logit "$I22 $1"
+  #   ;;
+  #   $RC_VERSION_SAME) logit "$I49"
+  #   ;;
+  #   $RC_VERSION_INSTALLED_HIGHER) logit "$I39"
+  #   ;;
+  #   $RC_VERSION_INSTALLED_LOWER) logit "$I38"
+  #   ;;
+  #   $RC_NODE_ONLINE) logit "$I18"
+  #   ;;
+  #   $RC_NO_LICENSE) logit "$I31"     # assume only cas where license file is missing
+  #   ;;
+  #   $RC_INST_UNABLE) logit "$I15"
+  #   ;;
+  #esac
+  # if rc >=20 then prereqSAM.centos failed.
+
+  if [ -z "$2" ] || [ "$2" = "0" ] ; then
+     if [ $OPT_SILENT -eq 0 ] && [ $1 -ne 0 ] && [ $RC -lt 20 ] ; then
+        echo "$I68 $INST_LOG"
+     fi
+  fi
+  if [ -z "$2" ] || [ "$2" = "0" ] || [ "$2" = "NONLS" ] ; then
+     DATE=`date`
+     echo "$ENMSG_LOG_ENDED $DATE" >> $INST_LOG
+  fi
+  exit $1
+}
+
+# function checkNodeOnline.
+# Check and memorize if node is online.
+# set IS_ONLINE to 1 if online, otherwise 0.
+#
+checkNodeOnline () {
+   IS_ONLINE=0
+   # check if the local node is online and automated if true exit
+   if [ -x "${RSCT_DIR}lsrpnode" ] ; then
+      ONLINE=`LANG=C lsrpnode -xL 2>/dev/null | $GREP "Online"`
+      if [ -n "$ONLINE" ] && [ $DISABLE_INST -ne 1 ] ; then
+         IS_ONLINE=1
+      fi
+   fi
+}
+
+
+# function logNodeOnline.
+# Check if node is online and log error messages.
+# precondition: checkNodeOnline must have been run before.
+#
+logNodeOnline () {
+   if [ $IS_ONLINE -eq 1 ] ; then
+      if [ -x "${RSCT_DIR}lsrpnode" ] ; then
+         logit "$I18"
+         if [ $OPT_SILENT -eq 0 ] ; then
+            lsrpnode -L
+         fi
+         lsrpnode -L >> $INST_LOG
+         logit "$I19"
+         logit "$I20"
+         logit "$I21"
+      fi
+   fi
+}
+
+# function checkAdapterRuns.
+# Check and memorize if adapter runs locally.
+# set ADAPTER_RUNS to 1 if running, otherwise 0.
+#
+checkAdapterRuns () {
+   ADAPTER_RUNS=0
+   if [ -x "${ADAPTER_DIR}/bin/samadapter" ] ; then
+      ${ADAPTER_DIR}/bin/samadapter status >/dev/null
+      R=$?
+      if [ $R -eq 1 ] ; then
+         # is online
+         ADAPTER_RUNS=1
+      fi
+   fi
+}         
+
+# function getASCII
+# get the ASCII NLS string from $NLS_FILE
+# if string is not available get from installSAM.en_US.msg - English
+# parameters:
+#  $1 ASCII key to search for NLS string
+#  $2 == 1, if removal of trailing CR(13) is required
+# return:
+#  ASCII NLS string with $SCRIPT prefix
+#
+getASCII () {
+  # find NLS text for pattern xxx=<NLS text>
+  R=${SCRIPT}`cat $NLS_FILE | $GREP $1= | sed s/$1=//`
+  #echo "R='$R'"
+  if [ "$R" = "$SCRIPT" ] ; then
+     # assume: not yet available as translated text, use English
+     R=${SCRIPT}`cat "$MSG_DIR/$MSG_NAME.en_US.msg" | $GREP $1= | sed s/$1=//`
+  fi
+  if [ "$R" != "$SCRIPT" ] && [ $2 -eq 1 ] ; then
+     # remove CR
+     #R=`echo $R |$AWK 'BEGIN {RS="\x0D\x0A"} {gsub("\x0D\x0A","\x0A"`; print; exit;}'`
+     RCNT=`echo $R | wc -c`
+     RCNT=`expr $RCNT - 1`
+     R=`echo $R | cut -b1-$RCNT`
+  fi
+  echo $R
+}
+
+# function chkLangSupport
+# check if the language is supported
+# parameters:
+#  $1 language to check for
+# return language checked, empty if none matched
+
+chkLangSupport () {
+   SUPP_LANG=''
+
+   case $1 in
+          EN|DE|ES|FR|IT|BR|JP|KR|CN|TW) SUPP_LANG=$1
+          ;;
+   esac
+   echo $SUPP_LANG
+}
+
+# function mapSUPPLANG2LLCC
+# map language to a supported LOCALE
+# parameters:
+#  $1 language to map, e.g. DE
+# return LOCALE, de_DE(Linux) DE_DE(AIX)
+mapSUPPLANG2LLCC () {
+   LL_CC=''
+
+   if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+      case $1 in
+             DE) LL_CC=de_DE
+             ;;
+             ES) LL_CC=es_ES
+             ;;
+             FR) LL_CC=fr_FR
+			 ;;
+             IT) LL_CC=it_IT
+             ;;
+             BR) LL_CC=pt_BR
+             ;;
+             JP) LL_CC=ja_JP
+             ;;
+             KR) LL_CC=ko_KR
+             ;;
+             CN) LL_CC=zh_CN
+             ;;
+             TW) LL_CC=zh_TW
+             ;;
+      esac
+      if [ "$OS" = Linux ] ; then
+         LL_CC="${LL_CC}.UTF-8"  # all languages have an UTF-8 packages
+      else # Solaris
+         LL_CC="${LL_CC}-UTF-8"  # all languages have an UTF-8 packages
+      fi      
+   else   # AIX
+      case $1 in
+             DE) LL_CC=DE_DE
+             ;;
+             ES) LL_CC=ES_ES
+             ;;
+             FR) LL_CC=FR_FR
+			 ;;
+             IT) LL_CC=IT_IT
+             ;;
+             BR) LL_CC=PT_BR
+             ;;
+             JP) LL_CC=JA_JP
+             ;;
+             KR) LL_CC=KO_KR
+             ;;
+             CN) LL_CC=ZH_CN
+             ;;
+             TW) LL_CC=ZH_TW
+             ;;
+      esac
+   fi
+   echo $LL_CC
+}
+
+# function mapLanguage
+# get similar language: e.g.
+# if $1 is en_US.iso885915 then map to en_US
+# parameters:
+#  $1 language currently set
+#
+mapLanguage () {
+   MAPPED_LANG=$NLS_LANG
+   # try map utf8 -> UTF-8
+   IS_UTF8=`echo $1 | $GREP -c utf8`
+   if [ $IS_UTF8 -ne 0 ] && ( [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ) ; then
+      MAPPED_LANG=`echo $1 | sed s/'.utf8'/'.UTF-8'/`
+   else # not UTF-8
+      # extract first part like 'en_' from 'en_UK'
+      LANG_PREFIX=`echo $1 | sed s/_.*/_/`
+
+      case "$LANG_PREFIX" in
+          en_) MAPPED_LANG=$LANG_PREFIX"US"
+          ;;
+          de_) MAPPED_LANG=$LANG_PREFIX"DE"
+          ;;
+          es_) MAPPED_LANG=$LANG_PREFIX"ES"
+          ;;
+          fr_) MAPPED_LANG=$LANG_PREFIX"FR"
+		  ;;
+          it_) MAPPED_LANG=$LANG_PREFIX"IT"
+          ;;
+          pt_) MAPPED_LANG=$LANG_PREFIX"BR"
+          ;;
+          ja_)
+             IS_EUC=`echo $1 | $GREP -ic eucjp`
+             if [ $IS_EUC -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"JP.eucJP"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"JP"
+                fi
+             else
+                MAPPED_LANG=$LANG_PREFIX"JP"
+             fi
+          ;;
+          ko_)
+             IS_EUC=`echo $1 | $GREP -ic euckr`
+             if [ $IS_EUC -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"KR.eucKR"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"KR"
+                fi
+             else
+                MAPPED_LANG=$LANG_PREFIX"KR"
+             fi
+          ;;
+          zh_)
+             IS_GBK=`echo $1 | $GREP -ic gbk`
+             if [ $IS_GBK -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"CN.GBK"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"CN"
+                fi
+                break
+             fi
+             IS_GB18=`echo $1 | $GREP -ic gb18030`
+             if [ $IS_GB18 -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"CN.GB18030"
+                else
+                   MAPPED_LANG="Zh_CN"
+                fi
+                break
+             fi
+             IS_GB23=`echo $1 | $GREP -ic gb2312`
+             if [ $IS_GB23 -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"CN.GB2312"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"CN"
+                fi
+                break
+             fi
+             IS_TWEUC=`echo $1 | $GREP -ic euctw`
+             if [ $IS_TWEUC -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"TW.eucTW"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"TW"
+                fi
+                break
+             fi
+             IS_TWBIG5=`echo $1 | $GREP -ic big5`
+             if [ $IS_TWBIG5 -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"TW.Big5"
+                else
+                   MAPPED_LANG="Zh_TW"
+                fi
+                break
+             fi
+             IS_TW=`echo $1 | $GREP -ic tw`
+             if [ $IS_TW -ne 0 ] ; then
+                MAPPED_LANG=$LANG_PREFIX"TW"
+             else
+                MAPPED_LANG=$LANG_PREFIX"CN"
+             fi
+          ;;
+      esac
+   fi
+   #echo "mapped to: "$MAPPED_LANG
+   NLS_LANG=$MAPPED_LANG
+}
+
+# function geVersion
+# check if version from $1 is greather or equal to version from $2
+# parameters:
+# $1 Name 1 with a version
+# $2 Name 2 with a version
+# return 1 if version of $1 is greater or equal version of $2
+#
+geVersion () {
+   GERC=0
+   # delimit the version x.x.x.x-yydddd with #x.x.x.x-yydddd#, then cut the
+   # version field and remove the . (3x) and the - to get the version as a number
+   # There may be versions like x.x.x.x-0 or x.x.x.x-yyddd, where yy is the last 2 digits of the year and
+   # ddd is the day in the year. Versions like x.x.x.x-0 must be extended to x.x.x.x-00000 for
+   # successful comparison
+   VT1=`extend0 $1`
+   VT2=`extend0 $2`
+   V1=`echo $VT1 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}-[0-9]\{5\}/#&#/g' | cut -s -d '#' -f2 | sed 's/\.//g' | sed 's/-//g'`
+   V2=`echo $VT2 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}-[0-9]\{5\}/#&#/g' | cut -s -d '#' -f2 | sed 's/\.//g' | sed 's/-//g'`
+   if [ -n "$V1" ] && [ -n "$V2" ] && [ $V1 -ge $V2 ] ; then
+      GERC=1
+   fi
+   echo $GERC
+}
+
+# function compVersion
+# compare versions from $1 and $2
+# parameters:
+# $1 Name 1 with a version
+# $2 Name 2 with a version
+# return 1  if version of $1 > $2
+# return 0  if version of $1 == $2
+# return -1 if version of $1 < $2
+# return 4 if versions could not be compared
+#
+#
+compVersion () {
+   CMPRC=$RCVSN_CMP_FAIL
+   # delimit the version x.x.x.x-yydddd with #x.x.x.x-yydddd#, then cut the
+   # version field and remove the . (3x) and the - to get the version as a number
+   # There may be versions like x.x.x.x-0 or x.x.x.x-yyddd, where yy is the last 2 digits of the year and
+   # ddd is the day in the year. Versions like x.x.x.x-0 must be extended to x.x.x.x-00000 for
+   # successful comparison
+   VT1=`extend0 $1`
+   VT2=`extend0 $2`
+   V1=`echo $VT1 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}-[0-9]\{5\}/#&#/g' | cut -s -d '#' -f2 | sed 's/\.//g' | sed 's/-//g'`
+   V2=`echo $VT2 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}-[0-9]\{5\}/#&#/g' | cut -s -d '#' -f2 | sed 's/\.//g' | sed 's/-//g'`
+   if [ -n "$V1" ] && [ -n "$V2" ] ; then
+      if [ $V1 -gt $V2 ] ; then
+         CMPRC=$RCVSN_PKG_GT_INST
+      elif [ $V1 -lt $V2 ] ; then
+         CMPRC=$RCVSN_PKG_LT_INST
+      else
+         CMPRC=$RCVSN_PKG_EQ_INST
+      fi
+   fi
+   echo $CMPRC
+}
+
+
+# function compare_version
+# This function compares two version strings from $1 and $2 e.g. "3.1.0.0", "3.1.1" 
+# and returns the result of the comparison which is one the following values: -1, 1 or 0.
+# parameters:
+# $1 version string e.g. "3.1.0.0"
+# $2 version string e.g. "3.2.0.0"
+# return 1  if version of $1 > $2
+# return 0  if version of $1 == $2
+# return -1 if version of $1 < $2
+#
+compare_version() {
+  version1=$1
+  version2=$2
+  
+  compRC=0
+  
+  # Make sure variables are defined
+  if [ -z "$version1" ] ; then
+    version1 = "0.0.0.0"
+  fi
+  if [ -z "$version2" ] ; then
+    version2 = "0.0.0.0"
+  fi
+  
+  # Remove illegal characters
+  version1=`echo $version1 | sed 's/[^0-9\.]//g'`
+  version2=`echo $version2 | sed 's/[^0-9\.]//g'`
+  
+  # Split version into parts
+  V1_V=`echo $version1 | awk '{split($0,a,"."); print a[1]}'`
+  V1_R=`echo $version1 | awk '{split($0,a,"."); print a[2]}'`
+  V1_M=`echo $version1 | awk '{split($0,a,"."); print a[3]}'`
+  V1_F=`echo $version1 | awk '{split($0,a,"."); print a[4]}'`
+  
+  if [ "x${V1_V}" = "x" ] ; then
+    V1_V=0
+  fi
+  if [ "x${V1_R}" = "x" ] ; then
+    V1_R=0
+  fi
+  if [ "x${V1_M}" = "x" ] ; then
+    V1_M=0
+  fi
+  if [ "x${V1_F}" = "x" ] ; then
+    V1_F=0
+  fi   
+
+  V2_V=`echo $version2 | awk '{split($0,a,"."); print a[1]}'`
+  V2_R=`echo $version2 | awk '{split($0,a,"."); print a[2]}'`
+  V2_M=`echo $version2 | awk '{split($0,a,"."); print a[3]}'`
+  V2_F=`echo $version2 | awk '{split($0,a,"."); print a[4]}'`
+ 
+  if [ "x${V2_V}" = "x" ] ; then
+    V2_V=0
+  fi
+  if [ "x${V2_R}" = "x" ] ; then
+    V2_R=0
+  fi
+  if [ "x${V2_M}" = "x" ] ; then
+    V2_M=0
+  fi
+  if [ "x${V2_F}" = "x" ] ; then
+    V2_F=0
+  fi 
+  
+  # Compare version parts from left to right
+  if [ $V1_V -lt $V2_V ] ; then
+    compRC=-1
+  elif [ $V1_V -gt $V2_V ] ; then
+    compRC=1
+  else
+    if [ $V1_R -lt $V2_R ] ; then
+      compRC=-1
+    elif [ $V1_R -gt $V2_R ] ; then
+      compRC=1
+    else
+      if [ $V1_M -lt $V2_M ] ; then
+        compRC=-1
+      elif [ $V1_M -gt $V2_M ] ; then
+        compRC=1
+      else
+        if [ $V1_F -lt $V2_F ] ; then
+          compRC=-1
+        elif [ $V1_F -gt $V2_F ] ; then
+          compRC=1
+        fi   
+      fi      
+    fi    
+  fi
+  
+  echo $compRC  
+}
+
+# function extend0
+# check if version from $1 has only -0 appended, if yes extend by -00000
+# parameters:
+# $1 Name 1 with a version
+#
+# return changed version  x.x.x.x-00000 if version was x.x.x.x-0
+#
+extend0 () {
+   # There may be versions like x.x.x.x-0 or x.x.x.x-yyddd where yy is the last 2 digits of the year and
+   # ddd is the day in the year.
+   VOUT=""
+   COUNT1=`echo $1 | $GREP -c "\-0$"`                          # detect x.x.x.x-0
+   COUNT2=`echo $1 | $GREP -c "\-0\."`                         # detect x.x.x.x-0.<arch>.${PKGEXT}
+   COUNT3=`echo $1 | $GREP -c "\-[0-9][0-9][0-9][0-9][0-9]\."` # detect x.x.x.x-yyddd.<arch>.${PKGEXT}
+   if [ $COUNT3 -eq 1 ] ; then
+      # detect x.x.x.x-yyddd.<arch>.${PKGEXT} - leave as is
+      VOUT=$1
+   elif [ $COUNT2 -eq 1 ] ; then
+      # detect x.x.x.x-0.<arch>.${PKGEXT}
+      # chop off appendix -0.<arch>.${PKGEXT} to append -00000
+      # sed must use "s/...." and NOT 's/...." here!
+      #VOUT=`echo $1 | sed "s/\-0\..*\.$PKGEXT//"`
+	  VOUT=`echo $1 | sed "s/\-0\..*//"`
+      VOUT=$VOUT"-00000"
+   elif [ $COUNT1 -eq 1 ] ; then
+      # detect x.x.x.x-0
+      VOUT=$1"0000"
+   else
+      # x.x.x.x
+      VOUT=$1"-00000"
+   fi
+   echo $VOUT
+}
+
+
+# function extractPkgVersion
+# Extract version from package file name
+# parameters:
+# $1 file path and name of package
+# $2 name of installed package
+# return package version: any of the form *x.x.x.x*
+
+#
+extractPkgVersion () {
+   VERSION=""
+   case "$OS" in
+       AIX)   VERSION=`strings $1 | $GREP -E "$2 [0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}" | cut -d ' ' -f2 | head -1`
+       ;;
+       Linux|SunOS) PKGNAME=`echo $1 | sed s/'.*\/'//g `
+              #echo "[TEST: msg to be removed!!!] extractPkgVersion PKGNAME: '$PKGNAME'"  >> $INST_LOG
+              if [ "$DISTRO" = "Ubuntu" ] ; then
+                 VERSION=`echo $PKGNAME | sed s/"$2\_"// | sed s/"\_$PKG_ARCH\.${PKGEXT}"//`
+              else
+                 VERSION=`echo $PKGNAME | sed s/"$2\-"// | sed s/"\.$PKG_ARCH\.${PKGEXT}"//`
+              fi
+              #echo "[TEST: msg to be removed!!!] extractPkgVersion VERSION: '$VERSION'"  >> $INST_LOG
+       ;;
+   esac
+   echo $VERSION
+}
+
+# function extractInstVersion
+# Extract version from installed package
+# parameters:
+# $1 name of installed package
+# return package version: any of the form x.x.x.x
+#        empty string if package is not installed
+#
+extractInstVersion () {
+   VERSION=""
+   case "$OS" in
+       AIX)
+           INST=`lslpp -l $1 2>/dev/null | $GREP -E $1 | head -1`
+           if [ -n "$INST" ] ; then
+              VERSION=`echo $INST  | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2`
+           fi
+       ;;
+       Linux)
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+              INST=`dpkg-query -W -f='${binary.Package}${Version}\n' $1  2> /dev/null`
+           else
+              INST=`rpm -q $1 2>/dev/null`
+           fi
+           RC=$?
+           if [ $RC -eq 0 ] && [ -n "$INST" ] ; then
+              VERSION=`echo $INST | sed s/"$1\-"// `
+           fi
+       ;;
+       SunOS)
+           INST=`pkginfo -x $1 2>/dev/null`
+           RC=$?
+           if [ $RC -eq 0 ] && [ -n "$INST" ] ; then
+              # extract version among line with name and revision
+              VERSION=`echo $INST | sed s/.*\)// | sed s/,.*// | tail -1`
+           fi
+       ;;
+   esac
+   echo $VERSION
+}
+
+
+# function compPkgInstVersion
+# Compare versions of supplied package against installed package
+# parameters:
+# $1 file path/name of package
+# $2 name of installed package
+# return 1  if version of $Pkg > Inst
+# return 0  if version of $Pkg == Inst
+# return -1 if version of $Pkg < Inst
+# return 4  if versions could not be compared
+# return 2  if supplied package could not be used
+# return 3  if installed package could not be used
+#
+compPkgInstVersion () {
+   PIRC=$RCVSN_CMP_FAIL
+   PKGVERSION=`extractPkgVersion $1 $2`
+   #echo "[TEST: msg to be removed!!!] compPkgInstVersion 1: '$1' 2: '$2'"  >> $INST_LOG
+   #echo "[TEST: msg to be removed!!!] compPkgInstVersion PKGVERSION: '$PKGVERSION'"  >> $INST_LOG
+   if [ -z "$PKGVERSION" ] ; then
+      PIRC=$RCVSN_NO_PKG
+   else
+      echo "$I43 '$2' '$PKGVERSION'" >> $INST_LOG
+      INSTVERSION=`extractInstVersion $2`
+      if [ -z "$INSTVERSION" ] ; then
+         PIRC=$RCVSN_NO_INST
+      else
+         echo "$I44 '$2' '$INSTVERSION'" >> $INST_LOG
+         PIRC=`compVersion $PKGVERSION $INSTVERSION`
+      fi
+   fi
+   echo $PIRC
+}
+
+# function extractPkgVR
+# Extract version/release from package file name
+# parameters:
+# $1 file path and name of package
+# return package version: any of the form x.x
+
+#
+extractPkgVR () {
+   VERSION=""
+   case "$OS" in
+       AIX) # special handling of msg packages: They have .core appended in their version string
+            # e.g. sam.msg.FR_FR has version string like: sam.msg.FR_FR.core 2.2.0.0000
+            VERSION_STG=`echo $1 | sed s/'.*\/'//g`        # strip off path
+            IS_MSG_PKG=`echo $1 | $GREP -Ec "\.msg\."`
+            if [ $IS_MSG_PKG -eq 1 ] ; then
+               VERSION_STG="${VERSION_STG}.core"
+            fi
+            #echo "[TEST] VERSION_STG=$VERSION_STG"  >> $INST_LOG
+            VERSION=`strings $1 | $GREP -E "$VERSION_STG [0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}\.[0-9]{1,}" | cut -d ' ' -f2 | head -1`
+       ;;
+       Linux|SunOS) VERSION=`echo $1 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2`
+       ;;
+   esac
+   if [ -n "$VERSION" ] ; then
+      # extract v.r from v.r.m.f
+      VERSION=`echo $VERSION |  sed s/'.[0-9]\{1,\}\.[0-9]\{1,\}$//'`
+   fi
+   echo $VERSION
+}
+
+# function extractInstVR
+# Extract version.release from installed package
+# parameters:
+# $1 name of package
+# return package version: any of the form x.x
+
+#
+extractInstVR () {
+   VERSION=""
+   RC=-1
+   case "$OS" in
+       AIX)
+           INST=`lslpp -l $1 2>/dev/null | $GREP -E $1 | head -1`
+           if [ -n "$INST" ] ; then
+              RC=0
+           fi
+       ;;
+       Linux)
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+              INST=`dpkg-query -W -f='${binary.Package}${Version}\n' $1  2> /dev/null`
+           else
+              INST=`rpm -q $1 2>/dev/null`
+           fi
+           RC=$?
+       ;;
+       SunOS)
+           INST=`pkginfo -x $1 2>/dev/null`
+           if [ -n "$INST" ] ; then
+              RC=0
+              INST=`echo $INST | tail -1`
+           fi
+       ;;
+   esac
+   if [ -n "$INST" ] && [ $RC -eq 0 ] ; then
+      VERSION=`echo $INST | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2`
+   fi
+   echo $VERSION
+}
+
+
+# function compPkgInstVR
+# Compare version/release of a supplied package against another installed package
+# parameters:
+# $1 file path/name of supplied package
+# $2 name of installed package
+# return 1  if version of $Pkg > Inst
+# return 0  if version of $Pkg == Inst
+# return -1 if version of $Pkg < Inst
+# return 4  if versions could not be compared
+# return 2  if supplied package could not be used
+# return 3  if installed package could not be used
+#
+compPkgInstVR () {
+   PIRC=$RCVSN_CMP_FAIL
+   PKGVERSION=`extractPkgVR $1`
+   #echo "[TEST: msg to be removed!!!] compPkgInstVR 1: '$1' 2: '$2'"  >> $INST_LOG
+   #echo "[TEST: msg to be removed!!!] compPkgInstVR PKGVERSION: '$PKGVERSION'"  >> $INST_LOG
+   if [ -z "$PKGVERSION" ] ; then
+      PIRC=$RCVSN_NO_PKG
+   else
+      echo "$I43 '$1' '$PKGVERSION'" >> $INST_LOG
+      INSTVERSION=`extractInstVR $2`
+      if [ -z "$INSTVERSION" ] ; then
+         PIRC=$RCVSN_NO_INST
+      else
+         echo "$I44 '$2' '$INSTVERSION'" >> $INST_LOG
+         PIRC=`compVR $PKGVERSION $INSTVERSION`
+      fi
+   fi
+   echo $PIRC
+}
+
+# function compVR
+# compare versions.release from $1 and $2
+# parameters:
+# $1 version.release  1
+# $2 version.release  2
+# return 1  if version of $1 > $2
+# return 0  if version of $1 == $2
+# return -1 if version of $1 < $2
+# return 4 if versions could not be compared
+#
+#
+compVR () {
+   CMPRC=$RCVSN_CMP_FAIL
+   # make numeric
+   V1=`echo $1 | sed 's/\.//g'`
+   V2=`echo $2 | sed 's/\.//g'`
+   if [ -n "$V1" ] && [ -n "$V2" ] ; then
+      if [ $V1 -gt $V2 ] ; then
+         CMPRC=$RCVSN_PKG_GT_INST
+      elif [ $V1 -lt $V2 ] ; then
+         CMPRC=$RCVSN_PKG_LT_INST
+      else
+         CMPRC=$RCVSN_PKG_EQ_INST
+      fi
+   fi
+   echo $CMPRC
+}
+
+# Linux Check prereqs for Java
+#
+# $1 Required Java version e.g. 1.7.0.0
+# $2 JRE directory e.g. /usr/lib/jvm/jre-1.7.1
+# $3 Java archictecure. Specify 1 for 64-bit and 0 for 32-bit.
+#
+# return $checkLinuxJAVA_RESULT="$RC $INST_JAVA_VERSION $JAVA_BIN_PATH"
+#    $RC Return code with the following values:
+#        0 if all prereqs met.
+#        21 if required version > installed version
+#        23 if comparison failed
+#    $INST_JAVA_VERSION installed Java version e.g. 1.7.1.0
+#    $JAVA_BIN_PATH path to java binary e.g. /usr/lib/jvm/jre-1.7.1/bin/java
+#
+checkLinuxJAVA () {
+   REQ_JAVA_VERSION=$1
+   JRE_DIR=$2
+   IS_ARCH_64=$3
+   
+   PIRC=$RC_PREREQ_UNABLE
+   checkLinuxJAVA_RESULT=""
+   
+   # If link to JRE already exists, check this JRE
+   if [ -L "/opt/IBM/tsamp/sam/java/jre" ] ; then
+      JAVA_BIN_PATH="/opt/IBM/tsamp/sam/java/jre/bin/java"
+   else
+      # Remove trailing /
+      JAVA_BIN_PATH=$(echo $JRE_DIR | sed "s/\/$//g")
+      
+      # Create Java bin path from JRE directory
+      if [ -e "${JAVA_BIN_PATH}/jre/bin/java" ] ; then
+         JAVA_BIN_PATH="${JAVA_BIN_PATH}/jre/bin/java"
+      elif [ -e "${JAVA_BIN_PATH}/bin/java" ] ; then
+         JAVA_BIN_PATH="${JAVA_BIN_PATH}/bin/java"
+      fi
+   fi
+   
+   # Check that Java has correct architecture
+   REQ_JRE_ARCH="32-bit"
+   if [ $IS_ARCH_64 -eq 1 ] ; then
+      REQ_JRE_ARCH="64-bit"
+   fi
+   
+   INST_JAVA_VERSION=""
+   if [ "${JAVA_BIN_PATH}" != "" ] && [ -e "${JAVA_BIN_PATH}" ] ; then
+      IS_JRE_ARCH=$(file ${JAVA_BIN_PATH} | grep -i "${REQ_JRE_ARCH}" 1>/dev/null 2>/dev/null && echo 1 || echo 0)
+      if [ "${IS_JRE_ARCH}" = "1" ] ; then
+         # Check if IBM JRE
+         IS_IBM_JRE=$(${JAVA_BIN_PATH} -version 2>&1 | grep "IBM" 1>/dev/null 2>/dev/null && echo 1 || echo 0)
+
+         if [ $? -eq 0 ] && [ "$IS_IBM_JRE" = "1"  ] ; then
+            # Determine Java version
+            JAVA_VERSION=$(${JAVA_BIN_PATH} -version 2>&1 | grep "java version" | awk -F '"' '{print $2}' | sed "s/_/./g")
+
+            if [ $? -eq 0 ] && [ "$JAVA_VERSION" != "" ] ; then
+               # Compare installed Java version with required Java version
+               COMP_JAVA_VERSION=$(compare_version "${JAVA_VERSION}" "${REQ_JAVA_VERSION}")
+
+               if [ $COMP_JAVA_VERSION -ge 0 ] ; then
+                  # Java has required version or higher
+                  INST_JAVA_VERSION=${JAVA_VERSION}
+                  PIRC=0
+                  
+                  # TODO create new message
+                  logit "installSAM: Using IBM Java at ${JRE_DIR} with version ${INST_JAVA_VERSION} and ${REQ_JRE_ARCH} architecture."
+               fi
+            fi
+         else
+            # TODO create new message
+            logit "installSAM: Detected non-IBM Java at ${JRE_DIR}"
+         fi
+      else
+         # TODO create new message
+         logit "installSAM: Incorrect architecture of specified Java at ${JRE_DIR}"
+      fi
+   fi
+   
+   if [ "${INST_JAVA_VERSION}" = "" ] ; then
+      # TODO create new message
+      PIRC=$RC_PREREQ_NOT_INST
+      logit "installSAM: Specified Java at ${JRE_DIR} is not valid. IBM Java with ${REQ_JRE_ARCH} architecture with version ${REQ_JAVA_VERSION} or higher is required."
+   fi
+   
+   # Return result in variable to allow logging on stdout
+   checkLinuxJAVA_RESULT="$PIRC $INST_JAVA_VERSION $JAVA_BIN_PATH"
+}
+
+# function validateInstallPackage
+# Check if correct installation package for architecture and OS is used
+# parameters:
+# $1 package directory
+# $2 specify if 64-bit package. Specify 1 for 64-bit and 0 for 32-bit.
+#
+validateInstallPackage () {
+PKG_CHK_DIR=$1
+USE_ARCH_64=$2
+
+if [ ! -d "${PKG_CHK_DIR}" ] ; then
+   if [ $USE_ARCH_64 -eq 1 ] ; then
+      # 64-bit deliverable on system where only 32-bit deliverable supported
+      logit "$I131"
+   else
+      # 32-bit deliverable on 64-bit system
+      logit "$I132"
+   fi
+   instexit $RC_INST_UNABLE 
+fi
+}
+
+# function installn
+# install n packages [1...n]
+#
+# parameters:
+# $1 package names as used by Linux:rpm -q <name> or SunOS pkginfo -x
+# Note: If multiple packages are supplied, all must be in the same path.
+#
+# $2 optional architecture if not regular: s390, ppc, i386
+#
+# $3 optional package install options
+#
+# return 0 if installed
+#
+installn () {
+   RC=$RC_INSTALLER_ERROR
+   #echo "test>>>> entered"
+   NPKGS=
+   ARCH_EXT=
+   PKG_INST_OPTS=
+   AIX_PKGDIR=`getAIXPkgSrcDir $1`
+   AIX_PKGDIR=${PKGDIR}${AIX_PKGDIR}
+
+   if [ -n "$2" ] ; then
+      ARCH_EXT=$2
+   else
+      ARCH_EXT=$PKG_ARCH
+   fi
+
+   # package installation options
+   if [ -n "$3" ] ; then
+     PKG_INST_OPTS=$3
+   fi
+
+   for APKG in $1
+   do
+      DOINST=1
+      #echo "test>>>> APKG=$APKG"   >> $INST_LOG
+      IRC=1
+      case "$OS" in
+         Linux)
+            if [ "$DISTRO" = "Ubuntu" ] ; then
+               # test if deb is installed
+               INSTPKG=`dpkg -s $APKG 2>/dev/null`
+            else
+               # test if rpm is installed
+               INSTPKG=`rpm -q $APKG 2>/dev/null`
+            fi
+            IRC=$?
+         ;;
+         SunOS)
+            INSTPKG=`pkginfo -x $APKG 2>/dev/null`
+            IRC=$?
+            if [ $IRC -eq 0 ] ; then
+                INSTPKG=`echo $INSTPKG | head -1 | cut -f1 -d' '`
+            fi
+         ;;
+
+         AIX)
+            # never challenge installed packages in AIX
+            IRC=1
+         ;;
+      esac
+      if [ $IRC -ne 0 ] ; then
+         INSTPKG=""
+      fi
+      if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+         # list existing package(s) hopefully only one
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            PKG="${PKGDIR}/${APKG}_*_${ARCH_EXT}.${PKGEXT}"
+         else
+            PKG="${PKGDIR}/$APKG-*.${ARCH_EXT}.${PKGEXT}"
+         fi
+      #else
+         # never test for existing fileset in AIX - only use directory for filtering
+      fi
+      #echo "PKG is  : $PKG" 
+      #echo "test>>>> PKG=$PKG"           >> $INST_LOG
+      #echo "test>>>> INSTPKG=$INSTPKG"    >> $INST_LOG
+      # check if package in install directory exists exactly once
+      if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+         # determine new package name and ensure it exists once
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            NPKG=`ls -1 $PKG 2>/dev/null | $GREP "${APKG}_[0-9]"`
+            COUNT=`ls -1 $PKG 2>/dev/null | $GREP -c "${APKG}_[0-9]"`
+         else
+            NPKG=`ls -1 $PKG 2>/dev/null | $GREP "$APKG-[0-9]"`
+            COUNT=`ls -1 $PKG 2>/dev/null | $GREP -c "$APKG-[0-9]"`
+         fi
+      else
+         # AIX - new package is APKG
+         NPKG=`ls -1 $AIX_PKGDIR 2>/dev/null | $GREP -E $APKG`
+         COUNT=`ls -1 $AIX_PKGDIR 2>/dev/null | $GREP -Ec $APKG`
+         NPKG=$APKG
+      fi
+      #echo "test>>>> NPKG=$NPKG"  >> $INST_LOG
+      #echo "count=$COUNT"  >> $INST_LOG 
+      if [ $COUNT -gt 1 ] ; then
+         # error! package exists more than once
+         ERT=$I12" "$COUNT
+         logit "$ERT"
+         if [ $OPT_SILENT -eq 0 ] ; then
+            ls -1 $NPKG 2>/dev/null
+         fi
+         ls -1 $NPKG 2>/dev/null >> $INST_LOG
+         logit "$I13"
+         if [ -z "$FIRST_ERROR" ] ; then
+            FIRST_ERROR=$ERT
+         fi
+         DOINST=0
+      elif [ $COUNT -lt 1 ] ; then
+         # error! package does not exist
+         # check if msg rpm only - then warn only
+         IS_MSG=`echo $APKG | $GREP -Ec ".msg|Msg\-"`
+         if [ $IS_MSG -eq 0 ] ; then
+            if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+               ERT="$I14 $PKG"
+            else
+               ERT="$I14 $APKG"
+            fi
+            echo $ERT
+            if [ -z "$FIRST_ERROR" ] ; then
+               FIRST_ERROR=$ERT
+            fi
+         else
+            RC=0
+         fi
+         DOINST=0
+      else
+         ISINST=0
+         # package exists exactly once
+         # if no force option
+         if [ -z "$OPT_FORCE" ] ; then
+            # check if package at version is installed
+            # e.g INSTPKG= sam-1.2.0.0-0
+            #     NPKG   = ./sam-1.2.0.0-0.s390.${PKGEXT}
+
+            if [ -n "$INSTPKG" ] ; then
+               # echo "test:: package installed? INSTPKG="$INSTPKG", PKG="$NPKG
+               if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                  ISINST=`geVersion $INSTPKG $NPKG`
+               #else do not check in AIX
+               fi
+               if [ $ISINST -ne 0 ] ; then
+                  # is installed at that or greater version
+                  DOINST=0
+                  if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+                     logit "$I25$INSTPKG"
+                  fi
+                  RC=0
+               fi
+            fi
+         fi
+      fi
+      if [ $DOINST -eq 1 ] ; then
+         if [ "$OS" = "AIX" ] ; then
+            # strip $DIR off of $NPKG
+            #echo "test>>>> before NPKG=$NPKG"
+            NPKG=`echo $NPKG | sed s/'.*\/'//`
+            #echo "test>>>> after NPKG=$NPKG"
+         fi
+         # add to packages to be installed
+         NPKGS=$NPKGS" "$NPKG
+      else   # $DOINST=0
+         if [ $RC -ne 0 ] ; then
+            saveInstErrorMsgs $RC "$PKG"
+         fi
+      fi
+   done
+   #echo "test>>> DOINST="$DOINST  >> $INST_LOG
+   if [ -n "$NPKGS" ] ; then
+      # any to install!
+      logit ""
+      logit "$I02"
+      for NPKG in $NPKGS
+      do
+         logit " $NPKG"
+      done
+      if [ $DISABLE_INST -ne 1 ] ; then
+         #echo "test:: USE_OPTIONS: $USE_OPTIONS" >> $INST_LOG
+         OPTS_USED=''
+         if [ $USE_OPTIONS -eq 1 ] ; then
+            OPTS_USED=$OPT_FORCE
+         fi
+         # normal options - Linux has none
+         case "$OS" in
+            Linux)
+            ;;
+            AIX) if [ -z "$OPTS_USED" ] ; then
+                    # use AIX normal install options
+                    OPTS_USED='-agXd'
+                 fi
+            ;;
+         esac
+
+         if [ -n "$PKG_INST_OPTS" ] ; then
+           if [ -n "$OPTS_USED" ] ; then
+             OPTS_USED="$OPTS_USED $PKG_INST_OPTS"
+           else
+             OPTS_USED=$PKG_INST_OPTS
+           fi
+         fi
+
+         #echo "test:: OPTS_USED: $OPTS_USED" >> $INST_LOG
+         INST_CMD=''
+         case "$OS" in
+            Linux) 
+                   if [ "$DISTRO" = "Ubuntu" ] ; then
+	              INST_CMD="dpkg -i $OPTS_USED $NPKGS"
+                      if [ $OPT_NOSCRIPTS -eq 1 ] ; then
+                         dpkg -i --noscripts $OPTS_USED $NPKGS >$TMP_STDERR 2>&1
+                      else
+                         dpkg -i $OPTS_USED $NPKGS >$TMP_STDERR 2>&1
+                      fi
+                   else
+                      INST_CMD="rpm -U $OPTS_USED $NPKGS"
+                      if [ $OPT_NOSCRIPTS -eq 1 ] ; then
+                         rpm -U --noscripts $OPTS_USED $NPKGS >$TMP_STDERR 2>&1
+                      else
+                         rpm -U $OPTS_USED $NPKGS >$TMP_STDERR 2>&1
+                      fi
+                   fi
+                   RC=$?
+            ;;
+            SunOS) # until we support multiple packages and
+                   # require interaction loop through packages
+                   for APKG in $NPKGS
+                   do
+                      # Install one by one 
+                      #XPKG=`echo $APKG | sed 's/.*\///' | sed 's/-[0-9]\..*//'`
+                      INST_CMD="pkgadd -a $PKG_ADM_FILE -d $APKG -G all"
+                      #echo "test:: use install command: $INST_CMD"  >> $INST_LOG
+                      pkgadd -n -a $PKG_ADM_FILE -d $APKG -G all >$TMP_STDERR 2>&1
+                      RC=$?
+                      if [ $RC -ne 0 ] ; then
+                         #echo "test:: install failed with RC:$RC"  >> $INST_LOG
+                         break
+                      fi   
+                   done   
+            ;;
+            AIX) INST_CMD="installp $OPTS_USED $AIX_PKGDIR $NPKG"
+                 installp $OPTS_USED $AIX_PKGDIR $NPKGS >$TMP_STDERR 2>&1
+                 RC=$?
+            ;;
+         esac
+         echo "$I46 '$INST_CMD' returned:$RC" >> $INST_LOG
+         if [ $RC -ne 0 ] ; then
+            saveInstErrorMsgs $RC "$NPKGS"
+         else
+            # installation successful
+            ANY_INST=`expr $ANY_INST + 1`
+            RC=0
+         fi
+      else
+         case "$OS" in
+            Linux) 
+               if [ "$DISTRO" = "Ubuntu" ] ; then
+                  logit "would do: dpg -i $OPTS_USED $NPKGS"
+               else
+                  logit "would do: rpm -U $OPTS_USED $NPKGS"
+               fi
+            ;;
+            SunOS) logit "would do: pkgadd -G -n -d $NPKGS"
+            ;;
+            AIX) logit "would do: installp -agXd $PKGDIR $NPKGS"
+            ;;
+         esac
+      fi
+   fi
+   return $RC
+}
+
+# funtion installEfixes
+#
+# Install efixes
+# Return 0 for success, 1 for failure, 2 for no efixes to be installed
+#
+installEfixes () {
+	# efix installation procedure
+	EFIX_DIR='/opt/IBM/tsamp/sam/efix'
+	EFIXPKG_DIR="${PKGDIR}"
+	ERRORSTRING="installSAM: Error applying efixes for file(s): "
+	ERRORFILES=""
+	RSCT_LEVEL=`ctversion | awk '{print $2}'`
+	SAMP_LEVEL=`samversion | awk '{print $2}'`
+        JAVA_EFIX_DIR='/opt/IBM/tsamp/sam'
+
+	# Remove efix dir contents if present
+	# (cause we will update files anyway during normal install)
+	if [ -d ${EFIX_DIR} ] ; then
+		rm -rf ${EFIX_DIR}/*
+	fi
+
+        # Remove PSIRT Java-efix dirs if present
+        # (cause we will update anyway during normal install, and new fixes start again with IF0001)
+        JAVA_EFIXES=`ls ${JAVA_EFIX_DIR}/java.IF0* 2>/dev/null|wc -l`
+        if [ $JAVA_EFIXES -ne 0 ] ; then
+                rm -rf ${JAVA_EFIX_DIR}/java.IF0*
+        fi
+
+	if [ -d "${EFIXPKG_DIR}/efix" ] && [ `ls ${EFIXPKG_DIR}/efix | wc -l` -gt 0 ] && ([ -d "${EFIXPKG_DIR}/efix/ship/sam/${SAMP_LEVEL}" ] || [ -d "${EFIXPKG_DIR}/efix/ship/rsct/${RSCT_LEVEL}" ]); then
+           logitex "installSAM: Applying efixes"
+		
+           # 1. Make efix dir
+           mkdir -p ${EFIX_DIR}
+
+           # 2. Copy efix informations to efix dir
+           cp -f ${EFIXPKG_DIR}/efix/*.efix ${EFIX_DIR}
+
+           # 3. Execute pre install script for efix
+           if [ -f ${EFIXPKG_DIR}/efix/pre.sh ] ; then
+              echo "--- Efix installation started at `date` ---" >> ${EFIX_DIR}/install.log
+              echo "-> Running efix pre-install script" >> ${EFIX_DIR}/install.log
+              ${EFIXPKG_DIR}/efix/pre.sh >> ${EFIX_DIR}/install.log
+           fi
+
+           # 4. Copy efix files to destination (overwriting existing files)
+           # 4.1 Copy SA MP files
+           if [ -d ${EFIXPKG_DIR}/efix/ship/sam/${SAMP_LEVEL} ] ; then
+              cp -rf ${EFIXPKG_DIR}/efix/ship/sam/${SAMP_LEVEL}/* /
+           fi
+		
+           # 4.2 Copy RSCT files
+           if [ -d ${EFIXPKG_DIR}/efix/ship/rsct/${RSCT_LEVEL} ] ; then
+              cp -rf ${EFIXPKG_DIR}/efix/ship/rsct/${RSCT_LEVEL}/* /
+           fi
+		
+           # 5. Verify that efixes have been applied correctly
+           FILES=`find ${EFIXPKG_DIR}/efix/ship -type f`
+           echo "-> Copying efix files:" >> ${EFIX_DIR}/install.log
+           echo "$FILES" >> ${EFIX_DIR}/install.log
+           for FILE in $FILES ; do
+              logitex "."
+              INSTFILE=`echo $FILE | sed "s|$EFIXPKG_DIR/efix/ship||g" | sed "s|/sam/${SAMP_LEVEL}||g" | sed "s|/rsct/${RSCT_LEVEL}||g"`
+			
+              if [ -f $INSTFILE ] ; then
+                 SIZE1=`ls -l $FILE | awk '{ print $5 }'`
+                 SIZE2=`ls -l $INSTFILE | awk '{ print $5 }'`
+
+                 if [ $SIZE1 -ne $SIZE2 ] ; then
+                    ERRORFILES="$ERRORFILES\n $INSTFILE"
+                 fi
+              else
+                 ERRORFILES="$ERRORFILES\n$INSTFILE"
+              fi
+           done
+		
+           # 6. Execute post install script for efix
+           if [ -f ${EFIXPKG_DIR}/efix/post.sh ] ; then
+              echo "-> Running efix post-install script" >> ${EFIX_DIR}/install.log
+              ${EFIXPKG_DIR}/efix/post.sh >> ${EFIX_DIR}/install.log
+              echo "--- Efix installation finished at `date` ---" >> ${EFIX_DIR}/install.log
+           fi
+
+           if [ -z "$ERRORFILES" ] ; then
+              logit "OK"
+
+              # 7. Show efix informations
+              if [ "$OS" = "AIX" ] ; then
+                 head -n1 `ls ${EFIX_DIR}/*.efix` | grep -v "==>" >> $INST_LOG
+              elif [ "$OS" = "SunOS" ] ; then
+                 head -n1 `ls ${EFIX_DIR}/*.efix` >> $INST_LOG 
+              else
+                 head -qn1 `ls ${EFIX_DIR}/*.efix` >> $INST_LOG
+              fi
+              EFIX_RC=$RC_OK
+           else
+              logit "Error"
+              logitex "$ERRORSTRING\n$ERRORFILES\n"
+              EFIX_RC=$RC_INSTALLER_ERROR
+           fi
+        else
+           echo "installSAM: No efixes to be applied." >> $INST_LOG
+           EFIX_RC=2 # no efixes installed
+        fi
+}
+
+# function saveInstErrorMsgs
+# Display installation error message append with $1 $2.
+# Expects the error message in file $TMP_STDERR
+# Side effects
+# If this is the first error encountered:
+#  - save rpm/pkg/installp error messages to
+#    $TMP_FIRST_STDERR.
+#  - keep error message in $FIRST_ERROR (for final output)
+# $1 return code from rpm/pkg/installp
+# $2 list of packages that failed install
+# 
+saveInstErrorMsgs () {
+   # rpm/pkg/installp failed with rc!=0
+   ERT=$I22" $1 : $2"
+   logit "$ERT"
+   ERROR=1
+   if [ -z "$FIRST_ERROR" ] ; then
+      # save first error if install failed
+      FIRST_ERROR=$ERT
+      # save stderr into first-error-file
+      if [ -r "$TMP_STDERR" ] ; then
+         $CPCMD $TMP_STDERR $TMP_FIRST_STDERR
+      fi
+   fi
+}
+
+# function checkSAMInst
+# Check if sam is installed
+#
+checkSAMInst () {
+   LALIRC=1
+   # Is sam installed?
+   case "$OS" in
+      Linux)  
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            dpkg -s sam 1>/dev/null 2>/dev/null
+         else
+            rpm -q sam 1>/dev/null 2>/dev/null
+         fi
+         LALIRC=$?
+      ;;
+      SunOS) pkginfo -x IBMsam 1>/dev/null 2>/dev/null
+             LALIRC=$?
+      ;;
+      AIX) lslpp -l sam.core.rte 1>/dev/null 2>/dev/null
+           LALIRC=$?
+      ;;
+   esac
+   if [ $LALIRC -eq 0 ] ; then
+      # sam is installed
+      IS_SAM_INST=1
+   else
+      #logit "Error: checkSAMInst() returned false. SAM not installed!"
+	  logit "SAM is currently not installed."
+   fi
+}
+
+
+# function getSAMInstPkg
+# Get installed SAM package
+# Return installed SAM package
+getSAMInstPkg () {
+   INSTSAMPKG=''
+   case "$OS" in
+      Linux)
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            INSTSAMPKG=`dpkg-query -W -f='${binary.Package}${Version}\n' sam  2> /dev/null` 
+         else 
+            INSTSAMPKG=`rpm -q sam 2>/dev/null`
+         fi
+      ;;
+      SunOS) INSTSAMPKG=`pkginfo -x IBMsam 2>/dev/null | head -1 | cut -f1 -d' '`
+      ;;
+      AIX) INSTSAMPKG=`lslpp -l sam.core.rte 2>/dev/null | $GREP sam.core.rte | head -1 | awk '{print $1" "$2}'`
+      ;;
+   esac
+   echo $INSTSAMPKG
+}
+
+
+# function installLUM
+# install license
+# parameters:
+# $1 license file with fully qualified path
+# $2 indicates if full license installed
+# $3 indicates if t&b license in pkg
+# return 0 if installed or not required
+# Conditions for installing a license:
+# 1. t&b installed and full in package
+# 2. sam installed and NOT full license installed AND t&b in package
+#
+installLUM () {
+   RC=0
+   LUM_FILE=$1
+   FULL_LIC_INST=$2
+   TB_LIC_PKG=$3
+   DO_LIC_INST=0
+   if [ -r "$LUM_FILE" ] ; then
+      if [ $FULL_LIC_INST -eq 0 ] && [ $TB_LIC_PKG -eq 0 ] ; then # condition 1
+         DO_LIC_INST=1
+      elif [ $IS_SAM_INST -eq 1 ] ; then  # condition 2
+         if [ $FULL_LIC_INST -eq 1 ] && [ $TB_LIC_PKG -eq 1 ] ; then # !condition 2
+            DO_LIC_INST=0   # assign just to fill clause
+         else
+            DO_LIC_INST=1
+         fi
+      else
+         logit "$I15" # Errors occurred - none installed
+      fi
+   fi
+
+   if [ $DO_LIC_INST -eq 1 ] ; then
+      # call samlicm to install lic file
+      ${RSCT_DIR}samlicm -i $LUM_FILE
+      RC=$?
+      if [ $RC -ne 0 ] ; then
+         logit "$I30 $LUM_FILE"
+         RC=$RC_NO_LICENSE
+      fi
+   fi
+   # test and list the license
+   if [ $RC -eq 0 ] ; then
+      JUNK=`${RSCT_DIR}samlicm -t 2>/dev/null`
+      RC=$?
+      if [ $RC -ne 0 ] ; then
+         if [ $OPT_NOLICCHECK -eq 0 ] ; then
+            logit "$I32"
+            RC=$RC_NO_LICENSE
+         fi
+      else
+         # list license
+         logit "$I33"
+         if [ $OPT_SILENT -eq 0 ] ; then
+            ${RSCT_DIR}samlicm -s
+         fi
+         ${RSCT_DIR}samlicm -s >> $INST_LOG
+      fi
+   fi
+
+   return $RC
+}
+
+# function getJavaPath - non 64bit
+# get the path of the latest java installed
+# parameters:
+#  $1 path to add to java path
+# return:
+#  Value: javapath with added path or errormsg
+#
+getJavaPath () {
+   JPATH=""
+   JPATH_OK=0
+   case "$OS" in
+       AIX)   # no longer used (we know the path already when checking the minimum version)
+       ;;
+       Linux|SunOS) JPATH=$ADAPTER_DIR/java
+                    JPATH_OK=1
+       ;;
+       *)     JPATH="$ENMSG_NOARCH"
+       ;;
+   esac
+   if [ -n "$JPATH" ] && [ $JPATH_OK -eq 1 ] ; then
+      JPATH="${JPATH}$1"
+   fi
+   echo "$JPATH"    # return java path or an error message
+}
+                
+                
+#--- function copyUninst c001
+# Copy files required by uninstallSAM to uninstall directory
+# Steps:
+# 1. create uninst msg directory if it does not exist
+# 2. copy uninstallSAM and uninstall msg files to uninst directory
+#
+copyUninst () {
+   if [ -d "$ADAPTER_DIR" ] && [ -x "${DIR}/uninstallSAM" ] ; then
+      # 1. create uninst/msg directory if it does not exist
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         mkdir -p $UNINST_DIR/${DISTRO}/msg
+      else
+         mkdir -p $UNINST_DIR/${OS}/msg
+      fi
+      # 2. copy uninstallSAM and msg to uinst directory
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         cp ${MSG_DIR}/uninstallSAM.*.msg $UNINST_DIR/${DISTRO}/msg
+      else
+         cp ${MSG_DIR}/uninstallSAM.*.msg $UNINST_DIR/${OS}/msg
+      fi
+      cp ${DIR}/uninstallSAM $UNINST_DIR
+      echo "$I104 $UNINST_DIR" >> $INST_LOG
+   fi
+}
+
+#--- function getAIXPkgSrcDir
+# Determine directory of package based on AIX version and package name
+# $1 package name
+getAIXPkgSrcDir () {
+   AIX_SRC_DIR=''
+   echo $AIX_SRC_DIR
+}
+
+#--function installAIXRSCT
+# $1 subdirectory
+# $2 rsct packages to be installed
+installAIXRSCT () {
+   ARRC=1
+   if [ -n "$2" ] ; then
+	   installp -agX -d ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/$1 "$2" >$TMP_STDERR 2>&1
+	   ARRC=$?
+   else
+       if [[ $1 = ptf* ]] || [[ $1 = inst ]] ; then
+           install_all_updates -d ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/$1 >$TMP_STDERR 2>&1
+           ARRC=$?
+       fi
+   fi
+   
+   if [ $ARRC -ne 0 ] ; then
+      saveInstErrorMsgs $ARRC "$2"
+   else
+      # installation successful
+      ANY_INST=`expr $ANY_INST + 1`
+   fi                                    
+   return $ARRC
+}
+
+#--- function makePkgAdminFile
+# Make file for SunOS package admin.
+# pkgadd -a <pkgAdminFile> can be used to suppress interaction
+# If $1 == 1 allow overwrite
+# Returns path and name of file
+makePkgAdminFile () {
+  PKG_ADM_FILE=`rmvPkgAdminFile`
+  touch $PKG_ADM_FILE
+  echo "mail=" > $PKG_ADM_FILE
+  if [ $1 -eq 1 ] ; then
+     # allow overwrite
+     echo "conflict=nocheck" >> $PKG_ADM_FILE
+     echo "instance=overwrite" >> $PKG_ADM_FILE
+  else
+     echo "conflict=nochange" >> $PKG_ADM_FILE
+  fi   
+  echo "setuid=nocheck"    >> $PKG_ADM_FILE
+  echo "action=nocheck"    >> $PKG_ADM_FILE
+  echo $PKG_ADM_FILE
+}
+
+#--- function rmvPkgAdminFile
+# Remove package admin file for SunOS.
+# Returns path and name of file
+rmvPkgAdminFile () {
+  PKG_ADM_FILE=/tmp/pkgadmfile.com.ibm.sunos
+  rm -f $PKG_ADM_FILE
+  echo $PKG_ADM_FILE
+}  
+
+# Check if any help option is in options
+# $1 options
+#
+# Rules:
+# - If any help like option is detected, display usage and exit.
+#
+checkHelp () {
+   IS_HELP=`echo $1 | $GREP -Ec "\-h|\-help|\-\-help|\-\?|\?"`
+   if [ $IS_HELP -ne 0 ] ; then
+      echo "$USAGE1"
+      echo "$USAGE2"
+      exit 1
+   fi   
+}
+
+#############################################################################################
+#################### Main - Begin installation processing ###################################
+#############################################################################################
+OS_FLAG=`uname -a | grep -c "Ubuntu"`
+if [ "$OS_FLAG" -eq 1 ] ; then
+  OS="Linux"
+  DISTRO="Ubuntu"
+else
+  OS=`uname -s`   # distinguish "Linux" "AIX" before trying to determine platform
+fi
+DATE=`date`
+ARCH=
+ARCH_64=0  # indicate if this is a 64 bit architecture
+
+GREP=
+if [ "$OS" = SunOS ] ; then
+   GREP=/usr/xpg4/bin/grep
+   echo "Solaris is not supported by System Automation for Multiplatforms 4.1 and higher."
+   exit 1
+else
+   GREP=grep    
+fi
+
+# Determine distro and version
+DISTRO=
+IS_VERSION=
+DISTRO_VERSION=
+
+case "$OS" in
+    AIX) DISTRO=IBM
+         IS_VERSION=`oslevel -r`
+    ;;
+    Linux)
+        if [ -n "$OPT_FORCE_ARCH_64" ] ; then
+           ARCH_64=1
+        fi
+        IS_VERSION=`cat /etc/redhat-release 2>/dev/null`
+        if [ -n "$IS_VERSION" ] ; then
+           COUNT=`echo $IS_VERSION | $GREP -Ec "Red Hat Enterprise.*S|CentOS.*"`
+           if [ $COUNT -eq 1 ] ; then
+              DISTRO=RH
+              DISTRO_VERSION=`echo $IS_VERSION | $GREP release | sed s/".*release "// | cut -d. -f1`
+              if [ $DISTRO_VERSION -ge 7 ] ; then
+                ARCH_64=1
+              fi
+           fi
+        else
+           IS_VERSION=`cat /etc/SuSE-release 2>/dev/null | $GREP -v -e "^#"`
+           if [ -n "$IS_VERSION" ] ; then
+              COUNT=`echo $IS_VERSION | $GREP -Ec "SLES|SuSE.*Enterprise Server|SUSE.*Enterprise Server"`
+              if [ $COUNT -eq 1 ] ; then
+                 DISTRO=SUSE
+                 DISTRO_VERSION=`echo $IS_VERSION | $GREP VERSION | sed s/".*VERSION = "// | cut -d" " -f1`
+                 if [ $DISTRO_VERSION -ge 12 ] ; then
+                   ARCH_64=1
+                 fi
+              fi
+           else
+              IS_VERSION=`cat /etc/os-release 2>/dev/null`
+              if [ -n "$IS_VERSION" ] ; then
+                #LINUX_DISTRO=`echo $IS_VERSION | $GREP -w "NAME=" | cut -d\" -f2`
+                #DISTRO_VERSION=`echo $IS_VERSION | $GREP VERSION_ID | cut -d\" -f2 | cut -d. -f1`
+                LINUX_DISTRO=`$GREP "^NAME=" /etc/os-release | cut -d\" -f2`
+                DISTRO_VERSION=`$GREP "^VERSION_ID=" /etc/os-release | cut -d\" -f2`
+                if [ -n "$LINUX_DISTRO" ] ; then
+                    # Map distribution name
+                    case "$LINUX_DISTRO" in
+                        "Red Hat Enterprise Linux Server"|"CentOS Server")
+                            DISTRO=RH
+                            # RHEL version 7 and higher should install 64-bit packages
+                            if [ $DISTRO_VERSION -ge 7 ] ; then
+                                ARCH_64=1
+                            fi
+                        ;;
+                        SLES)
+                            DISTRO=SUSE
+                            # SLES version 12 and higher should install 64-bit packages
+                            if [ $DISTRO_VERSION -ge 12 ] ; then
+                                ARCH_64=1
+                            fi
+                        ;;
+                        Ubuntu)
+                            DISTRO=Ubuntu
+                            ARCH_64=1
+                        ;;
+                    esac
+                fi
+              fi
+           fi
+        fi
+    ;;
+    SunOS)
+        IS_VERSION=`cat /etc/release 2>/dev/null`
+        if [ -n "$IS_VERSION" ] ; then
+           COUNT=`echo $IS_VERSION | $GREP -Ec "Solaris"`
+           if [ $COUNT -eq 1 ] ; then
+              DISTRO=SUN
+           fi
+        fi
+    ;;
+esac
+
+# get the copy command that does not need confirmation 'y'
+CPCMD=`getcpcmd`
+
+if [ -n "$OPTIONS" ] ; then
+   checkHelp "$OPTIONS"
+   # -l <log-file> option
+   OPT_LOG_FILE=`echo " $OPTIONS" | $GREP " \-l " | sed s/".* \-l "// | sed s/" -.*"//`
+   # --silent
+   OPT_SILENT=`echo $OPTIONS | $GREP -c "\-\-silent"`
+fi
+# inst log is either of the form /tmp/installSAM.#.log or
+# the file supplied in -l logfile
+if [ -n "$OPT_LOG_FILE" ] ; then
+   INST_LOG=$OPT_LOG_FILE
+else
+   INST_LOG=`makeLog $PN`
+fi
+#echo "logfile: $INST_LOG"
+
+if [ $? -ne 0 ] ; then
+   if [ $OPT_SILENT -eq 0 ] ; then
+      echo "$ENMSG_NO_LOGDIR $INST_LOG"
+   fi
+   instexit $RC_INST_UNABLE "NONE"
+fi
+
+if [ -n "$OPT_LOG_FILE" ] && [ -w "$INST_LOG" ] ; then
+   # append to existing logfile
+   echo "$ENMSG_LOG_APPENDED $DATE"  >> $INST_LOG
+else
+   # create a new logfile
+   touch $INST_LOG >/dev/null
+   echo "$ENMSG_LOG_STARTED $DATE"   > $INST_LOG
+fi
+
+# set all options
+PREREQ_OPTS=''
+if [ -n "$OPTIONS" ] ; then
+   # --force
+   COUNT=`echo $OPTIONS | $GREP -c "\-\-force"`
+   #echo "force count=$COUNT"
+   if [ $COUNT -ne 0 ] ; then
+      case "$OS" in
+         Linux)
+             if [ "$DISTRO" = "Ubuntu" ] ; then
+                OPT_FORCE="--force-configure-any"
+             else 
+                OPT_FORCE="--force"
+             fi
+         ;;
+         SunOS) echo "SunOS: --force option not yet supported in this version of installSAM."
+         ;;
+         AIX) OPT_FORCE="-aFXd"
+         ;;
+      esac
+   fi
+   # --forceAll (forces SAM and RSCT)
+   COUNT=`echo $OPTIONS | $GREP -c "\-\-forceAll"`
+   #echo "forceAll count=$COUNT"
+   if [ $COUNT -ne 0 ] ; then
+      case "$OS" in
+         Linux)
+            if [ "$DISTRO" = "Ubuntu" ] ; then
+               OPT_FORCEALL="--force-all"
+            else
+               OPT_FORCEALL="--force"
+            fi
+         ;;
+         SunOS) echo "SunOS: --force option not yet supported in this version of installSAM."
+         ;;
+         AIX) OPT_FORCEALL="-aFXd"
+         ;;
+      esac
+   fi
+   # --force64 (forces 64 bit installation on Linux)
+   COUNT=`echo $OPTIONS | $GREP -c "\-\-force64"`
+   #echo "force64 count=$COUNT"
+   if [ $COUNT -ne 0 ] ; then
+      case "$OS" in
+         Linux)
+            OPT_FORCE_ARCH_64='--force64';
+         ;;
+         SunOS) echo "SunOS: --force64 option not yet supported in this version of installSAM."
+         ;;
+         AIX) echo "AIX: --force64 option not yet supported in this version of installSAM."
+         ;;
+      esac
+   fi
+   # --nodeps
+   COUNT=`echo $OPTIONS | $GREP -c "\-\-nodeps"`
+   #echo "nodeps count=$COUNT"
+   if [ $COUNT -ne 0 ] ; then
+      case "$OS" in
+         Linux) 
+            if [ "$DISTRO" = "Ubuntu" ] ; then
+               echo "Ubuntu: --nodeps option not yet supported in this version of installSAM."
+            else
+               OPT_FORCE="$OPT_FORCE --nodeps"
+            fi
+         ;;
+         SunOS) echo "SunOS: --nodeps option not yet supported in this version of installSAM."
+         ;;
+         # Quitly accept --nodeps as NO-OP on AIX
+         #AIX) echo "AIX: --nodeps option not yet supported in this version of installSAM."
+         #;;
+      esac
+   fi   
+   # internal --nonls
+   OPT_NONLS=`echo $OPTIONS | $GREP -c "\-\-nonls"`
+   # internal --noadapter
+   OPT_NOADAPTER=`echo $OPTIONS | $GREP -c "\-\-noadapter"`
+   # internal --nosap
+   OPT_NOSAP=`echo $OPTIONS | $GREP -c "\-\-nosap"`
+   # internal --noscripts
+   OPT_NOSCRIPTS=`echo $OPTIONS | $GREP -c "\-\-noscripts"`
+   # internal --nolic
+   OPT_NOLIC=`echo "$OPTIONS " | $GREP -c "\-\-nolic "`
+   # internal --noprereqcheck
+   OPT_NOPREREQCHECK=`echo $OPTIONS | $GREP -c "\-\-noprereqcheck"`
+   # internal --noaixrsct
+   OPT_NOAIXRSCT=`echo $OPTIONS | $GREP -c "\-\-noaixrsct"`
+
+   # silent install options
+   # --silent
+   if [ $OPT_SILENT -eq 1 ] ; then
+      # also add option to prereqSAM.centos
+      if [ -z "$PREREQ_OPTS" ] ; then
+         PREREQ_OPTS="--silent"
+      else
+         PREREQ_OPTS="$PREREQ_OPTS --silent"
+      fi
+   fi
+   # --noupgrade
+   OPT_NOUPGRADE=`echo $OPTIONS | $GREP -c "\-\-noupgrade"`
+   # --onlyupgrade
+   OPT_ONLYUPGRADE=`echo $OPTIONS | $GREP -c "\-\-onlyupgrade"`
+   # --noliccheck
+   OPT_NOLICCHECK=`echo $OPTIONS | $GREP -c "\-\-noliccheck"`
+   if [ $OPT_NOLICCHECK -eq 1 ] ; then
+      # also add option to prereqSAM.centos
+      if [ -z "$PREREQ_OPTS" ] ; then
+         PREREQ_OPTS="--noliccheck"
+      else
+         PREREQ_OPTS="$PREREQ_OPTS --noliccheck"
+      fi
+   fi
+   # -d <package-directory> option
+   OPT_DIR=`echo " $OPTIONS" | $GREP " \-d " | sed s/".* \-d "// | sed s/" -.*"//`
+   if [ -n "$OPT_DIR" ] ; then
+      if [ ! -d "$OPT_DIR" ] ; then
+         logit "$ENMSG_NO_DIR $OPT_DIR"
+         instexit $RC_INST_UNABLE "NONLS"
+      else
+         DIR=$OPT_DIR
+      fi
+   fi
+   # -n <lang> option
+   OPT_LANG=`echo " $OPTIONS" | $GREP " \-n " | sed s/".* \-n "// | sed s/" -.*"//`
+   if [ -n "$OPT_LANG" ] ; then
+      INST_LANG_ONLY=1
+   fi
+   # --useibmjre <path_to_ibm_jre> option
+   OPT_USE_IBM_JRE=`echo $OPTIONS | $GREP -c "\-\-useibmjre"`
+   if [ "${OPT_USE_IBM_JRE}" = "1" ] ; then
+      OPT_IBM_JRE_PATH=`echo " $OPTIONS" | $GREP " \-\-useibmjre " | sed s/".* \-\-useibmjre "// | sed s/" -.*"//`
+   fi   
+fi
+
+echo "$SCRIPT OPTIONS           = $OPTIONS"            >> $INST_LOG
+echo "$SCRIPT OPT_FORCE         = $OPT_FORCE"          >> $INST_LOG
+echo "$SCRIPT OPT_FORCEALL      = $OPT_FORCEALL"       >> $INST_LOG
+echo "$SCRIPT OPT_SILENT        = $OPT_SILENT"         >> $INST_LOG
+echo "$SCRIPT OPT_NOLICCHECK    = $OPT_NOLICCHECK"     >> $INST_LOG
+echo "$SCRIPT OPT_NOPREREQCHECK = $OPT_NOPREREQCHECK"  >> $INST_LOG
+echo "$SCRIPT OPT_NOUPGRADE     = $OPT_NOUPGRADE"      >> $INST_LOG
+echo "$SCRIPT OPT_NONLS         = $OPT_NONLS"          >> $INST_LOG
+echo "$SCRIPT OPT_NOAIXRSCT     = $OPT_NOAIXRSCT"      >> $INST_LOG
+
+if [ -n "$OPT_LANG" ] ; then
+   echo "$SCRIPT Install language = $OPT_LANG" >> $INST_LOG
+fi
+
+if [ $INST_LANG_ONLY -eq 1 ] && [ $OPT_NONLS -eq 1 ] ; then
+   logit "$ENMSG_LANG_OPTS_INVALID"
+   instexit $RC_INST_UNABLE "NONLS"
+fi
+
+# Options not meant for customers
+#echo "OPT_NOADAPTER     = $OPT_NOADAPTER"     >> $INST_LOG
+#echo "OPT_NOSAP	     = $OPT_NOSAP" 		   >> $INST_LOG
+#echo "OPT_NOLIC         = $OPT_NOLIC"         >> $INST_LOG
+
+
+# Do prereq checking first
+# add useibmjre option to prereq options
+if [ "${OPT_USE_IBM_JRE}" = "1" ] ; then
+   if [ -z "$PREREQ_OPTS" ] ; then
+      PREREQ_OPTS="--useibmjre ${OPT_IBM_JRE_PATH}"
+   else
+      PREREQ_OPTS="$PREREQ_OPTS --useibmjre ${OPT_IBM_JRE_PATH}"
+   fi
+fi
+# add log option to prereq options
+if [ -z "$PREREQ_OPTS" ] ; then
+   PREREQ_OPTS="-l $INST_LOG"
+else
+   PREREQ_OPTS="$PREREQ_OPTS -l $INST_LOG"
+fi
+
+#====================================================
+# Call script 'prereqSAM.centos' before attempting install
+#====================================================
+#echo "PREREQ_OPTS=$PREREQ_OPTS"
+if [ ! -x "$DIR/prereqSAM.centos" ] ; then
+   logit "$ENMSG_NO_PREREQ $DIR"
+   instexit $RC_INST_UNABLE "NONLS"
+fi
+
+if [ $OPT_NOPREREQCHECK -eq 0 ] ; then
+   $DIR/prereqSAM.centos "$PREREQ_OPTS"
+   RC=$?
+else
+   logit "$ENMSG_NO_PREREQCHECK"
+   RC=0
+fi
+#echo "from prereqSAM.centos RC=$RC"
+
+if [ $RC -ne 0 ] ; then
+   # Failed prereq checks - exit
+   instexit $RC
+fi
+
+# package extension Linux or SunOS
+PKGEXT=
+case "$OS" in
+    AIX)   PLATFORM=AIX
+    ;;
+    Linux) PLATFORM=`arch` # platform of target Linux machine
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+              PKGEXT=deb
+           else 
+              PKGEXT=rpm
+           fi
+    ;;
+    SunOS) PLATFORM=`mach` # platform of target SunOS machine
+           PKGEXT=pkg
+    ;;
+    *)     logit "$ENMSG_NOOS"
+           instexit $RC_INST_UNABLE "NONLS"
+    ;;
+esac
+
+#echo "OS = $OS" >> $INST_LOG
+
+# determine architecture
+
+COUNT=`echo $PLATFORM | $GREP -c "^i[3-6]86$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=i386
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^x86_64$"`
+if [ $COUNT -eq 1 ] ; then
+   if [ $ARCH_64 -eq 1 ] ; then
+     ARCH=x86_64
+   else
+     ARCH=i386
+   fi
+
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^ia64"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=x86_64
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^s390$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=s390
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^s390x$"`
+if [ $COUNT -eq 1 ] ; then
+   if [ $ARCH_64 -eq 1 ] ; then
+     ARCH=s390x
+   else
+     ARCH=s390
+   fi
+
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^ppc$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=ppc
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^ppc64$"`
+if [ $COUNT -eq 1 ] ; then
+   if [ $ARCH_64 -eq 1 ] ; then
+     ARCH=ppc64
+   else
+     ARCH=ppc
+   fi
+
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^ppc64le$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=ppc64le
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^sparc"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=sparc
+   PKG_ARCH=$ARCH
+fi
+
+COUNT=`echo $PLATFORM | $GREP -c "^AIX"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=   # use only OS name
+   PKG_ARCH=$ARCH
+fi
+
+if [ "$OS" = "Linux" ] && [ "$DISTRO" = "Ubuntu" ] ; then
+   case "$ARCH" in
+      x86_64) PKG_ARCH=amd64
+      ;;
+      ppc64le) PKG_ARCH=ppc64el
+      ;;
+   esac
+fi
+
+# Check Architecture
+if [ -z "$ARCH" ] && [ "$OS" != AIX ] ; then
+   logit "$ENMSG_NOARCH"
+   instexit $RC_INST_UNABLE "NONLS"
+fi
+
+#echo "Architecture = $ARCH" >> $INST_LOG
+OS_ARCH_DIR=
+if [ "$OS" = AIX ] ; then
+   OS_ARCH_DIR=$OS
+else
+   if [ "$DISTRO" = "Ubuntu" ] ; then
+      OS_ARCH_DIR=$DISTRO/$ARCH
+   else
+      OS_ARCH_DIR=$OS/$ARCH
+   fi
+fi
+
+if [ -n "$OPT_DIR" ] ; then
+   if [ -d "${OPT_DIR}/$OS_ARCH_DIR" ] ; then
+      DIR=$OPT_DIR
+   else
+      logit "$ENMSG_NO_PKGDIR $OPT_DIR"
+      instexit $RC_INST_UNABLE "NONLS"
+   fi
+fi
+PKGDIR=${DIR}/$OS_ARCH_DIR
+
+# determine if ITLM files are in $DIR/$OS/itlm/
+ITLM_FILE=
+ITLM_FEATURE_FILES=
+if [ "$DISTRO" = "Ubuntu" ] ; then
+   ITLM_FILE=${DIR}/${DISTRO}/itlm/ITSAMP0302.SYS2
+else
+   ITLM_FILE=${DIR}/${OS}/itlm/ITSAMP0302.SYS2
+fi
+ITLM_FILE=`ls $ITLM_FILE 2>/dev/null`
+
+if [ "$DISTRO" = "Ubuntu" ] ; then
+   ITLM_FEATURE_FILES=${DIR}/${DISTRO}/itlm/*.feature
+else
+   ITLM_FEATURE_FILES=${DIR}/${OS}/itlm/*.feature
+fi
+ITLM_FEATURE_FILES=`ls $ITLM_FEATURE_FILES 2>/dev/null`
+
+#====================================================
+# determine National Language
+# extract <value> from LANG, LC_ALL, or LC_CTYPE
+NLS_LANG=`locale | $GREP "LANG=" | sed s/LANG=// | sed 's/\"//g'` 2>/dev/null
+if [ -z "$NLS_LANG" ] ; then
+   NLS_LANG=`locale | $GREP "LC_ALL=" | sed s/LC_ALL=// | sed 's/\"//g'` 2>/dev/null
+   if [ -z "$NLS_LANG" ] ; then
+      NLS_LANG=`locale | $GREP "LC_CTYPE=" | sed s/LC_CTYPE=// | sed 's/\"//g'` 2>/dev/null
+      if [ -z "$NLS_LANG" ] ; then
+         logit "$ENMSG_NOLANG"
+         NLS_LANG=en_US
+      fi
+   fi
+fi
+
+if [ "$NLS_LANG" = "POSIX" ] || [ "$NLS_LANG" = "C" ] ; then
+   NLS_LANG=en_US
+fi
+
+MSG_DIR=
+case "$OS" in
+   AIX|SunOS) MSG_DIR="${DIR}/${OS}/msg"
+   ;;
+   Linux)
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         MSG_DIR="${DIR}/${DISTRO}/msg"
+      else 
+         MSG_DIR="${DIR}/${OS}/msg"
+      fi
+   ;;
+esac
+
+NLS_FILE="$MSG_DIR/$MSG_NAME.$NLS_LANG.msg"
+#echo "try to find: "$NLS_FILE
+
+
+if [ ! -r "$NLS_FILE" ]  ; then
+   # try to map to similar language
+   mapLanguage $NLS_LANG
+   NLS_FILE="$MSG_DIR/$MSG_NAME.$NLS_LANG.msg"
+   if [ ! -r "$NLS_FILE" ] ; then
+      # fall back to English
+      logit "$ENMSG_NONLS $NLS_LANG"
+      logit
+      logit "$ENMSG_LANGINST"
+      logit
+      if [ $OPT_SILENT -eq 0 ] ; then
+         read RES
+         if [ "$RES" = "y" ] || [ "$RES" = "Y" ] ; then
+            logit "$I45"
+            instexit $RC_INST_UNABLE "NONLS"
+         fi
+      fi
+      logit "$ENMSG_CONTEN"
+      NLS_FILE="$MSG_DIR/$MSG_NAME.en_US.msg"
+      if [ ! -r "$NLS_FILE" ] ; then
+         logit "$I45"
+         logit "$ENMSG_NODEFLANG"
+         instexit $RC_INST_UNABLE "NONLS"
+      fi
+   fi
+fi
+
+# test
+#cat $NLS_FILE
+# test
+
+# list of messages (from installSAM.*.msg)
+
+# I01=Installing System Automation on platform
+# I02=Installing
+# I03=Information: uninstall/install done for this version of sam
+# I04=Option passed to rpm:
+# I05=Installed System Automation package and prerequisites:
+# I06=Status of System Automation on
+# I07=A general License Agreement and product specific License Information will be shown. Scroll down using the Enter key (line by line) or Space bar (page by page). At the end you will be asked to accept the terms to be allowed to install the product. Select Enter to continue.
+# I08=To accept all terms of the preceding License Agreement and License Information type 'y', anything else to decline.
+# I09=To accept all terms of the preceding License Agreement and License Information select 'Enter', to decline type Ctrl-c.
+# I10=You did not accepted the terms in License Agreement and License information. System Automation will not be installed.
+# I11=You accepted the terms in License Agreement and License information. The product will now be installed.
+# I12=Too many versions to install:
+# I13=You may have extracted a new version over an older version into directory SAM. Hint: Delete directory SAM before using tar to extract files.
+# I14=Package does not exist:
+# I15=Errors occurred - package installation is incomplete.
+# I16=Architecture not supported:
+# I17=Only option: --force can be used
+# I18=Cannot upgrade because this node is online:
+# I19=This node must be excluded from automation and then stopped before upgrade can proceed.
+# I20=Exclude this node from automation using samctrl -u a
+# I21=Before you try again, stop this node with stoprpnode
+# I22=Error: rpm failed with return-code:
+# I23=No License Agreement or License License Information was found. The product cannot be installed.
+# I24=Warning: Must set CT_MANAGEMENT_SCOPE=2
+# I25=Package is already installed:
+# I26=All packages were installed successfully.            (added 03/23)
+# I27=Any packages failed installation. See details below. (added 03/23)
+# I28=Option ignored:                                      (added 03/23)
+# I29=yes                                                  (added 04/02)
+# I30=Installing license failed.                           (added 04/02)
+# I31=License file not found:                              (added 04/02)
+# I32=Cannot upgrade because no valid license was found.   (added 04/02)
+# I33=The following license is installed:                  (added 04/02)
+# I34=Warning: Module 'softdog' could not be loaded...     (added 04/06/23)
+
+# new messages SAM2.1.0.0
+# I35=Stop the end-to-end automation manager adapter, using command 'samadapter stop'. (added 2005-05-28)
+# I36=Found Java at version:                                                           (added 2005-05-28)
+# I37=To run the end-to-end automation manager adapter, you must install 32-bit Java at this or higher version: (added 2005-05-28)
+
+# new messages SAM2.1.0.1 (added 2005-11-24)
+# I38=Package 'sam' was found installed at a lower version and needs to be upgraded, but option '--noupgrade' was specified to prevent upgrade.
+# I39=Package 'sam' is already installed at a higher version than the package supplied for upgrade.
+# I40=Cannot determine version of package 'sam'.
+# I41=Warning: You are installing a package over the same version that is already installed:
+# I42=Warning: You are installing a package over a higher version that is already installed:
+# I43=Package and version supplied for installation:
+# I44=Package and version installed:
+# I45=No installation performed.
+# I46=Installation command:
+# I47=Packages are installed from directory:
+# I82=Detected operating system:
+# I83=Detected architecture:
+
+# new messages SAM2.2.0.0 (added 2006-08-09) for separate language installation
+# I96=Error: The following language is not supported:
+# I97=Only the English version of packages will be installed.
+# I98=Only the following language will be installed:
+# I99=Error: Unable to install a language because package 'sam' is not installed.
+# I100=Error: Version and release of language to be installed and installed package 'sam' are different:
+# I101=Error: Option '--onlyupgrade' was specified which can only be used for upgrading, but package 'sam' was not found installed.
+# new sam 2.2.0.2
+# I104=Provided uninstallSAM in directory for uninstallation:
+
+#new sam 3.1.0.0
+# I113=Error: 'samadapter' is running. Stop samadapter with command 'samadapter stop'. Then re-try installation.
+# I114=Error: Installing a new version of RSCT for AIX failed with installp return code: 
+# I115=The new RSCT version for AIX to be installed is:
+# I116=Error: Upgrading RSCT for AIX failed with installp return code: 
+# I117=The new RSCT version for AIX to be upgraded is:
+# I118=Installed new version of RSCT for AIX successfully. New version is:
+# I119=Upgraded RSCT for AIX successfully. Upgraded version is:
+# I120=RSCT for AIX is not installed or upgraded because it is already installed at a higher version: 
+# I121=Package rsct.basic required by package 'sam' is not found installed on AIX. 
+# I122=Error: Package rsct.basic cannot be installed on AIX because the installed version of other RSCT packages is higher:
+# I124=SUN package is installed:
+#new sam 3.1.0.0 English only
+# I127=Error: Cannot find Java 32-bit."
+# I128=Error: Cannot use java5 because service release is less than SR5."
+# I131=Error: Invalid installation package for this architecture and OS. Please use 64-bit installation package instead.
+# I132=Error: Invalid installation package for this architecture and OS. Please use 32-bit installation package instead.
+
+# Get all NLS texts acc. to $NLS_FILE
+# get ASCII texts from keys
+I01=`getASCII "I01" 1`' '
+I02=`getASCII "I02" 1`' '
+I03=`getASCII "I03" 1`
+I04=`getASCII "I04" 1`" $1"
+I05=`getASCII "I05" 1`' '
+I06=`getASCII "I06" 1`' '
+I07=`getASCII "I07" 1`' '
+I08=`getASCII "I08" 1`' '
+I09=`getASCII "I09" 1`' '
+I10=`getASCII "I10" 1`
+I11=`getASCII "I11" 1`
+
+I12=`getASCII "I12" 1`' '
+I13=`getASCII "I13" 1`
+I14=`getASCII "I14" 1`' '
+I15=`getASCII "I15" 1`
+I16=`getASCII "I16" 1`' '
+I17=`getASCII "I17" 1`' '
+I18=`getASCII "I18" 1`' '
+I19=`getASCII "I19" 1`
+I20=`getASCII "I20" 1`' '$HOST_NAME
+I21=`getASCII "I21" 1`' '$HOST_NAME
+I22=`getASCII "I22" 1`' '
+I23=`getASCII "I23" 1`
+I24=`getASCII "I24" 1`' '
+I25=`getASCII "I25" 1`' '
+I26=`getASCII "I26" 1`
+I27=`getASCII "I27" 1`
+I28=`getASCII "I28" 1`' '
+I29=`getASCII "I29" 1`
+I30=`getASCII "I30" 1`' '
+I31=`getASCII "I31" 1`' '
+I32=`getASCII "I32" 1`' '
+I33=`getASCII "I33" 1`' '
+I34=`getASCII "I34" 1`' '              # new msg sam-1.2.0.1 for softdog
+# new messages SAM2.1.0.0
+I35=`getASCII "I35" 1`' '
+I36=`getASCII "I36" 1`' '
+I37=`getASCII "I37" 1`' '
+# new messages SAM2.1.0.1
+I38=`getASCII "I38" 1`' '
+I39=`getASCII "I39" 1`' '
+I40=`getASCII "I40" 1`' '
+I41=`getASCII "I41" 1`' '
+I42=`getASCII "I42" 1`' '
+I43=`getASCII "I43" 1`' '
+I44=`getASCII "I44" 1`' '
+I45=`getASCII "I45" 1`' '
+I46=`getASCII "I46" 1`' '
+I47=`getASCII "I47" 1`' '
+I48=`getASCII "I48" 1`' '
+I49=`getASCII "I49" 1`' '
+I50=`getASCII "I50" 1`' '
+I51=`getASCII "I51" 1`' '
+I52=`getASCII "I52" 1`' '
+I53=`getASCII "I53" 1`' '
+I68=`getASCII "I68" 1`' '             # shared with prereqSAM.centos
+I82=`getASCII "I82" 1`' '             # shared with prereqSAM.centos
+I83=`getASCII "I83" 1`' '             # shared with prereqSAM.centos
+I90=`getASCII "I90" 1`' '             # shared with prereqSAM.centos
+# new messages SAM2.2.0.0
+I96=`getASCII "I96" 1`' '             # separate language installation
+I97=`getASCII "I97" 1`' '             # separate language installation
+I98=`getASCII "I98" 1`' '             # separate language installation
+I99=`getASCII "I99" 1`' '             # separate language installation
+I100=`getASCII "I100" 1`' '           # separate language installation
+# new sam 3.1.0.0
+I110=`getASCII "I110" 1`' '
+I113=`getASCII "I113" 1`' '           # option --onlyupgrade
+I114=`getASCII "I114" 1`' '
+I115=`getASCII "I115" 1`' '
+I116=`getASCII "I116" 1`' '
+I117=`getASCII "I117" 1`' '
+I118=`getASCII "I118" 1`' '
+I119=`getASCII "I119" 1`' '
+I120=`getASCII "I120" 1`' '
+I121=`getASCII "I121" 1`' '
+I122=`getASCII "I122" 1`' '
+I124=`getASCII "I124" 1`' '
+I127=`getASCII "I127" 1`' '
+#I128=`getASCII "I128" 1`' '
+I131=`getASCII "I131" 1`' '
+I132=`getASCII "I132" 1`' '
+  
+echo "$I83 $OS" >> $INST_LOG
+
+RC=0
+
+# Check if correct installation package is used
+validateInstallPackage "$PKGDIR" $ARCH_64
+
+# Check if language is supported
+if [ $INST_LANG_ONLY -eq 1 ] ; then
+   SUPP_LANG=`chkLangSupport $OPT_LANG`
+   if [ -z "$SUPP_LANG" ] ; then
+      logit "$I96 $OPT_LANG"
+      instexit $RC_LANG_NOT_SUPP
+   fi
+fi
+
+if [ $INST_LANG_ONLY -eq 0 ] ; then    # no need to check if only language installed
+   #======================================================
+   # if Linux check if softdog module is installed - SunOS?
+   if [ "$OS" = "Linux" ] ; then
+      #modprobe --show softdog1 2>/dev/null # for test
+      modprobe --show softdog 2>/dev/null
+      RC=$?
+      # logit "modprobe RC=$RC"
+      if [ $RC -ne 0 ] ; then
+         # ask user if installation should continue, although
+         # softdog module cannot be found
+         logit "$I34"
+         # If users enters "y" continue anyway, although softdog does not exist
+         if [ $OPT_SILENT -eq 0 ] ; then
+            echo
+            read RES
+            if [ "$RES" != "y" ] && [ "$RES" != "Y" ] ; then
+               instexit $RC_INST_UNABLE
+            fi
+            echo
+         fi
+      fi
+   fi
+fi
+RC=0
+
+#======================================================
+# Start License Handling
+#======================================================
+
+# Check sam is already installed
+# if not LA or LI and LUM are required
+checkSAMInst
+
+#======================================================
+# Check LUM license supplied
+LUM_FILE=`ls ${DIR}/license/sam[0-9][0-9].lic 2>/dev/null`
+# -> check for samVRTB.lic in case no samVR.lic file found
+if [ "$LUM_FILE" = "" ] ; then
+   LUM_FILE=`ls ${DIR}/license/sam[0-9][0-9]TB.lic 2>/dev/null`
+fi
+if [ ! -r "$LUM_FILE" ] ; then
+   # no license file supplied
+   if [ $IS_SAM_INST -eq 1 ] ; then
+      # sam is installed
+      # may be PTF - check license exists - refuse to install if not,
+      # unless option bypasses license check
+      JUNK=`${RSCT_DIR}samlicm -t 2>/dev/null`
+      RC=$?
+      if [ $RC -ne 0 ] ; then
+         if [ $OPT_NOLICCHECK -eq 0 ] ; then
+            logit "$I32"
+            logit "$I45"
+            instexit $RC_NO_LICENSE
+         else
+            echo "$I52" >> $INST_LOG
+         fi
+      else
+         # Detected installed license
+         echo "$I50" >> $INST_LOG
+         ${RSCT_DIR}samlicm -s >> $INST_LOG
+
+      fi
+   else
+      # sam is not installed yet and no LUM file supplied
+      logit "$I31"
+      if [ $OPT_NOLICCHECK -eq 0 ] ; then
+         # exit because license check not overridden
+         logit "$I45"
+         instexit $RC_NO_LICENSE
+      else
+         echo "$I53" >> $INST_LOG
+      fi
+   fi
+else
+   # have a license file
+   # check if is a try&buy license file to install
+   TB_LIC_PKG=`cat $LUM_FILE | $GREP -c "TryAndBuy\=Yes"`
+   # Check if full license is installed
+   JUNK=`${RSCT_DIR}samlicm -p 2>/dev/null`
+   RC=$?
+   if [ $RC -eq 0 ] ; then
+      # a permanent license is installed
+      FULL_LIC_INST=1
+   fi
+   if [ $TB_LIC_PKG -eq 1 ] ; then
+      # if there is --noliccheck service may also have a T&B license and then don't exit.
+      if [ $FULL_LIC_INST -eq 1 ] && [ $OPT_NOLICCHECK -eq 0 ] ; then
+         # Installing try&buy license over a full license is not allowed.
+         # list license with error
+         logit "$I33"
+         if [ $OPT_SILENT -eq 0 ] ; then
+            ${RSCT_DIR}samlicm -s
+         fi
+         ${RSCT_DIR}samlicm -s >> $INST_LOG
+         logit "$I110" 
+         instexit $RC_NO_LICENSE
+      fi
+   fi
+   echo "$I51" >> $INST_LOG
+fi
+RC=0
+
+#======================================================
+# IBM Java option
+#======================================================
+if [ "$OS" = "Linux" ] && [ "${OPT_USE_IBM_JRE}" = "1" ] ; then
+   # Result of function is stored in $checkLinuxJAVA_RESULT
+   checkLinuxJAVA "${Linux_aaa_ddd_v_l_PKG_JAVA}" "${OPT_IBM_JRE_PATH}" $ARCH_64
+   JAVA_CHECK_RC=`echo ${checkLinuxJAVA_RESULT} | cut -f1 -d ' '`
+   
+   if [ "${JAVA_CHECK_RC}" != "0" ] ; then
+      # TODO create new message
+      logit "installSAM: Check for Java failed. Run \"./prereqSAM.centos --useibmjre ${OPT_IBM_JRE_PATH}\" for further details."
+      instexit $RC_INST_UNABLE
+   else
+      if [ ! -L "/opt/IBM/tsamp/sam/java/jre" ] ; then
+         JAVA_INST_VERSION=`echo ${checkLinuxJAVA_RESULT} | cut -f2 -d ' '`
+         JAVA_BIN_PATH=`echo ${checkLinuxJAVA_RESULT} | cut -f3 -d ' '`
+         
+         # Extract JRE directory from JAVA_BIN_PATH
+         JRE_PATH=`echo ${JAVA_BIN_PATH} | sed "s/\/bin\/java//g"`
+         if [ ! -d "${JRE_PATH}" ]; then
+            # JRE_PATH does not exist
+            # TODO create new message
+            logit "installSAM: Specified Java at ${JRE_PATH} does not exist."
+            instexit $RC_INST_UNABLE
+         fi
+      fi
+   fi
+fi
+
+# Check if package sam must be installed.
+# if not return w/o any prereq installation
+
+# 1. Compare package 'sam' and 'rsct' versions
+SAMPKG=''
+SAMINST=''
+RSCTPKG=''
+RSCTINST=''
+AIX_SAMCORE_DIR=''
+if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+   # list existing package(s) hopefully only one
+   if [ "$OS" = Linux ] ; then
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         SAMPKG="${PKGDIR}/sam_*_$PKG_ARCH.${PKGEXT}"
+         RSCTPKG="${PKGDIR}/rsct.core_*_$PKG_ARCH.${PKGEXT}"
+      else
+         SAMPKG="${PKGDIR}/sam-*.$PKG_ARCH.${PKGEXT}"
+         RSCTPKG="${PKGDIR}/rsct.core-*.$PKG_ARCH.${PKGEXT}"
+      fi
+      SAMINST=sam
+      RSCTINST=rsct.core
+   else # Solaris
+      SAMPKG="${PKGDIR}/IBMsam-*.$PKG_ARCH.${PKGEXT}"
+      SAMINST=IBMsam
+      RSCTPKG="${PKGDIR}/IBMrsctCore-*.$PKG_ARCH.${PKGEXT}"
+      RSCTINST=IBMrsctCore
+   fi 
+   if [ "$DISTRO" = "Ubuntu" ] ; then
+      SAMPKG=`ls -1 $SAMPKG 2>/dev/null | $GREP "$SAMINST_[0-9].*\-[0-9]*\_$PKG_ARCH\.${PKGEXT}"`
+      #echo "[TEST: msg to be removed!!!] SAMPKG=$SAMPKG"   >> $INST_LOG
+      COUNT=`ls -1 $SAMPKG 2>/dev/null | $GREP -c "$SAMINST_[0-9].*\-[0-9]*\_$PKG_ARCH\.${PKGEXT}"`
+      #echo "[TEST: msg to be removed!!!] COUNT=$COUNT"    >> $INST_LOG
+   else
+      SAMPKG=`ls -1 $SAMPKG 2>/dev/null | $GREP "$SAMINST-[0-9].*\-[0-9]*\.$PKG_ARCH\.${PKGEXT}"`
+      #echo "[TEST: msg to be removed!!!] SAMPKG=$SAMPKG"   >> $INST_LOG
+      COUNT=`ls -1 $SAMPKG 2>/dev/null | $GREP -c "$SAMINST-[0-9].*\-[0-9]*\.$PKG_ARCH\.${PKGEXT}"`
+      #echo "[TEST: msg to be removed!!!] COUNT=$COUNT"    >> $INST_LOG
+   fi
+   if [ $COUNT -gt 1 ] ; then
+      # error! sam package exists more than once
+      logit "$I12 $COUNT"
+      if [ $OPT_SILENT -eq 0 ] ; then
+         ls -1 $SAMPKG 2>/dev/null
+      fi
+      ls -1 $SAMPKG 2>/dev/null >> $INST_LOG
+      logit "$I13"
+      instexit $RC_INST_UNABLE
+   elif [ $COUNT -eq 0 ] ; then
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         SAMPKG="sam_" # package is not supplied (NLS packages only)
+      else
+         SAMPKG="sam-" # package is not supplied (NLS packages only)
+      fi
+   fi
+else
+   # list existing fileset in AIX
+   AIX_SAMCORE_DIR=`getAIXPkgSrcDir sam.core`
+   SAMPKG=${PKGDIR}${AIX_SAMCORE_DIR}/sam.core
+   SAMINST=sam.core.rte
+   RSCTPTFDIR=`ls -1 ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/ | grep ptf | sort -r | head -1`
+   if [ -n "$RSCTPTFDIR" ] ; then
+      RSCTPTFPKG=`ls -1 ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/$RSCTPTFDIR | grep rsct.core.utils`
+      RSCTPKG=${PKGDIR}${AIX_SAMCORE_DIR}/rsct/$RSCTPTFDIR/$RSCTPTFPKG
+   else
+      RSCTPKG=${PKGDIR}${AIX_SAMCORE_DIR}/rsct/inst/rsct.core
+   fi
+   RSCTINST=rsct.core.utils
+fi
+#echo "ITLM SYS file check only for 322 and below versions"
+SAMP_VERSION=`extractPkgVersion $SAMPKG | cut -d '-' -f1 | sed 's/[a-zA-Z]*//g' | sed 's/\.//g' | sed 's/.$//g'`
+if [ -n "$SAMP_VERSION" ] && [ "$SAMP_VERSION" -le 322 ] && [ ! -r "$ITLM_FILE" ] ; then
+   logit "$ENMSG_NOITLMFILE"
+   instexit $RC_INST_UNABLE "NONLS"
+fi
+#echo "[TEST: msg to be removed!!!] came here: SAMPKG=$SAMPKG, SAMINST=$SAMINST, AIX_SAMCORE_DIR=$AIX_SAMCORE_DIR"
+RC=`compPkgInstVersion $SAMPKG $SAMINST`
+RC_RSCT=`compPkgInstVersion $RSCTPKG $RSCTINST`
+#echo "[TEST: msg to be removed!!!] Comparing 'sam' package and installed version returned: $RC"
+
+# Indicates if sam installation is forced
+DO_FORCE=0
+DO_FORCEALL=0
+OVERWRITE=0
+# 2. Based on RC decide if installation is required:
+if [ $RC -eq $RCVSN_PKG_GT_INST ] || [ $RC_RSCT -eq $RCVSN_PKG_GT_INST ] ; then
+   # sam or rsct packages are more recent than installed
+   # If option "--noupgrade" is specified do not upgrade and exit
+   if [ $OPT_NOUPGRADE -eq 1 ] ; then
+      logit "$I45"
+      logit "$I38"
+      instexit $RC_VERSION_INSTALLED_LOWER
+   fi
+   OVERWRITE=1
+elif [ $RC -eq $RCVSN_PKG_EQ_INST ] ; then
+   INSTSAMPKG=`getSAMInstPkg`
+   # sam package is at the same level than installed
+   # if this installs only language bypass exit
+   if [ $INST_LANG_ONLY -eq 0 ] ; then
+      # If "--force" is specified install anyway
+      # If not exit - saying installed version is at same level than package
+      if [ -z "$OPT_FORCE" ] ; then
+         logit "$I45"
+         logit "$I49 $INSTSAMPKG"
+         # at least install efixes and license if full over t&b
+	 installEfixes
+         installLUM $LUM_FILE $FULL_LIC_INST $TB_LIC_PKG
+	 if [ $EFIX_RC -eq 0 ] ; then
+		instexit $RC_OK
+	 else
+		instexit $RC_VERSION_SAME
+	 fi
+      else
+         logit "$I41 $INSTSAMPKG"
+         DO_FORCE=1
+         if [ -n "$OPT_FORCEALL" ] ; then
+            DO_FORCEALL=1
+         fi
+      fi
+   fi
+   OVERWRITE=1
+elif [ $RC -eq $RCVSN_PKG_LT_INST ] ; then
+   INSTSAMPKG=`getSAMInstPkg`
+   # sam package is at lower level than installed
+   # If "--force" is specified install anyway
+   # If not exit - saying installed version is already at higher level than package
+   # if this installs only language bypass exit
+   if [ $INST_LANG_ONLY -eq 0 ] ; then
+      if [ -z "$OPT_FORCE" ] ; then
+         logit "$I45"
+         logit "$I39"
+         # at least install license if full over t&b
+         installLUM $LUM_FILE $FULL_LIC_INST $TB_LIC_PKG
+         instexit $RC_VERSION_INSTALLED_HIGHER
+      else
+         logit "$I42 $INSTSAMPKG"
+         DO_FORCE=1
+         if [ -n "$OPT_FORCEALL" ] ; then
+            DO_FORCEALL=1
+         fi
+      fi
+   fi
+   OVERWRITE=1
+elif [ $RC -eq $RCVSN_NO_INST ] ; then
+   if [ $OPT_ONLYUPGRADE -eq 0 ] ; then
+      # seems sam package is not installed - must install it
+      INSTSAMPKG=`getSAMInstPkg`
+      logit "$I48 $SAMPKG"
+   else
+      logit "$I101"
+      instexit $RC_ONLY_UPGRADE
+   fi
+elif [ $RC -eq $RCVSN_NO_PKG ] ; then
+   if [ $INST_LANG_ONLY -eq 0 ] ; then
+      # seems sam package is not supplied - cannot install - exit
+      logit "$I45"
+      logit "$I14 $SAMINST"
+      instexit $RC_INST_UNABLE
+   fi
+elif [ $RC -eq $RCVSN_CMP_FAIL ] ; then
+   # package and installed cannot be compared - exit
+   logit "$I45"
+   logit "$I40 $SAMINST"
+   instexit $RC_INST_UNABLE
+fi
+
+# Check language only installation is required,
+# then SAM must be at the correct level.
+# Otherwise exit
+if [ $INST_LANG_ONLY -eq 1 ] ; then
+   if [ $RC -eq $RCVSN_NO_INST ] || [ $RC -eq $RCVSN_CMP_FAIL ] ; then
+      logit "$I99"
+      instexit $RC_PREREQ_PKG_NOT_INST
+   else
+      # make a check if any lang package and installed version agree in Version/Release (e.g. 2.2`
+      SAMLANGPKG=''
+      LL_CC=`mapSUPPLANG2LLCC $SUPP_LANG`
+      #echo "[TEST: msg3 to be removed!!!] LL_CC=$LL_CC" >> $INST_LOG 
+      if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+         # list existing lang package
+         if [ "$OS" = Linux ] ; then
+            SAMLANGPKG="${PKGDIR}/sam.msg.${LL_CC}-*.$PKG_ARCH.${PKGEXT}"
+         else # Solaris   
+            SAMLANGPKG="${PKGDIR}/IBMsamMsg-${LL_CC}-*.$PKG_ARCH.${PKGEXT}"
+         fi   
+         #echo "[TEST: msg1 to be removed!!!] came here: SAMLANGPKG=$SAMLANGPKG, SAMINST=$SAMINST" >> $INST_LOG
+         SAMLANGPKG=`ls -1 $SAMLANGPKG 2>/dev/null`
+         #echo "[TEST: msg2 to be removed!!!] after ls SAMLANGPKG=$SAMLANGPKG" >> $INST_LOG
+      else
+         # list existing fileset in AIX
+         SAMLANGPKG="${PKGDIR}/sam.msg.${LL_CC}"
+      fi
+      #echo "[TEST: msg3 to be removed!!!] came here: SAMLANGPKG=$SAMLANGPKG, SAMINST=$SAMINST" >> $INST_LOG
+      RC=`compPkgInstVR $SAMLANGPKG $SAMINST`
+      #echo "[TEST: msg to be removed!!!] Comparing  VR 'sam' package and installed version returned: $RC" >> $INST_LOG
+      # test
+      #PKGVERSION=`extractPkgVR $SAMLANGPKG "$sam.msg.${LL_CC}"`
+      #INSTVERSION=`extractInstVR $SAMINST`
+      #echo "[TEST: msg to be removed!!!]PKGVERSION<>INSTVERSION= $PKGVERSION<>$INSTVERSION"  >> $INST_LOG
+      # end test
+      if [ $RC -ne $RCVSN_PKG_EQ_INST ] ; then
+         if [ "$OS" = Linux ] || [ "$OS" = AIX ] ; then
+            PKGVERSION=`extractPkgVR $SAMLANGPKG "sam.msg.${LL_CC}"`
+         else
+            PKGVERSION=`extractPkgVR $SAMLANGPKG "IBMsamMsg-${LL_CC}"`
+         fi   
+         INSTVERSION=`extractInstVR $SAMINST`
+         if [ $RC -eq $RCVSN_PKG_GT_INST ] || [ $RC -eq $RCVSN_PKG_LT_INST ] ; then
+            logit "$I100 $PKGVERSION<>$INSTVERSION"
+            if [ $RC -eq $RCVSN_PKG_LT_INST ] ; then
+               instexit $RC_VERSION_INSTALLED_HIGHER
+            elif [ $RC -eq $RCVSN_PKG_GT_INST ] ; then
+               instexit $RC_VERSION_INSTALLED_LOWER
+            fi
+         elif [ $RC -eq $RCVSN_NO_INST ] || [ $RC -eq $RCVSN_CMP_FAIL ] ; then
+            logit "$I99"
+         fi
+         instexit $RC_PREREQ_PKG_NOT_INST
+      fi
+   fi
+fi
+RC=0
+#=========================================================
+# Now it is clear that installation of sam package
+# OR the language pack is required.
+
+# 1. Check if license file is available or installed
+# 2. Indicate that LA and LI will be shown
+# 3. Show the LA_<$strNLS> (License Agreement) file
+# 4. Show the LI_<$strNLS> (License Information) file
+# 5. Ask the user to accept the terms
+
+LILA_DIR=
+case "$OS" in
+   AIX|SunOS) LILA_DIR="${DIR}/${OS}/license"
+   ;;
+   Linux)
+      if [ "$DISTRO" = "Ubuntu" ] ; then 
+         LILA_DIR="${DIR}/${DISTRO}/license"
+      else
+         LILA_DIR="${DIR}/${OS}/license"
+      fi
+   ;;
+esac
+
+if [ $INST_LANG_ONLY -eq 0 ] ; then
+   # check for domain online (must NOT be online)
+   checkNodeOnline
+   logNodeOnline
+   if [ $IS_ONLINE -eq 1 ] ; then
+      logit "$I45"
+      instexit $RC_NODE_ONLINE
+   fi
+   # check if the adapter is running
+   checkAdapterRuns
+   if [ $ADAPTER_RUNS -eq 1 ] ; then
+      logit "$I113"
+      instexit $RC_ADAPTER
+   fi
+   # show license agreement if installation required, but no upgrade
+   # install LUM license later when successfully installed
+   if [ $OPT_SILENT -eq 0 ] && [ -r "$LUM_FILE" ] ; then
+      # Find license agreement(LA) and information(LI) files
+      # 1. Generate names for LA and LI files
+      #    and check if files are in directory license/<$NLS_LANG>
+      #
+      LA="${LILA_DIR}/LA."$NLS_LANG
+      LI="${LILA_DIR}/LI."$NLS_LANG
+      #logit "NLS_LANG=$NLS_LANG"
+      #if [ $OPT_NOLICCHECK -eq 0 ] ; then
+         if [ ! -r "$LA" ] || [ ! -r "$LI" ] ; then
+            logit "$ENMSG_NOLIC $LA, $LI"
+            LA="${LILA_DIR}/LA.en_US"
+            LI="${LILA_DIR}/LI.en_US"
+         fi
+         if [ -r "$LA" ] && [ -r "$LI" ] ; then
+            if [ $OPT_NOLIC -eq 0 ] ; then
+               # 2. Indicate that LA and LI will be shown
+               echo
+               echo "$I07"
+               echo
+               read RES
+               # 3. Show the LA_<locale> (License Agreement) file
+               more $LA
+               # 4. Show the LI_<locale> (License Information) file
+               more $LI
+               # 5. Ask the user to accept the terms
+               echo
+               echo "$I08"
+               # If users enters "y" license is accepted
+               echo
+               read RES
+               if [ "$RES" != "y" ] && [ "$RES" != "Y" ] ; then
+                  echo "$I10"
+                  instexit $RC_INST_UNABLE
+               else
+                  echo "$I11"
+               fi
+               echo
+            else
+               echo "WARNING - you must accept license $LA and $LI although it was not shown."
+            fi
+         else
+            logit "$I23"
+            instexit $RC_INST_UNABLE
+         fi
+         # done License Handling
+      #fi
+   fi
+fi
+
+# Do install packages in correct order!
+logit "$I01$PLATFORM"
+
+if [ "$OS" = AIX ] ; then
+   logit "$I47 ${PKGDIR}$AIX_SAMCORE_DIR"
+else   
+   logit "$I47 $PKGDIR"
+fi
+
+if [ $OPT_NONLS -eq 1 ] ; then
+   logit "$I97"
+fi
+
+if [ $INST_LANG_ONLY -eq 1 ] ; then
+   logit "$I98 $SUPP_LANG"
+fi
+
+if [ "$OS" = SunOS ] ; then
+   PKG_ADM_FILE=`makePkgAdminFile $OVERWRITE`
+fi
+
+# install SRC/RSCT on Linux or SunOS if no force option has been specified
+#if [ $LINUX_OR_UBUNTU_OR_SOLARIS -eq 1 ] && [ $DO_FORCEALL -eq 1 ] ; then
+if ( [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ) && ( [ $DO_FORCEALL -eq 1 ] || [ $DO_FORCE -eq 0 ] )  ; then
+   # first on 64bit pLinux check the installed RSCT level, and ensure to install only if it is possible
+   if [ "$ARCH" = "ppc64" ] || [ "$ARCH" = "ppc64le" ] ; then
+      # determine installed RSCT level (set to "1.1.0.0" in case RSCT is not installed)
+      if [ -f /usr/bin/ctversion ]
+      then
+         RSCT_INST_VERSION=`/usr/bin/ctversion | awk '{print $2}'`
+      else
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            dpkg -s rsct.core >/dev/null 2>&1
+         else
+            rpm -q rsct.core >/dev/null 2>&1
+         fi
+         lslppRC=$?
+         if [ $lslppRC -eq 0 ]
+         then
+            if [ "$DISTRO" = "Ubuntu" ] ; then
+               RSCT_INST_VERSION=`dpkg-query -W -f='${Version}\n' rsct.core 2> /dev/null | cut -d- -f1`
+            else
+               RSCT_INST_VERSION=`rpm -q rsct.core | cut -d- -f2`
+            fi
+         else
+            RSCT_INST_VERSION="1.1.0.0"
+         fi
+      fi
+ 
+      # determine packaged RSCT levels
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         RSCT_PKG_VERSION=`ls ${PKGDIR} | grep rsct.core_ | cut -d_ -f2 | cut -d- -f1`
+      else
+         RSCT_PKG_VERSION=`ls ${PKGDIR} | grep rsct.core- | cut -d- -f2`
+      fi
+      RSCTcompRC=$(compare_version "$RSCT_PKG_VERSION" "$RSCT_INST_VERSION")
+      if [ $RSCTcompRC -lt 0 ] ; then      # RSCT_PKG_VERSION < RSCT_INST_VERSION
+         if [ "$DISTRO" = "Ubuntu" ]; then
+            dpkg -s rsct.basic >/dev/null 2>&1
+            FoundRSCTBasic=$?
+            dpkg -s rsct.opt.storagerm >/dev/null 2>&1
+            FoundRSCTStorageRM=$?
+         else
+            rpm -q rsct.basic >/dev/null 2>&1
+            FoundRSCTBasic=$?
+            rpm -q rsct.opt.storagerm >/dev/null 2>&1
+            FoundRSCTStorageRM=$?
+         fi
+         if [ $FoundRSCTBasic -ne 0 ] || [ $FoundRSCTStorageRM -ne 0 ] ; then
+            MISSING_LIST=""
+            if [ $FoundRSCTBasic -ne 0 ] ; then
+               MISSING_LIST="rsct.basic.rte"
+            fi
+            if [ $FoundRSCTStorageRM -ne 0 ] ; then
+               if [ "$MISSING_LIST" = "" ] ; then
+                  MISSING_LIST="rsct.opt.storagerm"
+               else
+                  MISSING_LIST="$MISSING_LIST, rsct.opt.storagerm"
+               fi
+            fi
+            logit "${SCRIPT}Error: RSCT cannot be installed or upgraded because the installed version (RSCT $RSCT_INST_VERSION) of other RSCT packages is higher than the packages included in this deliverable (RSCT $RSCT_PKG_V.$RSCT_PKG_R.$RSCT_PKG_M.$RSCT_PKG_F)"
+            logit "${SCRIPT}User Action: Install package(s)  ${MISSING_LIST}  in their latest version(s), then run this setup again."
+            instexit $RC_INST_UNABLE
+         fi
+      fi
+   fi
+   # end check for RSCT on pLinux 64-bit
+
+   USE_OPTIONS=1
+   if [ $INST_LANG_ONLY -eq 0 ] ; then
+      #======================================================
+      # >>> install prerequesite package "src"
+      #
+      # check if package at that version is installed
+      if [ "$OS" = Linux ] ; then
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+           # force keep old config files
+           installn "src" "" "--force-confold"
+         else
+           installn "src"
+         fi
+      else # Solaris
+         installn "IBMsrc"
+      fi      
+      RC=$?
+
+      # workaround for SRC startup problems in RSCT 3.1.4.(3-6) after rpm install (initctl only exists on RHEL)
+      if [ "$OS" = Linux ] && [ $RC -eq 0 ] ; then
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            /sbin/srcmstr &
+         else
+            if [ -f /sbin/initctl ] ; then
+               /sbin/initctl reload-configuration
+               /sbin/initctl start srcmstr >/dev/null 2>&1
+            fi
+         fi
+      fi
+
+      #=======================================================
+      # >>> install package prerequesite "rsct.core.utils"
+      # and install prerequesite package "rsct.core"
+      # and install prerequesite package "rsct.basic"
+      # together, because they have cross dependencies!!!
+      #
+      if [ $RC -eq 0 ] ; then
+         if [ "$OS" = Linux ] ; then
+            installn "rsct.core.utils \
+                      rsct.core \
+                      rsct.basic \
+                      rsct.opt.storagerm" 
+            # >>> install optional rsct stackdump (x + z Linux only, but not on Ubuntu .. remove any installed package on Ubuntu(from 4101))
+            if [ "$ARCH" = "i386" ] || [ "$ARCH" = "s390" ] || [ "$ARCH" = "x86_64" ] ; then
+               if [ "$DISTRO" = "Ubuntu" ] ; then
+                  dpkg -s rsct.opt.stackdump >/dev/null 2>&1
+                  INSTRC=$?
+                  if [ $INSTRC -eq 0 ] ; then
+                     dpkg --purge rsct.opt.stackdump >/dev/null 2>&1
+                  fi
+               else
+                  installn "rsct.opt.stackdump"
+               fi
+            fi
+         else # Solaris 
+            installn "IBMrsctCoreUtils \
+                      IBMrsctCore \
+                      IBMrsctBasic \
+                      IBMrsctOptStoragerm"
+         fi              
+         RC=$?
+      fi
+      # handle RSCT packages required by CSM, assume Linux only
+      if [ "$OS" = Linux ] ; then 
+         if [ "$ARCH" = "i386" ] || [ "$ARCH" = "ppc" ] ; then
+            if [ $RC -eq 0 ] ; then
+               # unconditionally install rsct 64 bit c002
+               ARCH_EXT=`arch`
+               RSCT64="${PKGDIR}/rsct.64bit-*.${ARCH_EXT}.${PKGEXT}"
+               RSCT64=`ls -1 $RSCT64 2>/dev/null`
+               GLIBC_VERSION=`ldd --version | head -1 | sed 's/[^0-9.]//g'`
+               GLIBC_V1=`echo "$GLIBC_VERSION" | cut -d '.' -f1`
+               GLIBC_V2=`echo "$GLIBC_VERSION" | cut -d '.' -f2`
+               if ! ( [ "$ARCH" = "ppc" ] && [ "$GLIBC_V1" -le 2 ] && [ "$GLIBC_V2" -lt 6 ] ) ; then
+                  if [ -r "$RSCT64" ] ; then
+                     installn "rsct.64bit" $ARCH_EXT
+                     RC=$?
+                  fi
+               fi
+               if [ $RC -eq 0 ] ; then
+               #   if [ "$DISTRO" = "Ubuntu" ] ; then
+               #      # Only if cimrm is installed, upgrade it.
+               #      dpkg -s rsct.core.cimrm 2>&1 >/dev/null
+               #   else
+                     # Only if cimrm is installed, upgrade it.
+                     rpm -q rsct.core.cimrm 2>&1 >/dev/null
+               #   fi
+                  INSTRC=$?
+                  #INSTRC=0
+                  #echo "test: INSTRC=0 pretend csm is installed INSTRC=$INSTRC"
+                  if [ $INSTRC -eq 0 ] ; then
+                     #CSM is installed! must install RSCT packages required by CSM
+                     # Check if prereq packages exist and install.
+               #      if [ "$DISTRO" = "Ubuntu" ] ; then
+               #         CSMPKG="${PKGDIR}/rsct.core.cimrm-*_${PKG_ARCH}.${PKGEXT}"
+               #      else
+                        CSMPKG="${PKGDIR}/rsct.core.cimrm-*.${PKG_ARCH}.${PKGEXT}"
+               #      fi
+                     CSMPKG=`ls -1 $CSMPKG 2>/dev/null`
+                     if [ -r "$CSMPKG" ] ; then
+                        installn "rsct.core.cimrm"
+                        RC=$?
+                     fi
+                  fi
+               fi
+            fi
+         fi
+      fi
+
+      if [ "$OS" = SunOS ] ; then 
+         if [ "$ARCH" = "sparc" ] ; then
+            if [ $RC -eq 0 ] ; then
+               # unconditionally install rsct 64 bit c002
+               RSCT64="${PKGDIR}/IBMrsct64bit-*.${PKG_ARCH}.${PKGEXT}"
+               RSCT64=`ls -1 $RSCT64 2>/dev/null`
+               if [ -r "$RSCT64" ] ; then
+                  installn "IBMrsct64bit"
+                  RC=$?
+               fi
+            fi
+         fi
+      fi   
+   fi
+   if [ $OPT_NONLS -eq 0 ] && [ $RC -eq 0 ] ; then
+      #=========================================================
+      # src
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "EN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.en-us \
+                      src.msg.en-us.utf-8"
+           else
+            installn "src.msg.en_US \
+                      src.msg.en_US.UTF-8"
+           fi
+         fi
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "DE" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.de-de \
+                      src.msg.de-de.iso-8859-1 \
+                      src.msg.de-deeuro \
+                      src.msg.de-de.utf-8"
+           else
+            installn "src.msg.de_DE \
+                      src.msg.de_DE.ISO-8859-1 \
+                      src.msg.de_DE@euro \
+                      src.msg.de_DE.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-de_DE-ISO8859-1 \
+                      IBMsrcMsg-de_DE-ISO8859-15 \
+                      IBMsrcMsg-de_DE-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "ES" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.es-es \
+                      src.msg.es-es.iso-8859-1 \
+                      src.msg.es-eseuro \
+                      src.msg.es-es.utf-8"
+           else
+            installn "src.msg.es_ES \
+                      src.msg.es_ES.ISO-8859-1 \
+                      src.msg.es_ES@euro \
+                      src.msg.es_ES.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-es_ES-ISO8859-1 \
+                      IBMsrcMsg-es_ES-ISO8859-15 \
+                      IBMsrcMsg-es_ES-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "FR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.fr-fr \
+                      src.msg.fr-fr.iso-8859-1 \
+                      src.msg.fr-freuro \
+                      src.msg.fr-fr.utf-8"
+           else
+            installn "src.msg.fr_FR \
+                      src.msg.fr_FR.ISO-8859-1 \
+                      src.msg.fr_FR@euro \
+                      src.msg.fr_FR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-fr_FR-ISO8859-1 \
+                      IBMsrcMsg-fr_FR-ISO8859-15 \
+                      IBMsrcMsg-fr_FR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "IT" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.it-it \
+                      src.msg.it-it.iso-8859-1 \
+                      src.msg.it-iteuro \
+                      src.msg.it-it.utf-8"
+           else
+            installn "src.msg.it_IT \
+                      src.msg.it_IT.ISO-8859-1 \
+                      src.msg.it_IT@euro \
+                      src.msg.it_IT.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-it_IT-ISO8859-1 \
+                      IBMsrcMsg-it_IT-ISO8859-15 \
+                      IBMsrcMsg-it_IT-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "JP" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.ja-jp.eucjp \
+                      src.msg.ja-jp.utf-8"
+           else
+            installn "src.msg.ja_JP.eucJP \
+                      src.msg.ja_JP.UTF-8"
+           fi
+         else  #Solaris           
+            installn "IBMsrcMsg-ja_JP-eucJP \
+                      IBMsrcMsg-ja_JP-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "KR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.ko-kr.euckr \
+                      src.msg.ko-kr.utf-8"
+           else
+            installn "src.msg.ko_KR.eucKR \
+                      src.msg.ko_KR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-ko_KR-EUC \
+                      IBMsrcMsg-ko_KR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "BR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.pt-br \
+                      src.msg.pt-br.utf-8"
+           else
+            installn "src.msg.pt_BR \
+                      src.msg.pt_BR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-pt_BR-UTF-8 \
+                      IBMsrcMsg-pt_BR-ISO8859-1"
+         fi   
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "CN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.zh-cn.gb2312 \
+                      src.msg.zh-cn.gb18030 \
+                      src.msg.zh-cn.gbk \
+                      src.msg.zh-cn.utf-8"
+           else
+            installn "src.msg.zh_CN.GB2312 \
+                      src.msg.zh_CN.GB18030 \
+                      src.msg.zh_CN.GBK \
+                      src.msg.zh_CN.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-zh_CN-GB18030 \
+                      IBMsrcMsg-zh_CN-GBK \
+                      IBMsrcMsg-zh_CN-UTF-8 \
+                      IBMsrcMsg-zh_CN-EUC"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "TW" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "src.msg.zh-tw \
+                      src.msg.zh-tw.big5 \
+                      src.msg.zh-tw.euctw \
+                      src.msg.zh-tw.utf-8"
+           else
+            installn "src.msg.zh_TW \
+                      src.msg.zh_TW.Big5 \
+                      src.msg.zh_TW.eucTW \
+                      src.msg.zh_TW.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMsrcMsg-zh_TW-BIG5 \
+                      IBMsrcMsg-zh_TW-EUC \
+                      IBMsrcMsg-zh_TW-UTF-8"
+         fi             
+      fi
+         # >>> install packages "rsct.*.msg" files
+         # rsct.core.utils
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "EN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.en-us \
+                      rsct.core.utils.msg.en-us.utf-8"
+           else
+            installn "rsct.core.utils.msg.en_US \
+                      rsct.core.utils.msg.en_US.UTF-8"
+           fi
+         fi
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "DE" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.de-de \
+                      rsct.core.utils.msg.de-de.iso-8859-1 \
+                      rsct.core.utils.msg.de-deeuro \
+                      rsct.core.utils.msg.de-de.utf-8"
+           else
+            installn "rsct.core.utils.msg.de_DE \
+                      rsct.core.utils.msg.de_DE.ISO-8859-1 \
+                      rsct.core.utils.msg.de_DE@euro \
+                      rsct.core.utils.msg.de_DE.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-de_DE-ISO8859-1 \
+                      IBMrsctCorUtMsg-de_DE-ISO8859-15 \
+                      IBMrsctCorUtMsg-de_DE-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "ES" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.es-es \
+                      rsct.core.utils.msg.es-es.iso-8859-1 \
+                      rsct.core.utils.msg.es-eseuro \
+                      rsct.core.utils.msg.es-es.utf-8"
+           else
+            installn "rsct.core.utils.msg.es_ES \
+                      rsct.core.utils.msg.es_ES.ISO-8859-1 \
+                      rsct.core.utils.msg.es_ES@euro \
+                      rsct.core.utils.msg.es_ES.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-es_ES-ISO8859-1 \
+                      IBMrsctCorUtMsg-es_ES-ISO8859-15 \
+                      IBMrsctCorUtMsg-es_ES-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "FR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.fr-fr \
+                      rsct.core.utils.msg.fr-fr.iso-8859-1 \
+                      rsct.core.utils.msg.fr-freuro \
+                      rsct.core.utils.msg.fr-fr.utf-8"
+           else
+            installn "rsct.core.utils.msg.fr_FR \
+                      rsct.core.utils.msg.fr_FR.ISO-8859-1 \
+                      rsct.core.utils.msg.fr_FR@euro \
+                      rsct.core.utils.msg.fr_FR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-fr_FR-ISO8859-1 \
+                      IBMrsctCorUtMsg-fr_FR-ISO8859-15 \
+                      IBMrsctCorUtMsg-fr_FR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "IT" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.it-it \
+                      rsct.core.utils.msg.it-it.iso-8859-1 \
+                      rsct.core.utils.msg.it-iteuro \
+                      rsct.core.utils.msg.it-it.utf-8"
+           else
+            installn "rsct.core.utils.msg.it_IT \
+                      rsct.core.utils.msg.it_IT.ISO-8859-1 \
+                      rsct.core.utils.msg.it_IT@euro \
+                      rsct.core.utils.msg.it_IT.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-it_IT-ISO8859-1 \
+                      IBMrsctCorUtMsg-it_IT-ISO8859-15 \
+                      IBMrsctCorUtMsg-it_IT-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "JP" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.ja-jp.eucjp \
+                      rsct.core.utils.msg.ja-jp.utf-8"
+           else
+            installn "rsct.core.utils.msg.ja_JP.eucJP \
+                      rsct.core.utils.msg.ja_JP.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-ja_JP-eucJP \
+                      IBMrsctCorUtMsg-ja_JP-UTF-8" 
+         fi                         
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "KR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.ko-kr.euckr \
+                      rsct.core.utils.msg.ko-kr.utf-8"
+           else
+            installn "rsct.core.utils.msg.ko_KR.eucKR \
+                      rsct.core.utils.msg.ko_KR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-ko_KR-EUC \
+                      IBMrsctCorUtMsg-ko_KR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "BR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.pt-br \
+                      rsct.core.utils.msg.pt-br.utf-8"
+           else
+            installn "rsct.core.utils.msg.pt_BR \
+                      rsct.core.utils.msg.pt_BR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-pt_BR-UTF-8 \
+                      IBMrsctCorUtMsg-pt_BR-ISO8859-1"
+         fi   
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "CN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.zh-cn.gb2312 \
+                      rsct.core.utils.msg.zh-cn.gb18030 \
+                      rsct.core.utils.msg.zh-cn.gbk \
+                      rsct.core.utils.msg.zh-cn.utf-8"
+           else
+            installn "rsct.core.utils.msg.zh_CN.GB2312 \
+                      rsct.core.utils.msg.zh_CN.GB18030 \
+                      rsct.core.utils.msg.zh_CN.GBK \
+                      rsct.core.utils.msg.zh_CN.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-zh_CN-GB18030 \
+                      IBMrsctCorUtMsg-zh_CN-GBK \
+                      IBMrsctCorUtMsg-zh_CN-UTF-8 \
+                      IBMrsctCorUtMsg-zh_CN-EUC"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "TW" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.utils.msg.zh-tw \
+                      rsct.core.utils.msg.zh-tw.big5 \
+                      rsct.core.utils.msg.zh-tw.euctw \
+                      rsct.core.utils.msg.zh-tw.utf-8"
+           else
+            installn "rsct.core.utils.msg.zh_TW \
+                      rsct.core.utils.msg.zh_TW.Big5 \
+                      rsct.core.utils.msg.zh_TW.eucTW \
+                      rsct.core.utils.msg.zh_TW.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorUtMsg-zh_TW-BIG5 \
+                      IBMrsctCorUtMsg-zh_TW-EUC \
+                      IBMrsctCorUtMsg-zh_TW-UTF-8"
+         fi             
+      fi
+         # rsct.core
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "EN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.en-us \
+                      rsct.core.msg.en-us.utf-8"
+           else
+            installn "rsct.core.msg.en_US \
+                      rsct.core.msg.en_US.UTF-8"
+           fi
+         fi
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "DE" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.de-de \
+                      rsct.core.msg.de-de.iso-8859-1 \
+                      rsct.core.msg.de-deeuro \
+                      rsct.core.msg.de-de.utf-8"
+           else
+            installn "rsct.core.msg.de_DE \
+                      rsct.core.msg.de_DE.ISO-8859-1 \
+                      rsct.core.msg.de_DE@euro \
+                      rsct.core.msg.de_DE.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-de_DE-ISO8859-1 \
+                      IBMrsctCorMsg-de_DE-ISO8859-15 \
+                      IBMrsctCorMsg-de_DE-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "ES" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.es-es \
+                      rsct.core.msg.es-es.iso-8859-1 \
+                      rsct.core.msg.es-eseuro \
+                      rsct.core.msg.es-es.utf-8"
+           else
+            installn "rsct.core.msg.es_ES \
+                      rsct.core.msg.es_ES.ISO-8859-1 \
+                      rsct.core.msg.es_ES@euro \
+                      rsct.core.msg.es_ES.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-es_ES-ISO8859-1 \
+                      IBMrsctCorMsg-es_ES-ISO8859-15 \
+                      IBMrsctCorMsg-es_ES-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "FR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.fr-fr \
+                      rsct.core.msg.fr-fr.iso-8859-1 \
+                      rsct.core.msg.fr-freuro \
+                      rsct.core.msg.fr-fr.utf-8"
+           else
+            installn "rsct.core.msg.fr_FR \
+                      rsct.core.msg.fr_FR.ISO-8859-1 \
+                      rsct.core.msg.fr_FR@euro \
+                      rsct.core.msg.fr_FR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-fr_FR-ISO8859-1 \
+                      IBMrsctCorMsg-fr_FR-ISO8859-15 \
+                      IBMrsctCorMsg-fr_FR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "IT" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.it-it \
+                      rsct.core.msg.it-it.iso-8859-1 \
+                      rsct.core.msg.it-iteuro \
+                      rsct.core.msg.it-it.utf-8"
+           else
+            installn "rsct.core.msg.it_IT \
+                      rsct.core.msg.it_IT.ISO-8859-1 \
+                      rsct.core.msg.it_IT@euro \
+                      rsct.core.msg.it_IT.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-it_IT-ISO8859-1 \
+                      IBMrsctCorMsg-it_IT-ISO8859-15 \
+                      IBMrsctCorMsg-it_IT-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "JP" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.ja-jp.eucjp \
+                      rsct.core.msg.ja-jp.utf-8"
+           else
+            installn "rsct.core.msg.ja_JP.eucJP \
+                      rsct.core.msg.ja_JP.UTF-8"
+           fi
+         else #Solaris
+            installn "IBMrsctCorMsg-ja_JP-eucJP \
+                      IBMrsctCorMsg-ja_JP-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "KR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.ko-kr.euckr \
+                      rsct.core.msg.ko-kr.utf-8"
+           else
+            installn "rsct.core.msg.ko_KR.eucKR \
+                      rsct.core.msg.ko_KR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-ko_KR-EUC \
+                      IBMrsctCorMsg-ko_KR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "BR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.pt-br \
+                      rsct.core.msg.pt-br.utf-8"
+           else
+            installn "rsct.core.msg.pt_BR \
+                      rsct.core.msg.pt_BR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-pt_BR-UTF-8 \
+                      IBMrsctCorMsg-pt_BR-ISO8859-1"
+         fi   
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "CN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.zh-cn.gb2312 \
+                      rsct.core.msg.zh-cn.gb18030 \
+                      rsct.core.msg.zh-cn.gbk \
+                      rsct.core.msg.zh-cn.utf-8"
+           else
+            installn "rsct.core.msg.zh_CN.GB2312 \
+                      rsct.core.msg.zh_CN.GB18030 \
+                      rsct.core.msg.zh_CN.GBK \
+                      rsct.core.msg.zh_CN.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-zh_CN-GB18030 \
+                      IBMrsctCorMsg-zh_CN-GBK \
+                      IBMrsctCorMsg-zh_CN-UTF-8 \
+                      IBMrsctCorMsg-zh_CN-EUC"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "TW" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.core.msg.zh-tw \
+                      rsct.core.msg.zh-tw.big5 \
+                      rsct.core.msg.zh-tw.euctw \
+                      rsct.core.msg.zh-tw.utf-8"
+           else
+            installn "rsct.core.msg.zh_TW \
+                      rsct.core.msg.zh_TW.Big5 \
+                      rsct.core.msg.zh_TW.eucTW \
+                      rsct.core.msg.zh_TW.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctCorMsg-zh_TW-BIG5 \
+                      IBMrsctCorMsg-zh_TW-EUC \
+                      IBMrsctCorMsg-zh_TW-UTF-8"
+         fi             
+      fi
+         # rsct.basic
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "EN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.en-us \
+                      rsct.basic.msg.en-us.utf-8"
+           else
+            installn "rsct.basic.msg.en_US \
+                      rsct.basic.msg.en_US.UTF-8"
+           fi
+         fi
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "DE" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.de-de \
+                      rsct.basic.msg.de-de.iso-8859-1 \
+                      rsct.basic.msg.de-deeuro \
+                      rsct.basic.msg.de-de.utf-8"
+           else
+            installn "rsct.basic.msg.de_DE \
+                      rsct.basic.msg.de_DE.ISO-8859-1 \
+                      rsct.basic.msg.de_DE@euro \
+                      rsct.basic.msg.de_DE.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-de_DE-ISO8859-1 \
+                      IBMrsctBasMsg-de_DE-ISO8859-15 \
+                      IBMrsctBasMsg-de_DE-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "ES" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.es-es \
+                      rsct.basic.msg.es-es.iso-8859-1 \
+                      rsct.basic.msg.es-eseuro \
+                      rsct.basic.msg.es-es.utf-8"
+           else
+            installn "rsct.basic.msg.es_ES \
+                      rsct.basic.msg.es_ES.ISO-8859-1 \
+                      rsct.basic.msg.es_ES@euro \
+                      rsct.basic.msg.es_ES.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-es_ES-ISO8859-1 \
+                      IBMrsctBasMsg-es_ES-ISO8859-15 \
+                      IBMrsctBasMsg-es_ES-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "FR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.fr-fr \
+                      rsct.basic.msg.fr-fr.iso-8859-1 \
+                      rsct.basic.msg.fr-freuro \
+                      rsct.basic.msg.fr-fr.utf-8"
+           else
+            installn "rsct.basic.msg.fr_FR \
+                      rsct.basic.msg.fr_FR.ISO-8859-1 \
+                      rsct.basic.msg.fr_FR@euro \
+                      rsct.basic.msg.fr_FR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-fr_FR-ISO8859-1 \
+                      IBMrsctBasMsg-fr_FR-ISO8859-15 \
+                      IBMrsctBasMsg-fr_FR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "IT" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.it-it \
+                      rsct.basic.msg.it-it.iso-8859-1 \
+                      rsct.basic.msg.it-iteuro \
+                      rsct.basic.msg.it-it.utf-8"
+           else
+            installn "rsct.basic.msg.it_IT \
+                      rsct.basic.msg.it_IT.ISO-8859-1 \
+                      rsct.basic.msg.it_IT@euro \
+                      rsct.basic.msg.it_IT.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-it_IT-ISO8859-1 \
+                      IBMrsctBasMsg-it_IT-ISO8859-15 \
+                      IBMrsctBasMsg-it_IT-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "JP" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.ja-jp.eucjp \
+                      rsct.basic.msg.ja-jp.utf-8"
+           else
+            installn "rsct.basic.msg.ja_JP.eucJP \
+                      rsct.basic.msg.ja_JP.UTF-8"
+           fi
+         else #Solaris
+            installn "IBMrsctBasMsg-ja_JP-eucJP \
+                      IBMrsctBasMsg-ja_JP-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "KR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.ko-kr.euckr \
+                      rsct.basic.msg.ko-kr.utf-8"
+           else
+            installn "rsct.basic.msg.ko_KR.eucKR \
+                      rsct.basic.msg.ko_KR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-ko_KR-EUC \
+                      IBMrsctBasMsg-ko_KR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "BR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.pt-br \
+                      rsct.basic.msg.pt-br.utf-8"
+           else
+            installn "rsct.basic.msg.pt_BR \
+                      rsct.basic.msg.pt_BR.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-pt_BR-UTF-8 \
+                      IBMrsctBasMsg-pt_BR-ISO8859-1"
+         fi   
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "CN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.zh-cn.gb2312 \
+                      rsct.basic.msg.zh-cn.gb18030 \
+                      rsct.basic.msg.zh-cn.gbk \
+                      rsct.basic.msg.zh-cn.utf-8"
+           else
+            installn "rsct.basic.msg.zh_CN.GB2312 \
+                      rsct.basic.msg.zh_CN.GB18030 \
+                      rsct.basic.msg.zh_CN.GBK \
+                      rsct.basic.msg.zh_CN.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-zh_CN-GB18030 \
+                      IBMrsctBasMsg-zh_CN-GBK \
+                      IBMrsctBasMsg-zh_CN-UTF-8 \
+                      IBMrsctBasMsg-zh_CN-EUC"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "TW" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "rsct.basic.msg.zh-tw \
+                      rsct.basic.msg.zh-tw.big5 \
+                      rsct.basic.msg.zh-tw.euctw \
+                      rsct.basic.msg.zh-tw.utf-8"
+           else
+            installn "rsct.basic.msg.zh_TW \
+                      rsct.basic.msg.zh_TW.Big5 \
+                      rsct.basic.msg.zh_TW.eucTW \
+                      rsct.basic.msg.zh_TW.UTF-8"
+           fi
+         else # Solaris
+            installn "IBMrsctBasMsg-zh_TW-BIG5 \
+                      IBMrsctBasMsg-zh_TW-EUC \
+                      IBMrsctBasMsg-zh_TW-UTF-8"
+         fi             
+      fi
+   fi
+   USE_OPTIONS=0
+elif [ "$OS" = AIX ] && [ $OPT_NOAIXRSCT -eq 0 ] && [ $RC -eq 0 ] ; then
+   #---------------------------------
+   # install/upgrade RSCT on AIX
+   #---------------------------------
+   
+   # force install RSCT on AIX
+   if [ -n "$OPT_FORCEALL" ] ; then
+     # 1. Get list of packages
+     installp -qLd ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/inst | awk -F: '{print $1" "$3}' | sort -u > /tmp/installSAM.forceRSCTAIX.files
+
+     logit "${SCRIPT}Force installing the following RSCT packages:" 
+     logit "`cat /tmp/installSAM.forceRSCTAIX.files`"
+     
+     # 2. Install packages
+     installp -aFX -d ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/inst -f /tmp/installSAM.forceRSCTAIX.files >$TMP_STDERR 2>&1
+
+     # 3. Cleanup temp file
+     rm -f /tmp/installSAM.forceRSCTAIX.files
+
+     RSCT_NECESSARY=1
+   else
+
+     # determine installed RSCT level (set to "1.1.0.0" in case RSCT is not installed)
+     if [ -f /usr/bin/ctversion ]
+     then
+        RSCT_INST_VERSION=`/usr/bin/ctversion | awk '{print $2}'`
+     else
+        lslpp -l rsct.core.utils >/dev/null 2>&1
+        lslppRC=$?
+        if [ $lslppRC -eq 0 ]
+        then
+           RSCT_INST_VERSION=`lslpp -lc rsct.core.utils | grep -v Id | awk '{split($0,a,":"); print a[3]}' | sort -u`
+        else
+           RSCT_INST_VERSION="1.1.0.0"
+        fi
+     fi
+
+     # determine packaged RSCT levels
+     RSCT_GA_PKG_VERSION_VRM=`installp -L -d ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/inst | grep rsct.core.rmc | awk '{split($0,a,":"); print a[3]}' | cut -d. -f-3`
+     RSCT_PTF_PKG_VERSION_F=`ls ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/ | grep ptf | cut -b4- | sort -n | sed s/^0*// | tail -n 1`
+     RSCT_PKG_VERSION="$RSCT_GA_PKG_VERSION_VRM.$RSCT_PTF_PKG_VERSION_F"
+
+     RSCTcompRC=$(compare_version "$RSCT_PKG_VERSION" "$RSCT_INST_VERSION")
+     RSCT_NECESSARY=1
+     lslpp -l rsct.basic.rte 1> /dev/null 2>&1
+     RSCT_BASIC=$?
+     lslpp -l rsct.opt.storagerm 1> /dev/null 2>&1
+     RSCT_STORAGERM=$?
+     lslpp -l rsct.opt.stackdump 1> /dev/null 2>&1
+     RSCT_STACKDUMP=$?
+     # 1. Check if we can upgrade RSCT with rsct.basic.rte, rsct.opt.storagerm and rsct.opt.stackdump
+     if [ $RSCTcompRC -lt 0 ] ; then
+        if [ $RSCT_BASIC -ne 0 ] || [ $RSCT_STORAGERM -ne 0 ] || [ $RSCT_STACKDUMP -ne 0 ] ; then
+           # Essential packages are not installed, check if we can upgrade them
+           MISSING_LIST=""
+           if [ $RSCT_BASIC -ne 0 ] ; then
+              MISSING_LIST="rsct.basic.rte"
+           fi
+           if [ $RSCT_STORAGERM -ne 0 ] ; then
+              if [ "$MISSING_LIST" = "" ] ; then
+                 MISSING_LIST="rsct.opt.storagerm"
+              else
+                 MISSING_LIST="$MISSING_LIST, rsct.opt.storagerm"
+              fi
+           fi
+           if [ $RSCT_STACKDUMP -ne 0 ] ; then
+              if [ "$MISSING_LIST" = "" ] ; then
+                 MISSING_LIST="rsct.opt.stackdump"
+              else
+                 MISSING_LIST="$MISSING_LIST, rsct.opt.stackdump"
+              fi
+           fi 
+	       logit "${SCRIPT}Error: RSCT cannot be installed or upgraded because the installed version (RSCT $RSCT_INST_VERSION) of other RSCT packages is higher than the packages included in this deliverable (RSCT $RSCT_PKG_V.$RSCT_PKG_R.$RSCT_PKG_M.$RSCT_PKG_F)"
+           logit "${SCRIPT}User Action: Install package(s) ${MISSING_LIST} in their latest version(s), then run this setup again."
+           instexit $RC_INST_UNABLE
+        else
+          # If we are here, then RSCT is installed completely, and at a higher level than packaged
+          # set the flag to bypass RSCT install / upgrade
+          RSCT_NECESSARY=0
+        fi
+     fi
+   
+     # 2. Install/Upgrade all RSCT pkgs to current GA level if necessary
+     if [ $RC -eq 0 ] && [ $RSCT_NECESSARY -eq 1 ] ; then
+       # Circumvention for issues with rsct packages rsct.vsd, rsct.lapi  and upgrade to RSCT 3.2.1.x
+       COMP_RSCT_INST_VERSION=`compare_version "$RSCT_INST_VERSION" "3.2.1.0"`
+       COMP_RSCT_PKG_VERSION=`compare_version "${RSCT_PKG_V}.${RSCT_PKG_R}.${RSCT_PKG_M}.${RSCT_PKG_F}" "3.2.1.0"`
+       # If installed RSCT level is < 3.2.1.x and RSCT level to install is >= 3.2.1.x
+       if [ "$COMP_RSCT_INST_VERSION" = "-1" ] && [ $COMP_RSCT_PKG_VERSION -ge 0 ] ; then
+         # Uninstall rsct.vsd* & rsct.lapi* if they are installed
+         RSCT_VSD_PKG=`lslpp -L | grep "rsct.vsd"`
+         VSD_RC=$?
+         if [ "$VSD_RC" = "0" ] ; then
+           logit "${SCRIPT}Uninstalling rsct.vsd"
+           installp -ug rsct.vsd
+         fi       
+         RSCT_LAPI_PKG=`lslpp -L | grep "rsct.lapi"`
+         LAPI_RC=$?
+         if [ "$LAPI_RC" = "0" ] ; then
+           logit "${SCRIPT}Uninstalling rsct.lapi"
+           installp -ug rsct.lapi
+         fi       
+     
+         # Remove /opt/rsct if is a real directory
+         if [ -d /opt/rsct ] && [ ! -h /opt/rsct ] ; then
+           logit "${SCRIPT}Removing /opt/rsct"
+           rm -rf /opt/rsct
+         fi
+       fi
+     
+       logit "${SCRIPT}Installing RSCT $RSCT_PKG_VERSION"
+       installAIXRSCT inst
+       if [ $RC -ne 0 ] ; then
+         logit "${SCRIPT}Error installing RSCT $RSCT_PKG_VERSION, RC = $RC"
+       fi
+     fi
+   
+     # 3. Check if rsct.basic.rte is installed
+     if [ $RC -eq 0 ] ; then
+	   if [ $RSCT_BASIC -ne 0 ] ; then
+		  logit "${SCRIPT}Installing rsct.basic.rte $RSCT_PKG_VERSION"
+		  installAIXRSCT inst rsct.basic.rte
+		  RC=$?
+		  if [ $RC -ne 0 ] ; then
+			 logit "${SCRIPT}Error installing rsct.basic.rte, RC = $RC"
+		  fi
+	   fi
+     fi
+   
+     # 4. Check if rsct.opt.storagerm is installed
+     if [ $RC -eq 0 ] ; then
+	   if [ $RSCT_STORAGERM -ne 0 ] ; then
+		  logit "${SCRIPT}Installing rsct.opt.storagerm $RSCT_PKG_VERSION"
+		  installAIXRSCT inst rsct.opt.storagerm
+		  RC=$?
+		  if [ $RC -ne 0 ] ; then
+			 logit "${SCRIPT}Error installing rsct.opt.storagerm, RC = $RC"
+		  fi
+	   fi
+     fi
+   
+     # 5. Check if rsct.opt.stackdump is installed
+     if [ $RC -eq 0 ] ; then
+	   if [ $RSCT_STACKDUMP -ne 0 ] ; then
+		  logit "${SCRIPT}Installing rsct.opt.stackdump $RSCT_PKG_VERSION"
+		  installAIXRSCT inst rsct.opt.stackdump
+		  RC=$?
+		  if [ $RC -ne 0 ] ; then
+			 logit "${SCRIPT}Error installing rsct.opt.stackdump, RC = $RC"
+		  fi
+	   fi
+     fi
+
+   fi # if [ -n "$OPT_FORCEALL" ]
+   
+   # 6. Install/Upgrade all RSCT pkgs to current GA level if necessary
+   if [ $RC -eq 0 ] && [ $RSCT_NECESSARY -eq 1 ] ; then
+       #logit "installSAM: Starting installation of RSCT PTFs"
+	   PTF_DIRS=`ls ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/ | grep ptf | sort`
+	   for PKG in $PTF_DIRS
+	   do
+	      logit "${SCRIPT}Processing RSCT $PKG"
+              FTEMP=`ls ${PKGDIR}${AIX_SAMCORE_DIR}/rsct/${PKG}|wc -l`
+              if [ $FTEMP -gt 0 ]
+              then
+		  installAIXRSCT $PKG
+		  if [ $RC -ne 0 ] ; then
+			 logit "${SCRIPT}Error installing RSCT $PKG, RC = $RC"
+			 break
+		  fi
+              fi
+	   done
+   fi
+   
+fi
+#echo "Test: before install sam  rc: $RC"
+
+if [ $INST_LANG_ONLY -eq 0 ] && [ $RC -eq 0 ] ; then
+   #=========================================================
+   # >>> install package "sam" (SAMP)
+   #
+   # Only for package sam, sam*msg and sam.adapter use options (like --force)
+   USE_OPTIONS=1
+   #echo "test:: OPT_FORCE=$OPT_FORCE"
+   if [ $RC -eq 0 ] ; then
+      if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+         if [ "$OS" = Linux ] ; then
+            installn "sam"
+         else    
+            installn "IBMsam"
+         fi   
+         RC=$?
+      else
+         installn "sam.core"
+         RC=$?
+      fi
+   fi
+   USE_OPTIONS=0
+fi
+
+
+if [ $INST_LANG_ONLY -eq 0 ] ; then
+   
+   # Install xdr.rpm for all zLinux distributions
+   if [ "$ARCH" = "s390" ] || [ "$ARCH" = "s390x" ] ; then
+      USE_OPTIONS=1
+      if [ "$OS" = Linux ] ; then
+         installn "xdr \
+                   xdrsl10"
+      fi
+      USE_OPTIONS=0
+   fi
+fi
+
+#=========================================================
+# >>> SAP HA policy Migration:
+#     Save any existing "sam.sappolicy" files (Linux + AIX only)
+#
+if [ $OPT_NOSAP -eq 0 ] && [ $RC -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] ; then
+	case "$OS" in
+		AIX|Linux)
+                        if [ -z "$DISTRO" ] || [ "$DISTRO" != "Ubuntu" ] ; then
+			   SAP_XML_FILE=/usr/sbin/rsct/sapolicies/sap/samsap_templateABAP.xml
+			   if [ -e $SAP_XML_FILE ] ; then
+			      cp -f $SAP_XML_FILE $SAP_XML_FILE.backup
+			   fi
+			   SAP_XML_FILE=/usr/sbin/rsct/sapolicies/sap/samsap_templateABAPCI.xml
+			   if [ -e $SAP_XML_FILE ] ; then
+			      cp -f $SAP_XML_FILE $SAP_XML_FILE.backup
+			   fi
+			   SAP_XML_FILE=/usr/sbin/rsct/sapolicies/sap/samsap_templateDoubleStack.xml
+			   if [ -e $SAP_XML_FILE ] ; then
+			      cp -f $SAP_XML_FILE $SAP_XML_FILE.backup
+			   fi
+			   SAP_XML_FILE=/usr/sbin/rsct/sapolicies/sap/samsap_templateJAVA.xml
+			   if [ -e $SAP_XML_FILE ] ; then
+			      cp -f $SAP_XML_FILE $SAP_XML_FILE.backup
+			   fi
+                        fi
+        ;;
+	esac
+fi
+
+#=========================================================
+# >>> install package "sam.sappolicy" (Linux + AIX only)
+#
+if [ $OPT_NOSAP -eq 0 ] && [ $RC -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] ; then
+	case "$OS" in
+           AIX|Linux)
+              if [ -z "$DISTRO" ] || [ "$DISTRO" != "Ubuntu" ] ; then
+                 USE_OPTIONS=1
+                 installn "sam.sappolicy"
+                 RC=$?
+                 if [ $RC -ne 0 ] && [ "$DISTRO" = "Ubuntu" ]; then
+                    RC=0
+                 fi 
+                 USE_OPTIONS=0
+              fi
+           ;;
+	esac
+fi
+
+#=========================================================
+# >>> install package "sam.policies.one" (Linux + AIX only)
+#
+if [ $OPT_NOSAP -eq 0 ] && [ $RC -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] && [ -n "`ls -1 ${PKGDIR} | grep sam.policies.one`" ] ; then
+    case "$OS" in
+        AIX|Linux)
+            if [ -z "$DISTRO" ] || [ "$DISTRO" != "Ubuntu" ] ; then
+               USE_OPTIONS=1
+               installn "sam.policies.one"
+               RC=$?
+               USE_OPTIONS=0
+            fi
+        ;;
+    esac
+fi
+
+#=========================================================
+# >>> install package "sam.policies.two" (Linux + AIX only)
+#
+if [ $OPT_NOSAP -eq 0 ] && [ $RC -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] && [ -n "`ls -1 ${PKGDIR} | grep sam.policies.two`" ] ; then
+    case "$OS" in
+        AIX|Linux)
+            if [ -z "$DISTRO" ] || [ "$DISTRO" != "Ubuntu" ] ; then
+               USE_OPTIONS=1
+               installn "sam.policies.two"
+               RC=$?
+               USE_OPTIONS=0
+            fi
+        ;;
+    esac
+fi
+
+#=========================================================
+# >>> install package "sam.adapter" (ITSAMP E2E adapter) and java
+#
+if [ $OPT_NOADAPTER -eq 0 ] && [ $RC -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] ; then
+   # if [ -z "$FIRST_ERROR" ] ; then
+      # check if samadapter is running - must be stopped
+      if [ -x "$ADAPTER_DIR/bin/$ADAPTER" ] ; then
+         # command exists - see if adapter is started
+         $ADAPTER_DIR/bin/$ADAPTER status >/dev/null
+         RC=$?
+         if [ $RC -eq 1 ] ; then
+            logit
+            logit "$I35"
+            instexit $RC_INST_UNABLE
+         fi
+      fi
+      # Reset RC from adapter test
+      RC=0
+      # install adapter
+      USE_OPTIONS=1
+      case "$OS" in
+         AIX|Linux) 
+             installn "sam.adapter"
+             RC=$?
+         ;;
+         SunOS) 
+             installn "IBMsamAdapter"
+             RC=$?
+         ;;
+      esac
+      USE_OPTIONS=0     
+      if [ $RC -eq 0 ] ; then
+         #==================================================
+         # Java installation
+         #==================================================
+         MUST_JAVA=0
+         #-- determine Java package -------------------
+         JAVAPKG=""
+         JAVAPAT=""
+         EXJPKG=""
+         ISJVERSION="0"
+         case "$OS" in
+             AIX) 
+                  # For IBM OS (like AIX) java must not be installed.
+             ;;
+             Linux)
+                  JAVAPAT=${PKGDIR}/"ibm-java-jre-${JAVA_PKG_VERSION}-linux-${ARCH}.tgz"
+                  JAVAPKG=`ls -1 $JAVAPAT 2>/dev/null`
+             ;;
+             SunOS)
+                  JAVAPAT=${PKGDIR}/"java.$OS.$PKG_ARCH.tar.Z"
+                  JAVAPKG=`ls -1 $JAVAPAT 2>/dev/null`
+             ;;     
+             *)     logit "$ENMSG_NOARCH"
+             ;;
+         esac
+
+         # check if version is less
+         case "$OS" in
+             AIX)   EXJPKGS=`lslpp -l Java* | $GREP -E "Java[0-9]+.(jre|rte|sdk)" | sort -u | awk '{print \$2}'`
+                    ISJVERSION="0"
+                    AIX_REQ_JAVA_VERSION="0"
+                    JPATH=""
+                    EXJPKG=""
+                    if [ -n "$EXJPKGS" ] ; then
+                       for EXJPKG in $EXJPKGS
+                       do
+                          ISJV=`echo $EXJPKG  | sed 's/[1-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2 `
+                          ISJVer=`echo $ISJV | cut -d. -f1`
+                          ISJRel=`echo $ISJV | cut -d. -f2`
+                          ISJFix=`echo $ISJV | cut -d. -f4`
+                    #echo "Test - ISJV: $ISJV"    >>/tmp/ejtest
+                    #echo "Test - ISJVer: $ISJVer"    >>/tmp/ejtest
+                    #echo "Test - ISJRel: $ISJRel"    >>/tmp/ejtest
+                    #echo "Test - ISJFix: $ISJFix"    >>/tmp/ejtest
+                          case $ISJVer in
+                            6) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_6 ]
+                               then
+                                  ISJVERSION=$ISJV
+                                  JPATH="/usr/java6"
+                               fi
+                               ISJPKG=$EXJPKG
+                               AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_6
+                               ;;
+                            7) case $ISJRel in
+                                 0) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_7 ]
+                                    then
+                                       ISJVERSION=$ISJV
+                                       JPATH="/usr/java7"
+                                    fi
+                                    ISJPKG=$EXJPKG
+                                    AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_7
+                                    ;;
+                                 1) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_71 ]
+                                    then
+                                       ISJVERSION=$ISJV
+                                       JPATH="/usr/java71"
+                                    fi
+                                    ISJPKG=$EXJPKG
+                                    AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_71
+                                    ;;
+                               esac
+                               ;;
+                            8) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_8 ]
+                               then
+                                  ISJVERSION=$ISJV
+                                  JPATH="/usr/java8"
+                               fi
+                               ISJPKG=$EXJPKG
+                               AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_8
+                               ;;
+                          esac
+                       done
+                    fi
+
+                    #echo "Test - EXJPKG: $ISJPKG"
+                    #echo "Test - architecture: $ARCH"
+                    #echo "Test - is java version      : $ISJVERSION"
+                    #echo "Test - required java version: $AIX_REQ_JAVA_VERSION"
+                    JERR=0
+                    if [ "$ISJVERSION" = "0" ] ; then
+                       if [ "$AIX_REQ_JAVA_VERSION" = "0" ] ; then
+                          # no java exists
+                          logit "$I37 6.0.0.$AIX_ppc_JAVA_FIXLEVEL_6"
+                          JERR=1
+                       else
+                          # version too low
+                          logit "$I36 $ISJPKG"
+                          logit "$I37 $AIX_REQ_JAVA_VERSION"
+                          JERR=1
+                       fi
+                    fi
+                    if [ $JERR -eq 0 ] ; then
+                       # set link required by JDBCPublisher
+                       ISJPATH=`echo "$JPATH" | $GREP -c "\/java"`
+                       if [ $ISJPATH -eq 0 ] ; then
+                          logit "$JPATH"      # jpath is non NLS AIX java error message
+                       elif [ -n "$JPATH" ] ; then
+                          ln -fs ${JPATH}/jre  /opt/IBM/tsamp/sam/java/jre
+                       else
+                          logit "Cannot find java path on $OS to set link to java."   # unlikely
+                       fi
+                    fi   
+             ;;
+             
+             Linux)
+                    JPATH=`getJavaPath`
+                    if [ "${OPT_USE_IBM_JRE}" = "1" ] ; then
+                       # Do not install Java if link to JRE exists or --useibmjre option is specified
+                       MUST_JAVA=0
+                       
+                       if [ ! -L "/opt/IBM/tsamp/sam/java/jre" ] ; then
+                          if [ -d "/opt/IBM/tsamp/sam/java/jre" ] ; then
+                             # Remove existing installed Java (e.g. previous installation with --useibmjre)
+                             rm -rf /opt/IBM/tsamp/sam/java/*
+                             logit "installSAM: Removing Java from /opt/IBM/tsamp/sam/java/jre"
+                          fi
+                          
+                          if [ ! -d "/opt/IBM/tsamp/sam/java/jre" ] ; then
+                             # Create java directory if required
+                             if [ ! -d "/opt/IBM/tsamp/sam/java" ] ; then
+                                mkdir -p /opt/IBM/tsamp/sam/java
+                             fi
+                             # Link to external Java
+                             ln -fs ${JRE_PATH} /opt/IBM/tsamp/sam/java/jre
+                             # TODO create new message
+                             logit "installSAM: Creating link for Java from /opt/IBM/tsamp/sam/java/jre to ${JRE_PATH}"
+                          fi
+                       fi
+                    elif [ -L "/opt/IBM/tsamp/sam/java/jre" ] ; then
+                       # Do not install Java if previous installation with --useibmjre exists
+                       MUST_JAVA=0
+                    else
+                       MUST_JAVA=1
+                    fi
+             ;;
+             
+             SunOS)
+                    JPATH=`getJavaPath`
+                    MUST_JAVA=1
+             ;;
+
+             *)     logit "$ENMSG_NOARCH"
+             ;;
+         esac
+
+         if [ $MUST_JAVA -eq 1 ] ; then
+            #==================================================
+            # Install Java
+            #==================================================
+            case "$OS" in
+                AIX)   #echo "Test - Java is never installed for AIX - package:"
+                       #echo "Test - must be package $ISJPKG"
+                ;;
+                Linux) mkdir -p "$JPATH"
+                       chmod 755 "$JPATH"
+                       if [ -d "$JPATH" ] ; then
+                          if [ -z "$JAVAPKG" ] ; then
+                             logit "$I14$JAVAPAT"
+                          else
+                             # remove existing Java
+                             rm -rf $JPATH/jre
+                             rm -rf $JPATH/docs
+                             tar zxf $JAVAPKG --directory=$JPATH
+                             # apply chcon to avoid VM aborting on RH selinux
+                             chcon -t textrel_shlib_t $JPATH/jre/bin/j9vm/lib*.so 2>/dev/null
+                             chcon -t textrel_shlib_t $JPATH/jre/bin/lib*.so 2>/dev/null
+                          fi
+                       fi
+                ;;
+                SunOS) mkdir -p "$JPATH"
+                       chmod 755 "$JPATH"
+                       if [ -d "$JPATH" ] ; then
+                          if [ -z "$JAVAPKG" ] ; then
+                             logit "$I14$JAVAPAT"
+                          else
+                             # remove existing Java
+                             rm -rf $JPATH/jre
+                             mkdir -p $JPATH/jre
+                             # make an absolute path of the Java package, 
+                             # because tar on SunOS does not handle --directory option.
+                             DJ=`dirname "$JAVAPKG"`
+                             BJ=`basename "$JAVAPKG"`
+                             JAVAPKG="`cd \"$DJ\" 2>/dev/null && pwd || echo \"$DJ\"`/$BJ"
+                             #echo "Test:: absolute java pkg: $JAVAPKG"
+                             CPATH=`pwd`
+                             cd $JPATH/jre
+                             zcat $JAVAPKG | tar -xf -  >TMP_STDERR 2>&1
+                             RC=$?
+                             if [ $RC -eq 0 ] ; then
+                                logit "$I124 $JAVAPKG"
+                             else
+                                saveInstErrorMsgs $RC $JAVAPKG
+                             fi       
+                             #echo "Test:: zcat / tar into $JPATH/jre, rc=$?"
+                             cd "$CPATH"
+                          fi
+                       fi
+                ;;
+                *)     logit "$ENMSG_NOARCH"
+                ;;
+            esac
+         fi
+      fi
+   # fi
+fi
+
+#=========================================================
+# >>> install packages "sam.msg" (SAMP NLS)
+#
+if [ $OPT_NONLS -eq 0 ] && [ $RC -eq 0 ] ; then
+   USE_OPTIONS=1
+   if [ "$OS" = "Linux" ] || [ "$OS" = "SunOS" ] ; then
+      # not AIX
+      # sam
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "DE" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.de-de \
+                      sam.msg.de-de.iso-8859-1 \
+                      sam.msg.de-deeuro \
+                      sam.msg.de-de.utf-8"
+           else
+            installn "sam.msg.de_DE \
+                      sam.msg.de_DE.ISO-8859-1 \
+                      sam.msg.de_DE@euro \
+                      sam.msg.de_DE.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-de_DE-ISO8859-1 \
+                      IBMsamMsg-de_DE-ISO8859-15 \
+                      IBMsamMsg-de_DE-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "ES" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.es-es \
+                      sam.msg.es-es.iso-8859-1 \
+                      sam.msg.es-eseuro \
+                      sam.msg.es-es.utf-8"
+           else
+            installn "sam.msg.es_ES \
+                      sam.msg.es_ES.ISO-8859-1 \
+                      sam.msg.es_ES@euro \
+                      sam.msg.es_ES.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-es_ES-ISO8859-1 \
+                      IBMsamMsg-es_ES-ISO8859-15 \
+                      IBMsamMsg-es_ES-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "FR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.fr-fr \
+                      sam.msg.fr-fr.iso-8859-1 \
+                      sam.msg.fr-freuro \
+                      sam.msg.fr-fr.utf-8"
+           else
+            installn "sam.msg.fr_FR \
+                      sam.msg.fr_FR.ISO-8859-1 \
+                      sam.msg.fr_FR@euro \
+                      sam.msg.fr_FR.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-fr_FR-ISO8859-1 \
+                      IBMsamMsg-fr_FR-ISO8859-15 \
+                      IBMsamMsg-fr_FR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "IT" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.it-it \
+                      sam.msg.it-it.iso-8859-1 \
+                      sam.msg.it-iteuro \
+                      sam.msg.it-it.utf-8"
+           else
+            installn "sam.msg.it_IT \
+                      sam.msg.it_IT.ISO-8859-1 \
+                      sam.msg.it_IT@euro \
+                      sam.msg.it_IT.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-it_IT-ISO8859-1 \
+                      IBMsamMsg-it_IT-ISO8859-15 \
+                      IBMsamMsg-it_IT-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "JP" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.ja-jp.eucjp \
+                      sam.msg.ja-jp.utf-8"
+           else
+            installn "sam.msg.ja_JP.eucJP \
+                      sam.msg.ja_JP.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-ja_JP-eucJP \
+                      IBMsamMsg-ja_JP-UTF-8"
+         fi
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "KR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.ko-kr.euckr \
+                      sam.msg.ko-kr.utf-8"
+           else
+            installn "sam.msg.ko_KR.eucKR \
+                      sam.msg.ko_KR.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-ko_KR-EUC \
+                      IBMsamMsg-ko_KR-UTF-8"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "BR" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.pt-br \
+                      sam.msg.pt-br.utf-8"
+           else
+            installn "sam.msg.pt_BR \
+                      sam.msg.pt_BR.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-pt_BR-UTF-8 \
+                      IBMsamMsg-pt_BR-ISO8859-1"
+         fi   
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "CN" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.zh-cn.gb2312 \
+                      sam.msg.zh-cn.gb18030 \
+                      sam.msg.zh-cn.gbk \
+                      sam.msg.zh-cn.utf-8"
+           else
+            installn "sam.msg.zh_CN.GB2312 \
+                      sam.msg.zh_CN.GB18030 \
+                      sam.msg.zh_CN.GBK \
+                      sam.msg.zh_CN.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-zh_CN-GB18030 \
+                      IBMsamMsg-zh_CN-GBK \
+                      IBMsamMsg-zh_CN-UTF-8 \
+                      IBMsamMsg-zh_CN-EUC"
+         fi             
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "TW" ] ; then
+         if [ "$OS" = Linux ] ; then
+           if [ "$DISTRO" = "Ubuntu" ] ; then
+            installn "sam.msg.zh-tw \
+                      sam.msg.zh-tw.big5 \
+                      sam.msg.zh-tw.euctw \
+                      sam.msg.zh-tw.utf-8"
+           else
+            installn "sam.msg.zh_TW \
+                      sam.msg.zh_TW.Big5 \
+                      sam.msg.zh_TW.eucTW \
+                      sam.msg.zh_TW.UTF-8"
+           fi             
+         else # Solaris
+            installn "IBMsamMsg-zh_TW-BIG5 \
+                      IBMsamMsg-zh_TW-EUC \
+                      IBMsamMsg-zh_TW-UTF-8"
+         fi             
+      fi
+   else # is AIX
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "DE" ] ; then
+         installn "sam.msg.DE_DE"
+         installn "sam.msg.de_DE"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "ES" ] ; then
+         installn "sam.msg.ES_ES"
+         installn "sam.msg.es_ES"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "FR" ] ; then
+         installn "sam.msg.FR_FR"
+         installn "sam.msg.fr_FR"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "IT" ] ; then
+         installn "sam.msg.IT_IT"
+         installn "sam.msg.it_IT"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "JP" ] ; then
+         installn "sam.msg.JA_JP"
+         installn "sam.msg.Ja_JP"
+         installn "sam.msg.ja_JP"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "KR" ] ; then
+         installn "sam.msg.KO_KR"
+         installn "sam.msg.ko_KR"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "BR" ] ; then
+         installn "sam.msg.PT_BR"
+         installn "sam.msg.pt_BR"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "CN" ] ; then
+         installn "sam.msg.ZH_CN"
+         installn "sam.msg.Zh_CN"
+         installn "sam.msg.zh_CN"
+      fi
+      if [ -z "$OPT_LANG" ] || [ "$SUPP_LANG" = "TW" ] ; then
+         installn "sam.msg.ZH_TW"
+         installn "sam.msg.Zh_TW"
+         installn "sam.msg.zh_TW"
+      fi
+   fi
+   USE_OPTIONS=0
+fi
+
+# Done with installation
+
+if [ $INST_LANG_ONLY -eq 0 ] ; then
+   # Check what was installed
+   SHOW_INST=0
+   case "$OS" in
+      Linux) 
+             if [ "$DISTRO" = "Ubuntu" ] ; then
+                DONE=`dpkg -l | $GREP -E "^src-|^src_|^src\.|^rsct|^sam-|^sam_|^sam\." |sort`
+             else
+                DONE=`rpm -qa | $GREP -E "^src-|^src\.|^rsct|^sam-|^sam\." |sort`
+             fi
+
+             if [ -n "$DONE" ] ; then
+                SHOW_INST=1
+             fi
+      ;;
+      SunOS) DONE=`pkginfo -x | $GREP -E "^IBMsrc|^IBMrsct|^IBMsam" | awk '{print $1}' | sort`
+             if [ -n "$DONE" ] ; then
+                SHOW_INST=1
+             fi
+             JUNK=rmvPkgAdminFile 
+      ;;
+      AIX) DONE=`lslpp -l "sam*" 2>/dev/null |$GREP -E "^sam-|^sam\." |sort`
+           RC=$?
+           if [ $RC -eq 0 ] && [ -n "$DONE" ] ; then
+              SHOW_INST=1
+           fi
+      ;;
+   esac
+
+   # Show what was installed
+   if [ $SHOW_INST -eq 1 ] ; then
+      logit "$I05"
+      for DONE1 in $DONE
+      do
+         logit " $DONE1"
+      done
+   fi
+
+   # verify again if sam is installed
+   checkSAMInst
+fi
+
+# Remove RecRM version file introduced with DB2 9.8 FP5 efix 1 (SAMP 3.2.2.1 efix 1)
+# if [ $ERROR -eq 0 ] && [ -f "/usr/sbin/rsct/share/IBM.RecoveryRM/version" ] ; then
+if [ -f "/usr/sbin/rsct/share/IBM.RecoveryRM/version" ] ; then
+   logit "Removing /usr/sbin/rsct/share/IBM.RecoveryRM/version"
+   rm -f /usr/sbin/rsct/share/IBM.RecoveryRM/version
+fi
+
+# Remove any Java backup directory wich might have been created
+rm -rf /opt/IBM/tsamp/sam/java.*
+
+# Install efixes (if any)
+installEfixes
+
+# if [ $ERROR -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] ; then
+if [ $INST_LANG_ONLY -eq 0 ] ; then
+
+   # Check if XDR license needs to be migrated
+   if [ -f $LIC_DIR/nodelock ] ; then
+      cat $LIC_DIR/nodelock | grep -c "SA for MP xDR for Linux on System z" > /dev/null
+      if [ $? -eq 0 ] ; then
+         logit ""
+         logit "Migrating existing XDR license."
+         mkdir -p $LIC_DIR/XDR
+         cp -f $LIC_DIR/nodelock $LIC_DIR/XDR/
+	  fi
+   fi
+
+   # install LUM license
+   logit ""
+   installLUM $LUM_FILE $FULL_LIC_INST $TB_LIC_PKG
+   logit ""
+   if [ -d "$LIC_DIR" ] ; then
+      # handle ITLM and Software Tagging files
+      
+      # 1. remove old ITLM files
+      rm $LIC_DIR/*.sys $LIC_DIR/*.SYS2 $LIC_DIR/*.feature 2>/dev/null
+     
+      # Only install when ITLM files are not part of rpm/deb package
+      if [ -d "${DIR}/${DISTRO}/itlm" ] || [ -d "${DIR}/${OS}/itlm" ] ; then
+         # 2. install new ITLM sys file
+         if [ -n "$ITLM_FILE" ] ; then
+            cp $ITLM_FILE $LIC_DIR
+         fi
+	  
+         # 3. copy itlm feature files
+         if [ -n "$ITLM_FEATURE_FILES" ] ; then
+            mkdir -p /opt/IBM/tsamp/sam/properties/version
+            cp -p $ITLM_FEATURE_FILES /opt/IBM/tsamp/sam/properties/version
+         fi
+	  
+         # determine if swtag file is in $DIR/$OS/itlm/
+         SWTAG_FILE=""
+         if [ "$DISTRO" = "Ubuntu" ] ; then
+            SWTAG_FILE=${DIR}/${DISTRO}/itlm/*.swtag
+         else
+            SWTAG_FILE=${DIR}/${OS}/itlm/*.swtag
+         fi
+         SWTAG_FILE=`ls $SWTAG_FILE 2>/dev/null`
+
+         # 4. install Software Tagging files for GA
+         if [ -n "$SWTAG_FILE" ] ; then
+            mkdir -p /opt/IBM/tsamp/sam/properties/version
+            cp -p ${SWTAG_FILE} /opt/IBM/tsamp/sam/properties/version
+         fi
+
+         # determine if fxtag file is in $DIR/$OS/itlm/
+         FXTAG_FILE=""
+         if [ "$DSITRO" = "Ubuntu" ] ; then
+            FXTAG_FILE=${DIR}/${DISTRO}/itlm/*.fxtag
+         else
+            FXTAG_FILE=${DIR}/${OS}/itlm/*.fxtag
+         fi
+         FXTAG_FILE=`ls $FXTAG_FILE 2>/dev/null`
+
+         # 5. install Software Tagging files for Fixpacks
+         if [ -n "$FXTAG_FILE" ] ; then
+            mkdir -p /opt/IBM/tsamp/sam/properties/version
+            cp -p ${FXTAG_FILE} /opt/IBM/tsamp/sam/properties/version
+         fi
+      fi
+
+   fi
+fi
+
+if [ $ERROR -eq 0 ] && [ $INST_LANG_ONLY -eq 0 ] ; then
+   if [ $ANY_INST -eq 1 ] ; then
+      logit "$I06"
+   fi
+   # show RMs active (NLS!)
+   # RMs that are inoperative show no processid (NF=3)
+   logit ""
+   if [ $OPT_SILENT -eq 0 ] ; then
+      lssrc -a | $GREP "Subsystem.*\|rsct.*" | awk '{if (NF==4)print}'
+   fi
+   lssrc -a | $GREP "Subsystem.*\|rsct.*" | awk '{if (NF==4)print}' >> $INST_LOG
+
+   # test for CT_MANAGEMENT_SCOPE: if exists use value, otherwise use -1
+   SCOPE_VAR=${CT_MANAGEMENT_SCOPE:-1}
+   if [ "$SCOPE_VAR" != 2 ] ; then
+      logit "$I24"
+   fi
+fi
+
+INST_RC=0
+# check for errors
+if [ $ERROR -eq 1 ] ; then
+   INST_RC=$RC_INSTALLER_ERROR
+   logit "$I27"
+   if [ -n "$FIRST_ERROR" ] ; then
+      # logs installer error return code
+      if [ $OPT_SILENT -eq 0 ] ; then
+         echo $FIRST_ERROR
+      fi
+      echo $FIRST_ERROR >> $INST_LOG
+   elif [ -n "$FIRST_WARN" ] ; then
+      if [ $OPT_SILENT -eq 0 ] ; then
+         echo $FIRST_WARN
+      fi
+      echo $FIRST_WARN >> $INST_LOG
+   fi
+   if [ -r "$TMP_FIRST_STDERR" ] ; then
+      if [ $OPT_SILENT -eq 0 ] ; then
+         cat $TMP_FIRST_STDERR
+      fi
+      cat $TMP_FIRST_STDERR >> $INST_LOG
+      logit ""
+   fi
+else
+   if [ $ANY_INST -ne 0 ] ; then
+      logit ""
+      logit "$I26"
+   fi
+fi
+
+if [ $INST_LANG_ONLY -eq 0 ] ; then
+   copyUninst #c001
+fi
+instexit $INST_RC

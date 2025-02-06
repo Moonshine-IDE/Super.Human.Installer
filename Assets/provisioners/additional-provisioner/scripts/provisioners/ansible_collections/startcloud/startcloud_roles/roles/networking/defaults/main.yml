@@ -1,0 +1,7 @@
+---
+run_tasks: true
+show_help: true
+use_proxy: false
+proxy_port: 3128
+proxy_server: squid.mydomain.com
+etc_hosts_entries: []

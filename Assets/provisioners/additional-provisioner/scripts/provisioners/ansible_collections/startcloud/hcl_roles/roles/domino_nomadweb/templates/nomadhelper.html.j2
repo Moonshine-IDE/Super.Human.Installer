@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Open Link</title>
+</head>
+<body>
+<script type="text/javascript">
+    window.onload = function() {
+        var link = getURLParameter("link");
+        link = decodeURIComponent(link);
+        openLink(link);
+    };
+
+    function openLink(link) {
+        const HASH_PREFIX = '#/';
+        const hrefUrl = new URL(link);
+        
+        if (navigator && navigator.serviceWorker && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'openNotesUri',
+                payload: {
+                    notesUri: decodeURIComponent(
+                        hrefUrl.hash.substring(
+                            hrefUrl.hash.indexOf(HASH_PREFIX) + HASH_PREFIX.length
+                        )
+                    )
+                }
+            });
+            
+            window.top.postMessage('[Success] Successfully called openNotesUri', '*');
+        } else {
+            console.error('No service worker registered');
+                    
+        		window.top.postMessage('[Error] No service worker registered', '*');
+        }
+    }
+
+    function getURLParameter(sParam) {
+        var sPageURL = window.location.search.substring(1);
+        var sURLVariables = sPageURL.split('&');
+        for (var i = 0; i < sURLVariables.length; i++) {
+            var urlParam = sURLVariables[i];
+            var sParameterName = sURLVariables[i].split('=');
+            if (sParameterName[0] == sParam) {
+                return sParameterName[1];
+            }
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+---
+-
+  name: Make swap file if necessary
+  ansible.builtin.command: mkswap {{ swap_file_path }}
+  when: swap_file_create is changed
+  register: mkswap_result
+
+-
+  name: Run swapon on the swap file
+  ansible.builtin.command: swapon {{ swap_file_path }}
+  when:
+    - mkswap_result is changed
+    - not swap_test_mode

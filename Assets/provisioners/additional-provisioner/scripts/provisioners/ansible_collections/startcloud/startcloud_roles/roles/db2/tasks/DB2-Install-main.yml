@@ -1,0 +1,143 @@
+--- 
+- 
+  name: "Updating System"
+  yum: 
+    name: "*"
+    state: latest
+- 
+  name: "Installing the 'Development tools' package group"
+  yum: 
+    name: "@Development tools"
+    state: present
+- 
+  name: "Installing Dependencies"
+  vars: 
+    packages: 
+      - libstdc++-devel
+      - libaio
+      - pam-devel.i686
+  yum: 
+    name: "{{ packages }}"
+- 
+  name: "Disabling SELinux"
+  selinux: 
+    state: disabled
+- 
+  group: 
+    name: "{{ db2grp }}"
+    state: present
+  name: "Ensuring Group: {{ db2grp }} exists"
+- 
+  name: "Adding User: {{ db2usr }}"
+  user: 
+    comment: "DB2 User"
+    group: "{{ db2grp }}"
+    name: "{{ db2usr }}"
+- 
+  file: 
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: /local
+    state: directory
+  name: "Check if /local data directory is mounted and writeable by user: {{ db2usr }}"
+  register: local_exists
+- 
+  file: 
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: "/local/{{database_dir}}"
+    state: directory
+  name: "Check if /local/{{database_dir}} data directory is mounted and writeable by user: {{ db2usr }}"
+- 
+  file: 
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: /local/backup
+    state: directory
+  name: "Check if /local/backup data directory is mounted and writeable by user: {{ db2usr }}"
+- 
+  file: 
+    group: "{{ db2grp }}"
+    mode: "0755"
+    owner: "{{ db2usr }}"
+    path: /local-log
+    state: directory
+  name: "Check if /local-log directory is mounted and writeable by user: {{ db2usr }}"
+  register: local_log_exists
+- 
+  name: "Check if /local/server_t to skip extraction if already extracted: {{ db2usr }}"
+  register: server_t_exists
+  stat: 
+    path: /local/server_t
+- 
+  get_url: 
+    dest: /local/v11.1.4fp5_linuxx64_server_t.tar.gz
+    url: "https://www./v11.1.4fp5_linuxx64_server_t.tar.gz"
+  name: "Downloading DB2 Installer Version: {{ db2version }}"
+  when: "server_t_exists.stat.exists is not defined or not server_t_exists.stat.exists"
+- 
+  name: "Extracting DB2 Installer Version: {{ db2version }} to /local/server_t"
+  unarchive: 
+    dest: /local/
+    src: /local/v11.1.4fp5_linuxx64_server_t.tar.gz
+  when: "server_t_exists.stat.exists is not defined or not server_t_exists.stat.exists"
+- 
+  block: 
+    - 
+      name: "Checking Command"
+      raw: "su - {{ db2usr }} -c 'db2licm -l'"
+      register: db2_installed
+  name: "Check if DB2 is Already Installed"
+  rescue: 
+    - 
+      become_user: db2inst1
+      name: "Checking Pre-Requisites for DB2 Version: {{ db2version }}"
+      shell: "/local/server_t/db2prereqcheck -v {{ db2version }} -c"
+    - 
+      blockinfile: 
+        block: "PROD = DB2_SERVER_EDITION\n\
+            FILE  = /opt/ibm/db2/V11.1\n\
+            LIC_AGREEMENT  = ACCEPT\n\
+            DB2_INST.START_DURING_INSTALL = YES\n\
+            DB2_INST.AUTOSTART = YES\n\
+            INSTALL_TYPE = TYPICAL\n\
+            INSTANCE = DB2_INST\n\
+            DB2_INST.NAME = {{ db2usr }}\n\
+            DB2_INST.GROUP_NAME =  {{ db2grp }} \n"
+        create: true
+        path: /local/server_t/db2server.rsp
+      name: "Creating Response File for Automated DB2 Version: {{ db2version }} installation"
+    - 
+      name: "Installing DB2 version: {{ db2version }} response file"
+      shell: "/local/server_t/db2setup -r /local/server_t/db2server.rsp"
+- 
+  name: "Stopping the Service"
+  raw: "su - {{ db2usr }} -c 'db2stop'"
+- 
+  name: "Starting the Service"
+  raw: "su - {{ db2usr }} -c 'db2start'"
+- 
+  name: "Checking Licensing"
+  raw: "su - {{ db2usr }} -c 'db2licm -l'"
+- 
+  name: "Check if /local/backup data directory already exists"
+  register: local_backup_exists
+  stat: 
+    path: /local/backup
+- 
+  file: 
+    path: /local/backup
+    state: absent
+  name: "Removing Previous Backups"
+  when: "local_backup_exists.stat.exists is defined and local_backup_exists.stat.exists"
+- 
+  file: 
+    group: "{{ db2grp }}"
+    owner: "{{ db2usr }}"
+    path: /local/backup
+    state: directory
+  name: "Creating new Backup folder"
+
