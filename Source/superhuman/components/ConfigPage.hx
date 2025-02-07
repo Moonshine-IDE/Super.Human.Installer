@@ -31,10 +31,7 @@
 package superhuman.components;
 
 import genesis.application.components.GenesisFormRow;
-import superhuman.server.SyncMethod;
-import feathers.controls.Button;
 import feathers.controls.Check;
-import feathers.layout.VerticalLayout;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -42,7 +39,6 @@ import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.VerticalAlign;
-import genesis.application.components.AdvancedAssetLoader;
 import genesis.application.components.GenesisForm;
 import genesis.application.components.GenesisFormButton;
 import genesis.application.components.GenesisFormPupUpListView;
@@ -131,7 +127,7 @@ class ConfigPage extends Page {
 
         _rowCoreComponentVersion = new GenesisFormRow();
         _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
-        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection() );
+        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection(ProvisionerType.DemoTasks) );
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };

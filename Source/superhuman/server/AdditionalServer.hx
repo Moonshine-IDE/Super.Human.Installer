@@ -1,5 +1,6 @@
 package superhuman.server;
 
+import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import haxe.io.Path;
 import superhuman.managers.ProvisionerManager;
@@ -16,7 +17,7 @@ class AdditionalServer extends Server {
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
-        var latestDemoTasks = ProvisionerManager.getBundledProvisioners()[ 0 ];
+        var latestDemoTasks = ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ];
 
         if ( data.provisioner == null ) {
 

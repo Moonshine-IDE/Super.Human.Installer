@@ -36,7 +36,7 @@ class AdditionalProvisioner extends DemoTasks {
 			server_organization: "",
 			type: ServerType.Domino,
 			user_email: "",
-            provisioner: ProvisionerManager.getBundledProvisioners()[ 0 ].data,
+            provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ].data,
             syncMethod: SyncMethod.Rsync,
 		};
 

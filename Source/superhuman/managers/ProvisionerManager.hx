@@ -30,6 +30,7 @@
 
 package superhuman.managers;
 
+import superhuman.server.provisioners.DemoTasks;
 import champaign.core.primitives.VersionInfo;
 import feathers.data.ArrayCollection;
 import haxe.io.Path;
@@ -40,9 +41,20 @@ import superhuman.server.provisioners.ProvisionerType;
 class ProvisionerManager {
 
     static final PROVISIONER_DEMO_TASKS_LOCAL_PATH:String = "assets/provisioners/demo-tasks/";
-    
-    static public function getBundledProvisioners():Array<ProvisionerDefinition> {
+    static final PROVISIONER_ADDITIONAL_LOCAL_PATH:String = "assets/provisioners/additional-provisioner/";
+
+    static public function getBundledProvisioners(type:ProvisionerType = ProvisionerType.DemoTasks):Array<ProvisionerDefinition> {
         
+        if (type == ProvisionerType.AdditionalProvisioner)
+        {
+            return [
+                {
+                    name: "HCL Additional Provisioner v1.0.0",
+                    data: { type: ProvisionerType.AdditionalProvisioner, version: VersionInfo.fromString( "1.0.0" ) },
+                    root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_ADDITIONAL_LOCAL_PATH + "1.0.0"
+                },
+            ];
+        }
         // Generate array of available provisioners, newest always at the top
         return [
             // Demo-tasks v0.1.18 has been disabled because of current bugs on Windows
@@ -74,7 +86,7 @@ class ProvisionerManager {
 
     static public function getBundledProvisionerCollection( ?type:ProvisionerType ):ArrayCollection<ProvisionerDefinition> {
 
-        var a = getBundledProvisioners();
+        var a = getBundledProvisioners(type);
 
         if ( type == null ) return new ArrayCollection( a );
 
@@ -86,7 +98,8 @@ class ProvisionerManager {
 
     static public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):ProvisionerDefinition {
 
-        for ( provisioner in getBundledProvisionerCollection() ) {
+        var bundledProvisionerCollection = getBundledProvisionerCollection(type);
+        for ( provisioner in bundledProvisionerCollection ) {
 
 			if ( provisioner.data.type == type && provisioner.data.version == version ) return provisioner;
 

@@ -129,13 +129,15 @@ class ServiceTypePage extends Page {
     
     function _continueButtonTriggered(e:TriggerEvent) {
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
-        
+            event.provisionerType = ProvisionerType.DemoTasks;
+            
         var selectedServiceType = _serviceTypeGrid.selectedItem;
         if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) 
         {
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER);
+            event.provisionerType = ProvisionerType.AdditionalProvisioner;
         }
-        event.provisionerType = ProvisionerType.DemoTasks;
+
         event.serviceTypeData = selectedServiceType;
 
         this.dispatchEvent( event );

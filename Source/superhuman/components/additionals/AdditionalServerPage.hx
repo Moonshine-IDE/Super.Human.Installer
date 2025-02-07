@@ -1,5 +1,7 @@
 package superhuman.components.additionals;
 
+import superhuman.server.provisioners.ProvisionerType;
+import haxe.io.Path;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.managers.ProvisionerManager;
@@ -15,17 +17,23 @@ import feathers.events.TriggerEvent;
 class AdditionalServerPage extends Page
 {
 	final _width:Float = GenesisApplicationTheme.GRID * 100;
-	
+		
+	private var _server:Server;
 	private var _appData:ApplicationData;
 	
 	public function new()
 	{
 		super();
-		
+	}
+
+	override function initialize() {
+
+        super.initialize();
+
 		firstLine.width = _width;
 
 		rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
-		dropdownCoreComponentVersion.dataProvider = ProvisionerManager.getBundledProvisionerCollection();
+		dropdownCoreComponentVersion.dataProvider = ProvisionerManager.getBundledProvisionerCollection(ProvisionerType.AdditionalProvisioner);
 		dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
@@ -41,8 +49,27 @@ class AdditionalServerPage extends Page
 
 		rowNewServerId.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.newserveridfile.text' );
 
-		buttonNewServerId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
-		//buttonNewServerId.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK );
+		buttonNewServerId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
+		buttonNewServerId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING ) ;
+        buttonNewServerId.enabled = !_server.userSafeId.locked;
+
+		if ( !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {
+
+            rowPreviousSafeId.visible = rowPreviousSafeId.includeInLayout = true;
+            var p = Path.withoutDirectory( SuperHumanInstaller.getInstance().config.user.lastusedsafeid );
+            labelPreviousSafeId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.useprevious', p );
+            labelPreviousSafeId.toolTip = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
+
+        } else {
+
+            rowPreviousSafeId.visible = rowPreviousSafeId.includeInLayout = false;
+
+        }
+
+		rowRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.text' );
+        buttonRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.button' );
+        buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
+        buttonRoles.enabled = !_server.roles.locked;
 
 		secondLine.width = _width;
 		
@@ -52,9 +79,8 @@ class AdditionalServerPage extends Page
 		buttonClose.text = LanguageManager.getInstance().getString( 'settingspage.buttons.cancel' );
 		buttonClose.addEventListener( TriggerEvent.TRIGGER, _buttonCloseTriggered );
 	}
-	
-	private var _server:Server;
-	
+
+
 	public function setServer( server:Server ) {
         _server = server;
 

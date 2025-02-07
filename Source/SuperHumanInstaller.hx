@@ -279,7 +279,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			 isEnabled: true},
 			{value: "Additional Domino Server", 
 			 description: "Join a new server to an existing Domino environment", 
-			 provisionerType: ProvisionerType.DemoTasks,
+			 provisionerType: ProvisionerType.AdditionalProvisioner,
 			 serverType: ServerUIType.AdditionalDomino,
 			 isEnabled: true},
 			{value: "Volt MX Go Foundry Server", 
@@ -1258,7 +1258,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _createServerAndSaveConfig(provisionerType:ProvisionerType) {
 		var newServerData:ServerData = ServerManager.getInstance().getDefaultServerData( provisionerType );
-		var server = ServerManager.getInstance().createServer( newServerData );
+		var server = ServerManager.getInstance().createServer( newServerData, provisionerType );
 		server.onUpdate.add( onServerPropertyChanged );
 
 		Logger.info( '${this}: New ${server} created' );
