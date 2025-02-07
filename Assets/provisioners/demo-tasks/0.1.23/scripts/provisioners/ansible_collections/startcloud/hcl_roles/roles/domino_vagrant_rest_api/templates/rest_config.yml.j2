@@ -14,9 +14,9 @@ restinterface:
 {% if domino_major_version is defined %}
         dominoVersion: '{{ domino_major_version }}.{{ domino_minor_version }}.{{ domino_patch_version }}'
 {% if domino_major_version == 12 and domino_patch_version == 1 %}
-        serverName: {{ settings.hostname }}/{{ domino_organization }}
+        serverName: {{ domino_server_name }}/{{ domino_organization }}
 {% else %}
-        serverName: {{ settings.hostname }}.{{ settings.domain }}/{{ domino_organization }}
+        serverName: {{ domino_server_name }}.{{ domino_server_domain }}/{{ domino_organization }}
 {% endif %}
 {% endif %}
         baseURL: https://domino.{{ settings.hostname }}.{{ settings.domain|lower }}

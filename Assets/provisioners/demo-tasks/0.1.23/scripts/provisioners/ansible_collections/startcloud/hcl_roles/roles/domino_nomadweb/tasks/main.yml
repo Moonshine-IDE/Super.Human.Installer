@@ -68,7 +68,7 @@
       become: true
       args:
         executable: "/bin/bash"
-      register: nomadweb_config_status
+      register: nomadweb_config_nomad_status
       changed_when: false
       with_items:
         - 'domino cmd "set config NOMAD_WEB_HOST={{ domino_nomadweb_proxy_url }}" 20'
@@ -100,7 +100,13 @@
       when: ( nomadweb_debug or debug_all ) and not nomadweb_installed_check.stat.exists
       ansible.builtin.debug:
         var: nomadweb_config_status
-    
+
+    -
+      name: "Outputting NomadWeb Configuration Status Logs"
+      when: ( nomadweb_debug or debug_all ) and not nomadweb_installed_check.stat.exists
+      ansible.builtin.debug:
+        var: nomadweb_config_nomad_status
+
     -
       name: "Stopping Domino for Changes to take effect"
       when: not nomadweb_installed_check.stat.exists
@@ -137,14 +143,31 @@
       register: port_check
     
     -
-      name: "Configuring NomadWeb Helper for Super.Human.Portal"
-      when: not nomadweb_installed_check.stat.exists
+      name: "Check if Super.Human.Portal nomadhelper.html exists"
+      register: shp_nomadhelper_check
+      ansible.builtin.stat:
+        path: "{{ domino_home_dir }}/domino/html/Super.Human.Portal/js-release/resources/nomadhelper.html"
+        get_md5: false
+
+    -
+      name: "Configuring NomadWeb Helper for Super.Human.Portal from SHP"
+      when: not nomadweb_installed_check.stat.exists and shp_nomadhelper_check.stat.exists
+      ansible.builtin.copy:
+        dest: "{{ domino_install_dir }}/nomad-files/nomadhelper.html"
+        mode: '0755'
+        owner: "{{ domino_user }}"
+        group: "{{ domino_group }}"
+        src: "{{ domino_home_dir }}/domino/html/Super.Human.Portal/js-release/resources/nomadhelper.html"
+
+    -
+      name: "Configuring NomadWeb Helper for Super.Human.Portal from template"
+      when: not nomadweb_installed_check.stat.exists and not shp_nomadhelper_check.stat.exists
       ansible.builtin.template:
         dest: "{{ domino_install_dir }}/nomad-files/nomadhelper.html"
         mode: '0755'
         owner: "root"
         src: "nomadhelper.html.j2"
-    
+
     -
       name: "Handing Nomad Helper templated update_nomad_helper_url JSON to Genesis"
       when: not nomadweb_installed_check.stat.exists

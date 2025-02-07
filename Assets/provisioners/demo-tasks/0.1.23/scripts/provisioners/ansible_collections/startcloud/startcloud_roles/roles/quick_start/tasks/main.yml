@@ -9,7 +9,7 @@
     -
       name: "Gathering facts on current container"
       community.docker.current_container_facts:
-    
+
     -
       name: "Creating Installation Directories" # Creates directories for images and ids under the Python Simple Web Server path.
       ansible.builtin.file:
@@ -19,13 +19,13 @@
       with_items: # Directories to be created, interpolated with variables from default/main.yml
         - "{{ python_simple_web_server_path }}/images"
         - "{{ python_simple_web_server_path }}/ids"
-    
+
     -
       name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
       ansible.builtin.pip:
         name: "uploadserver" # Specifies the pip package name.
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
-    
+
     -
       name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
       become_user: "{{ service_user }}"
@@ -33,7 +33,7 @@
       ansible.builtin.pip:
         name: "uploadserver" # Specifies the pip package name.
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
-    
+
     -
       name: "When Running in Container"
       when: ansible_module_running_in_container
@@ -45,18 +45,18 @@
           args:
             executable: /bin/bash
           register: address
-    
+
         -
           name: "Setting Address"
           ansible.builtin.set_fact:
             local_ip: "{{ address.stdout }}"
-    
+
         -
           name: Prints two lines of messages, but only if there is an environment value set
           ansible.builtin.debug:
             msg:
-            - "{{ address }}"
-    ####################################################################
+              - "{{ address }}"
+
     -
       name: "Gathering Networking Configurations"
       when:
@@ -72,7 +72,7 @@
           args:
             executable: /bin/bash
           register: sorted_interfaces_output
-    
+
         -
           name: "Parsing output to get interface names"
           ansible.builtin.set_fact:
@@ -81,7 +81,7 @@
           name: "Setting first and second adapters"
           ansible.builtin.set_fact:
             first_adapter: "{{ interfaces[0] }}"
-    
+
         -
           name: "Gathering details of the first adapter"
           changed_when: false
@@ -89,12 +89,12 @@
           args:
             executable: /bin/bash
           register: first_ip
-    
+
         -
           name: "Storing first adapter details as facts"
           ansible.builtin.set_fact:
             local_ip: "{{ first_ip.stdout.strip() | ansible.utils.ipaddr('address') }}"
-    
+
     -
       name: "Virtualbox Networking"
       when:
@@ -111,12 +111,12 @@
             executable: /bin/bash
           register: public_adapter_ip
           changed_when: false
-    
+
         -
           name: "Storing first adapter details as facts"
           ansible.builtin.set_fact:
             local_ip: "{{ public_adapter_ip }}"
-    
+
     -
       name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
       become: true # Executes the task with elevated privileges.
@@ -130,7 +130,7 @@
         - { src: 'environment.j2', dest: '/etc/pythonserv', owner: '{{ service_user }}' }
         - { src: 'styles.css', dest: '{{ python_simple_web_server_path }}/styles.css', owner: '{{ service_user }}' }
         - { src: 'cockpit.conf.j2', dest: '/etc/cockpit/cockpit.conf', owner: '{{ service_user }}' }
-    
+
     -
       name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
       become: true # Executes the task with elevated privileges.
@@ -141,7 +141,7 @@
         mode: '0644' # Sets the file permissions.
       loop:
         - { src: '{{ index }}', dest: '{{ python_simple_web_server_path }}/{{ index_name }}', owner: '{{ service_user }}' }
-    
+
     -
       name: "Copying Root CA to {{ service_home_dir }}"
       when: selfsigned_enabled and not letsencrypt_enabled
@@ -153,7 +153,7 @@
         owner: "{{ service_user }}"
       with_items:
         - "{{ cert_dir }}/ca/ca-certificate.crt"
-    
+
     -
       name: "Starting Python Simple HTTP server" # Starts the Python Simple HTTP server service.
       when: not ansible_module_running_in_container
@@ -161,7 +161,7 @@
         name: pythonserve # Specifies the service name.
         state: started # Ensures the service is running.
         enabled: true # Enables the service to start on boot.
-    
+
     -
       name: "Checking if Python HTTP server is listening on port {{ startcloud_quick_start_port_forwards[0].guest }}" # Checks if Python HTTP server is listening
       when: not ansible_module_running_in_container
@@ -180,7 +180,7 @@
         state: restarted # Restarts the service.
         daemon_reload: true # Reloads the systemd manager configuration.
         name: cockpit # Specifies the service name.
-    
+
     -
       name: "Copying pythonserver supervisord configuration file"
       when: ansible_module_running_in_container
@@ -202,14 +202,14 @@
         path: "/vagrant/ansible" # Specifies the directory to archive.
         dest: "/vagrant/support-bundle/ansible-roles.zip" # Specifies the destination of the archive.
         format: zip # Uses ZIP format for the archive.
-    
+
     -
       name: "Recording Installers" # Records the contents of the /vagrant/installers directory.
       when: not ansible_module_running_in_container
       ansible.builtin.command: tree -J /vagrant/installers # Executes the tree command to list directory contents.
       register: installers # Stores the output for later use.
       changed_when: false # Indicates that this task does not change the system state.
-    
+
     -
       name: "Writing included installers to /vagrant/support-bundle/installers.json" # Writes the recorded installers to a JSON file.
       when: not ansible_module_running_in_container
@@ -218,14 +218,14 @@
         dest: "/vagrant/support-bundle/installers.json" # Specifies the destination file.
         force: false # Does not overwrite existing files.
         mode: 'a+x'  # Appends to the file and sets execute permission.
-    
+
     -
       name: "Checking if Domino has been autoconfigured"
       register: autoconfigure
       ansible.builtin.stat:
         path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
         get_md5: false
-    
+
     -
       name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log" # Copies the Domino One Touch log to the support bundle.
       become: true # Executes the task with elevated privileges.
@@ -236,13 +236,13 @@
         force: false # Does not overwrite existing files.
         mode: 'a+x' # Appends to the file and sets execute permission.
         remote_src: true # Indicates the source file is on the remote system.
-    
+
     -
       name: "Recording Completed Roles"  # Records the contents of the /vagrant/completed directory.
       ansible.builtin.command: tree -J /vagrant/completed # Executes the tree command to list directory contents.
       register: completed # Stores the output for later use.
       changed_when: false # Indicates that this task does not change the system state.
-    
+
     -
       name: "Writing current completed roles to /vagrant/support-bundle/completed.json" # Writes the recorded completed roles to a JSON file.
       ansible.builtin.copy:
@@ -250,7 +250,7 @@
         dest: "/vagrant/support-bundle/completed.json"  # Specifies the destination file.
         force: false # Does not overwrite existing files.
         mode: 'a+x' # Appends to the file and sets execute permission.
-   
+
     -
       name: "Zip Support Bundle" # Archives the support bundle directory into a ZIP file.
       community.general.archive:
@@ -258,7 +258,7 @@
         path: "/vagrant/support-bundle" # Specifies the directory to archive.
         dest: "{{ python_simple_web_server_path }}/support-bundle.zip" # Specifies the destination of the archive.
         format: zip # Uses ZIP format for the archive.
-    
+
     -
       name: Zip Support Bundle
       community.general.archive:

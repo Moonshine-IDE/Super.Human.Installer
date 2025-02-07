@@ -6,6 +6,8 @@ index_name: welcome.html
 provisioner_name: Ad-Hoc Playbook
 provisioner_version: v0.0.0
 core_provisioner_version: v0.0.0
+domino_server_name: "{{ settings.hostname }}"
+domino_server_domain: "{{ settings.domain }}"
 startcloud_quick_start_port_forwards:
   -
     guest: 8000
