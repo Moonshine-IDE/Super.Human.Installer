@@ -33,7 +33,7 @@ Including an example of how to use your role (for instance, with variables passe
 yaml
 
 hosts: servers roles:
-{ role: username.haxe_install, haxe_version: 4.3.4, additional_haxe_libraries: ['neko', 'lime'] }
+{ role: username.haxe_install, haxe_version: 4.3.6, additional_haxe_libraries: ['neko', 'lime'] }
 ```
 
 ## License
