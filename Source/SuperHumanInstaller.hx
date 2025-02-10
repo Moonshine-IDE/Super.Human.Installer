@@ -384,6 +384,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
 		_additionalServerPage = new AdditionalServerPage();
+		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles );
 		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
 		this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 

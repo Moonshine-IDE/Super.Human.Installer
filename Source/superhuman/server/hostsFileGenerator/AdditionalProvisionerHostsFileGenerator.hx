@@ -61,8 +61,13 @@ class AdditionalProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             DOMINO_SERVER_CLUSTERMATES: 0,
             CERT_SELFSIGNED: ( internalProvisioner.server.url.hostname + "." + internalProvisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
 			
-		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
-			
+            //additional server
+		    DOMINO_IS_ADDITIONAL_INSTANCE: true,
+            DOMINO_ORIGIN_HOSTNAME: defaultProvisionerFieldValue,
+            DOMINO_ORIGIN_DOMAIN: defaultProvisionerFieldValue,
+            DOMINO_SERVER_ID: defaultProvisionerFieldValue,
+			DOMINO_ORIGIN_SERVER_IP: defaultProvisionerFieldValue,
+
             //Domino Variables
             DOMINO_HASH: defaultProvisionerFieldValue,
             DOMINO_INSTALLER: defaultProvisionerFieldValue,

@@ -1,5 +1,7 @@
 package superhuman.components.additionals;
 
+import sys.FileSystem;
+import openfl.events.MouseEvent;
 import superhuman.server.provisioners.ProvisionerType;
 import haxe.io.Path;
 import superhuman.events.SuperHumanApplicationEvent;
@@ -52,24 +54,16 @@ class AdditionalServerPage extends Page
 		buttonNewServerId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
 		buttonNewServerId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING ) ;
         buttonNewServerId.enabled = !_server.userSafeId.locked;
+		buttonNewServerId.addEventListener( TriggerEvent.TRIGGER, _buttonSafeIdTriggered );
 
-		if ( !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {
-
-            rowPreviousSafeId.visible = rowPreviousSafeId.includeInLayout = true;
-            var p = Path.withoutDirectory( SuperHumanInstaller.getInstance().config.user.lastusedsafeid );
-            labelPreviousSafeId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.useprevious', p );
-            labelPreviousSafeId.toolTip = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
-
-        } else {
-
-            rowPreviousSafeId.visible = rowPreviousSafeId.includeInLayout = false;
-
-        }
-
+		labelPreviousSafeId.addEventListener( MouseEvent.CLICK, _labelPreviousSafeIdTriggered );
+		this.refreshLabelPreviousSafeId();
+		
 		rowRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.text' );
         buttonRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.button' );
         buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
         buttonRoles.enabled = !_server.roles.locked;
+		buttonRoles.addEventListener( TriggerEvent.TRIGGER, _buttonRolesTriggered );
 
 		secondLine.width = _width;
 		
@@ -87,11 +81,50 @@ class AdditionalServerPage extends Page
 		labelTitle.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
     }
 
+	function _buttonSafeIdTriggered( e:TriggerEvent ) {
+        _server.locateNotesSafeId( _safeIdLocated );
+    }
+
+	function _safeIdLocated() {
+
+        buttonNewServerId.setValidity( true );
+        buttonNewServerId.icon = ( buttonNewServerId.isValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
+        buttonNewServerId.text = ( buttonNewServerId.isValid() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
+
+		this.refreshLabelPreviousSafeId();
+    }
+
+	function _labelPreviousSafeIdTriggered( e:MouseEvent ) {
+        if ( !FileSystem.exists( SuperHumanInstaller.getInstance().config.user.lastusedsafeid ) ) {
+            SuperHumanInstaller.getInstance().config.user.lastusedsafeid = null;
+        }
+
+        _server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
+        _safeIdLocated();
+    }
 	
+	function _buttonRolesTriggered( e:TriggerEvent ) {
+
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CONFIGURE_ROLES );
+        evt.server = this._server;
+        this.dispatchEvent( evt );
+	}
+
 	function _saveButtonTriggered(e:TriggerEvent) {
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE ) );
     }
+
+	function refreshLabelPreviousSafeId() {
+		if ( !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {
+            rowPreviousSafeId.visible = rowPreviousSafeId.includeInLayout = true;
+            var p = Path.withoutDirectory( SuperHumanInstaller.getInstance().config.user.lastusedsafeid );
+            labelPreviousSafeId.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.useprevious', p );
+			labelPreviousSafeId.toolTip = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
+        } else {
+            rowPreviousSafeId.visible = rowPreviousSafeId.includeInLayout = false;
+        }
+	}
 }
