@@ -32,7 +32,7 @@ hosts:
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: 'https://boxvault.startcloud.com'
-      box_version: 0.0.9
+      box_version: 2025.1.17
 
       # Provider Specific Settings
       provider_type: virtualbox
@@ -126,6 +126,7 @@ hosts:
           mount: /local
           size: 50.0G
           port: 5
+          #driver: virtio-scsi #Only add if your template doesn't already use virtio-scsi(the new templates do)
           volume_name: disk1
 
     provisioning:
@@ -262,6 +263,8 @@ hosts:
       extra_packages: ['htop']
 
       ## Domino Configuration Variables
+      #domino_server_name: "DoMiNO-iS-dVMb" # Defaults to settings.hostname if not set
+      #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: STARTcloud
       #domino_admin_notes_id_password: password
 
@@ -281,6 +284,7 @@ hosts:
       # For use in Domino 14 and above
       ots_generate_server_names:
         - additional-demo.startcloud.com
+      #  - ADDITIONAL-demo.startcloud.com
       
       # For use in Domino 12 and below
       #ots_generate_server_id_count:  1
@@ -349,9 +353,11 @@ hosts:
 
       ## Hosts entries for /etc/hosts
       #etc_hosts_entries:
-      #  - hostname: standalone-demo.startcloud.com
+      #  - hostname: "{{ settings.hostname }}.{{ settings.domain }}"
       #    aliases:
-      #      - standalone-demo
+      #      - "{{ settings.hostname }}"
+      #      - "{{ domino_server_name }}.{{ domino_server_domain }}"
+      #      - "{{ domino_server_name }}"
       #    ip: 192.168.2.255
 
     roles:

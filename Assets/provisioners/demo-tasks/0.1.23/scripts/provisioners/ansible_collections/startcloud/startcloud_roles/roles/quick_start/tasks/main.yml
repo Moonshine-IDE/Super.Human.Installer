@@ -16,20 +16,25 @@
         path: "{{ item }}" # Specifies the path for each directory.
         state: directory # Ensures the directory exists.
         mode: '0755' # Sets the directory permissions.
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
       with_items: # Directories to be created, interpolated with variables from default/main.yml
         - "{{ python_simple_web_server_path }}/images"
         - "{{ python_simple_web_server_path }}/ids"
+        - "{{ python_simple_web_server_path }}/.cache"
+        - "{{ python_simple_web_server_path }}/.cache/pip"
+        - "{{ python_simple_web_server_path }}/.local"
 
     -
       name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
+      become_user: "{{ service_user }}"
+      become: true
       ansible.builtin.pip:
         name: "uploadserver" # Specifies the pip package name.
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
 
     -
       name: "Installing uploadserver for Python Web Server" # Installs the uploadserver package for the Python web server.
-      become_user: "{{ service_user }}"
-      become: true
       ansible.builtin.pip:
         name: "uploadserver" # Specifies the pip package name.
         extra_args: --user --break-system-packages # Installs the package for the current user and allows breaking system packages if necessary.
