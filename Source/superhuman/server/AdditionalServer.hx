@@ -66,4 +66,12 @@ class AdditionalServer extends Server {
         sc._setServerStatus();
         return sc;
     }
+
+    override public function saveHostsFile() {
+
+        if ( isValid() ) 
+        {
+            cast(this.provisioner, AdditionalProvisioner).saveHostsFile();
+        }
+    }
 }

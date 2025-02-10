@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+import superhuman.server.provisioners.AdditionalProvisioner;
+import superhuman.server.provisioners.DemoTasks;
 import feathers.controls.BitmapImage;
 import openfl.Assets;
 import champaign.core.logging.Logger;
@@ -134,9 +136,7 @@ class ServerList extends ListView {
     }
 
     function _forwardEvent( e:SuperHumanApplicationEvent ) {
-
         this.dispatchEvent( e );
-
     }
 
 }
@@ -393,6 +393,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonConfigureTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CONFIGURE_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -401,6 +402,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonConsoleTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_CONSOLE );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         event.console = _console;
         this.dispatchEvent( event );
@@ -410,14 +412,16 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonDeleteTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.DELETE_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
     }
     
     function _buttonFtpTriggered( e:TriggerEvent ) {
-    		var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_FTP_CLIENT );
-        		event.server = _server;
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_FTP_CLIENT );
+        event.provisionerType = _server.provisioner.type;
+        event.server = _server;
         this.dispatchEvent( event );
        // _server.openFtpClient('/Applications/FileZilla.app/Contents/MacOS/filezilla');
     }
@@ -425,6 +429,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonDestroyTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.DESTROY_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -441,6 +446,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonOpenDirTriggered( e:TriggerEvent ) {
     	
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
         
@@ -449,6 +455,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonProvisionTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.PROVISION_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -459,6 +466,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         #if debug
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.RESET_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -477,6 +485,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonStartTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.START_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -485,6 +494,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonStopTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.STOP_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         event.forced = e.shiftKey;
         this.dispatchEvent( event );
@@ -494,6 +504,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonSuspendTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SUSPEND_SERVER );
+        event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -502,6 +513,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonSyncTriggered( e:TriggerEvent ) {
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SYNC_SERVER );
+        event.provisionerType = _server.provisioner.type;    
         event.server = _server;
         this.dispatchEvent( event );
 
@@ -509,12 +521,14 @@ class ServerItem extends LayoutGroupItemRenderer {
 
     function _copyToClipboard( e:SuperHumanApplicationEvent ) {
 
+        e.provisionerType = _server.provisioner.type;
         this.dispatchEvent( e );
 
     }
 
     function _closeConsole( e:SuperHumanApplicationEvent ) {
 
+        e.provisionerType = _server.provisioner.type;
         this.dispatchEvent( e );
 
     }
@@ -633,7 +647,21 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
                 _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = true;
-                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.runningwitherrors', ( _server.provisioned ) ? '(IP: ${_server.provisioner.ipAddress})' : '' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', ( _server.provisioned ) ? '(IP: ${_server.provisioner.ipAddress})' : '' );
+
+                var ipAddress:String = "";
+                switch (_server.provisioner.type)
+                {
+                    case AdditionalProvisioner:
+                        {
+                            ipAddress = cast(_server.provisioner, DemoTasks).ipAddress;
+
+                        }
+                        default:
+                        {
+                            ipAddress = cast(_server.provisioner, AdditionalProvisioner).ipAddress;
+                        }
+                }
+                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.runningwitherrors', ( _server.provisioned ) ? '(IP: ${ipAddress})' : '' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', ( _server.provisioned ) ? '(IP: ${ipAddress})' : '' );
                 
 
             case ServerStatus.Unconfigured:
@@ -687,11 +715,28 @@ class ServerItem extends LayoutGroupItemRenderer {
         if ( _server != null && _elapsedTimeLabel != null && _elapsedTimeLabel.visible == true ) {
 
             var elapsed = StrTools.timeToFormattedString( _server.vagrantUpElapsedTime );
-            var percentage = StrTools.calculatePercentage( _server.provisioner.numberOfStartedTasks, _server.provisioner.numberOfTasks );
+            
+            var numberOfStartedTasks:Int = 0;
+            var numberOfTasks:Int = 0;
+
+            switch (_server.provisioner.type)
+            {
+                case AdditionalProvisioner:
+                    {
+                        numberOfStartedTasks = cast(_server.provisioner, DemoTasks).numberOfStartedTasks;
+                        numberOfTasks = cast(_server.provisioner, DemoTasks).numberOfTasks;
+                    }
+                    default:
+                    {
+                        numberOfStartedTasks = cast(_server.provisioner, AdditionalProvisioner).numberOfStartedTasks;
+                        numberOfTasks = cast(_server.provisioner, AdditionalProvisioner).numberOfTasks;  
+                    }
+            }
+            //var percentage = StrTools.calculatePercentage( _server.provisioner.numberOfStartedTasks, _server.provisioner.numberOfTasks );
             if ( _server.provisionedBeforeStart )
                 _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtime', '${elapsed}' )
             else
-                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtimewithtasks', '${elapsed}', '${_server.provisioner.numberOfStartedTasks+1}/${_server.provisioner.numberOfTasks+1}' );
+                _elapsedTimeLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.elapsedtimewithtasks', '${elapsed}', '${numberOfStartedTasks+1}/${numberOfTasks+1}' );
 
         }
 

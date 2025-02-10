@@ -256,6 +256,10 @@ class AbstractProvisioner {
 
     }
 
+    public function generateHostsFileContent():String {
+        return "";
+    }
+
     public function toString():String {
 
         return '[AbstractProvisioner(v${this.version})]';

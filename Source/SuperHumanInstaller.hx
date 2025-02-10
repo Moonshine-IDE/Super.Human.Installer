@@ -577,7 +577,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _configureServer( e:SuperHumanApplicationEvent ) {
 
-		_showConfigureServer( e.server );
+		switch ( e.provisionerType ) {
+			case ProvisionerType.AdditionalProvisioner:
+				_showConfigureAdditionalServer( e.server );
+			default:
+				_showConfigureServer( e.server );
+		}
 
 	}
 

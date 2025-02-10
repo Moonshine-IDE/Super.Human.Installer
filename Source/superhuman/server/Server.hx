@@ -30,6 +30,7 @@
 
 package superhuman.server;
 
+import superhuman.server.provisioners.AbstractProvisioner;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.application.ApplicationData;
 import prominic.sys.io.Executor;
@@ -316,7 +317,7 @@ class Server {
     public var provisionedBeforeStart( get, never ):Bool;
     function get_provisionedBeforeStart() return _provisionedBeforeStart;
 
-    public var provisioner( get, never ):DemoTasks;
+    public var provisioner( get, never ):AbstractProvisioner;
     function get_provisioner() return _provisioner;
 
     public var roles( get, never ):Property<Array<RoleData>>;
@@ -717,7 +718,7 @@ class Server {
 
         if ( isValid() ) 
         {
-        		this.provisioner.saveHostsFile();
+            cast(this.provisioner, DemoTasks).saveHostsFile();
         }
     }
 

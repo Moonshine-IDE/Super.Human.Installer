@@ -274,7 +274,7 @@ class DemoTasks extends AbstractProvisioner {
 
     }
 
-    public function generateHostsFileContent():String {
+    override public function generateHostsFileContent():String {
 
         _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
 
