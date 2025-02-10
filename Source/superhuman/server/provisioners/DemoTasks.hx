@@ -30,7 +30,6 @@
 
 package superhuman.server.provisioners;
 
-import superhuman.server.provisioners.roles.RolesUtil;
 import superhuman.browser.Browsers;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
@@ -204,9 +203,9 @@ class DemoTasks extends AbstractProvisioner {
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
     
-    public function new( sourcePath:String, targetPath:String, server:Server ) {
+    public function new(type:ProvisionerType, sourcePath:String, targetPath:String, server:Server ) {
 
-        super( superhuman.server.provisioners.ProvisionerType.DemoTasks, sourcePath, targetPath, server );
+        super( type, sourcePath, targetPath, server );
 
         _versionFile = "version.rb";
         

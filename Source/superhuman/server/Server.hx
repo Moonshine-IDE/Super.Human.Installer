@@ -30,6 +30,7 @@
 
 package superhuman.server;
 
+import superhuman.server.provisioners.ProvisionerType;
 import superhuman.application.ApplicationData;
 import prominic.sys.io.Executor;
 import genesis.application.managers.LanguageManager;
@@ -99,7 +100,7 @@ class Server {
 
         if ( data.provisioner == null ) {
 
-            sc._provisioner = new DemoTasks( latestDemoTasks.root, sc._serverDir, sc );
+            sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, latestDemoTasks.root, sc._serverDir, sc );
 
         } else {
 
@@ -107,13 +108,13 @@ class Server {
 
             if ( provisioner != null ) {
 
-                sc._provisioner = new DemoTasks( provisioner.root, sc._serverDir, sc );
+                sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, provisioner.root, sc._serverDir, sc );
 
             } else {
 
                 // The server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                sc._provisioner = new DemoTasks( null, sc._serverDir, sc );
+                sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, null, sc._serverDir, sc );
 
             }
 
@@ -572,7 +573,7 @@ class Server {
 			}
 		}
     			
-    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + DemoTasks.HOSTS_FILE);
+    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + superhuman.server.provisioners.DemoTasks.HOSTS_FILE);
     		var hosts:TObjectMap<String, Dynamic> = hostsFileMap.get('hosts')[0];
     		var settings:TObjectMap<String, Dynamic> = hosts.get('settings');
     		var userName = settings.get('vagrant_user');
@@ -698,7 +699,7 @@ class Server {
         if ( !_provisioner.hostFileExists ) _provisioner.saveHostsFile();
 
         if ( console != null ) {
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( DemoTasks.HOSTS_FILE ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( superhuman.server.provisioners.DemoTasks.HOSTS_FILE ) ) );
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( this._combinedVirtualMachine.value.virtualBoxMachine ) ) );
         }
 

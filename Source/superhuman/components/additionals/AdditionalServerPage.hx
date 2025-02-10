@@ -44,7 +44,7 @@ class AdditionalServerPage extends Page
 		inputHostname.prompt = LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.prompt' );
 
 		rowExistingDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.text' );
-		inputExistingDominoServer.prompt = LanguageManager.getInstance().getString( 'serverconfigpage.form.orgcert.prompt' );
+		inputExistingDominoServer.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.prompt' );
 
 		rowExistingServerIp.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.text' );
 		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkip.prompt' );
@@ -102,7 +102,7 @@ class AdditionalServerPage extends Page
         _server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
         _safeIdLocated();
     }
-	
+
 	function _buttonRolesTriggered( e:TriggerEvent ) {
 
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CONFIGURE_ROLES );
@@ -111,6 +111,27 @@ class AdditionalServerPage extends Page
 	}
 
 	function _saveButtonTriggered(e:TriggerEvent) {
+		buttonNewServerId.setValidity( _server.safeIdExists() );
+        buttonRoles.setValidity( _server.areRolesValid() );
+
+        if ( !form.isValid() || !_server.safeIdExists() || !_server.areRolesValid() ) {
+            return;
+        }
+
+        // Making sure the event is fired
+        var a = _server.roles.value.copy();
+        _server.roles.value = a;
+        _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
+        _server.hostname.value = StringTools.trim( inputHostname.text );
+      //  _server.organization.value = StringTools.trim( _inputOrganization.text );
+     //   var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+      //  _server.updateProvisioner( dvv.data );
+
+        SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
+        
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
+        evt.server = _server;
+        this.dispatchEvent( evt );
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {

@@ -21,7 +21,7 @@ class AdditionalServer extends Server {
 
         if ( data.provisioner == null ) {
 
-            sc._provisioner = new AdditionalProvisioner( latestDemoTasks.root, sc._serverDir, sc );
+            sc._provisioner = new AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, latestDemoTasks.root, sc._serverDir, sc );
 
         } else {
 
@@ -29,13 +29,13 @@ class AdditionalServer extends Server {
 
             if ( provisioner != null ) {
 
-                sc._provisioner = new AdditionalProvisioner( provisioner.root, sc._serverDir, sc );
+                sc._provisioner = new AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, provisioner.root, sc._serverDir, sc );
 
             } else {
 
                 // The server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                sc._provisioner = new AdditionalProvisioner( null, sc._serverDir, sc );
+                sc._provisioner = new AdditionalProvisioner( ProvisionerType.AdditionalProvisioner, null, sc._serverDir, sc );
 
             }
 

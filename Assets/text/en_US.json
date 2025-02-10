@@ -149,7 +149,8 @@
                 "text": "Hostname (Should match new ID)*"
             },
             "existingdominoservername": {
-                "text": "Existing Domino server name*"
+                "text": "Existing Domino server name*",
+                "prompt": "domino-1.jupitermoons.com/Jupiter"
             },
             "existingserveripaddress": {
                 "text": "Existing server IP address"
