@@ -1,5 +1,6 @@
 package superhuman.server;
 
+import prominic.core.primitives.ValidatingProperty;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import haxe.io.Path;
@@ -9,8 +10,30 @@ import superhuman.server.provisioners.AdditionalProvisioner;
 
 class AdditionalServer extends Server {
 
-    static public function create( data:ServerData, rootDir:String ):Server {
-         var sc = new Server();
+    static final _HOSTNAME:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$/;
+
+    override function get_url():ServerURL {
+        return getHostNameServerUrl(hostname.value);
+    }
+
+    var _existingServerName:ValidatingProperty;
+
+    public var existingServerName( get, never ):ValidatingProperty;
+    function get_existingServerName() return _existingServerName;
+
+    function new() {
+        super();
+
+        _existingServerName = new ValidatingProperty( "", _HOSTNAME, 1 );
+        _existingServerName.onChange.add( _propertyChanged );
+        
+        _hostname.onChange.remove(_propertyChanged);
+        _hostname = new ValidatingProperty( "", _HOSTNAME, 1 );
+        _hostname.onChange.add( _propertyChanged );
+    }
+
+    static public function create( data:ServerData, rootDir:String ):AdditionalServer {
+         var sc = new AdditionalServer();
 
         sc._id = data.server_id;
         sc._serverDir = Path.normalize( rootDir + "/additional-provisioner/" + sc._id );
@@ -73,5 +96,29 @@ class AdditionalServer extends Server {
         {
             cast(this.provisioner, AdditionalProvisioner).saveHostsFile();
         }
+    }
+
+    public static function getHostNameServerUrl(hostname:String):ServerURL
+    {
+        var result:ServerURL = { domainName: "", hostname: "", path: "" };
+        
+        // Split the URL by "/" to separate path
+        var urlParts = hostname.split("/");
+        var hostPart = urlParts[0];
+        if (urlParts.length > 1) {
+            result.path = urlParts[1];
+        }
+
+        // Split the host part by dots
+        var a = hostPart.split(".");
+
+        if (a.length == 3) {
+            result.hostname = a[0];
+            result.domainName = a[1] + "." + a[2];
+        } else {
+            result.hostname = "configure";
+            result.domainName = "host.name";
+        }
+        return result;
     }
 }

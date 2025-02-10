@@ -1,5 +1,6 @@
 package superhuman.components.additionals;
 
+import superhuman.server.AdditionalServer;
 import sys.FileSystem;
 import openfl.events.MouseEvent;
 import superhuman.server.provisioners.ProvisionerType;
@@ -7,8 +8,6 @@ import haxe.io.Path;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.managers.ProvisionerManager;
-import superhuman.server.Server;
-import lime.ui.FileDialogType;
 import genesis.application.components.Page;
 import  superhuman.application.ApplicationData;
 import genesis.application.managers.LanguageManager;
@@ -20,7 +19,7 @@ class AdditionalServerPage extends Page
 {
 	final _width:Float = GenesisApplicationTheme.GRID * 100;
 		
-	private var _server:Server;
+	private var _server:AdditionalServer;
 	private var _appData:ApplicationData;
 	
 	public function new()
@@ -41,7 +40,7 @@ class AdditionalServerPage extends Page
         };
 
 		rowCoreComponentHostname.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.text' );
-		inputHostname.prompt = LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.prompt' );
+		inputHostname.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.prompt' );
 
 		rowExistingDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.text' );
 		inputExistingDominoServer.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.prompt' );
@@ -75,7 +74,7 @@ class AdditionalServerPage extends Page
 	}
 
 
-	public function setServer( server:Server ) {
+	public function setServer( server:AdditionalServer ) {
         _server = server;
 
 		labelTitle.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
@@ -123,9 +122,10 @@ class AdditionalServerPage extends Page
         _server.roles.value = a;
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         _server.hostname.value = StringTools.trim( inputHostname.text );
-      //  _server.organization.value = StringTools.trim( _inputOrganization.text );
-     //   var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-      //  _server.updateProvisioner( dvv.data );
+		_server.existingServerName.value = StringTools.trim( rowExistingDominoServer.text );
+	
+        var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
+        _server.updateProvisioner( dvv.data );
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         

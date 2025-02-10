@@ -146,7 +146,8 @@
     "additionalserverconfigpage": {
         "form": {
             "hostname": {
-                "text": "Hostname (Should match new ID)*"
+                "text": "Hostname (Should match new ID)*",
+                "prompt": "additional.jupitermoons.com"
             },
             "existingdominoservername": {
                 "text": "Existing Domino server name*",

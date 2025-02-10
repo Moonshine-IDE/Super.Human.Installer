@@ -30,6 +30,7 @@
 
 package;
 
+import superhuman.server.AdditionalServer;
 import openfl.Assets;
 import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
@@ -579,7 +580,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		switch ( e.provisionerType ) {
 			case ProvisionerType.AdditionalProvisioner:
-				_showConfigureAdditionalServer( e.server );
+				_showConfigureAdditionalServer( cast(e.server, AdditionalServer) );
 			default:
 				_showConfigureServer( e.server );
 		}
@@ -594,7 +595,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	function _showConfigureAdditionalServer( server:Server ) {
+	function _showConfigureAdditionalServer( server:AdditionalServer ) {
 
 		_additionalServerPage.setServer( server );
 		//_configPage.updateContent( true );
@@ -1143,7 +1144,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _createAdditionalDominoServer( e:SuperHumanApplicationEvent ) {
 		Logger.info( '${this}: Creating Additional Domino server...' );
 
-		var server:Server = _createServerAndSaveConfig( e.provisionerType );
+		var server:AdditionalServer = cast(_createServerAndSaveConfig( e.provisionerType ), AdditionalServer);
 
 		_showConfigureAdditionalServer( server );
 	}
