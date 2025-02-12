@@ -572,7 +572,7 @@ class HostsFileGenerator {
          	NETWORK_NETMASK: ( provisioner.server.dhcp4.value ) ? "255.255.255.0" : provisioner.server.networkNetmask.value,
          	NETWORK_GATEWAY: ( provisioner.server.dhcp4.value ) ? "" : provisioner.server.networkGateway.value,
             // Always true, never false
-            NETWORK_DHCP4: internalProvisioner.server.dhcp4.value,
+            NETWORK_DHCP4: provisioner.server.dhcp4.value,
          	NETWORK_BRIDGE: provisioner.server.networkBridge.value,
          	
          	//dns
