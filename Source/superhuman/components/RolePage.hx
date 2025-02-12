@@ -153,7 +153,9 @@ class RolePage extends Page {
 
     function _buttonCloseTriggered( e:TriggerEvent ) {
 
-        this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_ROLES ) );
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_ROLES );
+        event.provisionerType = _server.provisioner.type;
+        this.dispatchEvent( event );
 
     }
 

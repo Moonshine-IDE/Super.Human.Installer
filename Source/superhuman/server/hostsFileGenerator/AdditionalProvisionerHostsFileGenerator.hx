@@ -1,22 +1,31 @@
 package superhuman.server.hostsFileGenerator;
 
+import superhuman.server.provisioners.AdditionalProvisioner;
 import superhuman.server.provisioners.DemoTasks;
 import superhuman.server.provisioners.roles.RolesUtil;
 import superhuman.server.provisioners.AbstractProvisioner;
 import haxe.Template;
 import haxe.io.Path;
+import superhuman.server.AdditionalServer;
+import superhuman.server.ServerURL;
 
 class AdditionalProvisionerHostsFileGenerator extends AbstractHostsFileGenerator {
     static public function generateContent( sourceTemplate:String, provisioner:AbstractProvisioner ):String {
 
         var output:String = null;
-        var internalProvisioner:DemoTasks = cast(provisioner, DemoTasks);
+        var internalProvisioner:AdditionalProvisioner = cast(provisioner, AdditionalProvisioner);
         
         var defaultProvisionerFieldValue:String = null;
         var defaultRoleFieldValue:Dynamic = false;
 
         var syncMethod = internalProvisioner.server.syncMethod;
-
+        var existingServerUrl:ServerURL = cast(internalProvisioner.server, AdditionalServer).getExistingServerUrl();
+        var existingDominoOriginHostname:String = existingServerUrl != null ? existingServerUrl.hostname : defaultProvisionerFieldValue;
+        var existingDominoOriginDomain:String = existingServerUrl != null ? existingServerUrl.domainName : defaultProvisionerFieldValue;
+        var existingDominoServerId:String = DemoTasks._SAFE_ID_FILE;
+        var existingDominoOriginServerIp:String = cast(internalProvisioner.server, AdditionalServer).existingServerIpAddress != null ? 
+                                 cast(internalProvisioner.server, AdditionalServer).existingServerIpAddress.value :
+                                 defaultProvisionerFieldValue;
         var replace = {
 
             USER_EMAIL: internalProvisioner.server.userEmail.value,
@@ -63,10 +72,10 @@ class AdditionalProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
 			
             //additional server
 		    DOMINO_IS_ADDITIONAL_INSTANCE: true,
-            DOMINO_ORIGIN_HOSTNAME: defaultProvisionerFieldValue,
-            DOMINO_ORIGIN_DOMAIN: defaultProvisionerFieldValue,
-            DOMINO_SERVER_ID: defaultProvisionerFieldValue,
-			DOMINO_ORIGIN_SERVER_IP: defaultProvisionerFieldValue,
+            DOMINO_ORIGIN_HOSTNAME: existingDominoOriginHostname,
+            DOMINO_ORIGIN_DOMAIN: existingDominoOriginDomain,
+            DOMINO_SERVER_ID: existingDominoServerId,
+			DOMINO_ORIGIN_SERVER_IP: existingDominoOriginServerIp,
 
             //Domino Variables
             DOMINO_HASH: defaultProvisionerFieldValue,

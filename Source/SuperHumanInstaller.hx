@@ -818,8 +818,13 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _closeRolePage( e:SuperHumanApplicationEvent ) {
 
 		this.selectedPageId = this.previousPageId;
-		_configPage.updateContent();
 
+		switch ( e.provisionerType ) {
+			case ProvisionerType.AdditionalProvisioner:
+				_additionalServerPage.updateContent();
+			default:
+				_configPage.updateContent();
+		}
 	}
 
 	function _configureBrowserPage(e:SuperHumanApplicationEvent) {

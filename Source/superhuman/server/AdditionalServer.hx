@@ -10,7 +10,8 @@ import superhuman.server.provisioners.AdditionalProvisioner;
 
 class AdditionalServer extends Server {
 
-    static final _HOSTNAME:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$/;
+    public static final _HOSTNAME:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$/;
+    public static final _HOSTNAME_WITH_PATH:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*(\/.+)?$/;
 
     override function get_url():ServerURL {
         return getHostNameServerUrl(hostname.value);
@@ -29,15 +30,15 @@ class AdditionalServer extends Server {
     function new() {
         super();
 
-        _existingServerName = new ValidatingProperty( "", _HOSTNAME, true, 1 );
+        _hostname.onChange.remove(_propertyChanged);
+        _hostname = new ValidatingProperty( "", _HOSTNAME, true, 1 );
+        _hostname.onChange.add( _propertyChanged );
+
+        _existingServerName = new ValidatingProperty( "", _HOSTNAME_WITH_PATH, true, 1 );
         _existingServerName.onChange.add( _propertyChanged );
 
         _existingServerIpAddress = new ValidatingProperty( "", Server._VK_IP, true );
         _existingServerIpAddress.onChange.add( _propertyChanged );
-
-        _hostname.onChange.remove(_propertyChanged);
-        _hostname = new ValidatingProperty( "", _HOSTNAME, true, 1 );
-        _hostname.onChange.add( _propertyChanged );
     }
 
     static public function create( data:ServerData, rootDir:String ):AdditionalServer {
@@ -100,6 +101,11 @@ class AdditionalServer extends Server {
         return sc;
     }
 
+    public function getExistingServerUrl():ServerURL
+    {
+        return getHostNameServerUrl(_existingServerName.value);
+    }
+
     override public function saveHostsFile() {
 
         if ( isValid() ) 
@@ -112,7 +118,6 @@ class AdditionalServer extends Server {
         var sd:ServerData = super.getData();
             sd.existingServerName = _existingServerName.value;
             sd.existingServerIpAddress = _existingServerIpAddress.value;
-            
         return sd;
     }
 

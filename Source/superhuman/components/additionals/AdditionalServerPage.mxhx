@@ -33,7 +33,7 @@
 					<components:layoutData>
 						<f:HorizontalLayoutData percentWidth="60"/>
 					</components:layoutData>
-					<components:GenesisFormTextInput id="inputHostname" minLength="1" restrict="a-zA-Z0-9.-" />
+					<components:GenesisFormTextInput id="inputHostname" minLength="1"  />
 				</components:GenesisFormRowContent>
 			</components:content>
 		</components:GenesisFormRow>
@@ -43,7 +43,7 @@
 					<components:layoutData>
 						<f:HorizontalLayoutData percentWidth="60"/>
 					</components:layoutData>
-					<components:GenesisFormTextInput id="inputExistingDominoServer" minLength="1" restrict="a-zA-Z0-9.-" />
+					<components:GenesisFormTextInput id="inputExistingDominoServer" minLength="1"  />
 				</components:GenesisFormRowContent>
 			</components:content>
 		</components:GenesisFormRow>
