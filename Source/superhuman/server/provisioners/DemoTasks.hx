@@ -300,7 +300,10 @@ class DemoTasks extends AbstractProvisioner {
 	
     public function saveHostsFile() {
 
-        if ( _server.isValid() ) this._saveHostsFile();
+        if ( _server.isValid() ) 
+        {
+            this._saveHostsFile();
+        }
 
     }
 

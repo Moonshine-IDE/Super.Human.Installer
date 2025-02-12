@@ -86,6 +86,8 @@ class AdditionalServerPage extends Page
 
         super.updateContent();
 
+		if (form == null) return;
+
 		labelTitle.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
 		if ( forced || ( inputHostname.text == null || inputHostname.text == "" ) ) inputHostname.text = _server.hostname.value;
 	//	inputHostname.variant = null;
@@ -101,7 +103,6 @@ class AdditionalServerPage extends Page
 
 		//buttonNewServerId.variant = null;
 		buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
-		buttonRoles.update();
 		buttonNewServerId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
 		buttonNewServerId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
 
@@ -123,19 +124,21 @@ class AdditionalServerPage extends Page
 
 		if ( dropdownCoreComponentVersion.selectedIndex == -1 || forced ) {
 
-			for ( i in 0...dropdownCoreComponentVersion.dataProvider.length ) {
-
-				var d:ProvisionerDefinition = dropdownCoreComponentVersion.dataProvider.get( i );
-
-				if ( d.data.version == _server.provisioner.version ) {
-
-					dropdownCoreComponentVersion.selectedIndex = i;
-					break;
-
+			if (dropdownCoreComponentVersion.dataProvider != null)
+			{
+				for ( i in 0...dropdownCoreComponentVersion.dataProvider.length ) {
+	
+					var d:ProvisionerDefinition = dropdownCoreComponentVersion.dataProvider.get( i );
+	
+					if ( d.data.version == _server.provisioner.version ) {
+	
+						dropdownCoreComponentVersion.selectedIndex = i;
+						break;
+	
+					}
+	
 				}
-
 			}
-
 		}
 
 		dropdownCoreComponentVersion.enabled = !_server.hostname.locked;

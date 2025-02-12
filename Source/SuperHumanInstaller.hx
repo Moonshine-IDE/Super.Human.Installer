@@ -599,7 +599,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _showConfigureAdditionalServer( server:AdditionalServer ) {
 
 		_additionalServerPage.setServer( server );
-		//_configPage.updateContent( true );
+		_additionalServerPage.updateContent( true );
 		this.selectedPageId = PAGE_ADDITIONAL_SERVER;
 
 	}
