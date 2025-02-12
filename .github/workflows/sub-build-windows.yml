@@ -107,7 +107,7 @@ jobs:
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.71
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.73
           pushd .
           cd C:\hostedtoolcache\windows\haxe\${{env.haxe_version}}\x64\lib\hxcpp\git\tools\hxcpp
           haxe compile.hxml
