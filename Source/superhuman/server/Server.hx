@@ -75,7 +75,7 @@ class Server {
     static final _VK_DOMAIN:EReg = ~/^[a-zA-Z0-9]+\.[a-zA-Z0-9.-_]+$/;
     static final _VK_HOSTNAME:EReg = ~/^(?:[a-zA-Z0-9\-]+)((\.{1})([a-zA-Z0-9\-]+)(\.{1})([a-zA-Z0-9\-]{2,})){0,1}([^-\.])$/;
     static final _VK_HOSTNAME_FULL:EReg = ~/^(?!\W)(?:[a-zA-Z0-9\-]+)(?:\.{0,1})(?:[a-zA-Z0-9\-]+)((?:\.{0,1})(?:[a-zA-Z]+)){0,1}(?:[^\W])$/;
-    static final _VK_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    public static final _VK_IP:EReg = ~/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
     static final _VK_NAME:EReg = ~/^[a-zA-Z0-9 _\-.]*$/;
     static final _VK_NAME_ALPHANUMERIC:EReg = ~/^[a-zA-Z0-9]*$/;
     static final _VK_SERVER_NAME:EReg = ~/^[a-zA-Z0-9 _-]*$/;
@@ -478,8 +478,9 @@ class Server {
             dhcp4: this._dhcp4.value,
             provisioner: this._provisioner.data,
             disable_bridge_adapter: this._disableBridgeAdapter.value,
-            syncMethod: this._syncMethod
-
+            syncMethod: this._syncMethod,
+            existingServerName: "",
+            existingServerIpAddress: ""
         };
 
         return data;

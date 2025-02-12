@@ -253,7 +253,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		for ( s in _config.servers ) {
 
-			var server = ServerManager.getInstance().createServer( s );
+			var server = ServerManager.getInstance().createServer( s, s.provisioner.type );
 			server.onUpdate.add( onServerPropertyChanged );
 
 		}
@@ -386,6 +386,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_additionalServerPage = new AdditionalServerPage();
 		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles );
+		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION, _saveServerConfiguration );
 		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
 		this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 

@@ -43,6 +43,8 @@ typedef ServerData = {
     ?server_organization:String,
     server_id:Int,
     server_hostname:String,
+    existingServerName:String,
+    existingServerIpAddress:String,
 
     ?dhcp4:Bool,
     ?dhcp6:Bool,

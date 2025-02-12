@@ -38,6 +38,8 @@ class AdditionalProvisioner extends DemoTasks {
 			user_email: "",
             provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ].data,
             syncMethod: SyncMethod.Rsync,
+			existingServerName: "",
+			existingServerIpAddress: ""
 		};
 
     }

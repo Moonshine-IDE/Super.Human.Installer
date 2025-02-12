@@ -1,18 +1,18 @@
 package superhuman.components.additionals;
 
-import superhuman.server.AdditionalServer;
 import sys.FileSystem;
 import openfl.events.MouseEvent;
 import superhuman.server.provisioners.ProvisionerType;
-import haxe.io.Path;
-import superhuman.events.SuperHumanApplicationEvent;
-import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.managers.ProvisionerManager;
+import superhuman.server.definitions.ProvisionerDefinition;
+import haxe.io.Path;
 import genesis.application.components.Page;
 import  superhuman.application.ApplicationData;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import feathers.events.TriggerEvent;
+import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.server.AdditionalServer;
 
 @:build(mxhx.macros.MXHXComponent.build())
 class AdditionalServerPage extends Page
@@ -123,14 +123,15 @@ class AdditionalServerPage extends Page
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         _server.hostname.value = StringTools.trim( inputHostname.text );
 		_server.existingServerName.value = StringTools.trim( rowExistingDominoServer.text );
-	
+		_server.existingServerIpAddress.value = StringTools.trim( inputExistingServerIp.text );
+        
         var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
         _server.updateProvisioner( dvv.data );
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
-        evt.server = _server;
+        	evt.server = _server;
         this.dispatchEvent( evt );
 	}
 	

@@ -122,6 +122,8 @@ class DemoTasks extends AbstractProvisioner {
 			user_email: "",
             provisioner: ProvisionerManager.getBundledProvisioners()[ 0 ].data,
             syncMethod: SyncMethod.Rsync,
+            existingServerName: "",
+            existingServerIpAddress: ""
 		};
 
     }

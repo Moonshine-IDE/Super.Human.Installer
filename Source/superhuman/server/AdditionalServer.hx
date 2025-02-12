@@ -21,14 +21,22 @@ class AdditionalServer extends Server {
     public var existingServerName( get, never ):ValidatingProperty;
     function get_existingServerName() return _existingServerName;
 
+    var _existingServerIpAddress:ValidatingProperty;
+
+    public var existingServerIpAddress( get, never ):ValidatingProperty;
+    function get_existingServerIpAddress() return _existingServerIpAddress;
+
     function new() {
         super();
 
-        _existingServerName = new ValidatingProperty( "", _HOSTNAME, 1 );
+        _existingServerName = new ValidatingProperty( "", _HOSTNAME, true, 1 );
         _existingServerName.onChange.add( _propertyChanged );
-        
+
+        _existingServerIpAddress = new ValidatingProperty( "", Server._VK_IP, true );
+        _existingServerIpAddress.onChange.add( _propertyChanged );
+
         _hostname.onChange.remove(_propertyChanged);
-        _hostname = new ValidatingProperty( "", _HOSTNAME, 1 );
+        _hostname = new ValidatingProperty( "", _HOSTNAME, true, 1 );
         _hostname.onChange.add( _propertyChanged );
     }
 
@@ -64,6 +72,8 @@ class AdditionalServer extends Server {
 
         }
 
+        sc._existingServerName.value = data.existingServerName;
+        sc._existingServerIpAddress.value = data.existingServerIpAddress;
         sc._hostname.value = data.server_hostname;
         sc._memory.value = data.resources_ram;
         sc._nameServer1.value = data.network_dns_nameserver_1;
@@ -96,6 +106,14 @@ class AdditionalServer extends Server {
         {
             cast(this.provisioner, AdditionalProvisioner).saveHostsFile();
         }
+    }
+
+    override public function getData():ServerData {
+        var sd:ServerData = super.getData();
+            sd.existingServerName = _existingServerName.value;
+            sd.existingServerIpAddress = _existingServerIpAddress.value;
+            
+        return sd;
     }
 
     public static function getHostNameServerUrl(hostname:String):ServerURL
