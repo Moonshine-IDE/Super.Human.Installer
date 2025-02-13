@@ -21,7 +21,7 @@
         - "{{ cert_dir }}/jks"
         - "{{ cert_dir }}/combined"
         - "{{ cert_dir }}/ca"
-    
+
     -
       name: "Using existing Certificate"
       when: not selfsigned_enabled and not letsencrypt_enabled
@@ -34,7 +34,7 @@
             - "{{ cert_dir }}/key/default-signed.key"
             - "{{ cert_dir }}/crt/default-signed.crt"
             - "{{ cert_dir }}/ca/default-signed.ca"
-    
+
         -
           name: "Copying Signed SSL Key"
           ansible.builtin.copy:
@@ -43,8 +43,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Copying Signed SSL crt"
           ansible.builtin.copy:
@@ -53,8 +53,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Copying Signed SSL CA"
           ansible.builtin.copy:
@@ -63,8 +63,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Generating Signed PKCS12 file"
           community.crypto.openssl_pkcs12:
@@ -79,7 +79,7 @@
             friendly_name: 'pkcs12_file'
             owner: "{{ service_user }}"
             mode: '0777'
-    
+
         -
           name: "Copying Signed SSL PFX"
           ansible.builtin.copy:
@@ -88,8 +88,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Parsing PKCS12 file to concatenated PEM"
           community.crypto.openssl_pkcs12:
@@ -99,7 +99,7 @@
             state: present
             owner: "{{ service_user }}"
             mode: '0777'
-    
+
         -
           name: "Copying Combined cert"
           ansible.builtin.copy:
@@ -108,8 +108,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Creating a keystore for the given certificate/private key pair"
           become: true
@@ -123,7 +123,7 @@
             dest: "{{ cert_dir }}/jks/default-signed.jks"
           environment:
             PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
-    
+
         -
           name: "Copying JKS"
           ansible.builtin.copy:
@@ -132,12 +132,34 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
     -
       name: "Generating Self Signed Certificate"
       when: selfsigned_enabled and not letsencrypt_enabled
       block:
+        -
+          name: "Generating Certificate Authority"
+          when: not generate_self_signed_certificate_authority
+          block:
+            -
+              name: "Copying root CA certificate to trusted certificates directory"
+              ansible.builtin.copy:
+                src: "ssls/ca/ca-certificate.key"
+                dest: "{{ cert_dir }}/ca/ca-certificate.key"
+                owner: root
+                group: root
+                mode: '0644'
+
+            -
+              name: "Copying root CA certificate to trusted certificates directory"
+              ansible.builtin.copy:
+                src: "ssls/ca/ca-certificate.crt"
+                dest: "{{ cert_dir }}/ca/ca-certificate.crt"
+                owner: root
+                group: root
+                mode: '0644'
+
         -
           name: "Generating Certificate Authority"
           when: generate_self_signed_certificate_authority
@@ -149,7 +171,7 @@
                 passphrase: "{{ ca_cert_pass }}"
                 cipher: 'auto'
                 mode: '0777'
-    
+
             -
               name: "Creating certificate signing request (CSR) for Certifcate Authority certificate"
               community.crypto.openssl_csr_pipe:
@@ -166,7 +188,7 @@
                   - keyCertSign
                 key_usage_critical: true
               register: ca_csr
-    
+
             -
               name: "Creating self-signed CA certificate from CA CSR"
               community.crypto.x509_certificate:
@@ -177,7 +199,7 @@
                 provider: selfsigned
                 owner: "{{ service_user }}"
                 mode: '0777'
-    
+
         -
           name: "Copying root CA certificate to trusted certificates directory"
           ansible.builtin.copy:
@@ -186,12 +208,12 @@
             owner: root
             group: root
             mode: '0644'
-    
+
         -
           name: "Updating system's certificate store"
           ansible.builtin.command: update-ca-certificates
           changed_when: false
-    
+
         -
           name: "Generating Servers self signed SSL Key"
           community.crypto.openssl_privatekey:
@@ -199,7 +221,7 @@
             owner: "{{ service_user }}"
             type: "RSA"
             mode: '0777'
-    
+
         -
           name: "Copying signed SSL Key"
           ansible.builtin.copy:
@@ -208,7 +230,7 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
+            remote_src: true
 
         -
           name: "Setting DNS entries as a fact to consume for SSL generation"
@@ -232,7 +254,7 @@
             common_name: "{{ settings.hostname }}.{{ settings.domain }}"
             owner: "{{ service_user }}"
             mode: '0777'
-    
+
         -
           name: "Generating self signed Certificate"
           community.crypto.x509_certificate:
@@ -245,7 +267,7 @@
             ownca_privatekey_passphrase: "{{ ca_cert_pass }}"
             owner: "{{ service_user }}"
             mode: '0777'
-    
+
         -
           name: "Copying CRT"
           ansible.builtin.copy:
@@ -254,8 +276,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Generating self signed PKCS12 file"
           community.crypto.openssl_pkcs12:
@@ -267,7 +289,7 @@
             friendly_name: 'pkcs12_file'
             owner: "{{ service_user }}"
             mode: '0777'
-    
+
         -
           name: "Copying PKCS12"
           ansible.builtin.copy:
@@ -276,8 +298,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Parsing self-signed PKCS12 file to concatenated PEM"
           community.crypto.openssl_pkcs12:
@@ -287,7 +309,7 @@
             state: present
             owner: "{{ service_user }}"
             mode: '0777'
-    
+
         -
           name: "Copying combined"
           ansible.builtin.copy:
@@ -296,8 +318,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Creating a keystore for the self-signed certificate/private key pair"
           community.general.java_keystore:
@@ -310,7 +332,7 @@
             dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
           environment:
             PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
-    
+
         -
           name: "Copying JKS"
           ansible.builtin.copy:
@@ -319,8 +341,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
     -
       name: "Beginning Let's Encrypt Provisioning"
       when: letsencrypt_enabled
@@ -330,42 +352,42 @@
           ansible.builtin.apt:
             cache_valid_time: 3600
             update_cache: true
-    
+
         -
           name: "Upgrading all apt packages"
           ansible.builtin.apt:
             upgrade: dist
             update_cache: true
-    
+
         -
           name: "Adding certbot via apt repo"
           ansible.builtin.apt:
             name: certbot
             state: present
-    
+
         -
           name: "Checking if HAProxy is installed"
           ansible.builtin.command: systemctl status haproxy
           register: haproxy_status
           ignore_errors: true
-    
+
         -
           name: "Setting LE entries as a fact to consume"
           ansible.builtin.set_fact:
             le_entries: "{{ ['-d ' + settings.hostname + '.' + settings.domain] }}"
-    
+
         -
           name: "Add subdomain entries to LE entries"
           ansible.builtin.set_fact:
             le_entries: "{{ le_entries + ['-d ' + item + '.' + settings.hostname + '.' + settings.domain] }}"
           loop: "{{ dns_entries_list }}"
-    
+
         -
           name: "Checking if certificate exists"
           register: letsencrypt_cert
           ansible.builtin.stat:
             path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
-    
+
         -
           name: "Generating new staging certificate request"
           ansible.builtin.shell: >-
@@ -377,22 +399,22 @@
             --email {{ settings.email }}
             {{ le_entries | join(' ') }}
           when: haproxy_status.rc != 0 and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
-    
+
         -
           name: "Generating new staging  request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
           when: haproxy_status.rc == 0 and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
-    
+
         -
           name: "Generating new certificate request"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
           when: haproxy_status.rc != 0 and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
-    
+
         -
           name: "Generating new certificate request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
           when: haproxy_status.rc == 0 and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
-    
+
         -
           name: "Remove old certs Directories for SSLs"
           ansible.builtin.file:
@@ -401,14 +423,14 @@
           with_items:
             - "{{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key"
             - "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
-    
+
         -
           name: "Checking if letsencrypt certificate exists"
           register: letsencrypt_cert_generated_check
           become: true
           ansible.builtin.stat:
             path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
-    
+
         -
           name: "Copying cert.pem from Let'sEncrypt "
           when: letsencrypt_cert_generated_check.stat.exists | bool
@@ -418,8 +440,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Copying CRT"
           when: letsencrypt_cert_generated_check.stat.exists | bool
@@ -429,8 +451,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Copying privkey.pem from Let'sEncrypt"
           when: letsencrypt_cert_generated_check.stat.exists | bool
@@ -440,8 +462,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0777'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Copying privkey.pem"
           when: letsencrypt_cert_generated_check.stat.exists | bool
@@ -452,8 +474,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0777'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Generating self signed PKCS12 file"
           become: true
@@ -467,7 +489,7 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-    
+
         -
           name: "Copying PFX"
           become: true
@@ -477,8 +499,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0777'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Parsing letsencrypt PKCS12 file to concatenated PEM"
           become: true
@@ -490,7 +512,7 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0644'
-    
+
         -
           name: "Copying Combined Cert"
           become: true
@@ -500,8 +522,8 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0777'
-            remote_src: yes
-    
+            remote_src: true
+
         -
           name: "Creating a keystore for the letsencrypt certificate/private key pair"
           become: true
@@ -516,7 +538,7 @@
             dest: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
           environment:
             PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
-    
+
         -
           name: "Copying JKS"
           become: true
@@ -526,4 +548,4 @@
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
             mode: '0777'
-            remote_src: yes
+            remote_src: true

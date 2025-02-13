@@ -1,5 +1,7 @@
 ---
 run_tasks: true
+domino_server_name: "{{ settings.hostname }}"
+domino_server_domain: "{{ settings.domain }}"
 domino_user: domino
 domino_group: domino
 domino_home_dir: /local/notesdata

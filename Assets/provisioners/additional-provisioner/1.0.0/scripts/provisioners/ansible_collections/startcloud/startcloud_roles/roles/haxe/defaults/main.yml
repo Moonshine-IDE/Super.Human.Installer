@@ -3,7 +3,7 @@ run_tasks: true
 # Default values for variables used in the haxe_install role
 
 # Version of Haxe to install
-haxe_version: "4.3.4"
+haxe_version: "4.3.6"
 
 # Base directory for Haxe installation
 haxe_home: "/opt/haxe/haxe-{{ haxe_version }}"

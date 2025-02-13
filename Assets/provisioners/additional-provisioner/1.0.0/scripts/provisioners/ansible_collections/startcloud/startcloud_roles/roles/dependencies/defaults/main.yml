@@ -5,3 +5,4 @@ extra_packages:
   - dos2unix
 packages:
 
+use_proxy: false

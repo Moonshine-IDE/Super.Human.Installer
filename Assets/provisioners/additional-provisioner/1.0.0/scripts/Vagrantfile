@@ -1,1 +1,12 @@
-./core/Vagrantfile
+# frozen_string_literal: true
+
+unless Vagrant.has_plugin?('vagrant-startcloud')
+    system('vagrant plugin install vagrant-startcloud')
+    puts 'vagrant-startcloud plugin installed. Please run the command again.'
+    exit
+  end
+  
+  Vagrant.configure('2') do |config|
+    StartCloud.configure(config)
+  end
+  

@@ -8,9 +8,9 @@
 {% else %}
       "type": "first",
 {% endif %}
-      "name": "{{ settings.hostname }}.{{ settings.domain }}",
+      "name": "{{ domino_server_name }}.{{ domino_server_domain }}",
       "domainName": "{{ domino_organization }}",
-      "title": "{{ settings.hostname }}",
+      "title": "{{ domino_server_name }}",
       "password": null,
       "minPasswordLength": 5,
       "serverTasks": "HTTP"
@@ -20,12 +20,12 @@
 {% if domino_use_proxy is defined and domino_use_proxy %}
       "httpTunnelProxy": "{{ proxy_server }}:{{ proxy_port }}",
 {% endif %}
-      "CN": "{{ origin_server }}.{{ settings.domain }}/O={{ domino_organization }}",
+      "CN": "{{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
       "hostNameOrIP": "{{ origin_server_ip }}"
     },
 {% endif %}
     "network": {
-      "hostName": "{{ settings.hostname }}.{{ settings.domain }}",
+      "hostName": "{{ domino_server_name }}.{{ domino_server_domain }}",
       "enablePortEncryption": true,
       "enablePortCompression": true
     },
@@ -176,7 +176,7 @@
           "action": "update",
           "findDocument": {
             "Type": "Server",
-            "ServerName": "CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+            "ServerName": "CN={{ domino_server_name }}.{{ domino_server_domain }}/O={{ domino_organization }}"
           },
           "computeWithForm": true,
           "items": {
@@ -290,7 +290,7 @@
             "CmdLine": "Genesis",
             "Enabled": "2",
             "Program": "runjava",
-            "Source": "CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}"
+            "Source": "CN={{ domino_server_name }}.{{ domino_server_domain }}/O={{ domino_organization }}"
           }
         },
 {% if not is_additional_server %}
@@ -331,8 +331,8 @@
             "Form": "local",
             "Type": "Connection",
             "PortName": "TCPIP",
-            "Source": "CN={{ settings.hostname }}.{{ settings.domain }}/O={{ domino_organization }}",
-            "Destination": "{{ origin_server }}.{{ settings.domain }}/O={{ domino_organization }}",
+            "Source": "CN={{ domino_server_name }}.{{ domino_server_domain }}/O={{ domino_organization }}",
+            "Destination": "{{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
             "SourceDomain": "{{ domino_organization }}",
             "DestinationDomain": "{{ domino_organization }}",
             "ConnectionMode": "0",

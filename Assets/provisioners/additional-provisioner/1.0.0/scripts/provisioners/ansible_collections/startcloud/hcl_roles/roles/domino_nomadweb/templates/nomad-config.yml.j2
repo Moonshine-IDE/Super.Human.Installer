@@ -1,5 +1,12 @@
 host: '0.0.0.0'
 port: "{{ domino_nomadweb_port_forwards[0].guest }}"
 httpHeaders:
+{% if domino_nomadweb_use_proxy_url is defined %}
+{% if domino_nomadweb_use_proxy_url and domino_nomadweb_proxy_url is defined %}
+  Access-Control-Allow-Origin: "https://{{ domino_nomadweb_proxy_url }}"
+  Content-Security-Policy: "frame-ancestors 'self' https://{{ domino_nomadweb_proxy_url }}"
+{% else %}
   Access-Control-Allow-Origin: "https://{{ domino_install_proxy_url }}"
   Content-Security-Policy: "frame-ancestors 'self' https://{{ domino_install_proxy_url }}"
+{% endif %}
+{% endif %}
