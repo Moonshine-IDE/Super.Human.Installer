@@ -13,134 +13,12 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
 
         var output:String = null;
 			
-        var versionGreaterThan20:Bool = internalProvisioner.data.version > "0.1.20";
         var versionGreaterThan22:Bool = internalProvisioner.data.version > "0.1.22";
         
         var defaultProvisionerFieldValue:String = versionGreaterThan22 ? null : "";
         var defaultRoleFieldValue:Dynamic = versionGreaterThan22 ? false : "";
-
-        var syncMethod = internalProvisioner.server.syncMethod;
-
-        var replace = {
-
-            USER_EMAIL: internalProvisioner.server.userEmail.value,
-            
-            //settings
-         	SERVER_HOSTNAME: internalProvisioner.server.url.hostname,
-         	SERVER_DOMAIN: internalProvisioner.server.url.domainName,
-         	SERVER_ID: internalProvisioner.server.id,
-            SHOW_CONSOLE: false,
-            POST_PROVISION: false,
-            BOX_URL: 'https://boxvault.startcloud.com',
-            SYNC_METHOD: syncMethod,
-            SYNCBACK_ID_FILES: true,
-            DEBUG_ALL_ANSIBLE_TASKS: true,
-         	RESOURCES_CPU: internalProvisioner.server.numCPUs.value,    
-         	RESOURCES_RAM: Std.string( internalProvisioner.server.memory.value ) + "G",
-         	
-            USE_HTTP_PROXY: false,
-            HTTP_PROXY_HOST: '255.255.255.255',
-            HTTP_PROXY_PORT: 3128,
-
-         	//vagrant_user
-         	SERVER_DEFAULT_USER: "startcloud",
-         	SERVER_DEFAULT_USER_PASS: "STARTcloud24@!",
-         	
-         	//network
-         	NETWORK_ADDRESS: ( internalProvisioner.server.dhcp4.value ) ? "192.168.2.1" : internalProvisioner.server.networkAddress.value,
-         	NETWORK_NETMASK: ( internalProvisioner.server.dhcp4.value ) ? "255.255.255.0" : internalProvisioner.server.networkNetmask.value,
-         	NETWORK_GATEWAY: ( internalProvisioner.server.dhcp4.value ) ? "" : internalProvisioner.server.networkGateway.value,
-            // Always true, never false
-         	NETWORK_DHCP4: true,
-         	NETWORK_BRIDGE: internalProvisioner.server.networkBridge.value,
-         	
-         	//dns
-         	NETWORK_DNS_NAMESERVER_1: ( internalProvisioner.server.dhcp4.value ) ? "1.1.1.1" : internalProvisioner.server.nameServer1.value,
-         	NETWORK_DNS_NAMESERVER_2: ( internalProvisioner.server.dhcp4.value ) ? "1.0.0.1" : internalProvisioner.server.nameServer2.value,
-           
-            //vars
-            SERVER_ORGANIZATION: internalProvisioner.server.organization.value,
-            USER_SAFE_ID: DemoTasks._SAFE_ID_FILE,
-            DOMINO_ADMIN_PASSWORD: "password",
-            DOMINO_SERVER_CLUSTERMATES: 0,
-            CERT_SELFSIGNED: ( internalProvisioner.server.url.hostname + "." + internalProvisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
-			
-		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
-			
-            //Domino Variables
-            DOMINO_HASH: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_MAJOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_MINOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_PATCH_VERSION: defaultProvisionerFieldValue,
-            
-            DOMINO_MAJOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_MINOR_VERSION: defaultProvisionerFieldValue,
-            DOMINO_PATCH_VERSION: defaultProvisionerFieldValue,
-            
-            //Domino fixpack Variables
-            DOMINO_FP_HASH: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
-            DOMINO_INSTALLER_FIXPACK_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_FIXPACK: defaultProvisionerFieldValue,
-            
-            //Domino Hotfix Variables
-            DOMINO_HF_HASH: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_HOTFIX_INSTALL: false,
-            DOMINO_INSTALLER_HOTFIX_VERSION: defaultProvisionerFieldValue,
-            DOMINO_INSTALLER_HOTFIX: defaultProvisionerFieldValue,
-            
-            //Leap Variables
-            LEAP_HASH: defaultProvisionerFieldValue,
-            LEAP_INSTALLED_CHECK: false,
-            LEAP_INSTALLER: defaultProvisionerFieldValue,
-            LEAP_INSTALLER_VERSION: defaultProvisionerFieldValue,
-		    
-            //Nomad Web Variables
-            NOMADWEB_HASH: defaultProvisionerFieldValue,
-            NOMADWEB_INSTALLER: defaultProvisionerFieldValue,
-            NOMADWEB_VERSION: defaultProvisionerFieldValue,
-            
-            //Traveler Variables
-            TRAVELER_INSTALLER: defaultProvisionerFieldValue,
-            TRAVELER_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            TRAVELER_FP_INSTALLER: defaultProvisionerFieldValue,
-            TRAVELER_FP_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            
-            //Verse Variables
-            VERSE_INSTALLER: defaultProvisionerFieldValue,
-            VERSE_INSTALLER_VERSION: defaultProvisionerFieldValue,
-      		
-            //AppDev Web Pack Variables
-            APPDEVPACK_INSTALLER: defaultProvisionerFieldValue,
-            APPDEVPACK_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            
-            //Domino Rest API Variables
-            DOMINO_REST_API_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
-            
-            //roles
-            ROLE_LEAP: defaultRoleFieldValue,
-            ROLE_NOMADWEB: defaultRoleFieldValue,
-            ROLE_TRAVELER: defaultRoleFieldValue,
-            ROLE_TRAVELER_HTMO: defaultRoleFieldValue,
-            ROLE_VERSE: defaultRoleFieldValue,
-            ROLE_APPDEVPACK: defaultRoleFieldValue,
-            ROLE_RESTAPI: defaultRoleFieldValue,
-            ROLE_DOMINO_RESTAPI: defaultRoleFieldValue,
-            ROLE_VOLTMX: defaultRoleFieldValue,
-            ROLE_VOLTMX_DOCKER: defaultRoleFieldValue,
-            ROLE_STARTCLOUD_QUICK_START: defaultRoleFieldValue,
-            ROLE_STARTCLOUD_HAPROXY: defaultRoleFieldValue,
-            ROLE_STARTCLOUD_VAGRANT_README: defaultRoleFieldValue,
-            ROLE_DOMINO_RESET: defaultRoleFieldValue,
-            ROLE_MARIADB: defaultRoleFieldValue,
-            ROLE_DOCKER: defaultRoleFieldValue,
-            
-            ENV_OPEN_BROWSER: false,
-            ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,
-        };
+        
+        var replace = _getDefaultTemplateValues(internalProvisioner, defaultProvisionerFieldValue, defaultRoleFieldValue);
 
         for ( r in internalProvisioner.server.roles.value ) {
 
@@ -318,5 +196,127 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
 
         return output;
 
+    }
+
+    static function _getDefaultTemplateValues(internalProvisioner:DemoTasks, defaultProvisionerFieldValue:String = null, defaultRoleFieldValue:Dynamic = ""):Dynamic {
+        return {
+            USER_EMAIL: internalProvisioner.server.userEmail.value,
+            
+            //settings
+         	SERVER_HOSTNAME: internalProvisioner.server.url.hostname,
+         	SERVER_DOMAIN: internalProvisioner.server.url.domainName,
+         	SERVER_ID: internalProvisioner.server.id,
+            SHOW_CONSOLE: false,
+            POST_PROVISION: false,
+            BOX_URL: 'https://boxvault.startcloud.com',
+            SYNC_METHOD: internalProvisioner.server.syncMethod,
+            SYNCBACK_ID_FILES: true,
+            DEBUG_ALL_ANSIBLE_TASKS: true,
+         	RESOURCES_CPU: internalProvisioner.server.numCPUs.value,    
+         	RESOURCES_RAM: Std.string( internalProvisioner.server.memory.value ) + "G",
+         	
+            USE_HTTP_PROXY: false,
+            HTTP_PROXY_HOST: '255.255.255.255',
+            HTTP_PROXY_PORT: 3128,
+
+         	//vagrant_user
+         	SERVER_DEFAULT_USER: "startcloud",
+         	SERVER_DEFAULT_USER_PASS: "STARTcloud24@!",
+         	
+         	//network
+         	NETWORK_ADDRESS: ( internalProvisioner.server.dhcp4.value ) ? "192.168.2.1" : internalProvisioner.server.networkAddress.value,
+         	NETWORK_NETMASK: ( internalProvisioner.server.dhcp4.value ) ? "255.255.255.0" : internalProvisioner.server.networkNetmask.value,
+         	NETWORK_GATEWAY: ( internalProvisioner.server.dhcp4.value ) ? "" : internalProvisioner.server.networkGateway.value,
+            // Always true, never false
+         	NETWORK_DHCP4: internalProvisioner.server.dhcp4.value,
+         	NETWORK_BRIDGE: internalProvisioner.server.networkBridge.value,
+         	
+         	//dns
+         	NETWORK_DNS_NAMESERVER_1: ( internalProvisioner.server.dhcp4.value ) ? "1.1.1.1" : internalProvisioner.server.nameServer1.value,
+         	NETWORK_DNS_NAMESERVER_2: ( internalProvisioner.server.dhcp4.value ) ? "1.0.0.1" : internalProvisioner.server.nameServer2.value,
+           
+            //vars
+            SERVER_ORGANIZATION: internalProvisioner.server.organization.value,
+            USER_SAFE_ID: DemoTasks._SAFE_ID_FILE,
+            DOMINO_ADMIN_PASSWORD: "password",
+            DOMINO_SERVER_CLUSTERMATES: 0,
+            CERT_SELFSIGNED: ( internalProvisioner.server.url.hostname + "." + internalProvisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",
+			
+		    DOMINO_IS_ADDITIONAL_INSTANCE: false,
+			
+            //Domino Variables
+            DOMINO_HASH: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_MAJOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_MINOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_PATCH_VERSION: defaultProvisionerFieldValue,
+            
+            DOMINO_MAJOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_MINOR_VERSION: defaultProvisionerFieldValue,
+            DOMINO_PATCH_VERSION: defaultProvisionerFieldValue,
+            
+            //Domino fixpack Variables
+            DOMINO_FP_HASH: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_FIXPACK_INSTALL: false,
+            DOMINO_INSTALLER_FIXPACK_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_FIXPACK: defaultProvisionerFieldValue,
+            
+            //Domino Hotfix Variables
+            DOMINO_HF_HASH: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_HOTFIX_INSTALL: false,
+            DOMINO_INSTALLER_HOTFIX_VERSION: defaultProvisionerFieldValue,
+            DOMINO_INSTALLER_HOTFIX: defaultProvisionerFieldValue,
+            
+            //Leap Variables
+            LEAP_HASH: defaultProvisionerFieldValue,
+            LEAP_INSTALLED_CHECK: false,
+            LEAP_INSTALLER: defaultProvisionerFieldValue,
+            LEAP_INSTALLER_VERSION: defaultProvisionerFieldValue,
+		    
+            //Nomad Web Variables
+            NOMADWEB_HASH: defaultProvisionerFieldValue,
+            NOMADWEB_INSTALLER: defaultProvisionerFieldValue,
+            NOMADWEB_VERSION: defaultProvisionerFieldValue,
+            
+            //Traveler Variables
+            TRAVELER_INSTALLER: defaultProvisionerFieldValue,
+            TRAVELER_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            TRAVELER_FP_INSTALLER: defaultProvisionerFieldValue,
+            TRAVELER_FP_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            
+            //Verse Variables
+            VERSE_INSTALLER: defaultProvisionerFieldValue,
+            VERSE_INSTALLER_VERSION: defaultProvisionerFieldValue,
+      		
+            //AppDev Web Pack Variables
+            APPDEVPACK_INSTALLER: defaultProvisionerFieldValue,
+            APPDEVPACK_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            
+            //Domino Rest API Variables
+            DOMINO_REST_API_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
+            
+            //roles
+            ROLE_LEAP: defaultRoleFieldValue,
+            ROLE_NOMADWEB: defaultRoleFieldValue,
+            ROLE_TRAVELER: defaultRoleFieldValue,
+            ROLE_TRAVELER_HTMO: defaultRoleFieldValue,
+            ROLE_VERSE: defaultRoleFieldValue,
+            ROLE_APPDEVPACK: defaultRoleFieldValue,
+            ROLE_RESTAPI: defaultRoleFieldValue,
+            ROLE_DOMINO_RESTAPI: defaultRoleFieldValue,
+            ROLE_VOLTMX: defaultRoleFieldValue,
+            ROLE_VOLTMX_DOCKER: defaultRoleFieldValue,
+            ROLE_STARTCLOUD_QUICK_START: defaultRoleFieldValue,
+            ROLE_STARTCLOUD_HAPROXY: defaultRoleFieldValue,
+            ROLE_STARTCLOUD_VAGRANT_README: defaultRoleFieldValue,
+            ROLE_DOMINO_RESET: defaultRoleFieldValue,
+            ROLE_MARIADB: defaultRoleFieldValue,
+            ROLE_DOCKER: defaultRoleFieldValue,
+            
+            ENV_OPEN_BROWSER: false,
+            ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,
+        };
     }
 }

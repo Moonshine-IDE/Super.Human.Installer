@@ -67,16 +67,6 @@
 				</components:GenesisFormRowContent>
 			</components:content>
 		</components:GenesisFormRow>
-		<components:GenesisFormRow id="rowPreviousSafeId" visible="false" includeInLayout="false">
-			<components:content>
-				<components:GenesisFormRowContent>
-					<components:layoutData>
-						<f:HorizontalLayoutData percentWidth="60"/>
-					</components:layoutData>
-					<f:Label id="labelPreviousSafeId" variant="label-link" buttonMode="true" useHandCursor="true"/>
-				</components:GenesisFormRowContent>
-			</components:content>
-		</components:GenesisFormRow>
 		<components:GenesisFormRow id="rowRoles">
 			<components:content>
 				<components:GenesisFormRowContent>

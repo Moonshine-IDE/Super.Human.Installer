@@ -302,7 +302,7 @@ class DemoTasks extends AbstractProvisioner {
 
         if ( _server.isValid() ) 
         {
-            this._saveHostsFile();
+            _saveHostsFile();
         }
 
     }

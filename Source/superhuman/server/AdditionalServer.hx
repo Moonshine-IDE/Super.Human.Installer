@@ -1,5 +1,7 @@
 package superhuman.server;
 
+import prominic.sys.applications.oracle.VirtualBox;
+import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.core.primitives.ValidatingProperty;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
@@ -99,6 +101,36 @@ class AdditionalServer extends Server {
         sc._created = true;
         sc._setServerStatus();
         return sc;
+    }
+
+    override public function isValid():Bool {
+
+        var hasVagrant:Bool = Vagrant.getInstance().exists;
+        var hasVirtualBox:Bool = VirtualBox.getInstance().exists;
+        var hasValidHostname:Bool = _hostname.isValid();
+        var hasEnoughMemory:Bool = _memory.value >= 4;
+        var hasEnoughCPUs:Bool = _numCPUs.value >= 1;
+        var isDHCPEnabled:Bool = _dhcp4.value;
+        
+        var hasValidNetworkConfig:Bool = _networkBridge.isValid() &&
+            _networkAddress.isValid() &&
+            _networkGateway.isValid() &&
+            _networkNetmask.isValid() &&
+            _nameServer1.isValid() &&
+            _nameServer2.isValid();
+            
+        var hasValidRoles:Bool = areRolesValid();
+        
+        var isValid:Bool = hasVagrant &&
+            hasVirtualBox &&
+            hasValidHostname &&
+            hasEnoughMemory &&
+            hasEnoughCPUs &&
+            (isDHCPEnabled || hasValidNetworkConfig) &&
+            hasValidRoles;
+
+        return isValid;
+
     }
 
     public function getExistingServerUrl():ServerURL
