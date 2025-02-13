@@ -18,6 +18,13 @@
         home: "{{ service_home_dir }}"
     
     -
+      name: "Adding startcloud to groups: {{ service_group }}"
+      ansible.builtin.user:
+        name: "{{ settings.vagrant_user }}"
+        groups: "{{ service_group }}"
+        append: true
+
+    -
       name: "Adding user to sudoers: {{ service_user }}"
       ansible.builtin.lineinfile:
         path: "/etc/sudoers.d/{{ service_user }}"

@@ -1,4 +1,10 @@
 ---
 run_tasks: true
 nash_domino_service_script_git_repo: https://github.com/nashcom/domino-startscript/releases/download
+#nash_domino_service_script_version: 3.8.0
 nash_domino_service_script_version: 3.7.0
+#nash_domino_service_script_archive: "domino-startscript-{{ nash_domino_service_script_version }}.taz"
+nash_domino_service_script_archive: "domino-startscript_v{{ nash_domino_service_script_version }}.taz"
+
+#domino_start_script_source_folder: domino-startscript-3.8.0
+domino_start_script_source_folder: domino-startscript

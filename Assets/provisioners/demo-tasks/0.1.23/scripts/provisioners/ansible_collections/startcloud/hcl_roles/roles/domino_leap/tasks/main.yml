@@ -76,11 +76,18 @@
     
     -
       name: "Registering leap installation Output"
-      when: not leap_installed_check.stat.exists
+      when: not leap_installed_check.stat.exists and leap_version == "1.0.5"
       ansible.builtin.shell: cat /var/log/volt_install_*.log
       changed_when: false
       register: leap_install
-    
+
+    -
+      name: "Registering leap installation Output"
+      when: not leap_installed_check.stat.exists and not leap_version == "1.0.5"
+      ansible.builtin.shell: cat /var/log/leap_install_*.log
+      changed_when: false
+      register: leap_install
+
     -
       name: "Outputting Leap installation logs"
       when: not leap_installed_check.stat.exists and ( leap_debug or debug_all )
