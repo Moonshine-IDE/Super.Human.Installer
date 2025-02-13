@@ -25,7 +25,7 @@ hosts:
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: ::BOX_URL:: # Should default to 'https://boxvault.startcloud.com' but can be set to 'https://vagrantcloud.com'
-      box_version: 0.0.9
+      box_version: 2025.2.9
 
       # Provider Specific Settings
       provider_type: virtualbox
@@ -165,7 +165,7 @@ hosts:
           - '--copy-links'
 
       -
-        description: "Directory for Ansible Scripts"
+        description: "Directory for Ansible Collections"
         map: ./provisioners/ansible_collections/
         to: /vagrant/ansible_collections/
         type: rsync
@@ -191,7 +191,7 @@ hosts:
         map: ./id-files/
         to: /id-files/
         type: ::SYNC_METHOD:: ## rsync or scp
-        syncback: ::SYNCBACK_ID_FILES::
+        syncback: ::SYNCBACK_ID_FILES:: ## Should Default to True
 
     vars:
       # Secrets Override: If you don't want to use a secrets file you can override secrets here
@@ -225,10 +225,12 @@ hosts:
       extra_packages: ['htop']
 
       ## Domino Configuration Variables
+      #domino_server_name: "DoMiNO-iS-dVMb" # Defaults to settings.hostname if not set
+      #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: ::SERVER_ORGANIZATION::
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
 
-      ## Safe-ids to cross-certify
+      ## Safe-ids to cross-certify (only works for initial/standalone server)
       user_safe_id: ::USER_SAFE_ID::
 
       ## Additional server options
@@ -367,6 +369,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_nomadweb
         vars:
           run_tasks: ::ROLE_NOMADWEB::
+      #- name: startcloud.hcl_roles.domino_jedi
+      #  vars:
+      #    run_tasks: ::ROLE_JEDI::
       - name: startcloud.hcl_roles.domino_vagrant_readme
       - name: startcloud.startcloud_roles.quick_start
         tags: always
