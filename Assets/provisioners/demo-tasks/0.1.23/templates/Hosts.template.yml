@@ -26,7 +26,7 @@ hosts:
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: ::BOX_URL:: # Should default to 'https://boxvault.startcloud.com' but can be set to 'https://vagrantcloud.com'
-      box_version: 0.0.9
+      box_version: 2025.2.9
 
       # Provider Specific Settings
       provider_type: virtualbox
@@ -163,7 +163,7 @@ hosts:
           - '-z'
           - '--copy-links'
       -
-        description: "Directory for Ansible Scripts"
+        description: "Directory for Ansible Collections"
         map: ./provisioners/ansible_collections/
         to: /vagrant/ansible_collections/
         type: ::SYNC_METHOD::
