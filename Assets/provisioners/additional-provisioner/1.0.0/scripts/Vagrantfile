@@ -1,12 +1,9 @@
-# frozen_string_literal: true
+## Vagrant File tooling compatabile with Bhyve and Virtualbox, potentially ESXI/Vmware,KVM
+require 'yaml'
+require File.expand_path("#{File.dirname(__FILE__)}/core/Hosts.rb")
 
-unless Vagrant.has_plugin?('vagrant-startcloud')
-    system('vagrant plugin install vagrant-startcloud')
-    puts 'vagrant-startcloud plugin installed. Please run the command again.'
-    exit
-  end
-  
-  Vagrant.configure('2') do |config|
-    StartCloud.configure(config)
-  end
-  
+settings = YAML::load(File.read("#{File.dirname(__FILE__)}/Hosts.yml"))
+
+Vagrant.configure("2") do |config|
+  Hosts.configure(config, settings)
+end
