@@ -24,7 +24,45 @@
       ansible.builtin.stat:
         path: "{{ completed_dir }}/service_configured"
         get_md5: false
-    
+
+    -
+      name: "Checking if JEDI has been installed"
+      register: nash_domino_jedi_installed
+      ansible.builtin.stat:
+        path: "{{ completed_dir }}/domino_jedi_installed"
+        get_md5: false
+
+    -
+      name: "Disabling and Stopping JeDI service"
+      when: nash_domino_jedi_installed.stat.exists
+      ansible.builtin.systemd:
+        name: "{{ jedi_service }}"
+        enabled: false
+        state: stopped
+
+    -
+      name: "Stopping Domino Manually"
+      become: true
+      when: nash_domino_jedi_installed.stat.exists
+      ansible.builtin.shell: 'echo "exit" >> /local/notesdata/noteslog/notes.input'
+
+    -
+      name: "Waiting for Domino server shutdown complete message"
+      when: nash_domino_jedi_installed.stat.exists
+      ansible.builtin.wait_for:
+        path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+        search_regex: "Server shutdown complete"
+        state: present
+        timeout: 300
+
+    -
+      name:  "Enabling the nashed service to ensure provisioning works"
+      when: nash_domino_jedi_installed.stat.exists
+      ansible.builtin.service:
+        name: domino
+        enabled: true
+        state: started
+
     -
       name: "Downloading Nash's Service Script for Linux version {{ nash_domino_service_script_version }}"
       when: not domino_server_nash_installed.stat.exists
@@ -33,7 +71,7 @@
       retries: 3
       ansible.builtin.get_url:
         mode: '0644'
-        url: "{{ nash_domino_service_script_git_repo }}/v{{ nash_domino_service_script_version }}/domino-startscript_v{{ nash_domino_service_script_version }}.taz"
+        url: "{{ nash_domino_service_script_git_repo }}/v{{ nash_domino_service_script_version }}/{{ nash_domino_service_script_archive }}"
         dest: "{{ installer_dir }}/domino/archives/domino-startscript_v{{ nash_domino_service_script_version }}.tar"
     
     -
@@ -49,7 +87,7 @@
       name: "Changing Nash's service installer script's default Datadir"
       when: not domino_server_nash_installed.stat.exists
       ansible.builtin.replace:
-        path: "{{ installer_dir }}/domino/service-file/domino-startscript/sysconfig/rc_domino_config"
+        path: "{{ installer_dir }}/domino/service-file/{{ domino_start_script_source_folder }}/sysconfig/rc_domino_config"
         regexp: "(^DOMINO_DATA_PATH=)(.*)$"
         replace: "DOMINO_DATA_PATH={{ domino_home_dir }}"
     
@@ -57,7 +95,7 @@
       name: "Changing Nash's service installer script's default User"
       when: not domino_server_nash_installed.stat.exists
       ansible.builtin.replace:
-        path: "{{ installer_dir }}/domino/service-file/domino-startscript/install_script"
+        path: "{{ installer_dir }}/domino/service-file/{{ domino_start_script_source_folder }}/install_script"
         regexp: "(^  DOMINO_USER=notes)(.*)$"
         replace: "  DOMINO_USER={{ domino_user }}"
     
@@ -65,7 +103,7 @@
       name: "Changing Nash's service installer script's default Domino Group"
       when: not domino_server_nash_installed.stat.exists
       ansible.builtin.replace:
-        path: "{{ installer_dir }}/domino/service-file/domino-startscript/install_script"
+        path: "{{ installer_dir }}/domino/service-file/{{ domino_start_script_source_folder }}/install_script"
         regexp: "(^  DOMINO_GROUP=notes)(.*)$"
         replace: "  DOMINO_GROUP={{ domino_group }}"
     
@@ -75,7 +113,7 @@
       ansible.builtin.shell: "{{ item }}"
       become: true
       args:
-        chdir: "{{ installer_dir }}/domino/service-file/domino-startscript"
+        chdir: "{{ installer_dir }}/domino/service-file/{{ domino_start_script_source_folder }}"
         executable: "/bin/bash"
         creates: "{{ completed_dir }}/service_configured"
       with_items:
