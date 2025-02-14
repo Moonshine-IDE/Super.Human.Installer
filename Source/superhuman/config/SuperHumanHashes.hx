@@ -15,7 +15,7 @@ class SuperHumanHashes
 									  {hash: "0d19fdaa92716e3f097014e6800102ff", version: { fullVersion: "FP4"}}]],
 		"appdevpack" => [ "installers" => [ { hash: "b84248ae22a57efe19dac360bd2aafc2", version: { majorVersion: "1", minorVersion: "0", patch: "15", fullVersion: "1.0.15"} }]],
 		"leap" => [ "installers" => [ { hash: "080235c0f0cce7cc3446e01ffccf0046", version: { majorVersion: "1", minorVersion: "0", patch: "5", fullVersion: "1.0.5" } },
-									{ hash: "de4589d2b1b087acdf666f100abfbfda", version: { majorVersion: "1", minorVersion: "1", patch: "1", fullVersion: "1.1.1.18" } } ]],
+									{ hash: "8952d633ff19ad7833936edccee9fd01", version: { majorVersion: "1", minorVersion: "1", patch: "1", fullVersion: "1.1.1" } } ]],
 		"nomadweb" => [ "installers" => [ { hash: "044c7a71598f41cd3ddb88c5b4c9b403" }, 
 										 { hash: "8f3e42f4f5105467c99cfd56b8b4a755", version: { majorVersion: "1", minorVersion: "0", patch: "6", fullVersion: "1.0.6"} }, 
 										 { hash: "fe2dd37e6d05ea832d8ecc4f0e1dbe80", version: { majorVersion: "1", minorVersion: "0", patch: "8", fullVersion: "1.0.8"} },
@@ -28,8 +28,8 @@ class SuperHumanHashes
 										 { hash: "216807509d96f65c7a76b878fc4c4bd5", version: { majorVersion: "12", minorVersion: "0", patch: "2", fixPackVersion: "FP1", fullVersion: "12.0.2"} },
 										 { hash: "fc262f2b9cc334604cb830b371043468", version: { majorVersion: "14", minorVersion: "0", patch: "0", fullVersion: "14.0.0"} },
 										{ hash: "58f8bfab4165246a3b12490a4e661f69", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP1", fullVersion: "14.0.0"} } ]],
-		"verse" => [ "installers" => [ { hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } },
-										{ hash: "21a13b648fdaac3b516ac9880c106041", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" } } ]],
+		"verse" => [ "installers" => [  { hash: "cbe1edbe7afcf99f6f9607840d30e36e", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" }},
+										{ hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } }, ]],
 		"domino-rest-api" => [ "installers" => [ { hash: "fa990f9bac800726f917cd0ca857f220", version: { majorVersion: "1", minorVersion: "0", patch: "0", fullVersion: "1.0.0" } } ] ]
 	];
 	

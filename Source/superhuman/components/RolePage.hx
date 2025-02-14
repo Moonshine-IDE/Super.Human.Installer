@@ -226,15 +226,15 @@ class RolePickerItem extends LayoutGroup {
         _installerButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
         _labelGroup.addChild( _installerButton );
 
-        _hotfixButton = new Button( LanguageManager.getInstance().getString( 'rolepage.role.buttonhotfix' ) );
-        _hotfixButton.addEventListener( TriggerEvent.TRIGGER, _hotfixButtonTriggered );
-        _hotfixButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-        _labelGroup.addChild( _hotfixButton );
-
         _fixpackButton = new Button( LanguageManager.getInstance().getString( 'rolepage.role.buttonfixpack' ) );
         _fixpackButton.addEventListener( TriggerEvent.TRIGGER, _fixpackButtonTriggered );
         _fixpackButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
         _labelGroup.addChild( _fixpackButton );
+        
+        _hotfixButton = new Button( LanguageManager.getInstance().getString( 'rolepage.role.buttonhotfix' ) );
+        _hotfixButton.addEventListener( TriggerEvent.TRIGGER, _hotfixButtonTriggered );
+        _hotfixButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        _labelGroup.addChild( _hotfixButton );
 
         _selectInstallerLabel = new Label( LanguageManager.getInstance().getString( 'rolepage.role.noinstaller', _roleImpl.fileHint ) );
         _selectInstallerLabel.includeInLayout = _selectInstallerLabel.visible = false;
