@@ -219,25 +219,22 @@
         creates: "{{ completed_dir }}/domsetup"
       with_items:
         - "(su - {{ domino_user }} -c '{{ domino_install_basedir }}/bin/server -autoconf setup.json && touch {{ completed_dir }}/domsetup  > /dev/null 2>&1 &')"
-    
-    -
-      name: "Pause for 60 seconds to let Domino fully configure"
-      when: not domino_server_touched.stat.exists
-      ansible.builtin.pause:
-        seconds: 60
-    
+
     -
       name: "Waiting until the file autoconfigure.log is present before continuing"
       when: not domino_server_touched.stat.exists
       ansible.builtin.wait_for:
         path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
-    
+
     -
-      name: Pause for 60 seconds to let Domino fully configure
+      name: "Waiting for 'Application configuration completed successfully' in Autoconfigure"
       when: not domino_server_touched.stat.exists
-      ansible.builtin.pause:
-        seconds: 60
-    
+      ansible.builtin.wait_for:
+        path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
+        search_regex: "Application configuration completed successfully"
+        state: present
+        timeout: 300
+
     -
       name: "Capturing autoconfigure log output"
       ansible.builtin.command: "cat {{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
@@ -250,6 +247,12 @@
       ansible.builtin.debug:
         var: autoconf_result.stdout_lines
       when: ( debug_autoconfigure or debug_all ) and not domino_server_touched.stat.exists
+    
+    -
+      name: "Waiting for 60 seconds to let Domino fully configure"
+      when: not domino_server_touched.stat.exists
+      ansible.builtin.pause:
+        seconds: 60
     
     -
       name: "Cleanly stopping Domino because this was detected as a Secondary Server Setup"
@@ -269,7 +272,7 @@
         var: domino_stop_status
     
     -
-      name: Pause for 60 seconds to let Domino fully configure
+      name: "Waiting for 60 seconds to let Domino fully configure"
       when: not domino_server_touched.stat.exists and is_additional_server
       ansible.builtin.pause:
         seconds: 60
@@ -288,7 +291,7 @@
       until: domino_service_start_details.state == "started"
     
     -
-      name: Pause for 60 seconds to let Domino fully configure
+      name: "Waiting for 60 seconds to let Domino fully configure"
       when: not domino_server_touched.stat.exists and is_additional_server
       ansible.builtin.pause:
         seconds: 60
@@ -323,13 +326,13 @@
         - 'domino cmd "load certmgr -importkyr {{ cert_dir }}/kyr/{{ kyr_cert }}"'
     
     -
-      name: Waiting until the file certstore.nsf is present before continuing
+      name: "Waiting until the file certstore.nsf is present before continuing"
       when: not domino_server_touched.stat.exists
       ansible.builtin.wait_for:
         path: "{{ domino_home_dir }}/certstore.nsf"
     
     -
-      name: Pause for 60 seconds to let Domino fully configure
+      name: "Waiting for 60 seconds to let Domino fully configure"
       when: not domino_server_touched.stat.exists
       ansible.builtin.pause:
         seconds: 60
@@ -353,7 +356,7 @@
         var: domino_stop_status
     
     -
-      name: Waiting until the completed installation file is present before continuing
+      name: "Waiting until the completed installation file is present before continuing"
       when: not domino_server_touched.stat.exists
       ansible.builtin.wait_for:
         path: "{{ completed_dir }}/domsetup"
