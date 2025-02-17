@@ -46,6 +46,9 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: ./shi
 
     steps:
       - name: Build info
@@ -60,7 +63,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          path: shi
           lfs: true
 
       - name: Checkout LFS objects
