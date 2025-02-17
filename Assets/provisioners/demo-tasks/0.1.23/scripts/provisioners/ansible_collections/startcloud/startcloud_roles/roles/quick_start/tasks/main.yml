@@ -120,7 +120,7 @@
         -
           name: "Storing first adapter details as facts"
           ansible.builtin.set_fact:
-            local_ip: "{{ public_adapter_ip }}"
+            local_ip: "{{ public_adapter_ip.stdout }}"
 
     -
       name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.
