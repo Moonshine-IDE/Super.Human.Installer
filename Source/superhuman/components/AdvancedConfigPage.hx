@@ -365,6 +365,12 @@ class AdvancedConfigPage extends Page {
 
     }
 
+    override function _cancel( ?e:Dynamic ) {
+     	var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE );
+        		evt.server = _server;
+        this.dispatchEvent( evt );
+    }
+    
     function _saveButtonTriggered( e:TriggerEvent ) {
 
         if ( !_form.isValid() ) return;

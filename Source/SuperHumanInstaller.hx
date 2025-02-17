@@ -385,6 +385,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _advancedConfigPage, PAGE_CONFIG_ADVANCED );
 
 		_additionalServerPage = new AdditionalServerPage();
+		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER, _advancedConfigureServer );
 		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles );
 		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION, _saveServerConfiguration );
 		_additionalServerPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
@@ -622,8 +623,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _cancelAdvancedConfigureServer( e:SuperHumanApplicationEvent ) {
 
-		this.selectedPageId = PAGE_CONFIG;
-
+		switch ( e.server.provisioner.type ) {
+			case ProvisionerType.AdditionalProvisioner:
+				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+			default:
+				this.selectedPageId = PAGE_CONFIG;
+		}
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
@@ -895,8 +900,13 @@ class SuperHumanInstaller extends GenesisApplication {
 		_saveConfig();
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.advancedserverconfigsaved' ) );
-		this.selectedPageId = PAGE_CONFIG;
 
+		switch ( e.server.provisioner.type ) {
+			case ProvisionerType.AdditionalProvisioner:
+				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+			default:
+				this.selectedPageId = PAGE_CONFIG;
+		}
 	}
 
 	function _startServer( e:SuperHumanApplicationEvent ) {

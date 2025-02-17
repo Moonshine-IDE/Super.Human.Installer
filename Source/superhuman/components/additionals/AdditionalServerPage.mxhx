@@ -3,7 +3,7 @@
 			xmlns:f="https://ns.feathersui.com/mxhx"
 			xmlns:components="genesis.application.components.*">
 			
-	<f:LayoutGroup>
+	<f:LayoutGroup id="titleGroup">
 		<f:layout>
 			<f:HorizontalLayout horizontalAlign="LEFT" verticalAlign="MIDDLE"/>
 		</f:layout>
@@ -11,6 +11,8 @@
 			<f:layoutData>
 				<f:HorizontalLayoutData percentWidth="100"/>
 			</f:layoutData>
+		</f:Label>
+		<f:Label id="advancedLink" variant="label-link" >
 		</f:Label>
 	</f:LayoutGroup>
 	

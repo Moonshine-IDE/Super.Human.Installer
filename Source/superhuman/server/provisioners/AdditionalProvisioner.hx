@@ -74,11 +74,11 @@ class AdditionalProvisioner extends DemoTasks {
 
             var safeIdDir = Path.addTrailingSlash( _targetPath ) + Path.addTrailingSlash( _getSafeIdLocation() );
             FileSystem.createDirectory( safeIdDir );
-
+			var serverIdFileName = _server.serverProvisionerId != null ? new Path( _server.serverProvisionerId.value ) : new Path( "server.id" );
+			
             try {
-
-                File.copy( serverIdPath, safeIdDir + "server.id" );
-                if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyserverid', serverIdPath, safeIdDir + "server.id" ) );
+                File.copy( serverIdPath, safeIdDir + serverIdFileName.file + "." + serverIdFileName.ext );
+                if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyserverid', serverIdPath, safeIdDir + serverIdFileName.file + "." + serverIdFileName.ext ) );
                 return true;
 
             } catch ( e:Exception ) {

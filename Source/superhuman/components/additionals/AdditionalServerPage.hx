@@ -30,7 +30,11 @@ class AdditionalServerPage extends Page
 
         super.initialize();
 
+		titleGroup.width = _width;
 		firstLine.width = _width;
+
+		advancedLink.text = LanguageManager.getInstance().getString( 'serverconfigpage.advancedlink' );
+        advancedLink.addEventListener( MouseEvent.CLICK, _advancedLinkTriggered );
 
 		rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
 		dropdownCoreComponentVersion.dataProvider = ProvisionerManager.getBundledProvisionerCollection(ProvisionerType.AdditionalProvisioner);
@@ -126,6 +130,13 @@ class AdditionalServerPage extends Page
 		}
 
 		dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
+    }
+
+	function _advancedLinkTriggered( e:MouseEvent ) {
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER );
+		evt.provisionerType = ProvisionerType.AdditionalProvisioner;
+        evt.server = this._server;
+        this.dispatchEvent( evt );
     }
 
 	function _buttonProvisionerServerIdTriggered( e:TriggerEvent ) {
