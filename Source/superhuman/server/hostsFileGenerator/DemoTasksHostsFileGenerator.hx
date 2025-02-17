@@ -207,7 +207,7 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
          	SERVER_DOMAIN: internalProvisioner.server.url.domainName,
          	SERVER_ID: internalProvisioner.server.id,
             SHOW_CONSOLE: false,
-            POST_PROVISION: false,
+            POST_PROVISION: true,
             BOX_URL: 'https://boxvault.startcloud.com',
             SYNC_METHOD: internalProvisioner.server.syncMethod,
             SYNCBACK_ID_FILES: true,
