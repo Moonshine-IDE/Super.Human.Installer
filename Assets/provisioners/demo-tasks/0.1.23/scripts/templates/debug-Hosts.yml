@@ -13,7 +13,7 @@ hosts:
       debug_build: true
 
       # Identifiers
-      hostname: standalone-demo
+      hostname: additional-demo
       domain: startcloud.com
       server_id: '4021'
 
@@ -25,7 +25,7 @@ hosts:
       memory: 8G
 
       # Console Access
-      consoleport: 4020
+      consoleport: 4021
       consolehost: 0.0.0.0
       show_console: false
 
@@ -48,18 +48,6 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
-
-    plugins:
-      install:
-        -
-          name: vagrant-scp-sync
-          version: latest
-#        -
-#          name: vagrant-zones
-#          version: latest
-      remove:
-        -
-          name: vagrant-scp
 
     zones:
       vmtype: production
@@ -84,6 +72,18 @@ hosts:
       clean_shutdown_time: 200
       snapshot_script: '/opt/vagrant/bin/Snapshooter.sh'
       cpu_configuration: simple
+
+    plugins:
+      install:
+        -
+          name: vagrant-scp-sync
+          version: latest
+#        -
+#          name: vagrant-zones
+#          version: latest
+      remove:
+        -
+          name: vagrant-scp
 
     networks:
       # if ::NO_BRIDGE_INTERFACE::
@@ -126,7 +126,6 @@ hosts:
           mount: /local
           size: 50.0G
           port: 5
-          #driver: virtio-scsi #Only add if your template doesn't already use virtio-scsi(the new templates do)
           volume_name: disk1
 
     provisioning:
@@ -263,37 +262,32 @@ hosts:
       extra_packages: ['htop']
 
       ## Domino Configuration Variables
-      #domino_server_name: "DoMiNO-iS-dVMb" # Defaults to settings.hostname if not set
-      #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: STARTcloud
-      #domino_admin_notes_id_password: password
-
-      ## Safe-ids to cross-certify
-      user_safe_id: SAFE.ids
+      #domino_admin_notes_id_password:
 
       ## Additional server options
-      is_additional_server: false
-      #domino_server_id: "additional-demo.startcloud.com.id"
-      #origin_server: "standalone-demo.startcloud.com"
-      #origin_server_ip: "192.168.2.255"
+      is_additional_server: true
+      domino_server_id: "additional-demo.startcloud.com.id"
+      origin_server: "standalone-demo.startcloud.com"
+      origin_server_ip: "10.12.0.103"
 
       # ots: Use One Touch Setup to generate the ID (server names are incremented, ie mail1 mail2 mail3 . .)
       # asja: Use Custom Additional Server Java Applet to generate the additional server ID
-      domino_server_id_creation_tool: ots
+      #domino_server_id_creation_tool: ots
 
       # For use in Domino 14 and above
-      ots_generate_server_names:
-        - additional-demo.startcloud.com
-      #  - ADDITIONAL-demo.startcloud.com
+      #ots_generate_server_names:
+      #  - additional-demo.startcloud.com
       
       # For use in Domino 12 and below
       #ots_generate_server_id_count:  1
       #ots_generate_server_id_pattern: mail
-
+      
       #asja_generate_server_ids:
       #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
       #  - ::OTHER_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
       #  - ::THIRD_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
+
 
       ## Genesis Variables
       genesis_packages:
@@ -352,13 +346,11 @@ hosts:
       #domino_rest_api_archive:
 
       ## Hosts entries for /etc/hosts
-      #etc_hosts_entries:
-      #  - hostname: "{{ settings.hostname }}.{{ settings.domain }}"
-      #    aliases:
-      #      - "{{ settings.hostname }}"
-      #      - "{{ domino_server_name }}.{{ domino_server_domain }}"
-      #      - "{{ domino_server_name }}"
-      #    ip: 192.168.2.255
+      etc_hosts_entries:
+        - hostname: standalone-demo.startcloud.com
+          aliases:
+            - standalone-demo
+          ip: 10.12.0.103
 
     roles:
       - name: startcloud.startcloud_roles.setup
@@ -386,7 +378,8 @@ hosts:
       - name: startcloud.hcl_roles.domino_config 
       - name: startcloud.hcl_roles.domino_genesis
       - name: startcloud.hcl_roles.domino_genesis_applications
-      - name: startcloud.hcl_roles.domino_cross_certify
+      # Cross-certification not available on additional server, since certifier ID is not present
+      #- name: startcloud.hcl_roles.domino_cross_certify
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
