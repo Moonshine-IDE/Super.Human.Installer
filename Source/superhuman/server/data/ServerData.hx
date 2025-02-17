@@ -39,6 +39,7 @@ typedef ServerData = {
     
     user_email:String,
     ?user_safeid:Null<String>,
+    ?server_provisioner_id:Null<String>,
 
     ?server_organization:String,
     server_id:Int,

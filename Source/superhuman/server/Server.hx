@@ -136,6 +136,7 @@ class Server {
         sc._setupWait.value = data.env_setup_wait;
         sc._userEmail.value = data.user_email;
         sc._userSafeId.value = data.user_safeid;
+        sc._serverProvisionerId.value = data.server_provisioner_id;
         sc._syncMethod = data.syncMethod == null ? SyncMethod.Rsync : data.syncMethod;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
@@ -219,6 +220,7 @@ class Server {
     var _type:String;
     var _userEmail:ValidatingProperty;
     var _userSafeId:Property<String>;
+    var _serverProvisionerId:Property<String>;
     var _vagrantHaltExecutor:AbstractExecutor;
     var _vagrantSuspendExecutor:AbstractExecutor;
     var _vagrantUpElapsedTime:Float;
@@ -343,6 +345,9 @@ class Server {
     public var userSafeId( get, never ):Property<String>;
     function get_userSafeId() return _userSafeId;
 
+    public var serverProvisionerId( get, never ):Property<String>;
+    function get_serverProvisionerId() return _serverProvisionerId;
+
     public var vagrantUpElapsedTime( get, never ):Float;
     function get_vagrantUpElapsedTime() return _vagrantUpElapsedTime;
 
@@ -437,6 +442,8 @@ class Server {
         _userSafeId = new Property();
         _userSafeId.onChange.add( _propertyChanged );
 
+        _serverProvisionerId = new Property();
+        _serverProvisionerId.onChange.add( _propertyChanged );
     }
 
     public function dispose() {
@@ -473,6 +480,7 @@ class Server {
             env_setup_wait: this._setupWait.value,
             user_email: this._userEmail.value,
             user_safeid: ( this._userSafeId != null && this._userSafeId.value != null ) ? this._userSafeId.value : null,
+            server_provisioner_id: ( this._serverProvisionerId != null && this._serverProvisionerId.value != null ) ? this._serverProvisionerId.value : null,
             roles: this._roles.value,
             type: this._type,
             dhcp4: this._dhcp4.value,
@@ -732,12 +740,6 @@ class Server {
         _setServerStatus();
 
         for ( f in _onUpdate ) f( this, true );
-
-    }
-
-    public function safeIdCopied():Bool {
-
-        return _provisioner.safeIdExists;
 
     }
 

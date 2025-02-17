@@ -54,7 +54,7 @@ class AdditionalServerPage extends Page
 		buttonNewServerId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
 		buttonNewServerId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING ) ;
         buttonNewServerId.enabled = !_server.userSafeId.locked;
-		buttonNewServerId.addEventListener( TriggerEvent.TRIGGER, _buttonSafeIdTriggered );
+		buttonNewServerId.addEventListener( TriggerEvent.TRIGGER, _buttonProvisionerServerIdTriggered );
 		
 		rowRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.text' );
         buttonRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.button' );
@@ -128,17 +128,15 @@ class AdditionalServerPage extends Page
 		dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
     }
 
-	function _buttonSafeIdTriggered( e:TriggerEvent ) {
-        _server.locateNotesSafeId( _safeIdLocated );
+	function _buttonProvisionerServerIdTriggered( e:TriggerEvent ) {
+        _server.locateServerProvisionerId( _provisionerServerIdLocated );
     }
 
-	function _safeIdLocated() {
-
-		_server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
+	function _provisionerServerIdLocated() {
         buttonNewServerId.setValidity( true );
         buttonNewServerId.icon = ( buttonNewServerId.isValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
         buttonNewServerId.text = ( buttonNewServerId.isValid() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
-    }
+	}
 
 	function _buttonRolesTriggered( e:TriggerEvent ) {
 

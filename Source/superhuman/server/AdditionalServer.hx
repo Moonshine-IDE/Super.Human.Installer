@@ -1,5 +1,8 @@
 package superhuman.server;
 
+import lime.ui.FileDialogType;
+import lime.ui.FileDialog;
+import genesis.application.managers.LanguageManager;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.core.primitives.ValidatingProperty;
@@ -9,6 +12,7 @@ import haxe.io.Path;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.AdditionalProvisioner;
+import lime.system.System;
 
 class AdditionalServer extends Server {
 
@@ -146,11 +150,48 @@ class AdditionalServer extends Server {
         }
     }
 
+	override function _saveSafeId() {
+
+        var r = this._provisioner.saveSafeId( _serverProvisionerId.value );
+        if ( !r ) this._busy.value = false;
+
+    }
+
+    override public function safeIdExists():Bool {
+
+        if ( _serverProvisionerId == null || _serverProvisionerId.value == null || _serverProvisionerId.value == "" ) return false;
+
+        return FileSystem.exists( _serverProvisionerId.value );
+
+    }
+
     override public function getData():ServerData {
         var sd:ServerData = super.getData();
             sd.existingServerName = _existingServerName.value;
             sd.existingServerIpAddress = _existingServerIpAddress.value;
         return sd;
+    }
+
+    public function locateServerProvisionerId( ?callback:()->Void ) {
+
+        var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
+        var fd = new FileDialog();
+        var currentDir:String;
+
+        fd.onSelect.add( path -> {
+
+            currentDir = Path.directory( path );
+            _serverProvisionerId.value = path;
+
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provisionerserveridselected', path ) );
+
+            if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
+            if ( callback != null ) callback();
+
+        } );
+
+        fd.browse( FileDialogType.OPEN, null, dir + "/", "Locate your Server Id file with .ids extension" );
+
     }
 
     public static function getHostNameServerUrl(hostname:String):ServerURL

@@ -35,7 +35,6 @@ import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
-import haxe.Template;
 import haxe.io.Path;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;

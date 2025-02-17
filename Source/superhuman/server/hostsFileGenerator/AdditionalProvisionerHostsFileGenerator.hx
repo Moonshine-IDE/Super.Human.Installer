@@ -14,18 +14,24 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
 
         var output:String = null;
         var internalProvisioner:AdditionalProvisioner = cast(provisioner, AdditionalProvisioner);
+        var internalServer:AdditionalServer = cast(internalProvisioner.server, AdditionalServer);
         
         var defaultProvisionerFieldValue:String = null;
         var defaultRoleFieldValue:Dynamic = false;
 
-        var existingServerUrl:ServerURL = cast(internalProvisioner.server, AdditionalServer).getExistingServerUrl();
+        var existingServerUrl:ServerURL = internalServer.getExistingServerUrl();
         var existingDominoOriginHostname:String = existingServerUrl != null ? existingServerUrl.hostname : defaultProvisionerFieldValue;
         var existingDominoOriginDomain:String = existingServerUrl != null ? existingServerUrl.domainName : defaultProvisionerFieldValue;
-        var existingDominoServerId:String = "";
-        var existingDominoOriginServerIp:String = cast(internalProvisioner.server, AdditionalServer).existingServerIpAddress != null ? 
-                                 cast(internalProvisioner.server, AdditionalServer).existingServerIpAddress.value :
-                                 defaultProvisionerFieldValue;
+        var existingDominoOriginServerIp:String = internalServer.existingServerIpAddress != null ? 
+                                                  internalServer.existingServerIpAddress.value :
+                                                  defaultProvisionerFieldValue;
         
+        var existingDominoServerId:String = defaultProvisionerFieldValue;
+            if (internalServer.serverProvisionerId != null) {
+                var serverProvisionerName = new Path(internalServer.serverProvisionerId.value);
+                existingDominoServerId = serverProvisionerName.file + "." + serverProvisionerName.ext;
+            }
+                                          
         //additional server
 
         var replace = DemoTasksHostsFileGenerator._getDefaultTemplateValues(internalProvisioner, defaultProvisionerFieldValue, defaultRoleFieldValue);
