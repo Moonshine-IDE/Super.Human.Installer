@@ -757,7 +757,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _saveConfig() {
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
-
+		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
+		
 		_config.servers = [];
 
 		for ( server in ServerManager.getInstance().servers ) {
