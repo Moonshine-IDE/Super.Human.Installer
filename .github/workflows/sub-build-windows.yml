@@ -57,6 +57,11 @@ jobs:
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
+      - name: Setup Git settings
+        run: |
+          git config --global core.longpaths true
+          git config --system core.longpaths true 
+
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
