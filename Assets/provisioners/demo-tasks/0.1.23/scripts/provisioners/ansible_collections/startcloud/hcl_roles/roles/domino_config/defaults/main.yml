@@ -3,6 +3,7 @@ run_tasks: true
 show_help: true
 debug_autoconfigure: false
 domino_server_id: "server.id"
+domino_server_id_password: "null"
 use_domino_server_id: true
 domino_server_id_creation_tool: ots
 ots_generate_server_id_count: 1

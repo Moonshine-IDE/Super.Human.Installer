@@ -4,6 +4,7 @@
 .settings/
 build/
 gradle.properties
+*.class
 
 .DS_Store
 *.swp

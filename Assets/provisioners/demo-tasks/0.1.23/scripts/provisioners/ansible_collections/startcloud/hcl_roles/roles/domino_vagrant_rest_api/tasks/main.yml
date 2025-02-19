@@ -27,6 +27,9 @@
     
     -
       name: "Downloading Domino VagrantCRUD API {{ rest_vagrant_crud_version }}"
+      register: vagrant_crud_api
+      until: "vagrant_crud_api is not failed"
+      retries: 3
       when: not rest_interface_deployed.stat.exists
       ansible.builtin.get_url:
         mode: '0644'

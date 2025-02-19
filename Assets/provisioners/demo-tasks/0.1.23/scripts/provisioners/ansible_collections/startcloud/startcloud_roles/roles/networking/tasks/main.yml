@@ -251,7 +251,7 @@
               name: "Adding Extra Host Records"
               ansible.builtin.lineinfile:
                 path: "/etc/hosts"
-                line: "{{ updated_second_ip.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }}"
+                line: "{{ updated_second_ip.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain }}"
                 insertbefore: EOF
 
         -
@@ -277,7 +277,7 @@
               name: "Adding Extra Host Records"
               ansible.builtin.lineinfile:
                 path: "/etc/hosts"
-                line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }}"
+                line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain }}"
                 insertbefore: EOF
     
     -

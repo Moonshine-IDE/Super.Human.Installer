@@ -17,6 +17,7 @@ certbot_create_standalone_stop_services:
   - nginx
 
 dns_entries_list:
+    - auth
     - nomadweb
     - notes
     - domino

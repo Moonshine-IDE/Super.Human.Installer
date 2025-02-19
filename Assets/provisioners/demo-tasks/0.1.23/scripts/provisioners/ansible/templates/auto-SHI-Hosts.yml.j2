@@ -22,11 +22,11 @@ hosts:
 
       # Box information
       box: 'STARTcloud/debian12-server'
-      box_url: 'https://vagrantcloud.com'
+      box_url: 'https://boxvault.startcloud.com'
       box_version: 0.0.4
 
       # Provider Specific Settings
-      provider-type: virtualbox
+      provider_type: virtualbox
       os_type: 'Debian_64'
       firmware_type: UEFI
 
@@ -37,8 +37,8 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_user: ::SERVER_DEFAULT_USER:: #  startcloud
       vagrant_user_pass: ::SERVER_DEFAULT_USER_PASS:: # 'STARTcloud24@!' 
-      vagrant_insert_key: true
-      ssh_forward_agent: true
+      vagrant_ssh_insert_key: true
+      vagrant_ssh_forward_agent: true
 
     networks:
       # Future iteration may omit this to skip attaching a bridged adpater, the below block will need to be template unto itself
@@ -124,7 +124,7 @@ hosts:
       domino_organization: ::SERVER_ORGANIZATION::
       user_safe_id: ::USER_SAFE_ID::
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
-      generate_server_id_count: ::DOMINO_SERVER_CLUSTERMATES::
+      ots_generate_server_id_count: ::DOMINO_SERVER_CLUSTERMATES::
 
       # Additional server options
       is_additional_server: ::DOMINO_IS_ADDITIONAL_INSTANCE::

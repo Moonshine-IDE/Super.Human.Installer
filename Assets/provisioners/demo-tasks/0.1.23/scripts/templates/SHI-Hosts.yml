@@ -25,7 +25,7 @@ hosts:
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: ::BOX_URL:: # Should default to 'https://boxvault.startcloud.com' but can be set to 'https://vagrantcloud.com'
-      box_version: 0.0.9
+      box_version: 2025.2.9
 
       # Provider Specific Settings
       provider_type: virtualbox
@@ -163,6 +163,19 @@ hosts:
           - '--delete'
           - '-z'
           - '--copy-links'
+
+      -
+        description: "Directory for Ansible Collections"
+        map: ./provisioners/ansible_collections/
+        to: /vagrant/ansible_collections/
+        type: ::SYNC_METHOD:: ## rsync or scp
+        args:
+          - '--verbose'
+          - '--archive'
+          - '--delete'
+          - '-z'
+          - '--copy-links'
+
       -
         description: "Directory for Application Installers"
         map: ./installers/
@@ -178,7 +191,7 @@ hosts:
         map: ./id-files/
         to: /id-files/
         type: ::SYNC_METHOD:: ## rsync or scp
-        syncback: ::SYNCBACK_ID_FILES::
+        syncback: ::SYNCBACK_ID_FILES:: ## Should Default to True
 
     vars:
       # Secrets Override: If you don't want to use a secrets file you can override secrets here
@@ -212,8 +225,13 @@ hosts:
       extra_packages: ['htop']
 
       ## Domino Configuration Variables
+      #domino_server_name: "DoMiNO-iS-dVMb" # Defaults to settings.hostname if not set
+      #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: ::SERVER_ORGANIZATION::
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
+
+      ## Safe-ids to cross-certify (only works for initial/standalone server)
+      user_safe_id: ::USER_SAFE_ID::
 
       ## Additional server options
       is_additional_server: ::DOMINO_IS_ADDITIONAL_INSTANCE::
@@ -225,6 +243,7 @@ hosts:
       # asja: Use Custom Additional Server Java Applet to generate the additional server ID
       #domino_server_id_creation_tool: ::DOMINO_SERVER_ID_CREATION_TOOL::
 
+      ## OTS Additional Server Settings
       # For use in Domino 14 and above
       #ots_generate_server_names:
       #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
@@ -232,10 +251,22 @@ hosts:
       # For use in Domino 12 and below
       #ots_generate_server_id_count:  ::DOMINO_SERVER_CLUSTERMATES::
       #ots_generate_server_id_pattern: ::DOMINO_SERVER_CLUSTERMATES_PATTERN::
+
+      ## ASJA Server Settings
       #asja_generate_server_ids:
-      #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
-      #  - ::OTHER_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
-      #  - ::THIRD_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
+      #  - name: ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
+      #    pass: ""
+      #  - name: ::OTHER_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
+      #    pass: ""
+      #  - name: ::THIRD_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
+      #    pass: ""
+
+      asja_generate_server_ids:
+        - name: additional-demo.startcloud.com
+          pass: ""
+      #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
+      #  - ::OTHER_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
+      #  - ::THIRD_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
 
       ## Genesis Variables
       genesis_packages:
@@ -260,6 +291,9 @@ hosts:
       domino_installer_hotfix_install: ::DOMINO_INSTALLER_HOTFIX_INSTALL::
       domino_hotfix_version: ::DOMINO_INSTALLER_HOTFIX_VERSION::
       domino_server_hotfix_tar: ::DOMINO_INSTALLER_HOTFIX::
+
+      ## Jedi Overrides
+      jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
 
       ## Leap Variables
       leap_hash: ::LEAP_HASH::
@@ -326,8 +360,7 @@ hosts:
       - name: startcloud.hcl_roles.domino_config 
       - name: startcloud.hcl_roles.domino_genesis
       - name: startcloud.hcl_roles.domino_genesis_applications
-      # Cross-certification not available on additional server, since certifier ID is not present
-      #- name: startcloud.hcl_roles.domino_cross_certify
+      - name: startcloud.hcl_roles.domino_cross_certify
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
@@ -352,6 +385,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_nomadweb
         vars:
           run_tasks: ::ROLE_NOMADWEB::
+      - name: startcloud.hcl_roles.domino_jedi
+        vars:
+          run_tasks: ::ROLE_JEDI::
       - name: startcloud.hcl_roles.domino_vagrant_readme
       - name: startcloud.startcloud_roles.quick_start
         tags: always

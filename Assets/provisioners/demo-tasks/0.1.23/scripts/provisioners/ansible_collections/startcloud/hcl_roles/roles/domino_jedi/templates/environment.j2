@@ -1,0 +1,7 @@
+# Control whether JeDI will attempt to start the Domino servers when it is started or restarted
+{% if jedi_domino_autostart is defined and jedi_domino_autostart == true %}
+JDISTARTALL=true
+{% else %}
+JDISTARTALL=false
+{% endif %}
+

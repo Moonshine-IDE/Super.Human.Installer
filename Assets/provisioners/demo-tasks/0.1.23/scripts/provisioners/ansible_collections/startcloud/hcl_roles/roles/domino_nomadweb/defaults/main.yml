@@ -2,8 +2,11 @@
 run_tasks: true
 nomadweb_archive: nomad-server-1.0.13-linux.tar.gz
 nomadweb_version: 1.0.13
+nomadweb_version_major: "{{ nomadweb_version.split('.')[0] }}"
+nomadweb_version_minor: "{{ nomadweb_version.split('.')[1] }}"
+nomadweb_version_patch: "{{ nomadweb_version.split('.')[2] }}"
 nomadweb_debug: false
-nomadweb_update: false
+nomadweb_app_switcher_enabled: true
 installer_url_app_path: "Super.Human.Installer/Nomad"
 domino_nomadweb_port_forwards:
   -
@@ -11,3 +14,18 @@ domino_nomadweb_port_forwards:
     url: "notes"
 domino_nomadweb_use_proxy_url: true
 domino_nomadweb_proxy_url: "{{ domino_nomadweb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+nomad_client_config:
+  friendly_name: "Nomad server on Domino"
+  client_id: "{{ domino_oidc_client_id }}"
+  client_secret: "{{ domino_oidc_client_secret }}"
+  redirect_uri: "https://{{ domino_nomadweb_proxy_url }}/login/callback"
+  aud: "{% if domino_oidc_provider_federation_enabled %}{{ domino_organization }}-O={{ id_vault_name }}{% else %}https://{{ domino_nomadweb_proxy_url }}{% endif %}"
+  scope: "{% if domino_oidc_provider_federation_enabled %}openid email Domino.user.all Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}{% else %}openid email Domino.user.all{% endif %}"
+  token_endpoint_auth_method: "client_secret_basic"
+  access_token_sec: 300
+  id_token_sec: 900
+  refresh_token_sec: 3600
+  max_session_sec: 57600
+  id_token_signed_response_alg: "ES256"
+  access_token_signed_response_alg: "ES256"

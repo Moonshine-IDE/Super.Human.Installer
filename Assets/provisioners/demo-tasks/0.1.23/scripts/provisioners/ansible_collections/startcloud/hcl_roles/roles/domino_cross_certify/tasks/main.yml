@@ -63,7 +63,7 @@
             . {{ service_home_dir }}/.bash_profile &&
             . {{ service_home_dir }}/.bashrc &&
             . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
-            java -jar CheckDatabase.jar {{ domino_server_name }}.{{ domino_server_domain }}/{{ domino_organization }} names.nsf"
+            java -jar CheckDatabase.jar {{ domino_server_name_common_with_org }} names.nsf"
         responses:
           'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
     

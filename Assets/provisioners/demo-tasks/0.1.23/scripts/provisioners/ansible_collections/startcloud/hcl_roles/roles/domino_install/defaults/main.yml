@@ -30,8 +30,8 @@ domino_patch_version: "0"
 domino_server_installer_tar: "Domino_14.0_Linux_English.tar"
 domino_notesini_servertasks: "replica,router,update,amgr,adminp,certmgr,http,nomad"
 domino_installer_fixpack_install: false
-domino_fixpack_version: FP1
-domino_server_fixpack_tar: "Domino_140FP1_Linux.tar"
+domino_fixpack_version: FP3
+domino_server_fixpack_tar: "Domino_1400FP3_Linux.tar"
 domino_installer_hotfix_install: false
 domino_hotfix_version: HF16
 domino_server_hotfix_tar: "140FP3HF16-linux64.tar"
@@ -49,6 +49,13 @@ ots_generate_server_id_count: 0
 domino_organization: STARTcloud
 domino_countrycode: null
 
+domino_nomadweb_port_forwards:
+  -
+    guest: 9443
+    url: "notes"
+domino_nomadweb_use_proxy_url: true
+domino_nomadweb_proxy_url: "{{ domino_nomadweb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
 domino_enable_java_agent_cache: 2
 domino_daos_enable: 0
 domino_daos_base_path: /local/daos
@@ -61,6 +68,11 @@ domino_translog_status: "1"
 domino_translog_style: "0"
 domino_translog_use_all: "0"
 domino_qta_mthd: "1"
+domino_http_log_enabled: "1"
+domino_http_log_directory: "domino/html-logs"
+domino_http_log_prefix: "access"
+domino_http_log_format: "1"
+domino_http_log_to_dom_log: "1"
 domino_http_home_url: "homepage.nsf"
 domino_http_enable_session_auth: "1"
 domino_http_tcpnp: "1"
@@ -146,3 +158,56 @@ domino_install_port_forwards:
     guest: 1352
     url: "domino"
 domino_install_proxy_url: "{{ domino_install_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+domino_oidc_provider_enabled: true
+domino_oidc_hostname: auth
+domino_oidc_install_proxy_url: "{{ domino_oidc_hostname }}.{{ settings.hostname }}.{{ settings.domain }}"
+domino_oidc_client_id: "{{ settings.hostname }}_{{ settings.domain }}_client_id"
+domino_oidc_client_secret: "{{ lookup('ansible.builtin.password', '/dev/null', seed=inventory_hostname) }}"
+domino_oidc_provider_federation_enabled: true
+domino_oidc_provider_login_form: "$$LoginUserForm"
+domino_oidc_provider_nomad_enabled: true
+domino_oidc_trusted_roots: ""
+domino_oidc_auth_type: "B"
+#None|N
+#Client secret basic|B
+#Client secret post|P
+#Private key JWT|J
+
+domino_oidc_simplify_redirect_url: "1"
+domino_oidc_bearer_options: "0"
+domino_oidc_bearer_custom_claim_names: ""
+domino_oidc_bearer_alternate_audiences: ""
+domino_oidc_bearer_allowed_client_ids: ""
+domino_oidc_log_level: "2" #1 Minimal, 2 Standard, 3 verbose
+
+domino_oidc_external_providers:
+  - name: null
+    base_url: null
+    client_id: null
+    client_secret: null
+
+#https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0111664
+domino_server_name_common: "{{ (domino_major_version is defined and 
+                               ((domino_major_version >= 12 and 
+                                 ((domino_major_version == 12 and domino_patch_version >= 2) or domino_major_version > 12) and 
+                                 domino_admin_ignore_new_servernaming_convention == 1) or
+                                (domino_major_version == 12 and 
+                                 domino_patch_version < 2 and 
+                                 domino_admin_ignore_new_servernaming_convention == 0))
+                              ) | ternary(
+                                domino_server_name,
+                                domino_server_name + '.' + domino_server_domain
+                              ) }}"
+
+domino_server_name_common_with_org: "{{ (domino_major_version is defined and 
+                                        ((domino_major_version >= 12 and 
+                                          ((domino_major_version == 12 and domino_patch_version >= 2) or domino_major_version > 12) and 
+                                          domino_admin_ignore_new_servernaming_convention == 1) or
+                                         (domino_major_version == 12 and 
+                                          domino_patch_version < 2 and 
+                                          domino_admin_ignore_new_servernaming_convention == 0))
+                                       ) | ternary(
+                                         domino_server_name + '/' + domino_organization,
+                                         domino_server_name + '.' + domino_server_domain + '/' + domino_organization
+                                       ) }}"

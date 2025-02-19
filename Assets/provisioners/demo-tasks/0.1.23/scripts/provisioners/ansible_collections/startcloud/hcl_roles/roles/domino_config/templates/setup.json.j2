@@ -8,10 +8,10 @@
 {% else %}
       "type": "first",
 {% endif %}
-      "name": "{{ domino_server_name }}.{{ domino_server_domain }}",
+      "name": "{{ domino_server_name_common }}",
       "domainName": "{{ domino_organization }}",
       "title": "{{ domino_server_name }}",
-      "password": null,
+      "password": {{ domino_server_id_password }},
       "minPasswordLength": 5,
       "serverTasks": "HTTP"
     },
@@ -25,7 +25,7 @@
     },
 {% endif %}
     "network": {
-      "hostName": "{{ domino_server_name }}.{{ domino_server_domain }}",
+      "hostName": "{{ domino_server_name_common }}",
       "enablePortEncryption": true,
       "enablePortCompression": true
     },
@@ -172,15 +172,28 @@
         },
 {% endif %}
         "documents": [
+{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled %}
+        {
+          "action": "update",
+          "findDocument": {
+            "Type": "PolicySecurity",
+            "Fullname": "{{ id_vault_name }} Security Settings Policy"
+          },
+          "computeWithForm": true,
+          "items": {
+             "VaultBearerOn": "1"
+          }
+        },
+{% endif %}
         {
           "action": "update",
           "findDocument": {
             "Type": "Server",
-            "ServerName": "CN={{ domino_server_name }}.{{ domino_server_domain }}/O={{ domino_organization }}"
+            "ServerName": "CN={{ domino_server_name_common }}/O={{ domino_organization }}"
           },
           "computeWithForm": true,
           "items": {
-              "AutomationComment": "ServerAutoConfigured",
+            "AutomationComment": "ServerAutoConfigured",
 {% if not is_additional_server %}
             "FullAdmin": [
               "LocalDomainAdmins",
@@ -252,6 +265,11 @@
             "DAOSBasePath": "{{ domino_daos_base_path }}",
             "DAOSMinObjSize": "{{ domino_daos_min_obj_size }}",
             "DAOS_ENCRYPT_NLO": "{{ domino_daos_encrypt_nlo }}",
+            "HTTP_LogToFiles": "{{ domino_http_log_enabled }}",
+            "HTTP_LogDirectory": "{{ domino_http_log_directory }}",
+            "HTTP_AccessLog": "{{ domino_http_log_prefix }}",
+            "HTTP_AccessLogFormat": "{{ domino_http_log_format }}",
+            "HTTP_LogToDomLog": "{{ domino_http_log_to_dom_log }}",
             "HTTP_HomeURL": "{{ domino_http_home_url }}",
             "HTTP_EnableSessionAuth": "{{ domino_http_enable_session_auth }}",
             "HTTP_TCPNP": "{{ domino_http_tcpnp }}",
@@ -290,7 +308,7 @@
             "CmdLine": "Genesis",
             "Enabled": "2",
             "Program": "runjava",
-            "Source": "CN={{ domino_server_name }}.{{ domino_server_domain }}/O={{ domino_organization }}"
+            "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}"
           }
         },
 {% if not is_additional_server %}
@@ -331,7 +349,7 @@
             "Form": "local",
             "Type": "Connection",
             "PortName": "TCPIP",
-            "Source": "CN={{ domino_server_name }}.{{ domino_server_domain }}/O={{ domino_organization }}",
+            "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
             "Destination": "{{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
             "SourceDomain": "{{ domino_organization }}",
             "DestinationDomain": "{{ domino_organization }}",
@@ -357,6 +375,30 @@
           }
         },
 {% endif %}
+{% if domino_oidc_provider_enabled and domino_major_version >= 14 %}
+        {
+          "action": "create",
+          "computeWithForm": true,
+          "items": {
+            "Form": "WebSite",
+            "AutomationComment " : "Domino OIDC Provider",
+            "WSIsDflt"           : "0",
+            "ISiteAdrs"          : [ "127.0.0.1", "{{ domino_oidc_install_proxy_url }}" ],
+            "ISiteName"          : "DominoOIDCProvider",
+            "ISiteOrg"           : "{{ domino_organization }}",
+            "WSHostingSrvrs"     : "*",
+            "TCPAnonymous"       : "0",
+            "TCPNameAndPwd"      : "1",
+            "SSLAnonymous"       : "0",
+            "SSLNameAndPwd"      : "1",
+            "SSLBearerToken"     : "1",
+            "SSLKeyFile"         : "{{ cert_dir }}/kyr/{{ kyr_cert }}",
+            "SSLCipherList"      : [ "C030", "9F", "C02F", "9E" ],
+            "HTTP_EnableSessionAuth" : "1",
+            "HTTP_MaxActiveSessions" : "1000"
+          }
+        },
+{% endif %}
         {
           "action": "create",
           "computeWithForm": true,
@@ -371,6 +413,44 @@
         }
         ]
       },
+{% if domino_oidc_provider_enabled and domino_major_version >= 14 %}
+      {
+        "action": "create",
+        "filePath": "idpcat.nsf",
+        "title": "Identity Catalogue Database",
+        "templatePath": "idpcat.ntf",
+        "signUsingAdminp": false,
+        "documents": [
+          {
+            "action": "create",
+            "items": {
+              "Form": "OIDCProvider",
+{% if domino_oidc_provider_nomad_enabled  %}
+{% if not domino_oidc_provider_federation_enabled %}
+              "OIDCHostname": "127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}",
+{% else %}
+              "OIDCHostname": "127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}; bearer.vault-{{ domino_server_name_common }}",
+{% endif %}
+{% else %}
+              "OIDCHostname": "127.0.0.1; {{ domino_install_proxy_url }}",
+{% endif %}
+              "OIDCProviderName": "Domino",
+              "OIDCBaseURL": "https://{{ domino_oidc_install_proxy_url }}/auth/protocol/oidc",
+              "OIDC_TrustedRoots": "{{ domino_oidc_trusted_roots }}",
+              "OIDCClientID": "{{ domino_oidc_client_id }}",
+              "OIDCSecret": "{{ domino_oidc_client_secret }}",
+              "OIDCAuthType": "{{ domino_oidc_auth_type }}",
+              "OIDCSimplifyRedirectURL": "{{ domino_oidc_simplify_redirect_url }}",
+              "BearerOptions": "{{ domino_oidc_bearer_options }}",
+              "BearerCustomClaimName": "{{ domino_oidc_bearer_custom_claim_names }}",
+              "BearerAlternateAudiences": "{{ domino_oidc_bearer_alternate_audiences }}",
+              "BearerAllowedClientIDs": "{{ domino_oidc_bearer_allowed_client_ids }}",
+              "OIDCLogLevel": "{{ domino_oidc_log_level }}"
+            }
+          }
+        ]
+      },
+{% endif %}
       {
         "action": "create",
         "filePath": "domcfg.nsf",
@@ -378,6 +458,19 @@
         "templatePath": "domcfg5.ntf",
         "signUsingAdminp": false,
         "documents": [
+{% if domino_oidc_provider_enabled and domino_major_version >= 14 %}
+          {
+            "action": "create",
+            "items": {
+              "Form": "LoginMap",
+              "LF_LoginForm": "{{ domino_oidc_provider_login_form }}",
+              "LF_LoginFormDB": "domcfg.nsf",
+              "LF_ServerType": "0",
+              "LF_IP": "",
+              "$PublicAccess": "1"
+            }
+          }
+{% else %}
           {
             "action": "create",
             "items": {
@@ -389,6 +482,7 @@
               "$PublicAccess": "1"
             }
           }
+{% endif %}
         ]
       },
       {

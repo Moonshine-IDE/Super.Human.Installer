@@ -239,7 +239,6 @@
       args:
         chdir: "{{ installer_dir }}/domino/hotfix/linux64"
         creates: "{{ completed_dir }}/hfinstalled"
-        executable: "/bin/bash"
       when: domino_installer_hotfix_install and not hotfix_installed.stat.exists
       with_items:
         - "bash ./install -script ./script.dat && touch {{ completed_dir }}/hfinstalled"
@@ -260,3 +259,13 @@
         line: "EnableJavaAgentCache=2"
         insertafter: EOF
         state: present
+
+    -
+      name: "Append TEST_JWTIDVAULT to notes.ini"
+      ansible.builtin.blockinfile:
+        path: "{{ domino_home_dir }}/notes.ini"
+        insertafter: EOF
+        content: |
+          $$TEST_JWTIDVAULT=1
+
+      when: domino_major_version == 14

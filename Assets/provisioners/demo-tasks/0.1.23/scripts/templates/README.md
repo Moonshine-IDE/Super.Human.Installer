@@ -2,6 +2,29 @@
 
 This repository contains two main configuration templates for provisioning virtual machines: `debug-Hosts.yml` and `SHI-Hosts.yml`. These templates are used to define the settings and configurations for different environments.
 
+# Directions
+
+Access the template directory
+```
+cd hcl_domino_standalone_provisioner/templates
+```
+
+Copy your template of choice
+```
+cp debug-Hosts.yml ../Hosts.yml
+```
+
+Then go up a directory
+
+```
+cd ../
+```
+
+Then you can edit your template file, it will not be tracked by git
+```
+nano Hosts.yml
+```
+
 ## Templates Overview
 
 ### debug-Hosts.yml
