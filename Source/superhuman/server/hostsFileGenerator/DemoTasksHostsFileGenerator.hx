@@ -314,6 +314,7 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
             ROLE_DOMINO_RESET: defaultRoleFieldValue,
             ROLE_MARIADB: defaultRoleFieldValue,
             ROLE_DOCKER: defaultRoleFieldValue,
+            ROLE_JEDI: defaultRoleFieldValue,
             
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,

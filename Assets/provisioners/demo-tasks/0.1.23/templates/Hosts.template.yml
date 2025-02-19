@@ -257,6 +257,9 @@ hosts:
       domino_hotfix_version: ::DOMINO_INSTALLER_HOTFIX_VERSION::
       domino_server_hotfix_tar: ::DOMINO_INSTALLER_HOTFIX::
 
+## Jedi Overrides
+      jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
+
       # Leap Variables
       leap_hash: ::LEAP_HASH::
       leap_archive: ::LEAP_INSTALLER::
@@ -347,6 +350,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_nomadweb
         vars:
           run_tasks: ::ROLE_NOMADWEB::
+      - name: startcloud.hcl_roles.domino_jedi
+        vars:
+          run_tasks: ::ROLE_JEDI::
       - name: startcloud.hcl_roles.domino_vagrant_readme
       - name: startcloud.startcloud_roles.quick_start
         tags: always
