@@ -18,6 +18,7 @@ class AdditionalServer extends Server {
 
     public static final _HOSTNAME:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$/;
     public static final _HOSTNAME_WITH_PATH:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*(\/.+)?$/;
+    public static final _SERVER_ORGANIZATION:EReg = ~/\/([^\/]+)$/;
 
     override function get_url():ServerURL {
         return getHostNameServerUrl(hostname.value);
@@ -42,6 +43,9 @@ class AdditionalServer extends Server {
 
         _existingServerName = new ValidatingProperty( "", _HOSTNAME_WITH_PATH, true, 1 );
         _existingServerName.onChange.add( _propertyChanged );
+
+        _organization = new ValidatingProperty( "", _SERVER_ORGANIZATION, 1 );
+        _organization.onChange.add( _propertyChanged );
 
         _existingServerIpAddress = new ValidatingProperty( "", Server._VK_IP, true );
         _existingServerIpAddress.onChange.add( _propertyChanged );
@@ -142,6 +146,14 @@ class AdditionalServer extends Server {
         return getHostNameServerUrl(_existingServerName.value);
     }
 
+    public function getOrganization():String
+    {
+        if (_organization.isValid()) {
+            return _SERVER_ORGANIZATION.matched(1);
+        }
+        return null;
+    }
+    
     override public function saveHostsFile() {
 
         if ( isValid() ) 

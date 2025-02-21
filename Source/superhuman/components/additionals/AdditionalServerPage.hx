@@ -170,6 +170,7 @@ class AdditionalServerPage extends Page
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         _server.hostname.value = StringTools.trim( inputHostname.text );
 		_server.existingServerName.value = StringTools.trim( inputExistingDominoServer.text );
+		_server.organization.value = StringTools.trim( inputExistingDominoServer.text );
 		_server.existingServerIpAddress.value = StringTools.trim( inputExistingServerIp.text );
         
         var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;

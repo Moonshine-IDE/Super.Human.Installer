@@ -1,7 +1,6 @@
 package superhuman.server.hostsFileGenerator;
 
 import superhuman.server.provisioners.AdditionalProvisioner;
-import superhuman.server.provisioners.DemoTasks;
 import superhuman.server.provisioners.roles.RolesUtil;
 import superhuman.server.provisioners.AbstractProvisioner;
 import haxe.Template;
@@ -25,7 +24,7 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
         var existingDominoOriginServerIp:String = internalServer.existingServerIpAddress != null ? 
                                                   internalServer.existingServerIpAddress.value :
                                                   defaultProvisionerFieldValue;
-        
+
         var existingDominoServerId:String = defaultProvisionerFieldValue;
             if (internalServer.serverProvisionerId != null) {
                 var serverProvisionerName = new Path(internalServer.serverProvisionerId.value);
@@ -40,11 +39,10 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
             replace.DOMINO_ORIGIN_DOMAIN = existingDominoOriginDomain;
             replace.DOMINO_SERVER_ID = existingDominoServerId;
             replace.DOMINO_ORIGIN_SERVER_IP = existingDominoOriginServerIp;
-            replace.SERVER_ORGANIZATION = null;
+            replace.SERVER_ORGANIZATION = internalServer.getOrganization();
 
         for ( r in internalProvisioner.server.roles.value ) {
 
-			var roleValue = r.value;
 			var replaceWith:String = "";
 			var installerHash:String = r.files.installerHash == null ? defaultProvisionerFieldValue : "\"" + r.files.installerHash + "\"";
 			var installerName:String = r.files.installerFileName == null ? defaultProvisionerFieldValue : r.files.installerFileName;
