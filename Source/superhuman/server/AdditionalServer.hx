@@ -17,7 +17,7 @@ import lime.system.System;
 class AdditionalServer extends Server {
 
     public static final _HOSTNAME:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*$/;
-    public static final _HOSTNAME_WITH_PATH:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)*(\/.+)?$/;
+    public static final _HOSTNAME_WITH_PATH:EReg = ~/^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?)+(\/.+)?$/;
     public static final _SERVER_ORGANIZATION:EReg = ~/\/([^\/]+)$/;
 
     override function get_url():ServerURL {
