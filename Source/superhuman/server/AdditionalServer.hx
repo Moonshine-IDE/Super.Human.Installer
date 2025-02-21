@@ -116,6 +116,7 @@ class AdditionalServer extends Server {
         var hasVagrant:Bool = Vagrant.getInstance().exists;
         var hasVirtualBox:Bool = VirtualBox.getInstance().exists;
         var hasValidHostname:Bool = _hostname.isValid();
+        var hasValidExistingDominoServer:Bool = _existingServerName.isValid();
         var hasEnoughMemory:Bool = _memory.value >= 4;
         var hasEnoughCPUs:Bool = _numCPUs.value >= 1;
         var isDHCPEnabled:Bool = _dhcp4.value;
@@ -132,6 +133,7 @@ class AdditionalServer extends Server {
         var isValid:Bool = hasVagrant &&
             hasVirtualBox &&
             hasValidHostname &&
+            hasValidExistingDominoServer &&
             hasEnoughMemory &&
             hasEnoughCPUs &&
             (isDHCPEnabled || hasValidNetworkConfig) &&

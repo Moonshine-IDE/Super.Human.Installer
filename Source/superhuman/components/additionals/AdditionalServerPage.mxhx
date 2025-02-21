@@ -35,7 +35,7 @@
 					<components:layoutData>
 						<f:HorizontalLayoutData percentWidth="60"/>
 					</components:layoutData>
-					<components:GenesisFormTextInput id="inputHostname" minLength="1"  />
+					<components:GenesisFormTextInput id="inputHostname" minLength="1" />
 				</components:GenesisFormRowContent>
 			</components:content>
 		</components:GenesisFormRow>

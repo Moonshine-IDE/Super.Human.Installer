@@ -1,6 +1,5 @@
 package superhuman.components.additionals;
 
-import sys.FileSystem;
 import openfl.events.MouseEvent;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.managers.ProvisionerManager;
@@ -12,6 +11,7 @@ import genesis.application.theme.GenesisApplicationTheme;
 import feathers.events.TriggerEvent;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.AdditionalServer;
+import superhuman.server.Server;
 
 @:build(mxhx.macros.MXHXComponent.build())
 class AdditionalServerPage extends Page
@@ -44,14 +44,15 @@ class AdditionalServerPage extends Page
 
 		rowCoreComponentHostname.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.text' );
 		inputHostname.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.prompt' );
-		//inputHostname.restrict = AdditionalServer._HOSTNAME;
+		inputHostname.validationKey = AdditionalServer._HOSTNAME;
 
 		rowExistingDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.text' );
 		inputExistingDominoServer.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.prompt' );
-		//inputExistingDominoServer.restrict = AdditionalServer._HOSTNAME_WITH_PATH.;
+		inputExistingDominoServer.validationKey = AdditionalServer._HOSTNAME_WITH_PATH;
 
 		rowExistingServerIp.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.text' );
 		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkip.prompt' );
+		inputExistingServerIp.validationKey = Server._VK_IP;
 
 		rowNewServerId.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.newserveridfile.text' );
 
@@ -101,12 +102,13 @@ class AdditionalServerPage extends Page
 		inputExistingServerIp.variant = null;
 		inputExistingServerIp.enabled = !_server.existingServerIpAddress.locked;
 
-		//buttonNewServerId.variant = null;
+		buttonRoles.setValidity( _server.areRolesValid() );
 		buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
 		buttonNewServerId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
 		buttonNewServerId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
-
+		buttonNewServerId.setValidity( _server.safeIdExists() );
 		buttonNewServerId.enabled = !_server.userSafeId.locked;
+
 		buttonRoles.enabled = !_server.roles.locked;
 		buttonSave.enabled = !_server.hostname.locked;
 
@@ -172,15 +174,17 @@ class AdditionalServerPage extends Page
 		_server.existingServerName.value = StringTools.trim( inputExistingDominoServer.text );
 		_server.organization.value = StringTools.trim( inputExistingDominoServer.text );
 		_server.existingServerIpAddress.value = StringTools.trim( inputExistingServerIp.text );
-        
-        var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
-        _server.updateProvisioner( dvv.data );
-
-        SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
-        
-        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
-        	evt.server = _server;
-        this.dispatchEvent( evt );
+		
+		var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
+			_server.updateProvisioner( dvv.data );
+	
+		if (_server.isValid()) {		
+			SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
+			
+			var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
+				evt.server = _server;
+			this.dispatchEvent( evt );
+    		}
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {
