@@ -30,6 +30,8 @@
 
 package superhuman.server.provisioners;
 
+import yaml.Yaml;
+import yaml.util.ObjectMap;
 import superhuman.browser.Browsers;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
@@ -72,7 +74,9 @@ class DemoTasks extends AbstractProvisioner {
     static public final HOSTS_FILE:String = "Hosts.yml";
     static public final HOSTS_TEMPLATE_FILE:String = "Hosts.template.yml";
     static public final PROVISIONING_PROOF_FILE:String = ".vagrant/provisioned-briged-ip.txt";
+    static public final PROVISIONING_PROOF_YML_FILE:String = ".vagrant/provisioned-adapters.yml";
     static public final WEB_ADDRESS_FILE:String = ".vagrant/done.txt";
+    static public final RESULTS_FILE:String = "results.yml";
 
     static public function getDefaultProvisionerRoles():Map<String, RoleData> {
 
@@ -171,13 +175,12 @@ class DemoTasks extends AbstractProvisioner {
 
     public var ipAddress( get, never ):String;
     function get_ipAddress() {
-        var result:String = null;
-        var wa = _getWebAddress();
-        if ( wa == null ) return result;
         try {
-            if ( _IP_ADDRESS_PATTERN.match( wa ) ) return _IP_ADDRESS_PATTERN.matched( 0 );
+            var ip = _getIPAddress();
+            Logger.debug('_getIPAddress() - IP address: ' + ip);
+            return ip;
         } catch ( e ) {};
-        return result;
+        return null;
     }
 
     public var numberOfStartedTasks( get, never ):Int;
@@ -256,7 +259,11 @@ class DemoTasks extends AbstractProvisioner {
 
     public function deleteProvisioningProofFile() {
 
-        this.deleteFileInTargetDirectory( PROVISIONING_PROOF_FILE );
+        if (version < "0.1.23") {
+            this.deleteFileInTargetDirectory( PROVISIONING_PROOF_FILE );
+        } else {
+            this.deleteFileInTargetDirectory( PROVISIONING_PROOF_YML_FILE );
+        }
 
     }
 
@@ -285,7 +292,7 @@ class DemoTasks extends AbstractProvisioner {
     }
 
     public function openWelcomePage() {
-        Browsers.openLink(_getWebAddress());
+        Browsers.openLink(webAddress);
     }
 
     public override function reinitialize( sourcePath:String ) {
@@ -431,15 +438,70 @@ class DemoTasks extends AbstractProvisioner {
 
         try {
 
-            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-            if ( c == null || c.length == 0 ) return null;
+            if (version < "0.1.23")
+            {
+                var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
+                if ( c == null || c.length == 0 ) return null;
 
-            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return _WEB_ADDRESS_PATTERN.matched( 0 );
+                if ( _WEB_ADDRESS_PATTERN.match( c ) ) return _WEB_ADDRESS_PATTERN.matched( 0 );
+            }
+            else
+            {
+                var webAddressPath = _getWebAddressPath();
+                var w:ObjectMap<String, Dynamic> = Yaml.read(webAddressPath);
+                if (w != null && w.exists("open_url")) {
+                    return w.get("open_url");
+                }
+            }
 
         } catch( e ) {}
 
         return null;
+    }
 
+    function _getIPAddress():String {
+        var e = _webAddressFileExists();
+
+        if ( !e ) {
+            Logger.error( '${this}: File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
+            return null;
+        }
+
+        try {
+
+            if (version < "0.1.23")
+            {
+                var wa = _getWebAddress();
+                if ( _IP_ADDRESS_PATTERN.match( wa ) ) 
+                {
+                    return _IP_ADDRESS_PATTERN.matched( 0 );
+                }
+            }
+            else
+            {
+                try {
+                    var waPath = _getWebAddressPath();
+                    var w:ObjectMap<String, Dynamic> = Yaml.read(waPath);
+                    if (w != null) {
+                        if (w.exists("adapters")) {
+                            var adapters:Array<Dynamic> = w.get("adapters");
+                            for (adapter in adapters) {
+                                if (adapter != null && adapter.exists("name")) {
+                                    if (adapter.get("name") == "public_adapter") {
+                                        var ip:String = adapter.get("ip");
+                                        return ip.indexOf("/") >= 0 ? ip.split("/")[0] : ip;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e:Dynamic) {
+                }
+            }
+
+        } catch( e ) {}
+
+        return null;
     }
 
     override function _onFileWatcherFileAdded( path:String ) {
@@ -467,9 +529,14 @@ class DemoTasks extends AbstractProvisioner {
     }
 
     function _provisioningProofFileExists():Bool {
-
-        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PROVISIONING_PROOF_FILE );
-
+        if (version < "0.1.23")
+        {
+            return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PROVISIONING_PROOF_FILE );
+        }
+        else
+        {
+            return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + PROVISIONING_PROOF_YML_FILE );
+        }
     }
 
     function _saveHostsFile() {
@@ -497,22 +564,29 @@ class DemoTasks extends AbstractProvisioner {
     }
 
     function _webAddressFileExists():Bool {
-
-        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-
+        var waPath = _getWebAddressPath();
+        return FileSystem.exists( waPath );
     }
 
     function _webAddressValid():Bool {
 
-        if ( !_webAddressFileExists() ) return false;
+        var waPath = _getWebAddressPath();
+
+        if ( !FileSystem.exists( waPath ) ) return false;
 
         try {
 
-            var c = File.getContent( Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE );
-            if ( c == null || c.length == 0 ) return false;
+            if (version < "0.1.23")
+            {
+                var c = File.getContent( waPath );
+                if ( c == null || c.length == 0 ) return false;
 
-            if ( _WEB_ADDRESS_PATTERN.match( c ) ) return true;
-
+                if ( _WEB_ADDRESS_PATTERN.match( c ) ) return true;
+            }
+            else
+            {
+                return true;
+            }
         } catch( e ) {}
 
         return false;
@@ -526,6 +600,19 @@ class DemoTasks extends AbstractProvisioner {
     		}
 
     		return "id-files/user-safe-ids";
+    }
+
+    function _getWebAddressPath():String {
+        var result = "";
+        if (version < "0.1.23")
+        {
+            result = Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE;
+        }
+        else
+        {
+            result = Path.addTrailingSlash( _targetPath ) + RESULTS_FILE;
+        }
+        return result;
     }
 
 }

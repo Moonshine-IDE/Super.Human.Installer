@@ -461,7 +461,10 @@ class SuperHumanInstaller extends GenesisApplication {
 					pe.add(rsyncExecutor);
 				}
 
-				if ( !SuperHumanGlobals.IGNORE_VAGRANT_STATUS ) pe.add( Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ) );
+				if ( !SuperHumanGlobals.IGNORE_VAGRANT_STATUS ) 
+				{
+					pe.add( Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ) );
+				}
 				pe.onStop.add( _checkPrerequisitesFinished ).execute();
 
 			} else {
