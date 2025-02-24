@@ -153,6 +153,10 @@
                 "text": "Existing Domino server name*",
                 "prompt": "domino-1.jupitermoons.com/Jupiter"
             },
+            "organizationdominoservername": {
+                "text": "Domino Organization*",
+                "prompt": "Jupiter"
+            },
             "existingserveripaddress": {
                 "text": "Existing server IP address"
             },

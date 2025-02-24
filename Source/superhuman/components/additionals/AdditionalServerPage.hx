@@ -54,6 +54,9 @@ class AdditionalServerPage extends Page
 		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkip.prompt' );
 		inputExistingServerIp.validationKey = Server._VK_IP;
 
+		rowOrganizationDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.organizationdominoservername.text' );
+		inputOrganizationDominoServer.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.organizationdominoservername.prompt' );
+
 		rowNewServerId.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.newserveridfile.text' );
 
 		buttonNewServerId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
@@ -91,15 +94,15 @@ class AdditionalServerPage extends Page
 
 		labelTitle.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
 		if ( forced || ( inputHostname.text == null || inputHostname.text == "" ) ) inputHostname.text = _server.hostname.value;
-	//	inputHostname.variant = null;
 		inputHostname.enabled = !_server.hostname.locked;
 		
 		if (  forced || ( inputExistingDominoServer.text == null || inputExistingDominoServer.text == "" ) ) inputExistingDominoServer.text = _server.existingServerName.value;
-		//inputExistingDominoServer.variant = null;
 		inputExistingDominoServer.enabled = !_server.existingServerName.locked;
 
+		if (  forced || ( inputOrganizationDominoServer.text == null || inputOrganizationDominoServer.text == "" ) ) inputOrganizationDominoServer.text = _server.organization.value;
+		inputOrganizationDominoServer.enabled = !_server.organization.locked;
+
 		if (  forced || ( inputExistingServerIp.text == null || inputExistingServerIp.text == "" ) ) inputExistingServerIp.text = _server.existingServerIpAddress.value;
-		inputExistingServerIp.variant = null;
 		inputExistingServerIp.enabled = !_server.existingServerIpAddress.locked;
 
 		buttonRoles.setValidity( _server.areRolesValid() );
@@ -172,7 +175,7 @@ class AdditionalServerPage extends Page
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         _server.hostname.value = StringTools.trim( inputHostname.text );
 		_server.existingServerName.value = StringTools.trim( inputExistingDominoServer.text );
-		_server.organization.value = StringTools.trim( inputExistingDominoServer.text );
+		_server.organization.value = StringTools.trim( inputOrganizationDominoServer.text );
 		_server.existingServerIpAddress.value = StringTools.trim( inputExistingServerIp.text );
 		
 		var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;

@@ -49,6 +49,16 @@
 				</components:GenesisFormRowContent>
 			</components:content>
 		</components:GenesisFormRow>
+		<components:GenesisFormRow id="rowOrganizationDominoServer">
+			<components:content>
+				<components:GenesisFormRowContent>
+					<components:layoutData>
+						<f:HorizontalLayoutData percentWidth="60"/>
+					</components:layoutData>
+					<components:GenesisFormTextInput id="inputOrganizationDominoServer" restrict="a-zA-Z0-9.-" minLength="1"  />
+				</components:GenesisFormRowContent>
+			</components:content>
+		</components:GenesisFormRow>
 		<components:GenesisFormRow id="rowExistingServerIp">
 			<components:content>
 				<components:GenesisFormRowContent>
