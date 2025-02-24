@@ -19,6 +19,7 @@ class SuperHumanHashes
 		"leap" => [ "installers" => [ { hash: "080235c0f0cce7cc3446e01ffccf0046", version: { majorVersion: "1", minorVersion: "0", patch: "5", fullVersion: "1.0.5" } },
 									{ hash: "8952d633ff19ad7833936edccee9fd01", version: { majorVersion: "1", minorVersion: "1", patch: "1", fullVersion: "1.1.1" } } ]],
 		"nomadweb" => [ "installers" => [ { hash: "044c7a71598f41cd3ddb88c5b4c9b403" }, 
+										 { hash: "cb1b19e36e644bc7e782470624ada2cd", version: { majorVersion: "1", minorVersion: "0", patch: "14", fullVersion: "1.0.14"} },
 										 { hash: "8f3e42f4f5105467c99cfd56b8b4a755", version: { majorVersion: "1", minorVersion: "0", patch: "6", fullVersion: "1.0.6"} }, 
 										 { hash: "fe2dd37e6d05ea832d8ecc4f0e1dbe80", version: { majorVersion: "1", minorVersion: "0", patch: "8", fullVersion: "1.0.8"} },
 										 { hash: "378880b838aeeb4db513ebf05a8a7285", version: { majorVersion: "1", minorVersion: "0", patch: "9", fullVersion: "1.0.9"} },
