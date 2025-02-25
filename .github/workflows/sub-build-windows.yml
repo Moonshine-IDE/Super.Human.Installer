@@ -57,9 +57,6 @@ jobs:
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
-      - name: Where nsis
-        run: Get-Command makensis
-
       - name: Setup Git settings
         run: |
           git config --global core.longpaths true
@@ -164,13 +161,18 @@ jobs:
         run: |
           curl -L -o nsis-3.10-strlen_8192.zip http://prdownloads.sourceforge.net/nsis/nsis-3.10-strlen_8192.zip
           Expand-Archive -Path nsis-3.10-strlen_8192.zip -DestinationPath $env:USERPROFILE\nsis
-          # Optional: if the extracted folder is named differently, you can rename it:
-          # Rename-Item -Path "$env:USERPROFILE\nsis\nsis-3.10-strlen_8192" -NewName "nsis"
+
+      - name: Override default NSIS with custom build files
+        run: |
+          $source = "$env:USERPROFILE\nsis\nsis-3.10-strlen_8192"
+          $destination = "C:\Program Files (x86)\NSIS"
+          Write-Host "Copying files from $source to $destination"
+          Copy-Item -Path "$source\*" -Destination $destination -Recurse -Force
 
       - name: Create NSIS installer
         shell: pwsh
         run: >
-          & "$env:USERPROFILE\nsis\Bin\makensis.exe" --%
+          makensis
           /DPRODUCT_NAME=${{ env.app_name }}
           /DPRODUCT_VERSION=${{ inputs.version }}
           /DPRODUCT_PUBLISHER="Prominic.NET"
