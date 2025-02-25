@@ -160,11 +160,11 @@ jobs:
       - name: Download custom NSIS build
         run: |
           curl -L -o nsis-3.10-strlen_8192.zip http://prdownloads.sourceforge.net/nsis/nsis-3.10-strlen_8192.zip
-          Expand-Archive -Path nsis-3.10-strlen_8192.zip -DestinationPath $env:USERPROFILE\nsis
+          Expand-Archive -Path nsis-3.10-strlen_8192.zip -DestinationPath nsis_special_build
 
       - name: Override default NSIS with custom build files
         run: |
-          $source = "$env:USERPROFILE\nsis\nsis-3.10-strlen_8192"
+          $source = "$(Resolve-Path nsis_special_build)"
           $destination = "C:\Program Files (x86)\NSIS"
           Write-Host "Copying files from $source to $destination"
           Copy-Item -Path "$source\*" -Destination $destination -Recurse -Force
