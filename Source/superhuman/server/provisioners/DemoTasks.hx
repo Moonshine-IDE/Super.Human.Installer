@@ -176,9 +176,7 @@ class DemoTasks extends AbstractProvisioner {
     public var ipAddress( get, never ):String;
     function get_ipAddress() {
         try {
-            var ip = _getIPAddress();
-            Logger.debug('_getIPAddress() - IP address: ' + ip);
-            return ip;
+            return _getIPAddress();
         } catch ( e ) {};
         return null;
     }
@@ -245,8 +243,8 @@ class DemoTasks extends AbstractProvisioner {
 
         } catch ( e ) {};
 
-        Logger.debug( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
-        Logger.debug( '[${this._type} v${this._version}]: Total tasks: ${_tasks}' );
+        Logger.info( '[${this._type} v${this._version}]: Total number of tasks: ${_tasks.length}' );
+        Logger.info( '[${this._type} v${this._version}]: Total tasks: ${_tasks}' );
 
     }
 
@@ -301,7 +299,7 @@ class DemoTasks extends AbstractProvisioner {
 
         _setVersionFromFiles();
 
-        Logger.debug( '${this}: Reinitialized' );
+        Logger.info( '${this}: Reinitialized' );
     }
 	
     public function saveHostsFile() {
@@ -431,7 +429,7 @@ class DemoTasks extends AbstractProvisioner {
 
         if ( !e ) {
 
-            Logger.error( '${this}: File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
+            Logger.error( '${this}: File at ${_getWebAddressPath()} doesn\'t exist' );
             return null;
 
         }
@@ -463,10 +461,14 @@ class DemoTasks extends AbstractProvisioner {
         var e = _webAddressFileExists();
 
         if ( !e ) {
-            Logger.error( '${this}: File at ${Path.addTrailingSlash( _targetPath ) + WEB_ADDRESS_FILE} doesn\'t exist' );
+            if (version < "0.1.23") 
+            {
+                Logger.error( '${this}: File at ${_getWebAddressPath()} doesn\'t exist' );
+            }
             return null;
         }
 
+        var ip:String = null;
         try {
 
             if (version < "0.1.23")
@@ -474,7 +476,9 @@ class DemoTasks extends AbstractProvisioner {
                 var wa = _getWebAddress();
                 if ( _IP_ADDRESS_PATTERN.match( wa ) ) 
                 {
-                    return _IP_ADDRESS_PATTERN.matched( 0 );
+                    ip = _IP_ADDRESS_PATTERN.matched( 0 );
+                    Logger.info( '${this}: Server running using IP ${ip} at ${_getWebAddressPath()}' );
+                    return ip;
                 }
             }
             else
@@ -488,8 +492,10 @@ class DemoTasks extends AbstractProvisioner {
                             for (adapter in adapters) {
                                 if (adapter != null && adapter.exists("name")) {
                                     if (adapter.get("name") == "public_adapter") {
-                                        var ip:String = adapter.get("ip");
-                                        return ip.indexOf("/") >= 0 ? ip.split("/")[0] : ip;
+                                        var adapterIp:String = adapter.get("ip");
+                                        ip = adapterIp.indexOf("/") >= 0 ? adapterIp.split("/")[0] : adapterIp;
+                                        Logger.info( '${this}: Server running using IP ${ip} at ${_getWebAddressPath()}' );
+                                        return ip;
                                     }
                                 }
                             }
@@ -501,7 +507,7 @@ class DemoTasks extends AbstractProvisioner {
 
         } catch( e ) {}
 
-        return null;
+        return ip;
     }
 
     override function _onFileWatcherFileAdded( path:String ) {
@@ -550,7 +556,7 @@ class DemoTasks extends AbstractProvisioner {
         try {
 
             File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
-            Logger.debug( '${this}: Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
+            Logger.info( '${this}: Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
 
         } catch ( e:Exception ) {
@@ -572,8 +578,6 @@ class DemoTasks extends AbstractProvisioner {
 
         var waPath = _getWebAddressPath();
 
-        if ( !FileSystem.exists( waPath ) ) return false;
-
         try {
 
             if (version < "0.1.23")
@@ -585,7 +589,7 @@ class DemoTasks extends AbstractProvisioner {
             }
             else
             {
-                return true;
+                return FileSystem.exists( waPath );
             }
         } catch( e ) {}
 
