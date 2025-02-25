@@ -158,10 +158,10 @@
                 "prompt": "Jupiter"
             },
             "existingserveripaddress": {
-                "text": "Existing server IP address"
+                "text": "Existing server IP address*"
             },
             "newserveridfile": {
-                "text": "New server ID file"
+                "text": "New server ID file*"
             }
         }
     },
