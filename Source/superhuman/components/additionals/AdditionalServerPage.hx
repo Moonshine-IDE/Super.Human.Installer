@@ -48,7 +48,7 @@ class AdditionalServerPage extends Page
 
 		rowExistingDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.text' );
 		inputExistingDominoServer.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingdominoservername.prompt' );
-		inputExistingDominoServer.validationKey = AdditionalServer._HOSTNAME;
+		inputExistingDominoServer.validationKey = AdditionalServer._HOSTNAME_WITH_PATH;
 
 		rowExistingServerIp.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.text' );
 		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkip.prompt' );
