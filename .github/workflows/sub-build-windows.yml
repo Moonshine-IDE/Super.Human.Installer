@@ -58,7 +58,7 @@ jobs:
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
       - name: Where nsis
-        run: where nsis
+        run: Get-Command makensis
 
       - name: Setup Git settings
         run: |
