@@ -49,9 +49,9 @@ class ProvisionerManager {
         {
             return [
                 {
-                    name: "HCL Additional Provisioner v1.0.0",
-                    data: { type: ProvisionerType.AdditionalProvisioner, version: VersionInfo.fromString( "1.0.0" ) },
-                    root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_ADDITIONAL_LOCAL_PATH + "1.0.0"
+                    name: "HCL Additional Provisioner v0.1.23",
+                    data: { type: ProvisionerType.AdditionalProvisioner, version: VersionInfo.fromString( "0.1.23" ) },
+                    root: Path.addTrailingSlash( System.applicationDirectory ) + PROVISIONER_ADDITIONAL_LOCAL_PATH + "0.1.23"
                 },
             ];
         }

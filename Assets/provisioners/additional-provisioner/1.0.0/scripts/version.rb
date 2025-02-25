@@ -1,4 +1,4 @@
 module Provisioner
     NAME = 'hcl_domino_additional_provisioner'
-    VERSION = '1.0.0'
+    VERSION = '0.1.23'
 end
