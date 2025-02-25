@@ -57,6 +57,9 @@ jobs:
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
+      - name: Where nsis
+        run: where nsis
+
       - name: Setup Git settings
         run: |
           git config --global core.longpaths true
