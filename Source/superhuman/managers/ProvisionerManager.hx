@@ -41,7 +41,7 @@ import superhuman.server.provisioners.ProvisionerType;
 class ProvisionerManager {
 
     static final PROVISIONER_DEMO_TASKS_LOCAL_PATH:String = "assets/provisioners/demo-tasks/";
-    static final PROVISIONER_ADDITIONAL_LOCAL_PATH:String = "assets/provisioners/additional-provisioner/";
+    static final PROVISIONER_ADDITIONAL_LOCAL_PATH:String = "assets/provisioners/additional-prov/";
 
     static public function getBundledProvisioners(type:ProvisionerType = ProvisionerType.DemoTasks):Array<ProvisionerDefinition> {
         
