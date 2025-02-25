@@ -168,7 +168,7 @@ abstract class AbstractApp {
 
     function _initStop( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: _initStop(): ${executor.exitCode}' );
+        Logger.info( '${this}: _initStop(): ${executor.exitCode}' );
 
         _initialized = true;
 

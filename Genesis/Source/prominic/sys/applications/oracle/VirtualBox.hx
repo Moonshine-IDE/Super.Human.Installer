@@ -331,7 +331,7 @@ class VirtualBox extends AbstractApp {
         var extraArgs:Array<Dynamic> = [];
         extraArgs.push( machine );
 
-        Logger.debug( '${this}: getShowVMInfo with args ${args} and extraArgs ${extraArgs}' );
+        Logger.info( '${this}: getShowVMInfo with args ${args} and extraArgs ${extraArgs}' );
 
         final executor = new Executor( this.path + this._executable, args, extraArgs );
         executor.onStdOut.add( _showVMInfoExecutorStandardOutput ).onStop.add( _showVMInfoExecutorStopped );
@@ -386,7 +386,7 @@ class VirtualBox extends AbstractApp {
 
     public function openGUI() {
 
-        Logger.debug( '${this}: Opening GUI' );
+        Logger.info( '${this}: Opening GUI' );
 
         #if mac
         Shell.getInstance().open( [ "-a", "VirtualBox" ] );
@@ -412,7 +412,7 @@ class VirtualBox extends AbstractApp {
 
     function _bridgedInterfaceExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: bridgedInterfaceExecutor stopped with exit code: ${executor.exitCode}, data:${_tempBridgedInterfaceData}' );
+        Logger.info( '${this}: bridgedInterfaceExecutor stopped with exit code: ${executor.exitCode}, data:${_tempBridgedInterfaceData}' );
 
         if ( executor.exitCode == 0 )
             _processBridgedInterfacesData();
@@ -433,7 +433,7 @@ class VirtualBox extends AbstractApp {
 
     function _hostInfoExecutorExecutorStop( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: hostInfoExecutor stopped with exit code: ${executor.exitCode}, data: ${_tempHostInfoData}' );
+        Logger.info( '${this}: hostInfoExecutor stopped with exit code: ${executor.exitCode}, data: ${_tempHostInfoData}' );
 
         if ( executor.exitCode == 0 )
             _processHostInfoData();
@@ -567,7 +567,7 @@ class VirtualBox extends AbstractApp {
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         
-        Logger.debug( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
+        Logger.info( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
 
         for ( f in _onVersion ) f();
 
@@ -579,7 +579,7 @@ class VirtualBox extends AbstractApp {
 
     function _powerOffVMExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: powerOffVMExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: powerOffVMExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onPowerOffVM ) f( executor.extraParams[ 0 ] );
 
@@ -597,7 +597,7 @@ class VirtualBox extends AbstractApp {
 
     function _showVMInfoExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: showVMInfoExecutor stopped with exit code: ${executor.exitCode}' );
+        Logger.info( '${this}: showVMInfoExecutor stopped with exit code: ${executor.exitCode}' );
         
         if ( executor.exitCode == 0 )
             _processShowVMInfoLongFormatData( executor.extraParams[ 0 ] );
@@ -632,7 +632,7 @@ class VirtualBox extends AbstractApp {
 
     function _unregisterExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: unregisterExecutor stopped with exit code: ${executor.exitCode}' );
+        Logger.info( '${this}: unregisterExecutor stopped with exit code: ${executor.exitCode}' );
         
         for ( f in _onUnregisterVM ) f( executor.extraParams[ 0 ] );
 
@@ -650,7 +650,7 @@ class VirtualBox extends AbstractApp {
 
     function _listVMsExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: listVMsExecutor stopped with exit code: ${executor.exitCode}' );
+        Logger.info( '${this}: listVMsExecutor stopped with exit code: ${executor.exitCode}' );
 
         if ( executor.exitCode == 0 ) {
 

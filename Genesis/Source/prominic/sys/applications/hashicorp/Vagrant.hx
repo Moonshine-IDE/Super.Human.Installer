@@ -578,7 +578,7 @@ class Vagrant extends AbstractApp {
 
     function _globalStatusExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: _globalStatusExecutorStopped(): ${executor.exitCode} ${_tempGlobalStatusData}' );
+        Logger.info( '${this}: _globalStatusExecutorStopped(): ${executor.exitCode} ${_tempGlobalStatusData}' );
 
         _mutexGlobalStatusStop.acquire();
 
@@ -691,7 +691,7 @@ class Vagrant extends AbstractApp {
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         
-        Logger.debug( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
+        Logger.info( '${this}: _versionExecutorStopped(): ${executor.exitCode}' );
 
         for ( f in _onVersion ) f();
 
@@ -723,7 +723,7 @@ class Vagrant extends AbstractApp {
         // This ensures we'll look for rsync again next time
         _rsyncPath = null;
         
-        Logger.debug( '${this}: _versionRsyncExecutorStopped(): ${executor.exitCode}' );
+        Logger.info( '${this}: _versionRsyncExecutorStopped(): ${executor.exitCode}' );
 
         for ( f in _onVersionRsync ) f();
 
@@ -774,7 +774,7 @@ class Vagrant extends AbstractApp {
 
     function _upExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: upExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: upExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onUp ) f( executor.extraParams[ 0 ], executor.exitCode );
 
@@ -786,7 +786,7 @@ class Vagrant extends AbstractApp {
 
     function _statusExecutorStopped( executor:AbstractExecutor ) {
         
-        Logger.debug( '${this}: statusExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: statusExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onStatus ) f( executor.extraParams[ 0 ] );
 
@@ -824,7 +824,7 @@ class Vagrant extends AbstractApp {
 
     function _rsyncExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: rsyncExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: rsyncExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onRSync ) f( executor.extraParams[ 0 ] );
 
@@ -836,7 +836,7 @@ class Vagrant extends AbstractApp {
 
     function _provisionExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: provisionExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: provisionExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onProvision ) f( executor.extraParams[ 0 ] );
 
@@ -848,7 +848,7 @@ class Vagrant extends AbstractApp {
 
     function _haltExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: haltExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: haltExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onHalt ) f( executor.extraParams[ 0 ] );
 
@@ -860,7 +860,7 @@ class Vagrant extends AbstractApp {
 
     function _destroyExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: destroyExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: destroyExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onDestroy ) f( executor.extraParams[ 0 ] );
 
@@ -872,7 +872,7 @@ class Vagrant extends AbstractApp {
 
     function _initMachineExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: initMachineExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: initMachineExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onInitMachine ) f( executor.extraParams[ 0 ] );
 
@@ -902,7 +902,7 @@ class Vagrant extends AbstractApp {
 
     function _suspendExecutorStopped( executor:AbstractExecutor ) {
 
-        Logger.debug( '${this}: suspendExecutor stopped with exitCode: ${executor.exitCode}' );
+        Logger.info( '${this}: suspendExecutor stopped with exitCode: ${executor.exitCode}' );
 
         for ( f in _onSuspend ) f( executor.extraParams[ 0 ] );
 

@@ -128,7 +128,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _running = true;
         for ( f in _onStart ) f( this );
 
-        Logger.debug( '${this}: execute() in ${Sys.getCwd()}' );
+        Logger.info( '${this}: execute() in ${Sys.getCwd()}' );
 
         Sys.setCwd( currentWorkingDirectory );
 
@@ -166,7 +166,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         _stopTime = Sys.time();
         var t = _stopTime - _startTime;
-        Logger.debug( '${this}: stopped with exit code ${_process.exitCode}. Execution time:${StrTools.timeToFormattedString(t, true)}' );
+        Logger.info( '${this}: stopped with exit code ${_process.exitCode}. Execution time:${StrTools.timeToFormattedString(t, true)}' );
 
         _mutexStop.acquire();
         _running = false;
@@ -197,7 +197,7 @@ class Executor extends AbstractExecutor implements IDisposable {
 
         if ( _process != null ) {
 
-            Logger.debug( '${this}: stop( forced:${forced} )' );
+            Logger.info( '${this}: stop( forced:${forced} )' );
             _process.stop( forced );
 
         }
@@ -212,7 +212,7 @@ class Executor extends AbstractExecutor implements IDisposable {
         _process.stop( true );
         #elseif mac
         var e = Sys.command( "kill", [ "-" + Std.string( Std.int( signal ) ), Std.string( this._pid ) ] );
-        Logger.debug( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
+        Logger.warning( '${this} kill(${Std.string( Std.int( signal ) )}) exitCode: ${e}' );
         #elseif linux
         // Not implemented yet
         _process.stop( true );

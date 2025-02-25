@@ -483,7 +483,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( Vagrant.getInstance().exists ) {
 
-			Logger.debug( '${this}: Vagrant is installed at ${Vagrant.getInstance().path}' );
+			Logger.info( '${this}: Vagrant is installed at ${Vagrant.getInstance().path}' );
 
 		} else {
 
@@ -524,7 +524,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( VirtualBox.getInstance().exists ) {
 
-			Logger.debug( '${this}: VirtualBox is installed at ${VirtualBox.getInstance().path}' );
+			Logger.info( '${this}: VirtualBox is installed at ${VirtualBox.getInstance().path}' );
 
 		} else {
 
@@ -544,7 +544,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		VirtualBox.getInstance().onListVMs.remove( _virtualBoxListVMsUpdated );
 
-		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.info( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( s in ServerManager.getInstance().servers ) {
 
@@ -677,7 +677,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		if ( !_config.preferences.keepserversrunning && VirtualBox.getInstance().exists && Vagrant.getInstance().exists ) {
 
-			Logger.debug( '${this}: Shutting down server...' );
+			Logger.warning( '${this}: Shutting down server...' );
 
 			// Stop all possibly running executors
 			var vms:Array<CombinedVirtualMachine> = [];
@@ -796,7 +796,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			var conf = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
 			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-			Logger.debug( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+			Logger.info( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
 
 		} catch ( e ) {
 
@@ -981,11 +981,11 @@ class SuperHumanInstaller extends GenesisApplication {
 					_footer.warning = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
 				}
 
-				Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
-				Logger.debug( '${this}: VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
-				Logger.debug( '${this}: VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
-				Logger.debug( '${this}: VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
-				Logger.debug( '${this}: Rsync version: ${Vagrant.getInstance().versionRsync}' );
+				Logger.info( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
+				Logger.info( '${this}: VirtualBox hostinfo: ${VirtualBox.getInstance().hostInfo}' );
+				Logger.info( '${this}: VirtualBox bridgedInterfaces: ${VirtualBox.getInstance().bridgedInterfaces}' );
+				Logger.info( '${this}: VirtualBox vms: ${VirtualBox.getInstance().virtualBoxMachines}' );
+				Logger.info( '${this}: Rsync version: ${Vagrant.getInstance().versionRsync}' );
 
 				for ( s in ServerManager.getInstance().servers ) s.setServerStatus();
 

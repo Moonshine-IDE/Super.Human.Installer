@@ -235,7 +235,7 @@ class FileTools {
 
             if ( canCopy ) {
 
-                Logger.debug( 'Copying ${p.source} to ${p.destination}' );
+                Logger.info('FileTools: Copying ${p.source} to ${p.destination}' );
                 _copyFileByChunks( p.source, p.destination );
 
             }

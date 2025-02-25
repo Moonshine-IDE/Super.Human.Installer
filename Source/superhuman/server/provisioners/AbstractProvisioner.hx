@@ -111,7 +111,7 @@ class AbstractProvisioner {
 
         }
 
-        Logger.debug( '${this}: Copying server configuration files to ${_targetPath}' );
+        Logger.info( '${this}: Copying server configuration files to ${_targetPath}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "" ) );
         FileTools.copyDirectory( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT, _targetPath, FileOverwriteRule.Always, callback );
 

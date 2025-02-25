@@ -89,7 +89,6 @@ class Server {
     static public var keepFailedServersRunning:Bool = false;
 
     static public function create( data:ServerData, rootDir:String ):Server {
-
         var sc = new Server();
 
         sc._id = data.server_id;

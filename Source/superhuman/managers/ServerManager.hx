@@ -168,7 +168,7 @@ class ServerManager {
 
         if ( !server.isValid() ) result = ServerStatus.Unconfigured;
 
-        Logger.debug( '${server}: Assumed status: ${result}' );
+        Logger.info( '${server}: Assumed status: ${result}' );
 
         return result;
 
@@ -184,7 +184,7 @@ class ServerManager {
 
         if ( ExecutorManager.getInstance().exists( ServerManagerExecutorContext.RefreshVMInfo ) ) return;
 
-		Logger.debug( '${this}: Refreshing System Info...' );
+		Logger.info( '${this}: Refreshing System Info...' );
 
 		var pe = ParallelExecutor.create();
 		if ( refreshVagrant ) pe.add( Vagrant.getInstance().getGlobalStatus() );
@@ -206,8 +206,8 @@ class ServerManager {
         ExecutorManager.getInstance().remove( ServerManagerExecutorContext.RefreshVMInfo );
 
 		Logger.debug( '${this}: VM Info refreshed' );
-		Logger.debug( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
-		Logger.debug( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
+		Logger.info( '${this}: Vagrant machines: ${Vagrant.getInstance().machines}' );
+		Logger.info( '${this}: VirtualBox machines: ${VirtualBox.getInstance().virtualBoxMachines}' );
 
 		for ( s in _servers ) {
 

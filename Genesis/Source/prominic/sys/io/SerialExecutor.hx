@@ -93,7 +93,7 @@ class SerialExecutor extends AbstractExecutor {
 
         var a:Array<String> = [];
         for ( e in _executors ) a.push( e.id );
-        Logger.debug( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
+        Logger.info( '${this}: execute() executors:${a} extraArgs:${extraArgs} workingDirectory:${workingDirectory}' );
 
         _startTime = Sys.time();
         _running = true;
@@ -129,7 +129,7 @@ class SerialExecutor extends AbstractExecutor {
 
             _running = false;
             _stopTime = Sys.time();
-            Logger.debug( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
+            Logger.info( '${this}: Stopping sequence. ${executor} stopped with exit code ${executor.exitCode}. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
             return;
 
@@ -144,7 +144,7 @@ class SerialExecutor extends AbstractExecutor {
 
             _running = false;
             _stopTime = Sys.time();
-            Logger.debug( '${this}: All executors stopped. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
+            Logger.info( '${this}: All executors stopped. Execution time: ${StrTools.timeToFormattedString(this.runtime, true)}' );
             for ( f in _onStop ) f( this );
 
         }
