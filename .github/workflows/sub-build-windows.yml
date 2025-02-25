@@ -70,8 +70,8 @@ jobs:
       - name: Checkout LFS objects
         run: git lfs checkout
 
-      - name: Debug roles
-        run: ls Assets/provisioners/additional-provisioner/1.0.0/scripts/provisioners/ansible_collections/startcloud/hcl_roles/roles/domino_java_tools/files/src/main/java/net/prominic/domino/vagrant/
+      # - name: Debug roles
+      #   run: ls Assets/provisioners/additional-provisioner/1.0.0/scripts/provisioners/ansible_collections/startcloud/hcl_roles/roles/domino_java_tools/files/src/main/java/net/prominic/domino/vagrant/
 
       - name: Map disk
         shell: cmd
