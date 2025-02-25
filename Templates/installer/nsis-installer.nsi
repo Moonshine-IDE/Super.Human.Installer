@@ -54,9 +54,9 @@ InstallDir "$LOCALAPPDATA\${PRODUCT_NAME}"
 InstallDirRegKey "${ROOT_KEY}" "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
+SetAutoClose false
 
 Section "MainSection" SEC01
-  SetAutoClose false
   RMDir /r "$INSTDIR"
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
