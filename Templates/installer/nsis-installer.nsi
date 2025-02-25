@@ -56,6 +56,7 @@ ShowInstDetails show
 ShowUnInstDetails show
 
 Section "MainSection" SEC01
+  SetAutoClose false
   RMDir /r "$INSTDIR"
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
