@@ -54,7 +54,6 @@ InstallDir "$LOCALAPPDATA\${PRODUCT_NAME}"
 InstallDirRegKey "${ROOT_KEY}" "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show
-SetAutoClose false
 
 Section "MainSection" SEC01
   RMDir /r "$INSTDIR"

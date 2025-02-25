@@ -157,12 +157,16 @@ jobs:
           name: ${{ env.app_name }}-windows-bin
           path: ${{ env.bin_path }}
 
-      - name: Print NSIS version
-        run: makensis -version
+      - name: Download custom NSIS build
+        run: |
+          curl -L -o nsis-3.10-strlen_8192.zip http://prdownloads.sourceforge.net/nsis/nsis-3.10-strlen_8192.zip
+          Expand-Archive -Path nsis-3.10-strlen_8192.zip -DestinationPath $env:USERPROFILE\nsis
+          # Optional: if the extracted folder is named differently, you can rename it:
+          # Rename-Item -Path "$env:USERPROFILE\nsis\nsis-3.10-strlen_8192" -NewName "nsis"
 
       - name: Create NSIS installer
         run: >
-          makensis 
+          "$env:USERPROFILE\nsis\Bin\makensis.exe" 
           /DPRODUCT_NAME=${{ env.app_name }}
           /DPRODUCT_VERSION=${{ inputs.version }}
           /DPRODUCT_PUBLISHER="Prominic.NET"
