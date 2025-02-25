@@ -165,17 +165,18 @@ jobs:
           # Rename-Item -Path "$env:USERPROFILE\nsis\nsis-3.10-strlen_8192" -NewName "nsis"
 
       - name: Create NSIS installer
-        run: >
-          "$env:USERPROFILE\nsis\Bin\makensis.exe" 
-          /DPRODUCT_NAME=${{ env.app_name }}
-          /DPRODUCT_VERSION=${{ inputs.version }}
-          /DPRODUCT_PUBLISHER="Prominic.NET"
-          /DPRODUCT_WEB_SITE="/https://superhumaninstaller.com/"
-          /DBIN_PATH="${{ env.bin_path }}\*.*"
-          /DPRODUCT_EXE=${{ env.app_name }}.exe
-          /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
-          /DROOT_KEY=HKCU
-          X:/Templates/installer/nsis-installer.nsi
+        shell: pwsh
+        run: |
+          & "$env:USERPROFILE\nsis\Bin\makensis.exe" --% `
+            /DPRODUCT_NAME=${{ env.app_name }} `
+            /DPRODUCT_VERSION=${{ inputs.version }} `
+            /DPRODUCT_PUBLISHER="Prominic.NET" `
+            /DPRODUCT_WEB_SITE="https://superhumaninstaller.com/" `
+            /DBIN_PATH="${{ env.bin_path }}\*.*" `
+            /DPRODUCT_EXE=${{ env.app_name }}.exe `
+            /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe `
+            /DROOT_KEY=HKCU `
+            X:/Templates/installer/nsis-installer.nsi
 
       - name: Sign installer
         if: ${{ inputs.env == 'Production' }}
