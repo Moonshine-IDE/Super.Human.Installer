@@ -151,7 +151,7 @@
             },
             "existingdominoservername": {
                 "text": "Existing Domino server name*",
-                "prompt": "domino-1.jupitermoons.com/Jupiter"
+                "prompt": "domino-1.jupitermoons.com"
             },
             "organizationdominoservername": {
                 "text": "Domino Organization*",
