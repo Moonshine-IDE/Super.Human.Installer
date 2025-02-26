@@ -502,33 +502,36 @@ class Server {
 
     public function isValid():Bool {
 
-        var isValid:Bool = false;
+        var hasVagrant:Bool = Vagrant.getInstance().exists;
+        var hasVirtualBox:Bool = VirtualBox.getInstance().exists;
+        var isHostnameValid:Bool = _hostname.isValid();
+        var isOrganizationValid:Bool = _organization.isValid();
+        var isMemorySufficient:Bool = _memory.value >= 4;
+        var isCPUCountSufficient:Bool = _numCPUs.value >= 1;
+        
+        var isNetworkValid:Bool = _dhcp4.value || (
+            _networkBridge.isValid() &&
+            _networkAddress.isValid() &&
+            _networkGateway.isValid() &&
+            _networkNetmask.isValid() &&
+            _nameServer1.isValid() &&
+            _nameServer2.isValid()
+        );
+        
+        var hasSafeId:Bool = safeIdExists();
+        var areRolesOK:Bool = areRolesValid();
 
-        isValid = 
-
-            Vagrant.getInstance().exists &&
-            VirtualBox.getInstance().exists &&
-            _hostname.isValid() &&
-            _organization.isValid() &&
-            _memory.value >= 4 &&
-            _numCPUs.value >= 1 &&
-
-            ( _dhcp4.value || (
-
-                _networkBridge.isValid() &&
-                _networkAddress.isValid() &&
-                _networkGateway.isValid() &&
-                _networkNetmask.isValid() &&
-                _nameServer1.isValid() &&
-                _nameServer2.isValid()
-    
-            ) ) &&
-
-            safeIdExists() &&
-            areRolesValid()
-
-        ;
-
+        var isValid:Bool = 
+            hasVagrant &&
+            hasVirtualBox &&
+            isHostnameValid &&
+            isOrganizationValid &&
+            isMemorySufficient &&
+            isCPUCountSufficient &&
+            isNetworkValid &&
+            hasSafeId &&
+            areRolesOK;
+            
         return isValid;
 
     }
@@ -758,10 +761,12 @@ class Server {
 
             if ( r.enabled ) {
 
-                if ( r.files.installer == null || r.files.installer == "null" || !FileSystem.exists( r.files.installer ) ) valid = false;
-
+                if ( r.files.installer == null || r.files.installer == "null" || !FileSystem.exists( r.files.installer ) ) 
+                {
+                    valid = false;
+                    break;
+                }
             }
-
         }
 
         return valid;

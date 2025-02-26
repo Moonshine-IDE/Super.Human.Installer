@@ -160,13 +160,21 @@ class ServerManager {
         if ( result == ServerStatus.Unknown ) {
 
             if ( server.isValid() )
-                result = ServerStatus.Ready
+            {
+                result = ServerStatus.Ready;
+            }
             else
+            {
                 result = ServerStatus.Unconfigured;
+            }
 
         }
 
-        if ( !server.isValid() ) result = ServerStatus.Unconfigured;
+        if ( !server.isValid() ) 
+        {
+            Logger.warning( '${server}: Unconfigured because server is not valid' );
+            result = ServerStatus.Unconfigured;
+        }
 
         Logger.info( '${server}: Assumed status: ${result}' );
 

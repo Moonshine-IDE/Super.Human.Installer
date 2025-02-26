@@ -661,8 +661,11 @@ class ServerItem extends LayoutGroupItemRenderer {
                             ipAddress = cast(_server.provisioner, AdditionalProvisioner).ipAddress;
                         }
                 }
-                _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.runningwitherrors', ( _server.provisioned ) ? '(IP: ${ipAddress})' : '' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.running', ( _server.provisioned ) ? '(IP: ${ipAddress})' : '' );
-                
+                if (hasError) {
+                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.runningwitherrors', (_server.provisioned) ? '(IP: ${ipAddress})' : '');
+                } else {
+                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.running', (_server.provisioned) ? '(IP: ${ipAddress})' : '');
+                }
 
             case ServerStatus.Unconfigured:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
