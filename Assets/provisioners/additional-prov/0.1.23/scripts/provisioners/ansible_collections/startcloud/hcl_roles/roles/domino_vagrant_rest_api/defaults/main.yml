@@ -11,3 +11,8 @@ domino_vagrant_rest_api_port_forwards:
     guest: 8080
     url: "restapi"
 domino_vagrant_rest_api_proxy_url: "{{ domino_vagrant_rest_api_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+# Legacy directories needed for the capabilities for Moonshine-IDE
+domino_vagrant_restapi_supporting_dirs:
+  - /opt/restinterface/userfiles
+  - /opt/restinterface/public/uploads/

@@ -174,6 +174,9 @@ frontend  HTTPS-IN
 {% if domino_install_proxy_url is defined %}
         acl host_domino               hdr(host)            -i {{ domino_install_proxy_url }}
 {% endif %}
+{% if domino_oidc_provider_enabled %}
+        acl host_domino_oidc          hdr(host)            -i {{ domino_oidc_install_proxy_url }}
+{% endif %}
 {% if startcloud_quick_start_proxy_url is defined %}
         acl host_downloads            hdr(host)            -i {{ startcloud_quick_start_proxy_url }}
 {% endif %}
@@ -216,6 +219,9 @@ frontend  HTTPS-IN
         use_backend                   domino               if host_domino
 {% endif %}
 {% endif %}
+{% endif %}
+{% if domino_oidc_provider_enabled %}
+        use_backend                   domino               if host_domino_oidc
 {% endif %}
 {% if domino_leap_proxy_url is defined %}
         use_backend                   leap                 if host_leap

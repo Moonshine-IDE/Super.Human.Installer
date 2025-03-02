@@ -42,6 +42,7 @@ class Hosts
         server.ssh.private_key_path = File.exist?(vagrant_ssh_key) ? [vagrant_ssh_key, default_ssh_key] : default_ssh_key
         server.ssh.insert_key = false # host['settings']['vagrant_ssh_insert_key'], Note we are no longer automatically forcing the key in via Vagrants SSH insertion function
         server.ssh.forward_agent = host['settings']['vagrant_ssh_forward_agent']
+        server.ssh.keep_alive = host['settings'].key?('vagrant_ssh_keep_alive') ? host['settings']['vagrant_ssh_keep_alive'] : true
         config.vm.communicator = :ssh
         config.winrm.username = host['settings']['vagrant_user']
         config.winrm.password = host['settings']['vagrant_user_pass']
@@ -210,6 +211,7 @@ class Hosts
           vb.customize ['modifyvm', :id, "--natdnshostresolver1", 'off']
           vb.customize ['modifyvm', :id, "--accelerate3d", 'off']
           vb.customize ['modifyvm', :id, "--vram", '256']
+          vb.customize ['modifyvm', :id, '--macaddress1', '00FF00FF00FF']
 
           if host.has_key?('roles') and !host['roles'].empty?
             host['roles'].each do |rolefwds|

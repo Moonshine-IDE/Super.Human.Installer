@@ -1,12 +1,23 @@
 #jinja2:lstrip_blocks: True
 ---
 network:
+  renderer: networkd
   ethernets:
-    renderer: networkd
     {{ network_name }}:
       accept-ra: false
       dhcp-identifier: mac
+{% if convert_nat_dhcp_to_static %}
+      addresses:
+        - {{ address }}/{{ prefix }}
+#      routes:
+#        - to: {{ gateway }}/{{ prefix }}
+#          via: {{ gateway }}
+{% endif %}
+{% if convert_nat_dhcp_to_static %}
+      dhcp4: false
+{% else %}
       dhcp4: true
+{% endif %}
       dhcp6: false
       match:
         macaddress: {{ macaddress }}

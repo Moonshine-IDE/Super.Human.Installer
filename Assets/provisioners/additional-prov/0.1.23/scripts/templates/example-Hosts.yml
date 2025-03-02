@@ -18,24 +18,30 @@
 hosts:
   -
     settings:
+      # Vagrant Debug
+      debug_build: true
+
       # Identifiers
       hostname: REPLACEME #test-additional
       domain: REPLACEME #shi.com
       server_id: REPLACEME #'1234'
 
+      # Extra Actions
+      post_provision: true ## This calls extra things after Ansible completes, like syncing the new SSH key from the lockdown role, or the id_files or the support bundle
+
       # Resources
-      vcpus: 2
-      memory: 8G
+      vcpus: 4
+      memory: 16G
 
       # Console Access
-      consoleport: 1234
+      consoleport: REPLACEME #'1234'
       consolehost: 0.0.0.0
       show_console: false ## Some people have reported issues when VBox doesn't show the Console
 
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: 'https://boxvault.startcloud.com'
-      box_version: 2025.1.17
+      box_version: 2025.2.9
 
       # Provider Specific Settings
       provider_type: virtualbox
@@ -51,6 +57,19 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
+      vagrant_ssh_keep_alive: true
+
+    plugins:
+      install:
+        -
+          name: vagrant-scp-sync
+          version: latest
+#        -
+#          name: vagrant-zones
+#          version: latest
+      remove:
+        -
+          name: vagrant-scp
 
     zones:
       vmtype: production
@@ -75,19 +94,6 @@ hosts:
       clean_shutdown_time: 200
       snapshot_script: '/opt/vagrant/bin/Snapshooter.sh'
       cpu_configuration: simple
-
-    plugins:
-      install:
-        -
-          name: vagrant-scp-sync
-          version: latest
-#        -
-#          name: vagrant-zones
-#          version: latest
-      remove:
-        -
-          name: vagrant-scp
-
 
     networks:
       # if ::NO_BRIDGE_INTERFACE::
@@ -120,9 +126,25 @@ hosts:
         size: 48G
     
       additional_disks:
-    
+      # if ::ADDITIONAL_DISK::
+      # TO SHI DEVs, if user wants to store thier data on a secondary disk, you would enable this block
+      #  - array: Array-1
+      #    dataset: zones
+      #    sparse: true
+      #    live: false
+      #    filesystem: xfs
+      #    mount: /local
+      #    size: 50.0G
+      #    port: 5
+      #    #driver: virtio-scsi #Only add if your template doesn't already use virtio-scsi(the new templates do)
+      #    volume_name: disk1
 
     provisioning:
+      shell:
+        enabled: false
+        scripts:
+          - './scripts/aliases.sh'
+
       ansible:
         enabled: true
         playbooks:
@@ -189,7 +211,7 @@ hosts:
           - '--copy-links'
 
       -
-        description: "Directory for Ansible Scripts"
+        description: "Directory for Ansible Collections"
         map: ./provisioners/ansible_collections/
         to: /vagrant/ansible_collections/
         type: rsync
@@ -220,12 +242,13 @@ hosts:
         syncback: true
 
     vars:
+      # Secrets Override: If you don't want to use a secrets file you can override secrets here
       # Uncomment and fill in these lines if you want to download the installers for this instance
       # Note that the installer names must match the names on the download server.
       #secrets:
-      #  domino_installer_base_url: "replacme"
-      #  domino_installer_url_user: "replaceme"
-      #  domino_installer_url_pass: "replaceme"
+      #  domino_installer_base_url: "https://XXXXXXXXX.XXXXXXXXX.XXX"
+      #  domino_installer_url_user: "XXXXXXXXXXXX@XXXXXXXXXXX"
+      #  domino_installer_url_pass: "XXXXXXXXXXXX"
 
       ## Provisioner Debug
       debug_all: true
@@ -235,13 +258,6 @@ hosts:
       haproxy_ssl_redirect: true
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
-      #dns_entries_list:
-      #  - nomadweb
-      #  - domino
-      #  - traveler
-      #  - verse
-      #  - console
-      #  - downloads
 
       ## Use Proxy for downloads and updates
       use_proxy: false
@@ -252,32 +268,50 @@ hosts:
       extra_packages: ['htop']
 
       ## Domino Configuration Variables
+      #domino_server_name: "DoMiNO-iS-dVMb" # Defaults to settings.hostname if not set
+      #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: REPLACEME #TESTSTANDLONE
-      #domino_admin_notes_id_password:
+      #domino_admin_notes_id_password: password
+
+      # Domino OIDC Configurations
+      # Disabled for additional servers
+      domino_oidc_provider_enabled: false
+      domino_oidc_provider_federation_enabled: false
+
+      #domino_oidc_external_providers:
+      #  - name: null
+      #    base_url: null
+      #    client_id: null
+      #    client_secret: null
+
+      ## Safe-ids to cross-certify (only works for initial/standalone server)
+      # You need to add a file matching this name to id-files/user-safe-ids
+      #user_safe_id: SAFE.ids
 
       ## Additional server options
       is_additional_server: true
       domino_server_id: "REPLACEME" #"additional-demo.startcloud.com.id"
-      origin_server: "REPLACEME"  #"standalone-demo"  # Do not include settings.domain (i.e. .startcloud.com)
-      origin_server_ip: "REPLACEME"  #"10.12.0.103"
+      origin_server: "REPLACEME" #"standalone-demo"  # Do not include settings.domain (i.e. .startcloud.com)
+      origin_server_ip: "REPLACEME" #"10.12.0.103"
 
       # ots: Use One Touch Setup to generate the ID (server names are incremented, ie mail1 mail2 mail3 . .)
       # asja: Use Custom Additional Server Java Applet to generate the additional server ID
-      #domino_server_id_creation_tool: ots
+      #domino_server_id_creation_tool: asja
 
-      # For use in Domino 14 and above
+      ## OTS Additional Server Settings
+      # For use in Domino 14 and above, uncomment out these and set as needed
       #ots_generate_server_names:
       #  - additional-demo.startcloud.com
       
       # For use in Domino 12 and below
       #ots_generate_server_id_count:  1
       #ots_generate_server_id_pattern: mail
-      
-      #asja_generate_server_ids:
-      #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
-      #  - ::OTHER_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
-      #  - ::THIRD_DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::.id
 
+      ## ASJA Server Settings
+      # If using ASJA instead of OTS to generated Server IDs uncomment these lines
+      #asja_generate_server_ids:
+      #  - name: additional-demo.startcloud.com
+      #    pass: ""
 
       ## Genesis Variables
       genesis_packages:
@@ -304,6 +338,9 @@ hosts:
       domino_installer_hotfix_install: false
       domino_hotfix_version: 
       domino_server_hotfix_tar: 
+
+      ## Jedi Overrides
+      jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
 
       ## Leap Variables
       #leap_hash:
@@ -338,11 +375,12 @@ hosts:
       #domino_rest_api_archive:
 
       ## Hosts entries for /etc/hosts
+      ## For Additional servers, this should define a reference to the origin server (origin_server, origin_server_ip)
       etc_hosts_entries:
-        - hostname: standalone-demo.startcloud.com
+        - hostname: REPLACEME #test-standalone.shi.com
           aliases:
-            - standalone-demo
-          ip: 10.12.0.103
+            - REPLACEME #test-standalone
+          ip: REPLACEME #10.12.0.103
 
     roles:
       - name: startcloud.startcloud_roles.setup
@@ -370,8 +408,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_config 
       - name: startcloud.hcl_roles.domino_genesis
       - name: startcloud.hcl_roles.domino_genesis_applications
-      # Cross-certification not available on additional server, since certifier ID is not present
-      #- name: startcloud.hcl_roles.domino_cross_certify
+      - name: startcloud.hcl_roles.domino_cross_certify
+        vars:
+          run_tasks: false
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
@@ -394,6 +433,9 @@ hosts:
         vars:
           run_tasks: false
       - name: startcloud.hcl_roles.domino_nomadweb
+        vars:
+          run_tasks: false
+      - name: startcloud.hcl_roles.domino_jedi
         vars:
           run_tasks: true
       - name: startcloud.hcl_roles.domino_vagrant_readme

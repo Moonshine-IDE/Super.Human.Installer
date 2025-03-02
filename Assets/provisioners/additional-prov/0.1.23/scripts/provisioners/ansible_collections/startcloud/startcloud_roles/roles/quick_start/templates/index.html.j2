@@ -55,7 +55,7 @@
             </div>
             <p>Add the following line to your HOSTS file (this only must be done one time for each server):</p>
             <div class="tooltipnoborder">
-                <a href="#" onclick="CopyToClipboard('hosts');return false;"><code id="hosts">{{ local_ip }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} {% if domino_install_proxy_url is defined %}{{ domino_install_proxy_url }}{% endif %} {% if domino_vagrant_rest_api_proxy_url is defined %}{{ domino_vagrant_rest_api_proxy_url }}{% endif %} {{ startcloud_quick_start_proxy_url }} {% if domino_traveler_proxy_url is defined %}{{ domino_traveler_proxy_url }}{% endif %} {% if domino_verse_proxy_url is defined %}{{ domino_verse_proxy_url }}{% endif %} {% if domino_leap_proxy_url is defined %}{{ domino_leap_proxy_url }}{% endif %} {% if domino_nomadweb_proxy_url is defined %}{{ domino_nomadweb_proxy_url }}{% endif %} {% if domino_rest_api_proxy_url is defined %}{{ domino_rest_api_proxy_url }}{% endif %} {% if domino_appdevpack_proxy_url is defined %}{{ domino_appdevpack_proxy_url }}{% endif %}  #entry requested by Super.Human.Installer on {{ ansible_date_time.iso8601 }} for server id {{ settings.server_id }}</code></a>
+                <a href="#" onclick="CopyToClipboard('hosts');return false;"><code id="hosts">{{ local_ip }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} {% if domino_install_proxy_url is defined %}{{ domino_install_proxy_url }}{% endif %} {% if domino_oidc_provider_enabled %}{{ domino_oidc_install_proxy_url }}{% endif %} {% if domino_vagrant_rest_api_proxy_url is defined %}{{ domino_vagrant_rest_api_proxy_url }}{% endif %} {{ startcloud_quick_start_proxy_url }} {% if domino_traveler_proxy_url is defined %}{{ domino_traveler_proxy_url }}{% endif %} {% if domino_verse_proxy_url is defined %}{{ domino_verse_proxy_url }}{% endif %} {% if domino_leap_proxy_url is defined %}{{ domino_leap_proxy_url }}{% endif %} {% if domino_nomadweb_proxy_url is defined %}{{ domino_nomadweb_proxy_url }}{% endif %} {% if domino_rest_api_proxy_url is defined %}{{ domino_rest_api_proxy_url }}{% endif %} {% if domino_appdevpack_proxy_url is defined %}{{ domino_appdevpack_proxy_url }}{% endif %}  #entry requested by Super.Human.Installer on {{ ansible_date_time.iso8601 }} for server id {{ settings.server_id }}</code></a>
                 <span class="tooltiptextcenter">Copy to Clipboard</span>
             </div>
         </div>
@@ -64,7 +64,7 @@
             <h2 class="section-heading">Quick-Start</h2>
             <p>You can access your Domino server in 3 ways:</p>
             <p>1) The existing Notes Client on your desktop by using File --> Application --> Open then using this server name:</p>
-            <p>&emsp;{{ domino_server_name }}.{{ domino_server_domain }}/{{ domino_organization }}</p>
+            <p>&emsp;{{ domino_server_name_common_with_org }}</p>
             <p>2) Your browser by accessing:</p>
             <p>&emsp;<a href="https://domino.{{ settings.hostname }}.{{ settings.domain }}/Super.Human.Portal/js-release/index.html" target="_blank">Portal -- https://domino.{{ settings.hostname }}.{{ settings.domain }}/portal.nsf</a></p>
             <p>3) via Console:</p>
@@ -72,7 +72,14 @@
             <p>&emsp;or</p>
             <p>&emsp;b) Open the <a href="https://console.{{ settings.hostname }}.{{ settings.domain }}/system/terminal" target="_blank">Web Console</a> and login with the linux user credentials below</p>
             <p>&emsp;then</p>
+            {% if not jedi_enabled %}
             <p>&emsp;To open the Domino console run <a href="#" onclick="CopyToClipboard('dom-console');return false;"><code id="dom-console">sudo domino console</code></a> </p>
+            {% else %}
+            <p>&emsp;To open the Domino console first access Jedi: <a href="#" onclick="CopyToClipboard('jedi');return false;"><code id="jedi">telnet 0 1910</code></a> </p>
+            <p>&emsp;To open the Domino console then login to Jedi: <a href="#" onclick="CopyToClipboard('dom-console-jedi-login');return false;"><code id="dom-console-jedi-login">Glogin {{ jedi_username }} {{ jedi_password }}</code></a> </p>
+            <p>&emsp;To open the Domino console run <a href="#" onclick="CopyToClipboard('dom-console');return false;"><code id="dom-console">Gconsole {{ domino_server_name_common }}</code></a> </p>
+            <p>&emsp;To exit the Domino console run <a href="#" onclick="CopyToClipboard('dom-console-logout');return false;"><code id="dom-console-logout">Glogout</code></a> </p>
+            {% endif %}
             {% if selfsigned_enabled %}
             <p>You used the Self Signed Option, please add this Root CA to your Local OS to get rid of SSL warnings. This will vary based on your Local OS</p>
             <p><a href="https://{{ startcloud_quick_start_proxy_url }}/ca-certificate.crt" target="_blank">Root CA Certificate</a></p>

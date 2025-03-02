@@ -70,35 +70,13 @@
       become: true
       block:
         -
-          name: "Executing shell command to sort network interfaces"
-          when: networks[0] is defined
-          changed_when: false
-          ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$"
-          args:
-            executable: /bin/bash
-          register: sorted_interfaces_output
-
-        -
-          name: "Parsing output to get interface names"
-          ansible.builtin.set_fact:
-            interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
-        -
-          name: "Setting first and second adapters"
-          ansible.builtin.set_fact:
-            first_adapter: "{{ interfaces[0] }}"
-
-        -
-          name: "Gathering details of the first adapter"
-          changed_when: false
-          ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
-          args:
-            executable: /bin/bash
-          register: first_ip
+          name: "Gather Networking Details"
+          ansible.builtin.include_tasks: "gather.yml"
 
         -
           name: "Storing first adapter details as facts"
           ansible.builtin.set_fact:
-            local_ip: "{{ first_ip.stdout.strip() | ansible.utils.ipaddr('address') }}"
+            local_ip: "{{ first_adapter_details.ip }}"
 
     -
       name: "Virtualbox Networking"
@@ -108,19 +86,13 @@
       become: true
       block:
         -
-          name: "Grabbing External IP address"
-          ansible.builtin.shell: |
-            set -o pipefail
-            ip addr show public_adapter | awk '/inet / {print $2}' | cut -d'/' -f1
-          args:
-            executable: /bin/bash
-          register: public_adapter_ip
-          changed_when: false
+          name: "Gather Networking Details"
+          ansible.builtin.include_tasks: "gather.yml"
 
         -
           name: "Storing first adapter details as facts"
           ansible.builtin.set_fact:
-            local_ip: "{{ public_adapter_ip.stdout }}"
+            local_ip: "{{ second_adapter_details.ip }}"
 
     -
       name: "Placing Python Simple HTTP Server Service file" # Copies service configuration files to their respective locations.

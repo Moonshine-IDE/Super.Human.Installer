@@ -41,6 +41,7 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
+      vagrant_ssh_keep_alive: true
 
     plugins:
       install:
@@ -226,6 +227,10 @@ hosts:
       domino_organization: ::SERVER_ORGANIZATION::
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
 
+      # Domino OIDC Configurations
+      domino_oidc_provider_enabled: true
+      domino_oidc_provider_federation_enabled: true
+
       ## Additional server options
       is_additional_server: ::DOMINO_IS_ADDITIONAL_INSTANCE::
       domino_server_id: ::DOMINO_SERVER_ID::
@@ -271,6 +276,9 @@ hosts:
       domino_installer_hotfix_install: ::DOMINO_INSTALLER_HOTFIX_INSTALL::
       domino_hotfix_version: ::DOMINO_INSTALLER_HOTFIX_VERSION::
       domino_server_hotfix_tar: ::DOMINO_INSTALLER_HOTFIX::
+
+      ## Jedi Overrides
+      jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
 
       ## Leap Variables
       leap_hash: ::LEAP_HASH::
@@ -339,6 +347,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_genesis_applications
       # Cross-certification not available on additional server, since certifier ID is not present
       #- name: startcloud.hcl_roles.domino_cross_certify
+      - name: startcloud.hcl_roles.domino_cross_certify
+        vars:
+          run_tasks: false
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
@@ -363,6 +374,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_nomadweb
         vars:
           run_tasks: ::ROLE_NOMADWEB::
+      - name: startcloud.hcl_roles.domino_jedi
+        vars:
+          run_tasks: ::ROLE_JEDI::
       - name: startcloud.hcl_roles.domino_vagrant_readme
       - name: startcloud.startcloud_roles.quick_start
         tags: always
