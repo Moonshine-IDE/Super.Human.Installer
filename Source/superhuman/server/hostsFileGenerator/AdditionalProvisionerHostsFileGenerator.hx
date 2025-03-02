@@ -189,14 +189,16 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
                 replace.ROLE_RESTAPI = replaceWith;
                 replace.ROLE_DOMINO_RESTAPI = replaceWith;
             }
-			
-            //"- name: startcloud_quick_start";
-            replace.ROLE_STARTCLOUD_QUICK_START = RolesUtil.getOtherRole(internalProvisioner.data.version, "quick_start");
-             //"- name: startcloud_haproxy";
-            replace.ROLE_STARTCLOUD_HAPROXY = RolesUtil.getOtherRole(internalProvisioner.data.version, "haproxy");
-            //"- name: startcloud_vagrant_readme";
-            replace.ROLE_STARTCLOUD_VAGRANT_README = RolesUtil.getOtherRole(internalProvisioner.data.version, "vagrant_readme");
         }
+
+        			
+        replace.ROLE_JEDI = RolesUtil.getDominoRole(internalProvisioner.data.version, "jedi", true);
+        //"- name: startcloud_quick_start";
+        replace.ROLE_STARTCLOUD_QUICK_START = RolesUtil.getOtherRole(internalProvisioner.data.version, "quick_start");
+         //"- name: startcloud_haproxy";
+        replace.ROLE_STARTCLOUD_HAPROXY = RolesUtil.getOtherRole(internalProvisioner.data.version, "haproxy");
+        //"- name: startcloud_vagrant_readme";
+        replace.ROLE_STARTCLOUD_VAGRANT_README = RolesUtil.getOtherRole(internalProvisioner.data.version, "vagrant_readme");
 
         var template = new Template( sourceTemplate );
 		output = template.execute( replace );
