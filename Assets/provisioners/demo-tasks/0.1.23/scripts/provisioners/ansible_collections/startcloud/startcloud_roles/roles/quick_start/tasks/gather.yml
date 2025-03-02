@@ -1,0 +1,88 @@
+-
+  name: "Gathering Ansible facts"
+  ansible.builtin.setup:
+
+-
+  name: "Filtering network interfaces"
+  ansible.builtin.set_fact:
+    interfaces: "{{ ansible_interfaces | reject('match', '^lo$') | reject('match', 'docker') | list }}"
+
+-
+  name: "Ensuring there are at least two interfaces"
+  ansible.builtin.fail:
+    msg: "Less than two network interfaces found."
+  when: interfaces | length < 2
+
+-
+  name: "Gathering interface indices"
+  ansible.builtin.slurp:
+    src: "/sys/class/net/{{ item }}/ifindex"
+  loop: "{{ interfaces }}"
+  register: interface_indices
+
+-
+  name: "Creating sorted interface list"
+  ansible.builtin.set_fact:
+    sorted_interfaces: "{{ interfaces | zip(interface_indices.results | map(attribute='content') | map('b64decode') | map('trim') | map('int') | list) | sort(attribute='1') | map(attribute='0') | list }}"
+
+-
+  name: "Setting first and second adapters"
+  ansible.builtin.set_fact:
+    first_adapter: "{{ sorted_interfaces[0] }}"
+    second_adapter: "{{ sorted_interfaces[1] }}"
+
+-
+  name: "Storing first adapter details"
+  ansible.builtin.set_fact:
+    first_adapter_details:
+      name: "{{ first_adapter }}"
+      ip: "{{ hostvars[inventory_hostname]['ansible_' + first_adapter]['ipv4']['address'] | default('') }}"
+      mac: "{{ hostvars[inventory_hostname]['ansible_' + first_adapter]['macaddress'] | default('') }}"
+
+-
+  name: "Storing second adapter details"
+  ansible.builtin.set_fact:
+    second_adapter_details:
+      name: "{{ second_adapter }}"
+      ip: "{{ hostvars[inventory_hostname]['ansible_' + second_adapter]['ipv4']['address'] | default('') }}"
+      mac: "{{ hostvars[inventory_hostname]['ansible_' + second_adapter]['macaddress'] | default('') }}"
+
+-
+  name: "Displaying stored first adapter details"
+  ansible.builtin.debug:
+    msg: "First adapter: {{ first_adapter_details.name }}, IP: {{ first_adapter_details.ip }}, MAC: {{ first_adapter_details.mac }}"
+
+-
+  name: "Displaying stored second adapter details"
+  ansible.builtin.debug:
+    msg: "Second adapter: {{ second_adapter_details.name }}, IP: {{ second_adapter_details.ip }}, MAC: {{ second_adapter_details.mac }}"
+
+-
+  name: "Creating IP Address Artifacts"
+  block:
+    -
+      name: "Creating adapter details structure"
+      ansible.builtin.set_fact:
+        adapter_details: |
+          adapters:
+          - ip: {{ first_adapter_details.ip | default('') }}
+            mac: '{{ first_adapter_details.mac | default('') }}'
+            name: {{ first_adapter_details.name | default('') }}
+          - ip: {{ second_adapter_details.ip | default('') }}
+            mac: '{{ second_adapter_details.mac | default('') }}'
+            name: {{ second_adapter_details.name | default('') }}
+
+    -
+      name: "Writing adapter details to files"
+      ansible.builtin.copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+        force: true
+        mode: '0644'
+      loop:
+        - dest: "{{ completed_dir }}/ipaddress.yml"
+          content: "{{ second_adapter_details.ip | default('') }}"
+        - dest: "/vagrant/support-bundle/adapters.json"
+          content: "{{ adapter_details | from_yaml | to_nice_json }}"
+        - dest: "/vagrant/support-bundle/provisioned-adapters.yml"
+          content: "{{ adapter_details }}"

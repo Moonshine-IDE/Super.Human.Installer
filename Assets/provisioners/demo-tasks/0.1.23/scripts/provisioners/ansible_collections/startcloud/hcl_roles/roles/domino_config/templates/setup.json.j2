@@ -407,6 +407,9 @@
             "ISiteOrg": "{{ domino_organization }}",
             "ISiteName": "Domino Web Site",
             "WSIsDflt": "1",
+{% if super_human_portal_enabled %}
+            "WSHomeURL": "Super.Human.Portal/js-release/index.html",
+{% endif %}
             "HTTP_EnableSessionAuth": "1",
             "WSHTTPMthds_ed": [ "1", "2", "3", "4", "6", "7" ]
           }
@@ -429,7 +432,7 @@
 {% if not domino_oidc_provider_federation_enabled %}
               "OIDCHostname": "127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}",
 {% else %}
-              "OIDCHostname": "127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}; bearer.vault-{{ domino_server_name_common }}",
+              "OIDCHostname": "bearer.vault.{{ domino_server_name_common }}; 127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}",
 {% endif %}
 {% else %}
               "OIDCHostname": "127.0.0.1; {{ domino_install_proxy_url }}",

@@ -25,8 +25,8 @@ update_content: |
     dns_servers="Unavailable (systemd-resolved not running)"
   fi
   echo "DNS Servers:  $dns_servers"
-  gateway=$(ip route | awk '/default/ {print $3}')
-  echo "Gateway:      $gateway"
+  echo "Gateways:"
+  ip route | awk '/default/ {print "              - " $3}'
   echo "Open Ports:"
   netstat -talpnu 2>/dev/null | grep LISTEN | awk '{print $4}' | \
   awk -F: '{if ($1 == "" || $1 == "*") $1="::"; addr[$1]=addr[$1]","$NF} END {for (a in addr) print a":"substr(addr[a],2)}' | \

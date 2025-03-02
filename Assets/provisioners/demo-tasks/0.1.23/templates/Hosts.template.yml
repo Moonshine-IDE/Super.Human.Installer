@@ -42,6 +42,7 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
+      vagrant_ssh_keep_alive: true
 
     plugins:
       install:
@@ -223,6 +224,10 @@ hosts:
       domino_organization: ::SERVER_ORGANIZATION::
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
 
+      # Domino OIDC Configurations
+      domino_oidc_provider_enabled: true
+      domino_oidc_provider_federation_enabled: true
+
       user_safe_id: ::USER_SAFE_ID::
 
       #generate_server_id_count: ::DOMINO_SERVER_CLUSTERMATES::
@@ -230,7 +235,7 @@ hosts:
       ## Additional server options
       is_additional_server: ::DOMINO_IS_ADDITIONAL_INSTANCE::
       domino_server_id: ::DOMINO_SERVER_ID::
-      origin_server: ::SERVER_HOSTNAME::.::SERVER_DOMAIN::  ## Note to SHI dev, may be able to use ::SERVER_DOMAIN:: instead of ::DOMINO_ORIGIN_DOMAIN::
+      origin_server: ::SERVER_HOSTNAME::  ## Note to SHI dev, may be able to use ::SERVER_DOMAIN:: instead of ::DOMINO_ORIGIN_DOMAIN::
       #origin_server_ip: ::DOMINO_ORIGIN_SERVER_IP::
 
       # Genesis Variables
@@ -278,7 +283,7 @@ hosts:
       traveler_fixpack_version: ::TRAVELER_FP_INSTALLER_VERSION::
 
       # Verse Variables
-      #verse_hash: ::VERSE_HASH::
+     # verse_hash: ::VERSE_HASH::
       verse_archive: ::VERSE_INSTALLER::
       verse_base_version: ::VERSE_INSTALLER_VERSION::
 

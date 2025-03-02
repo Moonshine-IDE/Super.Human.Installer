@@ -41,6 +41,7 @@
         - src/main/java/net/prominic/domino/vagrant/DirectServerRegistration.java
         - src/main/java/net/prominic/domino/vagrant/HybridServerRegistration.java
         - src/main/java/net/prominic/domino/vagrant/NotesAPI.java
+        - src/main/java/net/prominic/domino/vagrant/PushUserIDtoIDVault.java
       when: build_utility_jars and not build_tools_deployed.stat.exists
     
     -

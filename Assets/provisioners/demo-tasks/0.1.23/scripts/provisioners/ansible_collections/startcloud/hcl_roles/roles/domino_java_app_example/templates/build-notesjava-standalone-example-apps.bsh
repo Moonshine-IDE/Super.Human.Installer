@@ -50,6 +50,16 @@ echo "Main-Class: net.prominic.domino.vagrant.CheckDatabase" >> ./manifest-temp.
 
 jar -cvfm CheckDatabase2.jar ./manifest-temp.txt -C /home/vagrant/dist-built/ .
 
+#############
+
+echo "Building and creating a runnable JAR for: PushUserIDtoIDVault.java "
+
+javac -verbose -source 1.8 -target 1.8 -d /home/vagrant/dist-built -classpath $NOTES_JAR /home/vagrant/dist-src/net/prominic/domino/vagrant/PushUserIDtoIDVault.java
+
+cp ./manifest.txt ./manifest-temp.txt
+echo "Main-Class: net.prominic.domino.vagrant.PushUserIDtoIDVault" >> ./manifest-temp.txt
+
+jar -cvfm PushUserIDtoIDVault2.jar ./manifest-temp.txt -C /home/vagrant/dist-built/ .
 
 
 #############

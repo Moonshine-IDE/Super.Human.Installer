@@ -48,6 +48,7 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
+      vagrant_ssh_keep_alive: true
 
     plugins:
       install:
@@ -248,13 +249,6 @@ hosts:
       haproxy_ssl_redirect: true
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
-      #dns_entries_list:
-      #  - nomadweb
-      #  - domino
-      #  - traveler
-      #  - verse
-      #  - console
-      #  - downloads
 
       ## Use Proxy for downloads and updates
       use_proxy: false
@@ -317,25 +311,25 @@ hosts:
 
       ## Domino Installer Variables
       #domino_hash: 
-      domino_server_installer_tar: Domino_14.0_Linux_English.tar
+      domino_server_installer_tar: Domino_14.5_Linux_English_EA2.tar #Domino_14.0_Linux_English.tar
       domino_major_version: 14
-      domino_minor_version: 0
+      domino_minor_version: 5
       domino_patch_version: 0
 
       ## Domino fixpack Variables
       #domino_fp_hash: 
-      domino_installer_fixpack_install: true
+      domino_installer_fixpack_install: false
       #domino_fixpack_version:
       #domino_server_fixpack_tar:
 
       ## Domino Hotfix Variables
       #domino_hf_hash:
-      domino_installer_hotfix_install: true
+      domino_installer_hotfix_install: false
       #domino_hotfix_version:
       #domino_server_hotfix_tar:
 
       ## Jedi Overrides
-      jedi_enabled: false ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
+      jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
 
       ## Leap Variables
       #leap_hash:

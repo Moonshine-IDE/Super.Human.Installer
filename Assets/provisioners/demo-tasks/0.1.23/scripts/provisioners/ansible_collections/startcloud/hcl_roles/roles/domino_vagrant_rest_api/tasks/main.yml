@@ -121,6 +121,15 @@
         - { src: 'environment.j2', dest: '{{ rest_app_home_dir }}/environment', owner: '{{ service_user }}' }
     
     -
+      name: "Create additional supporting directories"
+      ansible.builtin.file:
+        mode: '0755'
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ service_user }}"
+      loop: "{{ domino_vagrant_restapi_supporting_dirs|flatten(levels=1) }}"
+    
+    -
       name: "Copying restapi supervisord configuration file"
       when: not rest_interface_deployed.stat.exists and ansible_module_running_in_container
       ansible.builtin.template:

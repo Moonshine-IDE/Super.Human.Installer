@@ -58,6 +58,7 @@ hosts:
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
+      vagrant_ssh_keep_alive: true
 
     plugins:
       install:
@@ -258,13 +259,6 @@ hosts:
       haproxy_ssl_redirect: true
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
-      #dns_entries_list:
-      #  - nomadweb
-      #  - domino
-      #  - traveler
-      #  - verse
-      #  - console
-      #  - downloads
 
       ## Use Proxy for downloads and updates
       use_proxy: false
@@ -279,6 +273,16 @@ hosts:
       #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: REPLACEME # TESTSTANDALONE
       #domino_admin_notes_id_password: password
+
+      # Domino OIDC Configurations
+      domino_oidc_provider_enabled: true
+      domino_oidc_provider_federation_enabled: true
+
+      #domino_oidc_external_providers:
+      #  - name: null
+      #    base_url: null
+      #    client_id: null
+      #    client_secret: null
 
       ## Safe-ids to cross-certify
       # You need to add a file matching this name to id-files/user-safe-ids
@@ -319,9 +323,9 @@ hosts:
       #domino_hash: 
       # REPLACEME:   Update Domino installer and version if needed, and update the versions as well
       # If you want to use a local copy, it must match the below name and be added to `./installers/domino/archives`
-      domino_server_installer_tar: Domino_14.0_Linux_English.tar
+      domino_server_installer_tar: Domino_14.5_Linux_English_EA2.tar #Domino_14.0_Linux_English.tar
       domino_major_version: 14
-      domino_minor_version: 0
+      domino_minor_version: 5
       domino_patch_version: 0
 
       ## Domino fixpack Variables

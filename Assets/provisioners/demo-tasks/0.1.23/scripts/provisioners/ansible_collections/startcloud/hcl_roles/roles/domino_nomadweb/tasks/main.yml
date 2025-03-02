@@ -200,7 +200,7 @@
             content: "{{ {'provider_info': current_config.provider_info, 'registered_clients': current_config.registered_clients + [nomad_client_config]} | to_nice_json }}"
             mode: '0644'
 
-        ## Input the value bearer.vault-<Vault server hostname> into the Bearer token (JWT) approved OIDC provider configurations field
+        ## Input the value bearer.vault.<Vault server hostname> into the Bearer token (JWT) approved OIDC provider configurations field
         -
           name: "Handing IDVault JWT Bearer Token Modifications JSON to Genesis"
           when: not nomadweb_installed_check.stat.exists

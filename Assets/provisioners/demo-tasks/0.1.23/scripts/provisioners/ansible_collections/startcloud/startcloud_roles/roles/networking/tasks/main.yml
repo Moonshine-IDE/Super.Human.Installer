@@ -1,414 +1,100 @@
+---
 -
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
     -
-      name: "Gathering facts on current container"
+      name: "Gathering container related facts"
       community.docker.current_container_facts:
-    
+
     -
-      name: "Gathering Networking Configurations"
-      when: not ansible_module_running_in_container
+      name: "Network Cleanup"
+      when: 
+        - not ansible_module_running_in_container
       become: true
       tags: once
-      block:
-        -
-          name: "Executing shell command to sort network interfaces"
-          when: networks[0] is defined
-          changed_when: false
-          ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$ | grep -v docker"
-          args:
-            executable: /bin/bash
-          register: sorted_interfaces_output
-    
-        -
-          name: "Parsing output to get interface names"
-          ansible.builtin.set_fact:
-            interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
-    
-        -
-          name: "Ensuring there are at least two interfaces"
-          ansible.builtin.fail:
-            msg: "Less than two network interfaces found."
-          when: interfaces | length < 2
-    
-        -
-          name: "Setting first and second adapters"
-          ansible.builtin.set_fact:
-            first_adapter: "{{ interfaces[0] }}"
-            second_adapter: "{{ interfaces[1] }}"
-    
-        -
-          name: "Gathering details of the first adapter"
-          changed_when: false
-          ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
-          args:
-            executable: /bin/bash
-          register: first_ip
-    
-        -
-          name: "Gathering details of the second adapter"
-          changed_when: false
-          ansible.builtin.shell: "ip addr show {{ second_adapter }} | awk '/inet / {print $2}'"
-          args:
-            executable: /bin/bash
-          register: second_ip
-    
-        -
-          name: "Gathering MAC address of the first adapter"
-          changed_when: false
-          ansible.builtin.shell: "cat /sys/class/net/{{ first_adapter }}/address"
-          args:
-            executable: /bin/bash
-          register: first_mac
-    
-        -
-          name: "Gathering MAC address of the second adapter"
-          changed_when: false
-          ansible.builtin.shell: "cat /sys/class/net/{{ second_adapter }}/address"
-          args:
-            executable: /bin/bash
-          register: second_mac
-    
-        -
-          name: "Storing first adapter details as facts"
-          ansible.builtin.set_fact:
-            first_adapter_details:
-              name: "{{ first_adapter }}"
-              ip: "{{ first_ip.stdout.strip() }}"
-              mac: "{{ first_mac.stdout.strip() }}"
-    
-        -
-          name: "Storing second adapter details as facts"
-          ansible.builtin.set_fact:
-            second_adapter_details:
-              name: "{{ second_adapter }}"
-              ip: "{{ second_ip.stdout.strip() }}"
-              mac: "{{ second_mac.stdout.strip() }}"
-    
-        -
-          name: "Displaying stored first adapter details"
-          ansible.builtin.debug:
-            msg: "First adapter: {{ first_adapter_details.name }}, IP: {{ first_adapter_details.ip }}, MAC: {{ first_adapter_details.mac }}"
-    
-        -
-          name: "Displaying stored second adapter details"
-          ansible.builtin.debug:
-            msg: "Second adapter: {{ second_adapter_details.name }}, IP: {{ second_adapter_details.ip }}, MAC: {{ second_adapter_details.mac }}"
-    
-        -
-          name: "Serializing adapter details to JSON"
-          ansible.builtin.set_fact:
-            adapters_json: "{{ {'adapters': [{'name': first_adapter_details.name, 'ip': first_adapter_details.ip, 'mac': first_adapter_details.mac},
-                                               {'name': second_adapter_details.name, 'ip': second_adapter_details.ip, 'mac': second_adapter_details.mac}]} | to_nice_json }}"
-    
-    -
-      name: "Running tasks specific to: VirtualBox"
-      when: ansible_virtualization_type == "virtualbox"
-      tags: once
-      become: true
       block:
         -
           name: "Disabling NetworkManager"
-          ansible.builtin.systemd_service:
-            state: stopped
-            enabled: false
-            name: NetworkManager
-    
-        -
-          name: "Waiting for 3 seconds for IP to set"
-          ansible.builtin.pause:
-            seconds: 2
-    
-        -
-          name: "Enabling systemd-networkd"
+          when: not ansible_module_running_in_container
           ansible.builtin.systemd_service:
             state: restarted
             enabled: true
+            name: NetworkManager
+
+        -
+          name: "Enabling systemd-networkd"
+          when: not ansible_module_running_in_container
+          ansible.builtin.systemd_service:
+            state: stopped
+            enabled: false
             name: systemd-networkd
 
         -
-          name: "Waiting for 3 seconds for IP to set"
-          ansible.builtin.pause:
-            seconds: 2
+          name: "Deleting /etc/netplan/50-cloud-init.yaml"
+          ansible.builtin.file:
+            path: /etc/netplan/50-cloud-init.yaml
+            state: absent
 
-        -
-          name: "Setting up NAT Provisioning Network"
-          when: networks[0] is defined 
-          block:
-            -
-              name: "Placing Netplan into Working directory for Vagrant NAT Adapter"
-              ansible.builtin.template:
-                src: nat_interface.yaml.j2
-                dest: /etc/netplan/nat_adapter.yaml
-                mode: '0600'
-              vars:
-                macaddress: "{{ first_adapter_details.mac }}"
-                network_name: "nat_adapter"
-    
-            -
-              name: "Deleting /etc/netplan/50-cloud-init.yaml"
-              ansible.builtin.file:
-                path: /etc/netplan/50-cloud-init.yaml
-                state: absent
-    
-            -
-              name: "Setting Networking for Vagrant NAT Adapter"
-              changed_when: false
-              ansible.builtin.command: netplan apply
-
-            -
-              name: "Waiting for 3 seconds for IP to set for Vagrant NAT Adapter"
-              ansible.builtin.pause:
-                seconds: 2
-
-            -
-              name: "Enabling systemd-networkd"
-              ansible.builtin.systemd_service:
-                state: restarted
-                enabled: true
-                name: systemd-networkd
-
-            -
-              name: "Waiting for 3 seconds for IP to set"
-              ansible.builtin.pause:
-                seconds: 2
-
-            -
-              name: "Grabbing updated first adapter IP address"
-              changed_when: false
-              ansible.builtin.shell: "ip addr show {{ first_adapter_details.name }} | awk '/inet / {print $2}'"
-              args:
-                executable: /bin/bash
-              register: updated_first_ip
-    
-            -
-              name: "Creating file ipaddress.yml with contents of: {{ updated_first_ip.stdout }}"
-              ansible.builtin.copy:
-                content: "{{ updated_first_ip.stdout }}"
-                dest: "{{ completed_dir }}/ipaddress.yml"
-                mode: '0644'
-    
-        -
-          name: "Setting up Public Bridged Network"
-          when: networks[0] is defined and networks[0].type == "external"
-          block:
-            -
-              name: "Setting Netmask as a fact"
-              ansible.builtin.set_fact:
-                net_mask: "{{ networks[0].address }}/{{ networks[0].netmask }}"
-    
-            -
-              name: "Placing Netplan into Working directory"
-              ansible.builtin.template:
-                src: interface.yaml.j2
-                dest: /etc/netplan/public_adapter.yaml
-                mode: '0600'
-              vars:
-                macaddress: "{{ second_adapter_details.mac }}"
-                network_name: "public_adapter"
-    
-            -
-              name: "Setting Networking"
-              changed_when: false
-              ansible.builtin.command: "{{ item }}"
-              with_items:
-                - "netplan apply"
-    
-            -
-              name: "Waiting for 3 seconds for IP to set"
-              ansible.builtin.pause:
-                seconds: 2
-    
-            -
-              name: "Grabbing updated second adapter IP address"
-              changed_when: false
-              ansible.builtin.shell: "ip addr show {{ second_adapter_details.name }} | awk '/inet / {print $2}'"
-              args:
-                executable: /bin/bash
-              register: updated_second_ip
-
-            -
-              name: "Enabling systemd-networkd"
-              ansible.builtin.systemd_service:
-                state: restarted
-                enabled: true
-                name: systemd-networkd
-
-            -
-              name: "Waiting for 3 seconds for IP to set"
-              ansible.builtin.pause:
-                seconds: 2
-
-            -
-              name: "Creating file ipaddress.yml with contents of: {{ updated_second_ip.stdout }}"
-              ansible.builtin.copy:
-                content: "{{ updated_second_ip.stdout }}"
-                dest: "{{ completed_dir }}/ipaddress.yml"
-                mode: '0644'
-    
-            -
-              name: "Adding Extra Host Records"
-              ansible.builtin.lineinfile:
-                path: "/etc/hosts"
-                line: "{{ updated_second_ip.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain }}"
-                insertbefore: EOF
-
-        -
-          name: "When No Bridged Adapter included, Setting configurations to use 127.0.0.1 in case of VBox Port Forwards"
-          when: networks[0] is not defined
-          block:
-            -
-              name: "Placing 127.0.0.1 in file ipaddress.yml as no IP was configured in Hosts.yml into {{ completed_dir }}"
-              ansible.builtin.copy:
-                content: "127.0.0.1"
-                dest: "{{ completed_dir }}/ipaddress.yml"
-                mode: '0644'
-    
-            -
-              name: "Grabbing local address for scripts"
-              changed_when: false
-              ansible.builtin.shell: "cat {{ completed_dir }}/ipaddress.yml"
-              args:
-                executable: /bin/bash
-              register: netoutput
-    
-            -
-              name: "Adding Extra Host Records"
-              ansible.builtin.lineinfile:
-                path: "/etc/hosts"
-                line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain }}"
-                insertbefore: EOF
-    
     -
-      name: "Re-Gathering Networking Configurations"
+      name: "Gathering Networking Configurations"
+      when: 
+        - not ansible_module_running_in_container
       become: true
-      when: not ansible_module_running_in_container
-      tags: always
+      tags: once
       block:
         -
-          name: "Executing shell command to sort network interfaces"
-          when: networks[0] is defined
-          changed_when: false
-          ansible.builtin.shell: "ls /sys/class/net | grep -v ^lo$ | grep -v docker"
-          args:
-            executable: /bin/bash
-          register: sorted_interfaces_output
-    
+          name: "Gather Networking Details"
+          ansible.builtin.include_tasks: "gather.yml"
+
+    -
+      name: "Loading Virtualbox Tasks"
+      when: 
+        - ansible_virtualization_type == "virtualbox"
+        - not ansible_module_running_in_container
+      become: true
+      tags: once
+      block:
         -
-          name: "Parsing output to get interface names"
-          ansible.builtin.set_fact:
-            interfaces: "{{ sorted_interfaces_output.stdout_lines }}"
-    
-        -
-          name: "Ensuring there are at least two interfaces"
-          ansible.builtin.fail:
-            msg: "Less than two network interfaces found."
-          when: interfaces | length < 2
-    
-        -
-          name: "Setting first and second adapters"
-          ansible.builtin.set_fact:
-            first_adapter: "{{ interfaces[0] }}"
-            second_adapter: "{{ interfaces[1] }}"
-    
-        -
-          name: "Gathering details of the first adapter"
-          changed_when: false
-          ansible.builtin.shell: "ip addr show {{ first_adapter }} | awk '/inet / {print $2}'"
-          args:
-            executable: /bin/bash
-          register: first_ip
-    
-        -
-          name: "Gathering details of the second adapter"
-          changed_when: false
-          ansible.builtin.shell: "ip addr show {{ second_adapter }} | awk '/inet / {print $2}'"
-          args:
-            executable: /bin/bash
-          register: second_ip
-    
-        -
-          name: "Gathering MAC address of the first adapter"
-          changed_when: false
-          ansible.builtin.shell: "cat /sys/class/net/{{ first_adapter }}/address"
-          args:
-            executable: /bin/bash
-          register: first_mac
-    
-        -
-          name: "Gathering MAC address of the second adapter"
-          changed_when: false
-          ansible.builtin.shell: "cat /sys/class/net/{{ second_adapter }}/address"
-          args:
-            executable: /bin/bash
-          register: second_mac
-    
-        -
-          name: "Storing first adapter details as facts"
-          ansible.builtin.set_fact:
-            first_adapter_details:
-              name: "{{ first_adapter }}"
-              ip: "{{ first_ip.stdout.strip() }}"
-              mac: "{{ first_mac.stdout.strip() }}"
-    
-        -
-          name: "Storing second adapter details as facts"
-          ansible.builtin.set_fact:
-            second_adapter_details:
-              name: "{{ second_adapter }}"
-              ip: "{{ second_ip.stdout.strip() }}"
-              mac: "{{ second_mac.stdout.strip() }}"
-    
-        -
-          name: "Displaying stored first adapter details"
-          ansible.builtin.debug:
-            msg: "First adapter: {{ first_adapter_details.name }}, IP: {{ first_adapter_details.ip }}, MAC: {{ first_adapter_details.mac }}"
-    
-        -
-          name: "Displaying stored second adapter details"
-          ansible.builtin.debug:
-            msg: "Second adapter: {{ second_adapter_details.name }}, IP: {{ second_adapter_details.ip }}, MAC: {{ second_adapter_details.mac }}"
-    
-        -
-          name: "Serializing adapter details to JSON"
-          ansible.builtin.set_fact:
-            adapters_json: "{{ {'adapters': [{'name': first_adapter_details.name, 'ip': first_adapter_details.ip, 'mac': first_adapter_details.mac},
-                                               {'name': second_adapter_details.name, 'ip': second_adapter_details.ip, 'mac': second_adapter_details.mac}]} | to_nice_json }}"
-    
-        - name: "Serializing adapter details to YAML"
-          ansible.builtin.set_fact:
-            adapters_yaml: "{{ {'adapters': [{'name': (first_adapter_details.name | default('')), 'ip': (first_adapter_details.ip | default('')), 'mac': (first_adapter_details.mac | default(''))},
-                                               {'name': (second_adapter_details.name | default('')), 'ip': (second_adapter_details.ip | default('')), 'mac': (second_adapter_details.mac | default(''))}]} | to_yaml }}"
-    
-        -
-          name: "Writing adapter details to JSON file"
-          ansible.builtin.copy:
-            content: "{{ adapters_json }}"
-            dest: "/vagrant/support-bundle/adapters.json"
-            force: false
-            mode: '0644'
-    
-        -
-          name: "Writing adapter details to YAML file"
-          ansible.builtin.copy:
-            content: "{{ adapters_yaml }}"
-            dest: "/vagrant/support-bundle/provisioned-adapters.yml"
-            force: false
-            mode: '0644'
-    
+          name: "Including OS-specific tasks"
+          ansible.builtin.include_tasks: "virtualbox/{{ ansible_os_family | lower }}.yml"
+
     -
       name: "Setting Host Records"
       become: true
       when: not ansible_module_running_in_container
       tags: always
       block:
-            -
-              name: "Ensuring /etc/hosts entries are present"
-              ansible.builtin.lineinfile:
-                path: /etc/hosts
-                state: present
-                create: yes
-                line: "{{ item.ip }} {{ item.hostname }} {{ item.aliases | join(' ') }}"
-              loop: "{{ etc_hosts_entries }}"
-              when: etc_hosts_entries is iterable
+        -
+          name: "Creating DNS aliases list"
+          ansible.builtin.set_fact:
+            dns_aliases: "{{ [settings.hostname] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain)) | list }}"
+
+        -
+          name: "Creating new host entry"
+          ansible.builtin.set_fact:
+            new_entry:
+              ip: "{{ second_adapter_details.ip }}"
+              hostname: "{{ settings.hostname + '.' + settings.domain }}"
+              aliases: "{{ dns_aliases }}"
+
+        -
+          name: "Adding managed entries to etc_hosts_entries"
+          ansible.builtin.set_fact:
+            etc_hosts_entries: "{{ [new_entry] if not etc_hosts_entries else (etc_hosts_entries + [new_entry]) }}"
+
+        -
+          name: "Creating hosts entries block"
+          ansible.builtin.set_fact:
+            hosts_block: |
+              {% for entry in etc_hosts_entries %}
+              {{ entry.ip }} {{ entry.hostname }} {{ entry.aliases | join(' ') }}
+              {% endfor %}
+
+        -
+          name: "Ensuring /etc/hosts entries are present"
+          ansible.builtin.blockinfile:
+            path: /etc/hosts
+            marker: "# {mark} SHI ANSIBLE MANAGED HOST ENTRIES"
+            block: "{{ hosts_block }}"
+            create: yes

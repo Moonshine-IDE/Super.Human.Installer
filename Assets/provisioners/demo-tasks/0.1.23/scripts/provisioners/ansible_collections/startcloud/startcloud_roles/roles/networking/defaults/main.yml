@@ -4,4 +4,23 @@ show_help: true
 use_proxy: false
 proxy_port: 3128
 proxy_server: squid.mydomain.com
+convert_nat_dhcp_to_static: true
 etc_hosts_entries: []
+dns_entries_list:
+    - auth
+    - nomadweb
+    - notes
+    - domino
+    - traveler
+    - verse
+    - console
+    - downloads
+    - logging
+    - welcome
+    - proxy
+    - sametime
+    - leap
+    - restapi
+    - guacamole
+    - voltmx
+    - www

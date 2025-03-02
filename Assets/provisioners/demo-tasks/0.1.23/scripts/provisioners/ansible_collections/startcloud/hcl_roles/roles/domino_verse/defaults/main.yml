@@ -1,7 +1,7 @@
 ---
 run_tasks: true
-verse_archive: HCL_Verse_3.2.2.zip
-verse_base_version: 3.2.2
+verse_archive: HCL_Verse_3.2.3.zip
+verse_base_version: 3.2.3
 verse_debug: true
 installer_url_app_path: "Super.Human.Installer/Verse"
 domino_verse_port_forwards:

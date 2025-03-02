@@ -46,7 +46,7 @@
 {% endif %}
       {
         "label": "Domino Main Web Site",
-        "icon": "Domino",
+        "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/domino.ico",
         "URL": "https://{{ settings.hostname }}.{{ settings.domain }}"
       },
       {
@@ -57,7 +57,7 @@
       {
         "label": "Welcome Page",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/home.ico",
-        "URL": "https://{{ domino_nomadweb_proxy_url }}/welcome.html"
+        "URL": "https://downloads.{{ settings.hostname }}.{{ settings.domain }}/welcome.html"
       }
     ]
   }

@@ -52,7 +52,21 @@
       when: cross_certify_check.stat.exists
       ansible.builtin.debug:
         var: cross_certify_commands.stdout_lines
-    
+
+    -
+      name: "Adding Admin notes ID to the ID Vault"
+      become_user: "{{ service_user }}"
+      ansible.builtin.expect:
+        chdir: "{{ service_home_dir }}"
+        command: >
+          /bin/bash -c "
+            . {{ service_home_dir }}/.bash_profile &&
+            . {{ service_home_dir }}/.bashrc &&
+            . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
+            java -jar PushUserIDtoIDVault.jar /id-files/user-ids/{{ domino_admin_user_id }} '{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}' '{{ domino_admin_notes_id_password }}' {{ domino_server_name_common }}"
+        responses:
+          'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
+
     -
       name: "Running Check database to populate IDs into ID Vault"
       become_user: "{{ service_user }}"

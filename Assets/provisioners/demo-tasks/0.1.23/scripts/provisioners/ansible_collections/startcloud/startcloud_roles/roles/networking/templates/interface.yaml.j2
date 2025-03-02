@@ -1,8 +1,8 @@
 #jinja2:lstrip_blocks: True
 ---
 network:
+  renderer: networkd
   ethernets:
-    renderer: networkd
     {{ network_name }}:
       accept-ra: false
     {% if networks[0].dhcp4 == false %}

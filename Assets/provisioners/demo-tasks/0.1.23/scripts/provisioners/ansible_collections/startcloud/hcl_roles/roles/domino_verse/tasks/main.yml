@@ -50,7 +50,7 @@
         group: "{{ domino_group }}"
         src: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
         dest: "{{ installer_dir }}/verse/Verse"
-        creates: "{{ installer_dir }}/verse/Verse/HCL_Verse_{{ verse_base_version }}"
+        creates: "{{ installer_dir }}/verse/Verse/HCL_Verse.zip"
         remote_src: true
     
     -
@@ -69,9 +69,8 @@
         mode: "a+x"
         owner: "{{ domino_user }}"
         group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/verse/Verse/HCL_Verse_{{ verse_base_version }}/HCL_Verse.zip"
+        src: "{{ installer_dir }}/verse/Verse/HCL_Verse.zip"
         dest: "{{ domino_home_dir }}/domino/workspace/applications"
-        creates: "{{ domino_home_dir }}/domino/workspace/applications/ats-3.0.0-0.0-773.jar"
         remote_src: true
     
     -

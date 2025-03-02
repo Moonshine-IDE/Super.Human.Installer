@@ -12,7 +12,6 @@
       
     -
       name: "Disabling the nashed service to prevent conflict with JeDI"
-      when: domino_jedi_installed.stat.exists
       ansible.builtin.service:
         name: domino
         enabled: false
@@ -337,7 +336,7 @@
             get_md5: false
 
         -
-          name: "Checking if Nash's Domino Service Scripts has been installed"
+          name: "Checking if Nash's Domino Service Scripts have been installed"
           register: nash_service_installed
           ansible.builtin.stat:
             path: "{{ completed_dir }}/service_configured"
@@ -352,19 +351,55 @@
             state: stopped
 
         -
-          name: "Stopping Domino Manually"
-          become: true
+          name: "Check for Domino server process"
+          community.general.pids:
+            pattern: "/opt/hcl/domino/notes/latest/linux/server"
+          register: process_check
           when: nash_service_installed.stat.exists and domino_jedi_installed.stat.exists
-          ansible.builtin.shell: 'echo "exit" >> /local/notesdata/noteslog/notes.input'
 
         -
-          name: "Waiting for Domino server shutdown complete message"
+          name: "Debug process check"
+          ansible.builtin.debug:
+            msg: "Process check result: {{ process_check }}"
           when: nash_service_installed.stat.exists and domino_jedi_installed.stat.exists
-          ansible.builtin.wait_for:
-            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
-            search_regex: "Server shutdown complete"
-            state: present
-            timeout: 300
+
+        -
+          name: "Starting Initial Domino Stop Attempt"
+          become: true
+          when: >
+            nash_service_installed.stat.exists and
+            domino_jedi_installed.stat.exists and
+            process_check.pids | length > 0
+          ansible.builtin.shell: 'echo "exit" >> {{ domino_home_dir }}/noteslog/notes.input'
+
+        -
+          name: "Waiting for Domino configuration"
+          when: >
+            nash_service_installed.stat.exists and
+            domino_jedi_installed.stat.exists and
+            process_check.pids | length > 0
+          ansible.builtin.pause:
+            seconds: 90
+
+        -
+          name: "Setting initial shutdown status"
+          when: nash_domino_jedi_installed.stat.exists and
+                domino_server_nash_installed.stat.exists
+          ansible.builtin.set_fact:
+            shutdown_complete: false
+        
+        -
+          name: "Looping checking server status"
+          ansible.builtin.include_tasks: check_shutdown.yml
+          loop: "{{ range(1, 11)|list }}"
+          when: nash_domino_jedi_installed.stat.exists and
+                domino_server_nash_installed.stat.exists and
+                not shutdown_complete
+
+        -
+          name: "Waiting for Domino configuration"
+          ansible.builtin.pause:
+            seconds: 90
 
         -
           name: "Enabling the nashed service to ensure provisioning works"
@@ -372,4 +407,4 @@
           ansible.builtin.service:
             name: domino
             enabled: true
-            state: started
+            state: restarted
