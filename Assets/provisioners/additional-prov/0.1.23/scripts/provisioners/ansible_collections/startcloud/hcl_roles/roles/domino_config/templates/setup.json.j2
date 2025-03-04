@@ -111,6 +111,7 @@
         "lastName": "{{ domino_dev_user_last_name }}",
         "shortName": "{{ domino_dev_user_short_name }}",
         "password": "{{ domino_dev_user_id_password }}",
+        "mailFilePath": "mail/{{ domino_dev_user_short_name }}",
         "IDFilePath": "{{ domino_home_dir }}/ids/{{ domino_dev_user_id }}"
       }
       ]
@@ -172,7 +173,7 @@
         },
 {% endif %}
         "documents": [
-{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled %}
+{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and not is_additional_server %}
         {
           "action": "update",
           "findDocument": {

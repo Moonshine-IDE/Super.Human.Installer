@@ -81,11 +81,22 @@
         - { path: "{{ rest_app_home_dir }}/config" }
     
     -
-      name: "Copying Rest interface Jar to working path"
+      name: "Copying default REST Interface JAR to working path"
       become: true
-      when: not rest_interface_deployed.stat.exists
+      when: not rest_interface_deployed.stat.exists and not use_custom_rest_interface_jar
       ansible.builtin.copy:
         src: "{{ installer_dir }}/restapi/rest/{{ rest_interface_jar }}"
+        dest: "{{ rest_app_home_dir }}/bin/{{ rest_interface_jar }}"
+        mode: "a+x"
+        owner: "{{ service_user }}"
+        remote_src: true
+
+    -
+      name: "Copying custom REST Interface JAR to working path"
+      become: true
+      when: not rest_interface_deployed.stat.exists and use_custom_rest_interface_jar
+      ansible.builtin.copy:
+        src: "{{ installer_dir }}/custom_restapi_jar/{{ rest_interface_jar }}"
         dest: "{{ rest_app_home_dir }}/bin/{{ rest_interface_jar }}"
         mode: "a+x"
         owner: "{{ service_user }}"
