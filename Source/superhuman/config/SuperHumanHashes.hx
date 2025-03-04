@@ -31,8 +31,12 @@ class SuperHumanHashes
 										 { hash: "216807509d96f65c7a76b878fc4c4bd5", version: { majorVersion: "12", minorVersion: "0", patch: "2", fixPackVersion: "FP1", fullVersion: "12.0.2"} },
 										 { hash: "fc262f2b9cc334604cb830b371043468", version: { majorVersion: "14", minorVersion: "0", patch: "0", fullVersion: "14.0.0"} },
 										{ hash: "58f8bfab4165246a3b12490a4e661f69", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP1", fullVersion: "14.0.0"} } ]],
-		"verse" => [ "installers" => [  { hash: "cbe1edbe7afcf99f6f9607840d30e36e", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" }},
-										{ hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } }, ]],
+		"verse" => [ "installers" => [  { hash: "4f9622f8c16ac4a450b9551a19491994", version: { majorVersion: "3", minorVersion: "1", patch: "0", fullVersion: "3.1.0" } },
+										 { hash: "843eecf546fdb7c986cff66990b16dcb", version: { majorVersion: "3", minorVersion: "2", patch: "0", fullVersion: "3.2.0" } },
+										 { hash: "21a13b648fdaac3b516ac9880c106041", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" }},
+										 { hash: "c961a0347f83690cbb32df04f0a869ef", version: { majorVersion: "3", minorVersion: "2", patch: "3", fullVersion: "3.2.3" } },
+										 { hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } },
+									 ]],
 		"domino-rest-api" => [ "installers" => [ { hash: "fa990f9bac800726f917cd0ca857f220", version: { majorVersion: "1", minorVersion: "0", patch: "0", fullVersion: "1.0.0" } } ] ]
 	];
 	
