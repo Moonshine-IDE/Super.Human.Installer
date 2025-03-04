@@ -33,6 +33,10 @@ class AdditionalServer extends Server {
     public var existingServerIpAddress( get, never ):ValidatingProperty;
     function get_existingServerIpAddress() return _existingServerIpAddress;
 
+    override function get_fqdn():String {
+        return url.hostname + "." + url.domainName + "/" + organization.value;
+    }
+
     function new() {
         super();
 
