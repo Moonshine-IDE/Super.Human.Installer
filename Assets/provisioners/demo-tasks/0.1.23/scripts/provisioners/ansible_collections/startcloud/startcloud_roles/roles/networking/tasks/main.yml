@@ -18,16 +18,16 @@
           name: "Disabling NetworkManager"
           when: not ansible_module_running_in_container
           ansible.builtin.systemd_service:
-            state: restarted
-            enabled: true
+            state: stopped
+            enabled: false
             name: NetworkManager
 
         -
           name: "Enabling systemd-networkd"
           when: not ansible_module_running_in_container
           ansible.builtin.systemd_service:
-            state: stopped
-            enabled: false
+            state: restarted
+            enabled: true
             name: systemd-networkd
 
         -

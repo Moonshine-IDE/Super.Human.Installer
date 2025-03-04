@@ -16,3 +16,7 @@ domino_vagrant_rest_api_proxy_url: "{{ domino_vagrant_rest_api_port_forwards[0].
 domino_vagrant_restapi_supporting_dirs:
   - /opt/restinterface/userfiles
   - /opt/restinterface/public/uploads/
+
+# option to replace the {{ rest_interface_jar }} with a custom file
+# If enabled, put the file at installers/custom_restapi_jar/{{ rest_interface_jar }}
+use_custom_rest_interface_jar: false

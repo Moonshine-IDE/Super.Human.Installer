@@ -172,7 +172,7 @@
         },
 {% endif %}
         "documents": [
-{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled %}
+{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and not is_additional_server %}
         {
           "action": "update",
           "findDocument": {
