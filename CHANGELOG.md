@@ -10,11 +10,11 @@ The 1.1.0 release of Super.Human.Installer enhances Domino Server support and im
 ### Added
 * Added support for [additional Domino servers](https://github.com/STARTcloud/hcl_domino_additional_provisioner) ([#85](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/85))
 * Phase 2 updates for [hcl_domino_standalone_provisioner v0.1.23](https://github.com/STARTcloud/hcl_domino_standalone_provisioner) ([#132](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/132))
+* Added application sleep mode functionality ([#122](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/122))
 * Read IP Address from results.yml for provisioner v0.1.23 ([#120](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/120))
 
 ### Fixed
 * VM Destroy Button missing after stopping VM ([#104](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/104))
-* Added application sleep mode functionality ([#122](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/122))
 
 ## Super Human Installer [1.0.0]
 
