@@ -19,25 +19,28 @@ class SuperHumanHashes
 		"leap" => [ "installers" => [ { hash: "080235c0f0cce7cc3446e01ffccf0046", version: { majorVersion: "1", minorVersion: "0", patch: "5", fullVersion: "1.0.5" } },
 									{ hash: "8952d633ff19ad7833936edccee9fd01", version: { majorVersion: "1", minorVersion: "1", patch: "1", fullVersion: "1.1.1" } } ]],
 		"nomadweb" => [ "installers" => [ { hash: "044c7a71598f41cd3ddb88c5b4c9b403" }, 
-										 { hash: "cb1b19e36e644bc7e782470624ada2cd", version: { majorVersion: "1", minorVersion: "0", patch: "14", fullVersion: "1.0.14"} },
 										 { hash: "8f3e42f4f5105467c99cfd56b8b4a755", version: { majorVersion: "1", minorVersion: "0", patch: "6", fullVersion: "1.0.6"} }, 
 										 { hash: "fe2dd37e6d05ea832d8ecc4f0e1dbe80", version: { majorVersion: "1", minorVersion: "0", patch: "8", fullVersion: "1.0.8"} },
 										 { hash: "378880b838aeeb4db513ebf05a8a7285", version: { majorVersion: "1", minorVersion: "0", patch: "9", fullVersion: "1.0.9"} },
 										 { hash: "697d89eb78fa6c1512e0ee199fa0c97c", version: { majorVersion: "1", minorVersion: "0", patch: "10", fullVersion: "1.0.10"} },
 										{ hash: "5908ea3a43571ec55f380908dfd5b69f", version: { majorVersion: "1", minorVersion: "0", patch: "12", fullVersion: "1.0.12"} },
-										{ hash: "fb86ec43be9c8e7c9fa7928f5b592ed1", version: { majorVersion: "1", minorVersion: "0", patch: "13", fullVersion: "1.0.13"} } ]],
+										{ hash: "fb86ec43be9c8e7c9fa7928f5b592ed1", version: { majorVersion: "1", minorVersion: "0", patch: "13", fullVersion: "1.0.13"} },
+										{ hash: "cb1b19e36e644bc7e782470624ada2cd", version: { majorVersion: "1", minorVersion: "0", patch: "14", fullVersion: "1.0.14"} },
+									    { hash: "9b9f38b544052cccf2611c5308714153", version: { majorVersion: "1", minorVersion: "0", patch: "15", fullVersion: "1.0.15"} }, ]],
 		"traveler" => [ "installers" => [ { hash: "4a195e3282536de175a2979def40527d" }, 
 										 { hash: "4118ee30d590289070f2d29ecf1b34cb", version: { majorVersion: "12", minorVersion: "0", patch: "2", fullVersion: "12.0.2" }}, 
 										 { hash: "216807509d96f65c7a76b878fc4c4bd5", version: { majorVersion: "12", minorVersion: "0", patch: "2", fixPackVersion: "FP1", fullVersion: "12.0.2"} },
 										 { hash: "fc262f2b9cc334604cb830b371043468", version: { majorVersion: "14", minorVersion: "0", patch: "0", fullVersion: "14.0.0"} },
-										{ hash: "58f8bfab4165246a3b12490a4e661f69", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP1", fullVersion: "14.0.0"} } ]],
+										{ hash: "58f8bfab4165246a3b12490a4e661f69", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP1", fullVersion: "14.0.0"} },
+										{ hash: "aa381965a8b71c69ae2770c6c74f03fb", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP2", fullVersion: "14.0.0"} } ],
 		"verse" => [ "installers" => [  { hash: "4f9622f8c16ac4a450b9551a19491994", version: { majorVersion: "3", minorVersion: "1", patch: "0", fullVersion: "3.1.0" } },
 										 { hash: "843eecf546fdb7c986cff66990b16dcb", version: { majorVersion: "3", minorVersion: "2", patch: "0", fullVersion: "3.2.0" } },
 										 { hash: "21a13b648fdaac3b516ac9880c106041", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" }},
 										 { hash: "c961a0347f83690cbb32df04f0a869ef", version: { majorVersion: "3", minorVersion: "2", patch: "3", fullVersion: "3.2.3" } },
 										 { hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } },
 									 ]],
-		"domino-rest-api" => [ "installers" => [ { hash: "fa990f9bac800726f917cd0ca857f220", version: { majorVersion: "1", minorVersion: "0", patch: "0", fullVersion: "1.0.0" } } ] ]
+		"domino-rest-api" => [ "installers" => [ { hash: "fa990f9bac800726f917cd0ca857f220", version: { majorVersion: "1", minorVersion: "0", patch: "0", fullVersion: "1.0.0" } },
+											     { hash: "3c4e3718343d4ba35631a51c905484b8", version: { majorVersion: "1", minorVersion: "1", patch: "2", fullVersion: "1.1.2" } } ] ]
 	];
 	
 	public static function getInstallersHashes(installerType:String):Array<String> 
