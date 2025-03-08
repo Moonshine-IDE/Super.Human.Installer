@@ -40,7 +40,8 @@ class SuperHumanHashes
 										 { hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } },
 									 ]],
 		"domino-rest-api" => [ "installers" => [ { hash: "fa990f9bac800726f917cd0ca857f220", version: { majorVersion: "1", minorVersion: "0", patch: "0", fullVersion: "1.0.0" } },
-											     { hash: "3c4e3718343d4ba35631a51c905484b8", version: { majorVersion: "1", minorVersion: "1", patch: "2", fullVersion: "1.1.2" } } ] ]
+											     { hash: "3c4e3718343d4ba35631a51c905484b8", version: { majorVersion: "1", minorVersion: "1", patch: "2_R14", fullVersion: "1.1.2_R14" } },
+												 { hash: "25ee35f5c58fcf1d716d5fdb5774f8ef", version: { majorVersion: "1", minorVersion: "1", patch: "2_R12", fullVersion: "1.1.2_R12" } } ] ]
 	];
 	
 	public static function getInstallersHashes(installerType:String):Array<String> 
