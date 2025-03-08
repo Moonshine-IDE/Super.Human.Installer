@@ -32,7 +32,7 @@ class SuperHumanHashes
 										 { hash: "216807509d96f65c7a76b878fc4c4bd5", version: { majorVersion: "12", minorVersion: "0", patch: "2", fixPackVersion: "FP1", fullVersion: "12.0.2"} },
 										 { hash: "fc262f2b9cc334604cb830b371043468", version: { majorVersion: "14", minorVersion: "0", patch: "0", fullVersion: "14.0.0"} },
 										{ hash: "58f8bfab4165246a3b12490a4e661f69", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP1", fullVersion: "14.0.0"} },
-										{ hash: "aa381965a8b71c69ae2770c6c74f03fb", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP2", fullVersion: "14.0.0"} } ],
+										{ hash: "aa381965a8b71c69ae2770c6c74f03fb", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP2", fullVersion: "14.0.0"} } ]],
 		"verse" => [ "installers" => [  { hash: "4f9622f8c16ac4a450b9551a19491994", version: { majorVersion: "3", minorVersion: "1", patch: "0", fullVersion: "3.1.0" } },
 										 { hash: "843eecf546fdb7c986cff66990b16dcb", version: { majorVersion: "3", minorVersion: "2", patch: "0", fullVersion: "3.2.0" } },
 										 { hash: "21a13b648fdaac3b516ac9880c106041", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" }},
