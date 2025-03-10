@@ -118,6 +118,85 @@
         executable: "/bin/bash"
         chdir: "{{ domino_home_dir }}"
         creates: "{{ completed_dir }}/kyr-cert-imported"
+
+    -
+      name: "Adding Root CA Certificate to KYR"
+      ansible.builtin.shell: >
+        {{ domino_install_basedir }}/bin/tools/startup
+        {{ domino_install_dir }}/kyrtool import roots
+        -k {{ cert_dir }}/kyr/{{ kyr_cert }}
+        -p {{ cert_pass }}
+        -i {{ cert_dir }}/ca/ca-certificate.crt &&
+        touch {{ completed_dir }}/kyr-root-ca-imported
+      become_user: "{{ domino_user }}"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      args:
+        executable: "/bin/bash"
+        chdir: "{{ domino_home_dir }}"
+        creates: "{{ completed_dir }}/kyr-root-ca-imported"
+
+    -
+      name: "Getting SSL certificate info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.openssl_certificate_info:
+        path: "{{ cert_dir }}/ca/ca-certificate.crt"
+      register: ca_cert_info
+
+    -
+      name: "Showing Self Signed Certificate Authority Cert Info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.debug:
+        var: ca_cert_info
+
+    -
+      name: "Extracting Subject Key Identifier of the Self Signed Certificate Authority"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.set_fact:
+        ca_subject_key_id_raw: "{{ ca_cert_info.subject_key_identifier | regex_replace(':', '') }}"
+
+    -
+      name: "Formatting Subject Key Identifier of the Self Signed Certificate Authority"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.set_fact:
+        ca_subject_key_id: "{{ ca_subject_key_id_raw | upper | regex_replace('(.{4})(?!$)', '\\1 ') }}"
+
+    -
+      name: "Printing Subject Key Identifier of the Self Signed Certificate Authority"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.debug:
+        var: ca_subject_key_id
+
+    -
+      name: "Getting Self Signed SSL certificate info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.openssl_certificate_info:
+        path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
+      register: cert_info
+
+    -
+      name: "Showing Self Signed SSL certificate info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.debug:
+        var: cert_info
+
+    -
+      name: "Extracting Subject Key Identifier from the Self Signed SSL certificate info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.set_fact:
+        subject_key_id_raw: "{{ cert_info.subject_key_identifier | regex_replace(':', '') }}"
+
+    -
+      name: "Formatting Subject Key Identifier of the Self Signed SSL certificate info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.set_fact:
+        subject_key_id: "{{ subject_key_id_raw | upper | regex_replace('(.{4})(?!$)', '\\1 ') }}"
+
+    -
+      name: "Printing Subject Key Identifier of the of the Self Signed SSL certificate info"
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.debug:
+        var: subject_key_id
+##
     
     -
       name: "Creating Domino DAOS, Translogs, NIFNSF and FullText Thread Path directories"
@@ -310,7 +389,7 @@
       become: true
       args:
         executable: "/bin/bash"
-      register: domino_stop_status
+      register: domino_certmgr_start
       with_items:
         - 'domino cmd "load certmgr" 20'
     
@@ -321,7 +400,7 @@
       become: true
       args:
         executable: "/bin/bash"
-      register: domino_stop_status
+      register: domino_certmgr_add_kyr
       with_items:
         - 'domino cmd "load certmgr -importkyr {{ cert_dir }}/kyr/{{ kyr_cert }}"'
     
@@ -330,13 +409,24 @@
       when: not domino_server_touched.stat.exists
       ansible.builtin.wait_for:
         path: "{{ domino_home_dir }}/certstore.nsf"
-    
+
+    -
+      name: "Adding the Self Signed CA to CertStore"
+      when: not domino_server_touched.stat.exists and selfsigned_enabled and not letsencrypt_enabled
+      ansible.builtin.shell: "{{ item }}"
+      become: true
+      args:
+        executable: "/bin/bash"
+      register: domino_certmgr_add_root_cert
+      with_items:
+        - 'domino cmd "load certmgr -ImportRootFromFile {{ cert_dir }}/ca/ca-certificate.crt" 20'
+
     -
       name: "Waiting for 60 seconds to let Domino fully configure"
       when: not domino_server_touched.stat.exists
       ansible.builtin.pause:
         seconds: 60
-    
+
     -
       name: "Cleanly stopping Domino"
       when: not domino_server_touched.stat.exists
@@ -369,14 +459,35 @@
 #        - (domino_fixpack_version | replace('FP', '') | int) is version('2', '>=')
       block:
         -
-          name: "Setting up OIDC Configurations"
-          when: not domino_server_touched.stat.exists
-          ansible.builtin.template:
-            dest: "{{ domino_home_dir }}/oidcinfo.json"
-            mode: "0644"
+          name: "Ensure cacert.pem exists"
+          ansible.builtin.file:
+            path: "{{ domino_home_dir }}/cacert.pem"
+            state: touch
             owner: "{{ domino_user }}"
             group: "{{ domino_group }}"
-            src: oidcinfo.json.j2
+            mode: '0644'
+            modification_time: preserve
+            access_time: preserve
+          
+        -
+          name: "Append CA certificate to cacert.pem"
+          ansible.builtin.blockinfile:
+            path: "{{ domino_home_dir }}/cacert.pem"
+            block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            mode: '0644'
+            
+        #-
+        #  name: "Setting up OIDC Configurations"
+        #  when: not domino_server_touched.stat.exists
+        #  ansible.builtin.template:
+        #    dest: "{{ domino_home_dir }}/oidcinfo.json"
+        #    mode: "0644"
+        #    owner: "{{ domino_user }}"
+        #    group: "{{ domino_group }}"
+        #    src: oidcinfo.json.j2
 
     -
       name: 'Setting file permissions Admin User ID, filename: {{ domino_admin_user_id }}'

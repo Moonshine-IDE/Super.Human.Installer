@@ -1,0 +1,20 @@
+---
+-
+  name: "Waiting for HTTP Server to start"
+  listen: Domino Started
+  ansible.builtin.wait_for:
+    path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+    search_regex: "HTTP Server: Started"
+    timeout: 300
+    msg: "HTTP Server did not start within the timeout period."
+
+-
+  name: "Waiting for 60 seconds to let Domino fully configure"
+  listen: Domino Started
+  ansible.builtin.pause:
+    seconds: 60
+
+-
+  name: "Restarting Nomad service"
+  listen: Domino Started
+  ansible.builtin.command: domino cmd "restart task nomad" 20

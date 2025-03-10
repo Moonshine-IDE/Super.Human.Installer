@@ -1,7 +1,7 @@
 ---
 run_tasks: true
-nomadweb_archive: nomad-server-1.0.14-linux.tar.gz
-nomadweb_version: 1.0.14
+nomadweb_archive: nomad-server-1.0.15-linux.tar.gz
+nomadweb_version: 1.0.15
 nomadweb_version_major: "{{ nomadweb_version.split('.')[0] }}"
 nomadweb_version_minor: "{{ nomadweb_version.split('.')[1] }}"
 nomadweb_version_patch: "{{ nomadweb_version.split('.')[2] }}"

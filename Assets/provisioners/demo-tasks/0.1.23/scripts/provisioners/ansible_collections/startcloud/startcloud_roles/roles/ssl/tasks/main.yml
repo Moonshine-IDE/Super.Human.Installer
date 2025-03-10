@@ -21,6 +21,7 @@
         - "{{ cert_dir }}/jks"
         - "{{ cert_dir }}/combined"
         - "{{ cert_dir }}/ca"
+        - "/usr/local/share/ca-certificates/self-signed"
 
     -
       name: "Using existing Certificate"
@@ -204,7 +205,7 @@
           name: "Copying root CA certificate to trusted certificates directory"
           ansible.builtin.copy:
             src: "{{ cert_dir }}/ca/ca-certificate.crt"
-            dest: "/usr/local/share/ca-certificates/ca-certificate.pem"
+            dest: "/usr/local/share/ca-certificates/self-signed/ca-certificate.crt"
             owner: root
             group: root
             mode: '0644'
@@ -212,7 +213,6 @@
         -
           name: "Updating system's certificate store"
           ansible.builtin.command: update-ca-certificates
-          changed_when: false
 
         -
           name: "Generating Servers self signed SSL Key"
@@ -321,6 +321,16 @@
             remote_src: true
 
         -
+          name: "Append CA certificate to combined certificate"
+          ansible.builtin.blockinfile:
+            path: "{{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem"
+            block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+            mode: '0644'
+
+        -
           name: "Creating a keystore for the self-signed certificate/private key pair"
           community.general.java_keystore:
             name: "{{ settings.hostname }}.{{ settings.domain }}"
@@ -366,10 +376,12 @@
             state: present
 
         -
-          name: "Checking if HAProxy is installed"
-          ansible.builtin.command: systemctl status haproxy
+          name: "Checking if HAProxy is running"
+          ansible.builtin.service:
+            name: haproxy
+            state: started
+          check_mode: yes
           register: haproxy_status
-          ignore_errors: true
 
         -
           name: "Setting LE entries as a fact to consume"
@@ -398,22 +410,22 @@
             --staging
             --email {{ settings.email }}
             {{ le_entries | join(' ') }}
-          when: haproxy_status.rc != 0 and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+          when: haproxy_status.changed and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
-          name: "Generating new staging  request via HAProxy"
+          name: "Generating new staging request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-          when: haproxy_status.rc == 0 and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+          when: not haproxy_status.changed and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
           name: "Generating new certificate request"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
-          when: haproxy_status.rc != 0 and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+          when: haproxy_status.changed and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
         -
           name: "Generating new certificate request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-          when: haproxy_status.rc == 0 and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+          when: not haproxy_status.changed and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
         -
           name: "Remove old certs Directories for SSLs"
@@ -429,13 +441,13 @@
           register: letsencrypt_cert_generated_check
           become: true
           ansible.builtin.stat:
-            path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
+            path: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
 
         -
-          name: "Copying cert.pem from Let'sEncrypt "
+          name: "Copying cert.pem from letsencrypt"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
-            src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/cert.pem"
+            src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/fullchain.pem"
             dest: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
             owner: "{{ service_user }}"
             group: "{{ service_group }}"
@@ -443,7 +455,7 @@
             remote_src: true
 
         -
-          name: "Copying CRT"
+          name: "Replacing presigned ssl with letsencrypt cert"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
             src: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
@@ -454,7 +466,7 @@
             remote_src: true
 
         -
-          name: "Copying privkey.pem from Let'sEncrypt"
+          name: "Copying privkey.pem from letsencrypt"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           ansible.builtin.copy:
             src: "/etc/letsencrypt/live/{{ settings.hostname | lower }}.{{ settings.domain | lower }}/privkey.pem"
@@ -465,7 +477,7 @@
             remote_src: true
 
         -
-          name: "Copying privkey.pem"
+          name: "Replacing presigned ssl with letsencrypt key"
           when: letsencrypt_cert_generated_check.stat.exists | bool
           become: true
           ansible.builtin.copy:

@@ -29,6 +29,33 @@
       msg: "{{ domino_genesis_applications }}"
   
   -
+    name: "Setting Imported Self Signed CA as trusted via Genesis task"
+    when: not genesis_packages_installed_check.stat.exists and domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+    ansible.builtin.template:
+      dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_self_signed_ca_cert_verify.json"
+      mode: "a+x"
+      owner: "{{ domino_user }}"
+      group: "{{ domino_group }}"
+      src: "domino_oidc_self_signed_ca_cert_verify.json.j2"
+  
+  -
+    name: "Waiting until Genesis returns OK after processing domino_oidc_self_signed_ca_cert_verify"
+    when: not genesis_packages_installed_check.stat.exists and domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+    ansible.builtin.wait_for:
+      path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_self_signed_ca_cert_verify.json"
+  
+  -
+    name: "Checking if the CA was set to issued and activated via domino_oidc_self_signed_ca_cert_verify JSON applied succesfully"
+    when: not genesis_packages_installed_check.stat.exists and domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+    ansible.builtin.lineinfile:
+      path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_self_signed_ca_cert_verify.json"
+      line: "OK"
+      state: present
+    check_mode: true
+    register: presence
+    failed_when: presence is changed
+
+  -
     name: "Marking all Genesis packages as installed"
     when: not genesis_packages_installed_check.stat.exists
     ansible.builtin.file:

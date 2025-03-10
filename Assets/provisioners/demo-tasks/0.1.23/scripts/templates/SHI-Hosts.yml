@@ -230,8 +230,12 @@ hosts:
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
 
       # Domino OIDC Configurations
+      domino_oidc_debug: false
       domino_oidc_provider_enabled: true
       domino_oidc_provider_federation_enabled: true
+      domino_oidc_provider_nomad_enabled: true
+      domino_oidc_provider_verse_enabled: true
+      domino_oidc_provider_web_enabled: true
 
       #domino_oidc_external_providers:
       #  - name: null

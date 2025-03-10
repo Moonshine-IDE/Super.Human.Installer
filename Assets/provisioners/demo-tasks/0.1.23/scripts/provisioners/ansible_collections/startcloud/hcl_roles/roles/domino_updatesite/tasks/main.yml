@@ -48,7 +48,7 @@
         - { src: 'maven_settings.xml.j2', dest: '{{ service_home_dir }}/.m2/settings.xml', owner: '{{ service_user }}' }
     
     -
-      name: "Installing updatesite with Maven {{ maven_version }}"
+      name: "Installing updatesite over proxy with Maven {{ maven_version }}"
       when: not updatesite_deployed.stat.exists and use_proxy
       ansible.builtin.shell: |
         source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh && mvn install
@@ -80,7 +80,7 @@
         MAVEN_HOME: "{{ service_home_dir }}/.sdkman/candidates/maven/current"
     
     -
-      name: "Deploying updatesite with Maven {{ maven_version }}"
+      name: "Deploying updatesite over proxy with Maven {{ maven_version }}"
       when: not updatesite_deployed.stat.exists and use_proxy
       ansible.builtin.shell: |
         source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh

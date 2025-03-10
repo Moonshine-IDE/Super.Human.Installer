@@ -119,6 +119,84 @@ class Hosts
         end
 
         ##### Begin Virtualbox Configurations #####
+        # Save MAC addresses after VM is created and update Hosts.yml if needed
+        config.trigger.after :up do |trigger|
+          trigger.info = "Checking and updating network interface MAC addresses in Hosts.yml..."
+          trigger.ruby do |env, machine|
+            # Only run this for VirtualBox provider
+            if host['settings']['provider_type'] == 'virtualbox'
+              vm_name = "#{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}"
+              
+              # Get VM info from VirtualBox
+              vm_info = `#{path_VBoxManage} showvminfo "#{vm_name}" --machinereadable`
+              
+              # Extract MAC addresses for each adapter
+              mac_addresses = {}
+              vm_info.scan(/macaddress(\d+)="(.+?)"/).each do |adapter_num, mac|
+                mac_addresses[adapter_num.to_i] = mac.upcase
+              end
+              
+              # Check if we need to update Hosts.yml
+              hosts_yml_path = File.join(Dir.pwd, 'Hosts.yml')
+              if File.exist?(hosts_yml_path)
+                # Read the file line by line
+                lines = File.readlines(hosts_yml_path)
+                
+                # Track if we're in the right host section
+                in_current_host = false
+                in_networks = false
+                current_network_index = -1
+                needs_update = false
+                
+                # Process each line
+                lines.each_with_index do |line, i|
+                  # Check if we're entering a host section
+                  if line.strip == '-' && lines[i+1] && lines[i+1].strip.start_with?('settings:')
+                    in_current_host = false
+                    in_networks = false
+                    current_network_index = -1
+                  end
+                  
+                  # Check if we're in the settings section of the current host
+                  if !in_current_host && line.strip.start_with?('hostname:') && line.include?(host['settings']['hostname'])
+                    in_current_host = true
+                  end
+                  
+                  # Check if we're entering the networks section of the current host
+                  if in_current_host && line.strip == 'networks:'
+                    in_networks = true
+                    current_network_index = -1
+                  end
+                  
+                  # Check if we're starting a new network entry
+                  if in_networks && line.strip == '-'
+                    current_network_index += 1
+                  end
+                  
+                  # Check if this line contains a MAC address set to 'auto'
+                  if in_networks && current_network_index >= 0 && line.strip.start_with?('mac:') && (line.include?('auto') || line.strip == 'mac:')
+                    adapter_num = current_network_index + 2  # +2 because adapter 1 is NAT
+                    if mac_addresses.has_key?(adapter_num)
+                      formatted_mac = mac_addresses[adapter_num].scan(/../).join(':')
+                      indent = line[/\A\s*/]
+                      lines[i] = "#{indent}mac: #{formatted_mac}\n"
+                      needs_update = true
+                      puts "Updated MAC address for network #{current_network_index} to #{formatted_mac}"
+                    end
+                  end
+                end
+                
+                # Write updated Hosts.yml if changes were made
+                if needs_update
+                  File.open(hosts_yml_path, 'w') do |file|
+                    file.write(lines.join)
+                  end
+                  puts "Updated Hosts.yml with actual MAC addresses while preserving comments"
+                end
+              end
+            end
+          end
+        end
         ##### Disk Configurations #####
         ## https://sleeplessbeastie.eu/2021/05/10/how-to-define-multiple-disks-inside-vagrant-using-virtualbox-provider/
         disks_directory = File.join("./", "disks")
