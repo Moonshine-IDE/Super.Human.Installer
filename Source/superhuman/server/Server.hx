@@ -618,6 +618,9 @@ class Server {
         this._currentAction = ServerAction.Start( false );
         this._busy.value = true;
 
+        // Clean up Vagrant's cache before starting to handle cases where the VM was deleted outside the application
+        Vagrant.getInstance().pruneGlobalStatus();
+
         _forceVagrantProvisioning = provision;
         this.status.value = ServerStatus.Initializing;
         this.combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId = this.virtualBoxId;

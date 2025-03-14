@@ -22,10 +22,9 @@
  *  must comply with the Server Side Public License in all respects for
  *  all of the code used other than as permitted herein. If you modify file(s)
  *  with this exception, you may extend this exception to your version of the
- *  file(s), but you are not obligated to do so. If you do not wish to do so,
- *  delete this exception statement from your version. If you delete this
- *  exception statement from all source files in the program, then also delete
- *  it in the license file.
+ *  file(s), but you are not obligated to do so. If you delete this exception
+ *  statement from your version. If you delete this exception statement from all
+ *  source files in the program, then also delete it in the license file.
  */
 
 package prominic.sys.applications.hashicorp;
@@ -487,6 +486,27 @@ class Vagrant extends AbstractApp {
 
     }
 
+    public function pruneGlobalStatus():AbstractExecutor {
+        // Return the already running executor if it exists
+        if (ExecutorManager.getInstance().exists(VagrantExecutorContext.PruneGlobalStatus))
+            return ExecutorManager.getInstance().get(VagrantExecutorContext.PruneGlobalStatus);
+            
+        Logger.info('${this}: Pruning Vagrant global-status cache');
+        
+        final executor = new Executor(this._path + this._executable, ["global-status", "--prune"]);
+        executor.onStop.add(_pruneGlobalStatusExecutorStopped);
+        ExecutorManager.getInstance().set(VagrantExecutorContext.PruneGlobalStatus, executor);
+        executor.execute();
+        
+        return executor;
+    }
+    
+    function _pruneGlobalStatusExecutorStopped(executor:AbstractExecutor) {
+        Logger.info('${this}: Vagrant global-status prune completed with exitCode: ${executor.exitCode}');
+        ExecutorManager.getInstance().remove(VagrantExecutorContext.PruneGlobalStatus);
+        executor.dispose();
+    }
+
     // TODO: Add Windows and Linux implementation
     public function ssh() {
         
@@ -935,6 +955,7 @@ enum abstract VagrantExecutorContext( String ) to String {
     var GlobalStatus = "Vagrant_GlobalStatus";
     var Halt = "Vagrant_Halt_";
     var Init = "Vagrant_Init_";
+    var PruneGlobalStatus = "Vagrant_PruneGlobalStatus";
     var Provision = "Vagrant_Provision_";
     var RSync = "Vagrant_RSync_";
     var Status = "Vagrant_Status_";
