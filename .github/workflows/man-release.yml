@@ -29,7 +29,7 @@ env:
 jobs:
   build-linux:
     name: Build on Linux
-    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-linux.yml@master
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-linux.yml@mark-testing-branch
     secrets: inherit
     with:
       env: ${{ inputs.env }}
@@ -38,7 +38,7 @@ jobs:
 
   build-windows:
     name: Build on Windows
-    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@master
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@mark-testing-branch
     secrets: inherit
     with:
       env: ${{ inputs.env }}
@@ -47,7 +47,7 @@ jobs:
 
   build-macos:
     name: Build on MacOS
-    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-macos.yml@master
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-macos.yml@mark-testing-branch
     secrets: inherit
     with:
       env: ${{ inputs.env }}
