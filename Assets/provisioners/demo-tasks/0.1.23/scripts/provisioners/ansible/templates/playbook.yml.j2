@@ -18,6 +18,17 @@
     {% for key, value in role_vars.items() %}
     {{ key }}: {{ value }}
     {% endfor %}
+    all_roles:
+    {% for role in provision_roles %}
+      - {{ role.name }}
+    {% endfor %}
+    enabled_roles:
+    {% for role in provision_roles %}
+      {% set run_tasks = role.vars.run_tasks if role.vars is defined and 'run_tasks' in role.vars else true %}
+      {% if run_tasks %}
+      - {{ role.name }}
+      {% endif %}
+    {% endfor %}
   {% endif %}
   {% if playbook_collections is defined and playbook_collections and playbook_collections != "" %}
   collections:

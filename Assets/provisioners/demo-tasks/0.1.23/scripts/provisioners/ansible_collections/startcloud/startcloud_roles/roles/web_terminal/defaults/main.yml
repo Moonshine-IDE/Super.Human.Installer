@@ -1,0 +1,12 @@
+---
+run_tasks: true
+web_terminal_path: "/opt/web-terminal"
+
+web_terminal_users:
+  admin: "UjYU@eXq42Xiy^VRKZp"
+
+startcloud_web_terminal_port_forwards:
+  -
+    guest: 8090
+    url: "web-terminal"
+startcloud_web_terminal_proxy_url: "{{ startcloud_web_terminal_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

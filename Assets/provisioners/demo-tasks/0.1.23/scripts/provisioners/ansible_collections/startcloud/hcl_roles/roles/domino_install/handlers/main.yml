@@ -18,3 +18,42 @@
   name: "Restarting Nomad service"
   listen: Domino Started
   ansible.builtin.command: domino cmd "restart task nomad" 20
+
+-
+  name: "Stopping Domino for Changes to take effect"
+  listen: Restart Domino
+  become: true
+  ansible.builtin.service:
+    name: domino
+    state: stopped
+    enabled: true
+  register: domino_service_stop_details_handler
+  until: domino_service_stop_details_handler.state == "stopped"
+  retries: 10
+  delay: 10
+
+-
+  name: "Waiting for 30 seconds to let Domino fully shutdown"
+  listen: Restart Domino
+  ansible.builtin.pause:
+    seconds: "{{ domino_shutdown_delay }}"
+
+-
+  name: "Starting Domino for Changes to take effect"
+  listen: Restart Domino
+  notify: Domino Started
+  become: true
+  ansible.builtin.service:
+    name: domino
+    state: started
+    enabled: true
+  register: domino_service_start_details_handler
+  until: domino_service_start_details_handler.state == "started"
+  retries: 10
+  delay: 10
+
+-
+  name: "Waiting for 30 seconds to let Domino fully startup"
+  listen: Restart Domino
+  ansible.builtin.pause:
+    seconds: "{{ domino_startup_delay }}"

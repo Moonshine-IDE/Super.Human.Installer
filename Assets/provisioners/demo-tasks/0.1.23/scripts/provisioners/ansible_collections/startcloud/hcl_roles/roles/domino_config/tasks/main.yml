@@ -144,7 +144,7 @@
 
     -
       name: "Showing Self Signed Certificate Authority Cert Info"
-      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled and debug_autoconfigure
       ansible.builtin.debug:
         var: ca_cert_info
 
@@ -162,7 +162,7 @@
 
     -
       name: "Printing Subject Key Identifier of the Self Signed Certificate Authority"
-      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled and debug_autoconfigure
       ansible.builtin.debug:
         var: ca_subject_key_id
 
@@ -175,7 +175,7 @@
 
     -
       name: "Showing Self Signed SSL certificate info"
-      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled and debug_autoconfigure
       ansible.builtin.debug:
         var: cert_info
 
@@ -193,10 +193,9 @@
 
     -
       name: "Printing Subject Key Identifier of the of the Self Signed SSL certificate info"
-      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+      when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled and debug_autoconfigure
       ansible.builtin.debug:
         var: subject_key_id
-##
     
     -
       name: "Creating Domino DAOS, Translogs, NIFNSF and FullText Thread Path directories"
@@ -373,7 +372,7 @@
       name: "Waiting for 60 seconds to let Domino fully configure"
       when: not domino_server_touched.stat.exists and is_additional_server
       ansible.builtin.pause:
-        seconds: 60
+        seconds: "{{ domino_startup_delay }}"
     
     -
       name: "Waiting until the autoconfigure.log has the Completed Succesfully String"
@@ -450,44 +449,6 @@
       when: not domino_server_touched.stat.exists
       ansible.builtin.wait_for:
         path: "{{ completed_dir }}/domsetup"
-    
-    -
-      name: "Setting up Domino OIDC"
-      when: 
-        - domino_oidc_provider_enabled
-        - domino_major_version is version('14', '>=')
-#        - (domino_fixpack_version | replace('FP', '') | int) is version('2', '>=')
-      block:
-        -
-          name: "Ensure cacert.pem exists"
-          ansible.builtin.file:
-            path: "{{ domino_home_dir }}/cacert.pem"
-            state: touch
-            owner: "{{ domino_user }}"
-            group: "{{ domino_group }}"
-            mode: '0644'
-            modification_time: preserve
-            access_time: preserve
-          
-        -
-          name: "Append CA certificate to cacert.pem"
-          ansible.builtin.blockinfile:
-            path: "{{ domino_home_dir }}/cacert.pem"
-            block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
-            marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
-            owner: "{{ domino_user }}"
-            group: "{{ domino_group }}"
-            mode: '0644'
-            
-        #-
-        #  name: "Setting up OIDC Configurations"
-        #  when: not domino_server_touched.stat.exists
-        #  ansible.builtin.template:
-        #    dest: "{{ domino_home_dir }}/oidcinfo.json"
-        #    mode: "0644"
-        #    owner: "{{ domino_user }}"
-        #    group: "{{ domino_group }}"
-        #    src: oidcinfo.json.j2
 
     -
       name: 'Setting file permissions Admin User ID, filename: {{ domino_admin_user_id }}'
@@ -566,28 +527,21 @@
 
     -
       name: "Using the Additional Server Creation Tool to generate Server IDs"
-      when: domino_server_id_creation_tool == "asja"
+      when: 
+        - domino_server_id_creation_tool == "asja"
+        - asja_generate_server_ids is defined
+        - asja_generate_server_ids | length > 0
+        - not domino_server_touched.stat.exists
       block:
         -
-          name: 'Setting asja_generate_server_ids for loop'
-          set_fact:
-            actual_asja_generate_server_ids: "{{ asja_generate_server_ids }}"
-          when: 
-            - not domino_server_touched.stat.exists
-            - not is_additional_server
-            - asja_generate_server_ids is defined
-            - asja_generate_server_ids | length > 0
-
-        -
           name: "Creating the Properties file to Generate Additional Server IDs"
-          when: not domino_server_touched.stat.exists
           ansible.builtin.template:
             dest: "/tmp/{{ item.name }}-additional.properties"
             mode: "0644"
             owner: "{{ domino_user }}"
             group: "{{ domino_group }}"
             src: additional.properties.j2
-          loop: "{{ actual_asja_generate_server_ids }}"
+          loop: "{{ asja_generate_server_ids }}"
 
         -
           name: "Creating Additional Server IDs using Custom Generate Additional Server ID Tool"
@@ -601,12 +555,7 @@
           environment:
             PASSWORD: "{{ domino_admin_notes_id_password }}"
             LD_LIBRARY_PATH: "{{ domino_install_dir }}"
-          when: 
-            - not domino_server_touched.stat.exists
-            - not is_additional_server
-            - asja_generate_server_ids is defined
-            - asja_generate_server_ids | length > 0
-          loop: "{{ actual_asja_generate_server_ids }}"
+          loop: "{{ asja_generate_server_ids }}"
 
         -
           name: "Copying Server IDs to /id-files/server-ids/"
@@ -618,12 +567,7 @@
             owner: "{{ domino_user }}"
             group: "{{ domino_group }}"
             force: true
-          loop: "{{ actual_asja_generate_server_ids }}"
-          when: 
-            - not domino_server_touched.stat.exists
-            - not is_additional_server
-            - actual_asja_generate_server_ids is defined
-            - actual_asja_generate_server_ids | length > 0
+          loop: "{{ asja_generate_server_ids }}"
 
     -
       name: "Stopping Domino and Enabling at boot"

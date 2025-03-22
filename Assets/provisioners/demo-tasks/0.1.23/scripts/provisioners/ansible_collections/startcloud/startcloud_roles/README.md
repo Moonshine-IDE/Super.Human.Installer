@@ -112,6 +112,7 @@ See the [open issues](https://github.com/STARTcloud/startcloud_roles/issues) for
 | Docker Desktop | No                             |
 | HyperKit       | No                             |
 | WSL2           | No                             |
+|----------------|--------------------------------|
 
 ## Built With
 * [Vagrant](https://www.vagrantup.com/) - Portable Development Environment Suite.

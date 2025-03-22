@@ -1,0 +1,9 @@
+[program:web_terminal]
+directory={{ web_terminal_path }}
+command=/usr/bin/node server.js
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/web_terminal.log
+stderr_logfile=/var/log/web_terminal_err.log
+user=root
+environment=PATH="{{ service_home_dir }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

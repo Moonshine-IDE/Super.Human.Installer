@@ -2,63 +2,74 @@
   "appSwitcher": {
     "visible": true,
     "apps": [
-{% if domino_verse_proxy_url is defined %}
+{% if domino_verse_proxy_url is defined and 'Verse' in nomad_app_switcher_enabled_services %}
       {
         "label": "Verse",
         "icon": "Verse",
         "URL": "https://{{ domino_verse_proxy_url }}/verse/"
       },
 {% endif %}
-{% if domino_leap_proxy_url is defined %}
+{% if domino_leap_proxy_url is defined and 'Leap' in nomad_app_switcher_enabled_services %}
       {
         "label": "Leap",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/leap.ico",
         "URL": "https://{{ domino_leap_proxy_url }}"
       },
 {% endif %}
-{% if domino_traveler_proxy_url is defined %}
+{% if domino_traveler_proxy_url is defined and 'Traveler' in nomad_app_switcher_enabled_services %}
       {
         "label": "Traveler",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/traveler.ico",
         "URL": "https://{{ domino_traveler_proxy_url }}"
       },
 {% endif %}
-{% if domino_sametime_proxy_url is defined %}
+{% if domino_sametime_proxy_url is defined and 'Sametime' in nomad_app_switcher_enabled_services %}
       {
         "label": "Sametime",
         "icon": "Sametime",
         "URL": "https://{{ domino_sametime_proxy_url }}/meeting/"
       },
 {% endif %}
-{% if domino_vagrant_rest_api_proxy_url is defined %}
+{% if domino_vagrant_rest_api_proxy_url is defined and 'RestAPI' in nomad_app_switcher_enabled_services %}
       {
         "label": "Rest API",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/api.ico",
         "URL": "https://{{ domino_vagrant_rest_api_proxy_url }}/"
       },
 {% endif %}
-{% if startcloud_guacamole_proxy_url is defined %}
+{% if startcloud_guacamole_proxy_url is defined and 'Guacamole' in nomad_app_switcher_enabled_services %}
       {
         "label": "Rest API",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/guac.ico",
         "URL": "https://{{ startcloud_guacamole_proxy_url }}/"
       },
 {% endif %}
-      {
-        "label": "Domino Main Web Site",
-        "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/domino.ico",
-        "URL": "https://{{ settings.hostname }}.{{ settings.domain }}"
-      },
+{% if 'ServerConsole' in nomad_app_switcher_enabled_services %}
       {
         "label": "Server Console",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/cockpit.ico",
         "URL": "https://console.{{ settings.hostname }}.{{ settings.domain }}/"
       },
+      {% endif %}
+{% if 'WelcomePage' in nomad_app_switcher_enabled_services %}
       {
         "label": "Welcome Page",
         "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/home.ico",
         "URL": "https://downloads.{{ settings.hostname }}.{{ settings.domain }}/welcome.html"
+      },
+{% endif %}
+{% if 'DominoWeb' in nomad_app_switcher_enabled_services %}
+      {
+{% if super_human_portal_enabled %}
+        "label": "Super.Human.Portal",
+        "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/SHI.ico",
+{% else %}
+        "label": "Domino Main Web Site",
+        "icon": "https://raw.githubusercontent.com/STARTcloud/hcl_roles/refs/heads/main/roles/domino_nomadweb/files/domino.ico",
+{% endif %}
+        "URL": "https://{{ settings.hostname }}.{{ settings.domain }}"
       }
+{% endif %}
     ]
   }
 }

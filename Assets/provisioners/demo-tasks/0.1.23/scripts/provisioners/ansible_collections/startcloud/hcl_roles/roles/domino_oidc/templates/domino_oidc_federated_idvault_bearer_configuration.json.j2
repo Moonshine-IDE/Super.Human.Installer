@@ -1,5 +1,5 @@
 { 
-    "title": "Update the Security Policy required for Domino as ODIC provider for Nomad using IDVault", 
+    "title": "Create configuration document required for Domino as ODIC provider using IDVault", 
     "versionjson": "1.0.0", 
     "steps": [ 
         { 
@@ -7,18 +7,17 @@
             "databases": [ 
                 { 
                     "action": "update", 
-                    "filePath": "names.nsf", 
+                    "filePath": "IBM_ID_VAULT\{{ id_vault_name }}.nsf", 
                     "documents":[
                         { 
                             "action": "update", 
                             "search": {
-                                        "formula":"Type=\"PolicySecurity\" & Fullname=\"{{ id_vault_name }} Security Settings Policy\"",
+                                        "formula":"Form=\"Control\" & VTName=\"O={{ id_vault_name }}\"",
                                         "number":0
                             },
                             "computeWithForm": true,
                             "items": {
-                                "VaultBearerOn":"1",
-                                "IDVAppsOK":"{{ id_vault_name_allow_notes_based_apps }}"
+                                "OIDCBearerConfigs":"bearer.vault.{{ domino_server_name_common }}"
                             }
                         }
                     ]

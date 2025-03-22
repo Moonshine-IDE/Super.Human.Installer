@@ -274,13 +274,7 @@ hosts:
       domino_organization: REPLACEME # TESTSTANDALONE
       #domino_admin_notes_id_password: password
 
-      # Domino OIDC Configurations
-      domino_oidc_debug: false
-      domino_oidc_provider_enabled: true
-      domino_oidc_provider_federation_enabled: true
-      domino_oidc_provider_nomad_enabled: true
-      domino_oidc_provider_verse_enabled: true
-      domino_oidc_provider_web_enabled: true
+      domino_oidc_debug: true
 
       #domino_oidc_external_providers:
       #  - name: null
@@ -288,7 +282,7 @@ hosts:
       #    client_id: null
       #    client_secret: null
 
-      ## Safe-ids to cross-certify
+      ## Safe-ids to cross-certify (only works for initial/standalone server)
       # You need to add a file matching this name to id-files/user-safe-ids
       user_safe_id: REPLACEME #safe.ids
 
@@ -355,12 +349,15 @@ hosts:
       ## Nomad Web Variables
       #nomadweb_hash:
       #nomadweb_archive:
-      #nomadweb_version:
+      #nomadweb_version: 
+      #nomad_hotfix_version: "HF1"
+      #nomad_hotfix_install: false
 
       ## Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
       #traveler_archive:
       #traveler_base_version:
+      #traveler_fixpack_install: false
       #traveler_fixpack_archive:
       #traveler_fixpack_version:
 
@@ -369,7 +366,7 @@ hosts:
       #verse_archive:
       #verse_base_version:
 
-      ## AppDev Web Pack Variables
+      ## AppDev Web Pack Variables ## Will receive no Updates in the future
       #appdevpack_hash: ::APPDEVPACK_HASH::
       #appdevpack_archive:
       #appdevpack_version:
@@ -418,6 +415,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
+      - name: startcloud.hcl_roles.domino_oidc
+        vars:
+          run_tasks: true
       - name: startcloud.hcl_roles.domino_leap
         vars:
           run_tasks: false
@@ -430,6 +430,7 @@ hosts:
       - name: startcloud.hcl_roles.domino_verse
         vars:
           run_tasks: false
+      # Deprecated -- See: https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0105781
       - name: startcloud.hcl_roles.domino_appdevpack
         vars:
           run_tasks: false
@@ -443,6 +444,8 @@ hosts:
         vars:
           run_tasks: true
       - name: startcloud.hcl_roles.domino_vagrant_readme
+        vars:
+          run_tasks: true
       - name: startcloud.startcloud_roles.quick_start
         tags: always
         vars:
@@ -454,3 +457,5 @@ hosts:
         vars:
           run_tasks: true
       - name: startcloud.startcloud_roles.lockdown
+        vars:
+          run_tasks: true

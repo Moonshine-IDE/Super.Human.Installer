@@ -4,89 +4,425 @@
   when: run_tasks
   block:
     -
-      name: "Creating installation directories for Verse"
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: directory
-      with_items:
-        - "{{ installer_dir }}/verse/archives"
-        - "{{ installer_dir }}/verse/Verse"
-    
-    -
       name: "Checking if Verse is installed: {{ verse_base_version }}"
       register: verse_installed_check
       ansible.builtin.stat:
-        path: "{{ completed_dir }}/verse_install"
+        path: "{{ completed_dir }}/verse_installed"
         get_md5: false
-    
+
     -
-      name: "Checking if Verse installer is at verse/archives/{{ verse_archive }}"
-      register: verse_installer_check
-      ansible.builtin.stat:
-        path: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
-        get_md5: false
-    
-    -
-      name: "Downloading Verse from {{ domino_installer_base_url }}"
-      register: verseresult
-      until: "verseresult is not failed"
-      retries: 3
-      ansible.builtin.get_url:
-        mode: '0755'
-        validate_certs: false
-        url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ verse_archive }}"
-        dest: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
-        username: "{{ domino_installer_url_user }}"
-        password: "{{ secrets.domino_installer_url_pass }}"
-      when: not verse_installer_check.stat.exists and not verse_installed_check.stat.exists
-    
-    -
-      name: "Extracting Verse from {{ verse_archive }}"
-      when: not verse_installed_check.stat.exists
-      ansible.builtin.unarchive:
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
-        dest: "{{ installer_dir }}/verse/Verse"
-        creates: "{{ installer_dir }}/verse/Verse/HCL_Verse.zip"
-        remote_src: true
-    
-    -
-      name: "Stopping Domino for Verse Installation"
-      when: not verse_installed_check.stat.exists
-      become: true
-      ansible.builtin.service:
-        name: domino
-        state: stopped
-        enabled: true
-    
-    -
-      name: "Extracting Verse Files from HCL_Verse.zip: {{ verse_base_version }}"
-      when: not verse_installed_check.stat.exists
-      ansible.builtin.unarchive:
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/verse/Verse/HCL_Verse.zip"
-        dest: "{{ domino_home_dir }}/domino/workspace/applications"
-        remote_src: true
-    
-    -
-      name: "Starting Domino"
-      when: not verse_installed_check.stat.exists
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
-    
-    -
-      name: "Setting Verse as installed"
-      when: not verse_installed_check.stat.exists
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: touch
-      with_items:
-        - "{{ completed_dir }}/verse_install"
+      name: "Installing Verse"
+      when: run_tasks and not verse_installed_check.stat.exists
+      block:
+        -
+          name: "Creating installation directories for Verse"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: directory
+          with_items:
+            - "{{ installer_dir }}/verse/archives"
+            - "{{ installer_dir }}/verse/Verse"
+
+        -
+          name: "Adding Verse Application Switcher to Notes.ini"
+          ansible.builtin.lineinfile:
+            dest: "{{ domino_home_dir }}/notes.ini"
+            line: "{{ item }}"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+          loop:
+            - "VOP_Extensibility_Applications_Json_FilePath={{ domino_home_dir }}/applications.json"
+
+        -
+          name: "Adding Verse Application Switcher"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/applications.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "applications.json.j2"
+
+        -
+          name: "Checking if Verse installer is at verse/archives/{{ verse_archive }}"
+          register: verse_installer_check
+          ansible.builtin.stat:
+            path: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
+            get_md5: false
+
+        -
+          name: "Downloading Verse from {{ domino_installer_base_url }}"
+          register: verseresult
+          until: "verseresult is not failed"
+          retries: 3
+          ansible.builtin.get_url:
+            mode: '0755'
+            validate_certs: false
+            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ verse_archive }}"
+            dest: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
+            username: "{{ domino_installer_url_user }}"
+            password: "{{ secrets.domino_installer_url_pass }}"
+          when: not verse_installer_check.stat.exists
+
+        -
+          name: "Extracting Verse from {{ verse_archive }}"
+          ansible.builtin.unarchive:
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "{{ installer_dir }}/verse/archives/{{ verse_archive }}"
+            dest: "{{ installer_dir }}/verse/Verse"
+            creates: "{{ installer_dir }}/verse/Verse/HCL_Verse.zip"
+            remote_src: true
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_verse
+          until: domino_service_stopped_verse.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Extracting Verse Files from HCL_Verse.zip: {{ verse_base_version }}"
+          ansible.builtin.unarchive:
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "{{ installer_dir }}/verse/Verse/HCL_Verse.zip"
+            dest: "{{ domino_home_dir }}/domino/workspace/applications"
+            remote_src: true
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_verse
+          until: domino_service_start_details_verse.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let Domino HTTP fully configure"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Handing Verse templated JSON to Genesis to create Verse Internet Site Document"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/verse-internet-site-document.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "verse-internet-site-document.json.j2"
+
+        -
+          name: "Waiting until Genesis returns OK"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/verse-internet-site-document.json"
+
+        -
+          name: "Checking if Genesis reports that it created the Verse Internet Site Document"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/verse-internet-site-document.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_inet_verse_1
+          failed_when: presence_inet_verse_1 is changed
+
+        -
+          name: "Setting up OIDC for Verse without using unified registered client"
+          when: 
+            - not domino_oidc_web_apps_use_unified_registered_client
+            - domino_oidc_provider_enabled
+            - domino_oidc_provider_verse_enabled
+            - domino_oidc_provider_federation_enabled
+            - domino_major_version >= 14
+          block:
+            -
+              name: "Creating a Registered OAuth client for Verse"
+              when: not domino_oidc_web_apps_use_unified_registered_client
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_registered_client_verse.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_registered_client_verse.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK"
+              when: not domino_oidc_web_apps_use_unified_registered_client
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_registered_client_verse.json"
+
+            -
+              name: "Checking if Genesis reports that it created the Verse Registered OAuth client form"
+              when: not domino_oidc_web_apps_use_unified_registered_client
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_registered_client_verse.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_inet_verse_2
+              failed_when: presence_inet_verse_2 is changed
+
+        -
+          name: "Setting up OIDC for Verse"
+          when: 
+            - domino_oidc_provider_enabled
+            - domino_oidc_provider_verse_enabled
+            - domino_oidc_provider_federation_enabled
+            - domino_major_version >= 14
+          block:
+            -
+              name: "Handing templated gather_domino_oidc_trusted_provider_for_verse.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_oidc_trusted_provider_for_verse.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "gather_domino_oidc_trusted_provider_for_verse.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing gather_domino_oidc_trusted_provider_for_verse.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_trusted_provider_for_verse.json"
+
+            -
+              name: "Checking if gather_domino_oidc_trusted_provider_for_verse.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_trusted_provider_for_verse.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_gather_for_verse
+              failed_when: presence_oidc_gather_for_verse is changed
+
+            -
+              name: "Reading OIDC hostnames from file"
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_hostnames_for_verse.txt"
+              register: oidc_hostnames_file
+
+            -
+              name: "Processing OIDC hostnames"
+              ansible.builtin.set_fact:
+                oidc_hostnames_raw_for_verse: "{{ oidc_hostnames_file['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Removing OIDCHostname= prefix and checking for domino_verse_proxy_url"
+              ansible.builtin.set_fact:
+                oidc_hostnames_processed_for_verse: "{{ oidc_hostnames_raw_for_verse | regex_replace('^OIDCHostname=', '') }}"
+
+            -
+              name: "Appending domino_verse_proxy_url if not present"
+              when: domino_verse_proxy_url not in oidc_hostnames_processed_for_verse
+              ansible.builtin.set_fact:
+                oidc_hostnames_processed_for_verse: "{{ oidc_hostnames_processed_for_verse }} {{ domino_verse_proxy_url }}"
+
+            -
+              name: "Handing templated update_domino_oidc_trusted_provider_for_verse JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_domino_oidc_trusted_provider_for_verse.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "update_domino_oidc_trusted_provider_for_verse.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing update_domino_oidc_trusted_provider_for_verse"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_trusted_provider_for_verse.json"
+
+            -
+              name: "Checking if update_domino_oidc_trusted_provider_for_verse JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_trusted_provider_for_verse.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_update_for_verse
+              failed_when: presence_oidc_update_for_verse is changed
+
+        -
+          name: "Setting up OIDC for Verse by Adding Verse to Registered Clients List for Unified Client Configs"
+          when: 
+            - domino_oidc_web_apps_use_unified_registered_client
+            - domino_oidc_provider_enabled
+            - domino_oidc_provider_verse_enabled
+            - domino_oidc_provider_federation_enabled
+            - domino_major_version >= 14
+          block:
+            -
+              name: "Handing templated gather_domino_oidc_unified_registered_clients_for_verse.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_oidc_unified_registered_clients_for_verse.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "gather_domino_oidc_unified_registered_clients_for_verse.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing gather_domino_oidc_unified_registered_clients_for_verse.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_unified_registered_clients_for_verse.json"
+
+            -
+              name: "Checking if gather_domino_oidc_unified_registered_clients_for_verse.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_unified_registered_clients_for_verse.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_gather_clients_for_verse
+              failed_when: presence_oidc_gather_clients_for_verse is changed
+
+            -
+              name: "Reading OIDC Registered Clients from file"
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_registered_clients_for_verse_name.txt"
+              register: oidc_registered_clients_file
+
+            -
+              name: "Reading OIDC Registered Clients Redirect URIs from file"
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_registered_clients_for_verse_redirect_uris.txt"
+              register: oidc_registered_clients_file_redirect_uris
+
+            -
+              name: "Processing OIDC Registered Clients"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_raw_verse: "{{ oidc_registered_clients_file['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Processing OIDC Registered Clients Redirect URIs"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_redirect_uris_raw: "{{ oidc_registered_clients_file_redirect_uris['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Removing RC_Name= prefix and checking for Registered client name"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_processed_verse: "{{ oidc_registered_clients_raw_verse | regex_replace('^RC_Name=', '') }}"
+
+            -
+              name: "Removing RC_redirect_uris= prefix and checking for domino_verse_proxy_url"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_redirect_uri_processed_verse: "{{ oidc_registered_clients_redirect_uris_raw | regex_replace('^RC_redirect_uris=', '') }}"
+
+            -
+              name: "Appending Verse Name if not present"
+              when: domino_verse_proxy_url not in oidc_registered_clients_processed_verse
+              ansible.builtin.set_fact:
+                oidc_registered_clients_processed_verse: "{{ oidc_registered_clients_processed_verse ~ ' + Verse' }}"
+
+            -
+              name: "Appending domino_verse_proxy_url if not present"
+              when: domino_verse_proxy_url not in oidc_registered_clients_redirect_uri_processed_verse
+              ansible.builtin.set_fact:
+                oidc_registered_clients_redirect_uri_processed_verse: "{{ oidc_registered_clients_redirect_uri_processed_verse }} https://{{ domino_verse_proxy_url }}/auth/protocol/oidc"
+
+            -
+              name: "Handing templated update_domino_oidc_unified_registered_clients_redirect_uris_for_verse JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_domino_oidc_unified_registered_clients_redirect_uris_for_verse.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "update_domino_oidc_unified_registered_clients_redirect_uris_for_verse.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing update_domino_oidc_unified_registered_clients_redirect_uris_for_verse"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_unified_registered_clients_redirect_uris_for_verse.json"
+
+            -
+              name: "Checking if update_domino_oidc_unified_registered_clients_redirect_uris_for_verse JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_unified_registered_clients_redirect_uris_for_verse.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_update_for_verse_registered_clients
+              failed_when: presence_oidc_update_for_verse_registered_clients is changed
+
+        -
+          name: "Adding Logout Redirect for Verse and OIDC"
+          when: domino_oidc_provider_enabled and domino_oidc_provider_verse_enabled and domino_major_version >= 14
+          ansible.builtin.lineinfile:
+            dest: "{{ domino_home_dir }}/notes.ini"
+            line: "INOTES_WA_LOGOUTREDIRECT=https://{{ domino_oidc_install_proxy_url }}/auth/protocol/oidc/logout?client_id={{ domino_oidc_client_id }}&post_logout_redirect_uri=https%3A%2F%2F{{ domino_verse_proxy_url }}%2Fverse"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            state: present
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_verse_2
+          until: domino_service_stopped_verse_2.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_verse_2
+          until: domino_service_start_details_verse_2.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let Domino HTTP fully configure"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Setting Verse as installed"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/verse_installed"

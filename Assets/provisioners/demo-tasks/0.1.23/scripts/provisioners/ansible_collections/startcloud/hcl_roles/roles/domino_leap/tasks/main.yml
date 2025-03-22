@@ -3,137 +3,462 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-    -
-      name: "Creating installation directories for Leap"
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: directory
-      with_items:
-        - "{{ installer_dir }}/leap/archives"
-        - "{{ installer_dir }}/leap/Leap"
-    
-    -
-      name: "Checking if Leap installer is at leap/archives/{{ leap_archive }}"
-      register: domino_server_installer_check
-      ansible.builtin.stat:
-        path: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
-        get_md5: false
     
     -
       name: "Checking if Leap is installed: {{ leap_version }} "
       register: leap_installed_check
       ansible.builtin.stat:
-        path: "{{ completed_dir }}/leap_install"
+        path: "{{ completed_dir }}/leap_installed"
         get_md5: false
     
     -
-      name: "Downloading Leap from {{ domino_installer_base_url }}"
-      register: leapresult
-      until: "leapresult is not failed"
-      retries: 3
-      ansible.builtin.get_url:
-        mode: '0755' 
-        validate_certs: false
-        url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ leap_archive }}"
-        dest: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
-        username: "{{ domino_installer_url_user }}"
-        password: "{{ secrets.domino_installer_url_pass }}"
-      when: not domino_server_installer_check.stat.exists and not leap_installed_check.stat.exists
-    
-    -
-      name: "Extracting Leap from {{ leap_archive }}"
+      name: "Installing Leap"
       when: not leap_installed_check.stat.exists
-      ansible.builtin.unarchive:
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
-        dest: "{{ installer_dir }}/leap/Leap"
-        creates: "{{ installer_dir }}/leap/Leap/Leap-{{ leap_version }}-for-domino-1201-linux"
-        remote_src: true
-    
-    -
-      name: "Stopping Domino for Leap Installation"
-      when: not leap_installed_check.stat.exists
-      become: true
-      ansible.builtin.service:
-        name: domino
-        state: stopped
-        enabled: true
-    
-    -
-      name: "Configuring Leap and Starting Service"
-      when: not leap_installed_check.stat.exists
-      ansible.builtin.shell: "{{ item }}"
-      become: true
-      args:
-        executable: "/bin/bash"
-        chdir: "{{ installer_dir }}/leap/Leap/Leap-{{ leap_version }}/linux"
-        creates: "{{ domino_install_dir }}/osgi/volt"
-      with_items:
-        - ./install silent
-    
-    -
-      name: "Registering leap installation Output"
-      when: not leap_installed_check.stat.exists and leap_version == "1.0.5"
-      ansible.builtin.shell: cat /var/log/volt_install_*.log
-      changed_when: false
-      register: leap_install
+      block:
+        -
+          name: "Creating installation directories for Leap"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: directory
+          with_items:
+            - "{{ installer_dir }}/leap/archives"
+            - "{{ installer_dir }}/leap/Leap"
 
-    -
-      name: "Registering leap installation Output"
-      when: not leap_installed_check.stat.exists and not leap_version == "1.0.5"
-      ansible.builtin.shell: cat /var/log/leap_install_*.log
-      changed_when: false
-      register: leap_install
+        -
+          name: "Checking if Leap installer is at leap/archives/{{ leap_archive }}"
+          register: domino_server_installer_check
+          ansible.builtin.stat:
+            path: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
+            get_md5: false
 
-    -
-      name: "Outputting Leap installation logs"
-      when: not leap_installed_check.stat.exists and ( leap_debug or debug_all )
-      ansible.builtin.debug:
-        var: leap_install.stdout_lines
-    
-    -
-      name: "Starting Domino"
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
-    
-    -
-      name: "Handing Leap/Volt ACL templated JSON to Genesis"
-      when: not leap_installed_check.stat.exists
-      ansible.builtin.template:
-        dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/voltacl-org.json"
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "voltacl-org.json.j2"
-    
-    -
-      name: Waiting until Genesis returns OK
-      when: not leap_installed_check.stat.exists
-      ansible.builtin.wait_for:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/voltacl-org.json"
-    
-    -
-      name: "Checking if ACL applied succesfully"
-      when: not leap_installed_check.stat.exists
-      ansible.builtin.lineinfile:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/voltacl-org.json"
-        line: "OK"
-        state: present
-      check_mode: true
-      register: presence
-      failed_when: presence is changed
-    
-    -
-      name: "Marking leap as installed"
-      when: not leap_installed_check.stat.exists
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: touch
-      with_items:
-        - "{{ completed_dir }}/leap_install"
+        -
+          name: "Downloading Leap from {{ domino_installer_base_url }}"
+          register: leapresult
+          until: "leapresult is not failed"
+          retries: 3
+          ansible.builtin.get_url:
+            mode: '0755' 
+            validate_certs: false
+            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ leap_archive }}"
+            dest: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
+            username: "{{ domino_installer_url_user }}"
+            password: "{{ secrets.domino_installer_url_pass }}"
+          when: not domino_server_installer_check.stat.exists
+
+        -
+          name: "Extracting Leap from {{ leap_archive }}"
+          ansible.builtin.unarchive:
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
+            dest: "{{ installer_dir }}/leap/Leap"
+            creates: "{{ installer_dir }}/leap/Leap/linux"
+            remote_src: true
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_leap_shutdown
+          until: domino_service_stopped_leap_shutdown.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Installing Domino Leap"
+          ansible.builtin.shell: "{{ item }}"
+          become: true
+          args:
+            executable: "/bin/bash"
+            chdir: "{{ installer_dir }}/leap/Leap/linux"
+            creates: "{{ domino_install_dir }}/osgi/volt"
+          with_items:
+            - ./install silent
+
+        -
+          name: "Registering Domino Leap installation Output"
+          when: leap_version is version('1.0.5', '<=')
+          ansible.builtin.shell: cat /var/log/volt_install_*.log
+          changed_when: false
+          register: leap_install
+
+        -
+          name: "Registering Domino Leap installation Output"
+          when: leap_version is version('1.0.5', '>')
+          ansible.builtin.shell: cat /var/log/leap_install_*.log
+          changed_when: false
+          register: leap_install
+
+        -
+          name: "Outputting Leap installation logs"
+          ansible.builtin.debug:
+            var: leap_install.stdout_lines
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_leap_first
+          until: domino_service_start_details_leap_first.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Running Post Leap Installation Domino Commands"
+          ansible.builtin.shell: "{{ item }}"
+          become: true
+          args:
+            executable: "/bin/bash"
+          register: leap_osgi_status
+          with_items:
+            - 'domino cmd "tell http osgi ss dleap" 20'
+
+        -
+          name: "Checking if Package has been installed"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/console.log"
+            search_regex: "dleap_{{ leap_version }}"
+            timeout: 120
+            msg: "Leap confirmed to be installed"
+
+        -
+          name: "Handing Leap/Volt templated JSON to Genesis to create Leap Internet Site Document"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/leap-internet-site-document.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "leap-internet-site-document.json.j2"
+
+        -
+          name: "Waiting until Genesis returns OK"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/leap-internet-site-document.json"
+
+        -
+          name: "Checking if Genesis reports that it created the Leap Internet Site Document"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/leap-internet-site-document.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_inet
+          failed_when: presence_inet is changed
+
+        -
+          name: "Setting up OIDC for Leap by Adding Leap to Registered Clients List for Unified Client Configs"
+          when: 
+            - not domino_oidc_web_apps_use_unified_registered_client
+            - domino_oidc_provider_enabled
+            - domino_oidc_provider_leap_enabled
+            - domino_oidc_provider_federation_enabled
+            - domino_major_version >= 14
+          block:
+            -
+              name: "Creating a Registered OAuth client for Leap"
+              when: not domino_oidc_web_apps_use_unified_registered_client
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_registered_client_leap.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_registered_client_leap.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK"
+              when: not domino_oidc_web_apps_use_unified_registered_client
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_registered_client_leap.json"
+
+            -
+              name: "Checking if Genesis reports that it created the Leap Registered OAuth client form"
+              when: not domino_oidc_web_apps_use_unified_registered_client
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_registered_client_leap.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_inet
+              failed_when: presence_inet is changed
+
+        -
+          name: "Handing Leap/Volt ACL templated JSON to Genesis"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/voltacl-org.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "voltacl-org.json.j2"
+
+        -
+          name: Waiting until Genesis returns OK
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/voltacl-org.json"
+
+        -
+          name: "Checking if ACL applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/voltacl-org.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence
+          failed_when: presence is changed
+
+        -
+          name: "Setting up OIDC for Leap by Adding Leap to Registered Clients List for Unified Client Configs"
+          when: 
+            - domino_oidc_web_apps_use_unified_registered_client
+            - domino_oidc_provider_enabled
+            - domino_oidc_provider_leap_enabled
+            - domino_oidc_provider_federation_enabled
+            - domino_major_version >= 14
+          block:
+            -
+              name: "Handing templated gather_domino_oidc_trusted_provider_for_leap.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_oidc_trusted_provider_for_leap.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "gather_domino_oidc_trusted_provider_for_leap.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing gather_domino_oidc_trusted_provider_for_leap.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_trusted_provider_for_leap.json"
+
+            -
+              name: "Checking if gather_domino_oidc_trusted_provider_for_leap.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_trusted_provider_for_leap.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_gather_for_leap
+              failed_when: presence_oidc_gather_for_leap is changed
+
+            -
+              name: "Reading OIDC hostnames from file"
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_hostnames.txt"
+              register: oidc_hostnames_file_for_leap
+
+            -
+              name: "Processing OIDC hostnames"
+              ansible.builtin.set_fact:
+                oidc_hostnames_raw_for_leap: "{{ oidc_hostnames_file_for_leap['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Removing OIDCHostname= prefix and checking for domino_leap_proxy_url"
+              ansible.builtin.set_fact:
+                oidc_hostnames_processed_for_leap: "{{ oidc_hostnames_raw_for_leap | regex_replace('^OIDCHostname=', '') }}"
+
+            -
+              name: "Appending domino_leap_proxy_url if not present"
+              when: domino_leap_proxy_url not in oidc_hostnames_processed_for_leap
+              ansible.builtin.set_fact:
+                oidc_hostnames_processed_for_leap: "{{ oidc_hostnames_processed_for_leap }} {{ domino_leap_proxy_url }}"
+
+            -
+              name: "Handing templated update_domino_oidc_trusted_provider_for_leap.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_domino_oidc_trusted_provider_for_leap.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "update_domino_oidc_trusted_provider_for_leap.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing update_domino_oidc_trusted_provider_for_leap.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_trusted_provider_for_leap.json"
+
+            -
+              name: "Checking if update_domino_oidc_trusted_provider_for_leap.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_trusted_provider_for_leap.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_update_for_leap
+              failed_when: presence_oidc_update_for_leap is changed
+
+        -
+          name: "Setting up OIDC for Leap by Adding Leap to Registered Clients List for Unified Client Configs"
+          when: 
+            - domino_oidc_web_apps_use_unified_registered_client
+            - domino_oidc_provider_enabled
+            - domino_oidc_provider_leap_enabled
+            - domino_oidc_provider_federation_enabled
+            - domino_major_version >= 14
+          block:
+            -
+              name: "Handing templated gather_domino_oidc_unified_registered_clients_for_leap.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_oidc_unified_registered_clients_for_leap.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "gather_domino_oidc_unified_registered_clients_for_leap.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing gather_domino_oidc_unified_registered_clients_for_leap.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_unified_registered_clients_for_leap.json"
+
+            -
+              name: "Checking if gather_domino_oidc_unified_registered_clients_for_leap.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_unified_registered_clients_for_leap.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_gather_clients_for_leap
+              failed_when: presence_oidc_gather_clients_for_leap is changed
+
+            -
+              name: "Reading OIDC Registered Clients from file"
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_registered_clients_for_leap_name.txt"
+              register: oidc_registered_clients_file
+
+            -
+              name: "Reading OIDC Registered Clients Redirect URIs from file"
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_registered_clients_for_leap_redirect_uris.txt"
+              register: oidc_registered_clients_file_redirect_uris
+
+            -
+              name: "Processing OIDC Registered Clients"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_raw: "{{ oidc_registered_clients_file['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Processing OIDC Registered Clients Redirect URIs"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_redirect_uris_raw: "{{ oidc_registered_clients_file_redirect_uris['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Removing RC_Name= prefix and checking for Registered client name"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_processed: "{{ oidc_registered_clients_raw | regex_replace('^RC_Name=', '') }}"
+
+            -
+              name: "Removing RC_redirect_uris= prefix and checking for domino_leap_proxy_url"
+              ansible.builtin.set_fact:
+                oidc_registered_clients_redirect_uri_processed: "{{ oidc_registered_clients_redirect_uris_raw | regex_replace('^RC_redirect_uris=', '') }}"
+
+            -
+              name: "Appending Leap Name if not present"
+              when: domino_leap_proxy_url not in oidc_registered_clients_processed
+              ansible.builtin.set_fact:
+                oidc_registered_clients_processed: "{{ oidc_registered_clients_processed ~ ' + Leap' }}"
+
+            -
+              name: "Appending domino_leap_proxy_url if not present"
+              when: domino_leap_proxy_url not in oidc_registered_clients_redirect_uri_processed
+              ansible.builtin.set_fact:
+                oidc_registered_clients_redirect_uri_processed: "{{ oidc_registered_clients_redirect_uri_processed }} https://{{ domino_leap_proxy_url }}/auth/protocol/oidc"
+
+            -
+              name: "Handing templated update_domino_oidc_unified_registered_clients_redirect_uris_for_leap JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_domino_oidc_unified_registered_clients_redirect_uris_for_leap.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "update_domino_oidc_unified_registered_clients_redirect_uris_for_leap.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing update_domino_oidc_unified_registered_clients_redirect_uris_for_leap"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_unified_registered_clients_redirect_uris_for_leap.json"
+
+            -
+              name: "Checking if update_domino_oidc_unified_registered_clients_redirect_uris_for_leap JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_domino_oidc_unified_registered_clients_redirect_uris_for_leap.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_update_for_leap_registered_clients
+              failed_when: presence_oidc_update_for_leap_registered_clients is changed
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_genesis_shutdown_2
+          until: domino_service_stopped_genesis_shutdown_2.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_leap
+          until: domino_service_start_details_leap.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          when: not leap_installed_check.stat.exists 
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Marking leap as installed"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/leap_installed"

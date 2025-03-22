@@ -1,12 +1,27 @@
 ---
 run_tasks: true
-nomadweb_archive: nomad-server-1.0.15-linux.tar.gz
 nomadweb_version: 1.0.15
 nomadweb_version_major: "{{ nomadweb_version.split('.')[0] }}"
 nomadweb_version_minor: "{{ nomadweb_version.split('.')[1] }}"
 nomadweb_version_patch: "{{ nomadweb_version.split('.')[2] }}"
+
+# Archive names for different versions
+nomadweb_archive_domino14: "nomad-server-{{ nomadweb_version }}-for-domino-{{ domino_version_major }}.0.0-linux.tgz"
+nomadweb_archive_domino12: "nomad-server-{{ nomadweb_version }}-for-domino-{{ domino_version_major }}.0.2-linux.tgz"
+nomadweb_archive_newer: "nomad-server-{{ nomadweb_version }}-linux.tar.gz"
+
+# Set the archive name based on version conditions
+nomadweb_archive: "{{ nomadweb_archive_domino14 if (nomadweb_version is version('1.0.13', '<') and domino_version_major == 14) else 
+                      nomadweb_archive_domino12 if (nomadweb_version is version('1.0.13', '<') and domino_version_major == 12) else 
+                      nomadweb_archive_newer }}"
+
 nomadweb_debug: false
 nomadweb_app_switcher_enabled: true
+
+nomad_hotfix_install: false
+nomad_hotfix_version: "HF1"
+nomad_hotfix_archive: "HCL_Nomad_server_{{ nomadweb_version }}-{{ nomad_hotfix_version }}_linux.tar.gz"
+
 installer_url_app_path: "Super.Human.Installer/Nomad"
 domino_nomadweb_port_forwards:
   -
@@ -29,3 +44,14 @@ nomad_client_config:
   max_session_sec: 57600
   id_token_signed_response_alg: "ES256"
   access_token_signed_response_alg: "ES256"
+
+nomad_app_switcher_enabled_services:
+ - WelcomePage
+ - ServerConsole
+ - DominoWeb
+ - Guacamole
+ - "{{ 'RestAPI' if 'startcloud.hcl_roles.domino_rest_api' in (enabled_roles | default([])) }}"
+ - "{{ 'Sametime' if 'startcloud.hcl_roles.domino_sametime' in (enabled_roles | default([])) }}"
+ - "{{ 'Traveler' if 'startcloud.hcl_roles.domino_traveler' in (enabled_roles | default([])) }}"
+ - "{{ 'Leap' if 'startcloud.hcl_roles.domino_leap' in (enabled_roles | default([])) }}"
+ - "{{ 'Verse' if 'startcloud.hcl_roles.domino_verse' in (enabled_roles | default([])) }}"

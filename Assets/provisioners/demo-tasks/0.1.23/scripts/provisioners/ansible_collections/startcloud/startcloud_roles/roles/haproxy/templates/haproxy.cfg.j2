@@ -160,6 +160,10 @@ frontend  HTTPS-IN
         acl host_console              hdr(host)            -i console.{{ settings.hostname }}.{{ settings.domain }}
         acl is_options                method               OPTIONS
 
+{% if startcloud_web_terminal_proxy_url is defined %}
+        acl host_web_terminal         hdr(host)            -i {{ startcloud_web_terminal_proxy_url }}
+{% endif %}
+
 {% if domino_vagrant_rest_api_proxy_url is defined %}
         acl host_restapi              hdr(host)            -i {{ domino_vagrant_rest_api_proxy_url }}
 {% endif %}
@@ -174,7 +178,7 @@ frontend  HTTPS-IN
 {% if domino_install_proxy_url is defined %}
         acl host_domino               hdr(host)            -i {{ domino_install_proxy_url }}
 {% endif %}
-{% if domino_oidc_provider_enabled %}
+{% if domino_oidc_provider_enabled is defined and domino_oidc_provider_enabled and domino_oidc_install_proxy_url is defined %}
         acl host_domino_oidc          hdr(host)            -i {{ domino_oidc_install_proxy_url }}
 {% endif %}
 {% if startcloud_quick_start_proxy_url is defined %}
@@ -220,7 +224,7 @@ frontend  HTTPS-IN
 {% endif %}
 {% endif %}
 {% endif %}
-{% if domino_oidc_provider_enabled %}
+{% if domino_oidc_provider_enabled is defined and domino_oidc_provider_enabled %}
         use_backend                   domino_oidc          if host_domino_oidc
 {% endif %}
 {% if domino_leap_proxy_url is defined %}
@@ -241,13 +245,15 @@ frontend  HTTPS-IN
 {% if voltmx_port_forwards[0].url is defined %}
         use_backend                   voltmx               if host_voltmx
 {% endif %}
+{% if startcloud_web_terminal_proxy_url is defined %}
+        use_backend                   web_terminal            if host_web_terminal
+{% endif %}
 {% if startcloud_quick_start_proxy_url is defined %}
         use_backend                   downloads            if host_downloads || host_direct_ip
 {% endif %}
 {% if haproxy_default_backend is defined and haproxy_default_backend | length > 0 %}
         default_backend               {{ haproxy_default_backend }}
 {% endif %}
-
 
 #---------------------------------------------------------------------
 ##### BACKENDS ####
@@ -260,7 +266,7 @@ backend letsencrypt_80
         mode http
         log global
         http-response set-header Server haproxy
-        server  letsencrypt             127.0.0.1:8181
+        server  letsencrypt             127.0.0.1:{{ haproxy_cert_bot_port }}
 
 # CORS preflight requests
 backend cors_backend
@@ -274,6 +280,12 @@ backend cors_backend
 # Console
 backend console
         server  cockpit               127.0.0.1:9090    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+
+{% if startcloud_web_terminal_port_forwards[0].guest is defined %}
+backend web_terminal
+        server  web_terminal          127.0.0.1:{{ startcloud_web_terminal_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+{% endif %}
+
 {% if domino_vagrant_rest_api_port_forwards[0].guest is defined %}
 # Rest API
 backend restapi
@@ -288,17 +300,17 @@ backend restapi
 backend downloads
         server  downloads             127.0.0.1:{{ startcloud_quick_start_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
-{% if domino_install_port_forwards[0].guest is defined %}
+{% if domino_install_port_forwards[0].guest is defined and domino_install_proxy_url is defined %}
 # Domino
 backend domino
-        server  domino-https          127.0.0.1:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+        server  domino-https          {{ domino_install_proxy_url }}:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_install_port_forwards[1].guest is defined %}
-        server  domino-http           127.0.0.1:{{ domino_install_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
+        server  domino-http           {{ domino_install_proxy_url }}:{{ domino_install_port_forwards[1].guest }}    backup check cookie {{ settings.hostname }} init-addr last,libc,none
 {% endif %}
 {% endif %}
 
-{% if domino_install_port_forwards[0].guest is defined %}
-# Domino
+{% if domino_install_port_forwards[0].guest is defined and domino_oidc_install_proxy_url is defined and domino_oidc_provider_enabled %}
+# Domino OIDC
 backend domino_oidc
         server  domino-oidc-https          {{ domino_oidc_install_proxy_url }}:{{ domino_install_port_forwards[0].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
 {% if domino_install_port_forwards[1].guest is defined %}

@@ -4,117 +4,140 @@
   when: run_tasks
   block:
     -
-      name: "Creating installation directories for domino-appdev-pack"
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0644'
-      with_items:
-        - "{{ installer_dir }}/appdevpack/archives"
-        - "{{ installer_dir }}/appdevpack/domino-appdev-pack"
-    
-    -
-      name: "Checking if domino-appdev-pack  installer is at appdevpack/archives/{{ appdevpack_archive }}"
-      register: domino_server_installer_check
-      ansible.builtin.stat:
-        path: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
-        get_md5: false
-    
-    -
       name: "Checking if domino-appdev-pack is installed: {{ appdevpack_version }}"
       register: appdevpack_installed_check
       ansible.builtin.stat:
-        path: "{{ completed_dir }}/appdevpack_install"
+        path: "{{ completed_dir }}/appdevpack_installed"
         get_md5: false
     
     -
-      name: "Downloading domino-appdev-pack from {{ domino_installer_base_url }}"
-      register: appdevpackresult
-      until: "appdevpackresult is not failed"
-      retries: 3
-      ansible.builtin.get_url:
-        mode: '0755'
-        validate_certs: false
-        url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ appdevpack_archive }}"
-        dest: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
-        username: "{{ domino_installer_url_user }}"
-        password: "{{ secrets.domino_installer_url_pass }}"
-      when: not domino_server_installer_check.stat.exists and not appdevpack_installed_check.stat.exists
-    
-    -
-      name: "Extracting domino-appdev-pack from {{ appdevpack_archive }}"
+      name: "Block to Allow Loading of Variables without running task"
       when: not appdevpack_installed_check.stat.exists
-      ansible.builtin.unarchive:
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
-        dest: "{{ installer_dir }}/appdevpack/domino-appdev-pack"
-        creates: "{{ installer_dir }}/appdevpack/domino-appdev-pack/adpconfig.ntf"
-        remote_src: true
-    
-    -
-      name: "Stopping Domino for domino-appdev-pack Installation"
-      when: not appdevpack_installed_check.stat.exists
-      become: true
-      ansible.builtin.service:
-        name: domino
-        state: stopped
-        enabled: true
-    
-    -
-      name: "Copying App Dev Pack Templates and Files"
-      ansible.builtin.copy:
-        mode: '0644'
-        src: "{{ item }}"
-        dest: "{{ service_home_dir }}"
-        remote_src: true
-        owner: "{{ service_user }}"
-      with_items:
-        - "{{ installer_dir }}/appdevpack/domino-appdev-pack/adpconfig.ntf"
-        - "{{ installer_dir }}/appdevpack/domino-appdev-pack/iam-store.ntf"
-        - "{{ installer_dir }}/appdevpack/domino-appdev-pack/1202-proton-addin-0.15.5+ND12000200.tgz"
-      when: not appdevpack_installed_check.stat.exists
-    
-    -
-      name: "Extracting domino-appdev-pack from {{ appdevpack_archive }}"
-      when: not appdevpack_installed_check.stat.exists
-      ansible.builtin.unarchive:
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/appdevpack/domino-appdev-pack/1202-proton-addin-0.15.5+ND12000200.tgz"
-        dest: "{{ domino_install_dir }}"
-        creates: "{{ domino_install_dir }}/libiamclient.so"
-        remote_src: true
-    
-    -
-      name: "Installing domino-appdev-pack"
-      when: not appdevpack_installed_check.stat.exists
-      ansible.builtin.shell: "{{ item }}"
-      become: true
-      args:
-        executable: "/bin/bash"
-        chdir: "{{ domino_install_dir }}"
-        creates: "{{ domino_install_dir }}/libiamclient.so"
-      with_items:
-        - sh -v ./setup_proton.sh
-    
-    -
-      name: "Setting domino-appdev-pack as installed"
-      when: not appdevpack_installed_check.stat.exists
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: touch
-      with_items:
-        - "{{ completed_dir }}/appdevpack_install"
-    
-    -
-      name: "Starting Domino"
-      when: not appdevpack_installed_check.stat.exists
-      become: true
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
+      block:
+        -
+          name: "Creating installation directories for domino-appdev-pack"
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0644'
+          with_items:
+            - "{{ installer_dir }}/appdevpack/archives"
+            - "{{ installer_dir }}/appdevpack/domino-appdev-pack"
+
+        -
+          name: "Checking if domino-appdev-pack  installer is at appdevpack/archives/{{ appdevpack_archive }}"
+          register: appdevpack_installer_check
+          ansible.builtin.stat:
+            path: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
+            get_md5: false
+
+        -
+          name: "Downloading domino-appdev-pack from {{ domino_installer_base_url }}"
+          register: appdevpackresult
+          until: "appdevpackresult is not failed"
+          retries: 3
+          ansible.builtin.get_url:
+            mode: '0755'
+            validate_certs: false
+            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ appdevpack_archive }}"
+            dest: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
+            username: "{{ domino_installer_url_user }}"
+            password: "{{ secrets.domino_installer_url_pass }}"
+          when: not appdevpack_installer_check.stat.exists
+
+        -
+          name: "Extracting domino-appdev-pack from {{ appdevpack_archive }}"
+          ansible.builtin.unarchive:
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
+            dest: "{{ installer_dir }}/appdevpack/domino-appdev-pack"
+            creates: "{{ installer_dir }}/appdevpack/domino-appdev-pack/adpconfig.ntf"
+            remote_src: true
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_appdevpack
+          until: domino_service_stopped_appdevpack.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Copying App Dev Pack Templates and Files"
+          ansible.builtin.copy:
+            mode: '0644'
+            src: "{{ item }}"
+            dest: "{{ service_home_dir }}"
+            remote_src: true
+            owner: "{{ service_user }}"
+          with_items:
+            - "{{ installer_dir }}/appdevpack/domino-appdev-pack/adpconfig.ntf"
+            - "{{ installer_dir }}/appdevpack/domino-appdev-pack/iam-store.ntf"
+            - "{{ installer_dir }}/appdevpack/domino-appdev-pack/1202-proton-addin-0.15.5+ND12000200.tgz"
+
+        -
+          name: "Extracting domino-appdev-pack from {{ appdevpack_archive }}"
+          ansible.builtin.unarchive:
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "{{ installer_dir }}/appdevpack/domino-appdev-pack/1202-proton-addin-0.15.5+ND12000200.tgz"
+            dest: "{{ domino_install_dir }}"
+            creates: "{{ domino_install_dir }}/libiamclient.so"
+            remote_src: true
+
+        -
+          name: "Installing domino-appdev-pack"
+          ansible.builtin.shell: "{{ item }}"
+          become: true
+          args:
+            executable: "/bin/bash"
+            chdir: "{{ domino_install_dir }}"
+            creates: "{{ domino_install_dir }}/libiamclient.so"
+          with_items:
+            - sh -v ./setup_proton.sh
+
+        -
+          name: "Setting domino-appdev-pack as installed"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/appdevpack_installed"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_appdevpack
+          until: domino_service_start_details_appdevpack.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"

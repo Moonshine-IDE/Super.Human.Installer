@@ -24,3 +24,4 @@ dns_entries_list:
     - guacamole
     - voltmx
     - www
+    - web-terminal

@@ -11,63 +11,80 @@
         get_md5: false
     
     -
-      name: "Handing HTMO templated JSON to Genesis"
+      name: "Block to Allow Loading of Variables without running task"
       when: not htmo_installed_check.stat.exists
-      ansible.builtin.template:
-        dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/htmo-traveler-access.json"
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "htmo-traveler-access.json.j2"
-    
-    -
-      name: Waiting until Genesis returns OK
-      when: not htmo_installed_check.stat.exists
-      ansible.builtin.wait_for:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/htmo-traveler-access.json"
-    
-    -
-      name: "Checking if ACL applied succesfully"
-      when: not htmo_installed_check.stat.exists
-      ansible.builtin.lineinfile:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/htmo-traveler-access.json"
-        line: "OK"
-        state: present
-      check_mode: true
-      register: presence
-      failed_when: presence is changed
-    
-    -
-      name: "Stopping Domino for Changes to take effect"
-      when: not htmo_installed_check.stat.exists
-      become: true
-      ansible.builtin.service:
-        name: domino
-        state: stopped
-        enabled: true
-      register: domino_html_service_details_stop
-      until: domino_html_service_details_stop.state == "stopped"
-      retries: 3
-      delay: 5
-    
-    -
-      name: "Starting Domino for Changes to take effect"
-      when: not htmo_installed_check.stat.exists
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
-      register: domino_html_service_details_start
-      retries: 3
-      delay: 5
-      until: domino_html_service_details_start.state == "started"
-    
-    -
-      name: "Marking HTMO as installed"
-      when: not htmo_installed_check.stat.exists
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: touch
-      with_items:
-        - "{{ completed_dir }}/htmo_installed"
+      block:
+        -
+          name: "Handing HTMO templated JSON to Genesis"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/htmo-traveler-access.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "htmo-traveler-access.json.j2"
+
+        -
+          name: Waiting until Genesis returns OK
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/htmo-traveler-access.json"
+
+        -
+          name: "Checking if ACL applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/htmo-traveler-access.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence
+          failed_when: presence is changed
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_htmo_service_details_stop
+          until: domino_htmo_service_details_stop.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_htmo
+          until: domino_service_start_details_htmo.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Marking HTMO as installed"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/htmo_installed"

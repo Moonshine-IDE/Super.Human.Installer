@@ -57,22 +57,8 @@ domino_https_enabled: 1
 ots_generate_server_id_count: 0
 domino_organization: STARTcloud
 domino_countrycode: null
-
-domino_nomadweb_port_forwards:
-  -
-    guest: 9443
-    url: "notes"
-domino_nomadweb_use_proxy_url: true
-domino_nomadweb_proxy_url: "{{ domino_nomadweb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
-domino_verse_port_forwards:
-  -
-    guest: "{{ domino_install_port_forwards[0].guest }}"
-    url: "verse"
-  -
-    guest: "{{ domino_install_port_forwards[1].guest }}"
-    url: "verse"
-domino_verse_proxy_url: "{{ domino_verse_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
-
+domino_shutdown_delay: 30
+domino_startup_delay: 60
 domino_enable_java_agent_cache: 2
 domino_daos_enable: 0
 domino_daos_min_obj_size: 256000
@@ -176,38 +162,6 @@ domino_install_port_forwards:
     url: "domino"
 domino_install_proxy_url: "{{ domino_install_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
 
-domino_oidc_provider_enabled: true
-domino_oidc_hostname: auth
-domino_oidc_debug: true
-domino_oidc_install_proxy_url: "{{ domino_oidc_hostname }}.{{ settings.hostname }}.{{ settings.domain }}"
-domino_oidc_client_id: "{{ settings.hostname }}_{{ settings.domain }}_client_id"
-domino_oidc_client_secret: "{{ lookup('ansible.builtin.password', '/dev/null', seed=inventory_hostname) }}"
-domino_oidc_provider_federation_enabled: true
-domino_oidc_provider_login_form: "$$LoginUserForm"
-domino_oidc_provider_nomad_enabled: true
-domino_oidc_provider_verse_enabled: true
-domino_oidc_provider_web_enabled: true
-domino_oidc_provider_web_home_url: "/names.nsf?open"
-domino_oidc_trusted_roots: ""
-domino_oidc_auth_type: "B"
-#None|N
-#Client secret basic|B
-#Client secret post|P
-#Private key JWT|J
-
-domino_oidc_simplify_redirect_url: "1"
-domino_oidc_bearer_options: "0"
-domino_oidc_bearer_custom_claim_names: ""
-domino_oidc_bearer_alternate_audiences: ""
-domino_oidc_bearer_allowed_client_ids: ""
-domino_oidc_log_level: "3" #1 Minimal, 2 Standard, 3 verbose
-
-domino_oidc_external_providers:
-  - name: null
-    base_url: null
-    client_id: null
-    client_secret: null
-
 #https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0111664
 domino_server_name_common: "{{ (domino_major_version is defined and 
                                ((domino_major_version >= 12 and 
@@ -233,5 +187,11 @@ domino_server_name_common_with_org: "{{ (domino_major_version is defined and
                                          domino_server_name + '.' + domino_server_domain + '/' + domino_organization
                                        ) }}"
 
-
+## Do not change these unless you know exactly what you are doing, these are set to false in case the oidc role isn't included.
 super_human_portal_enabled: true
+domino_oidc_provider_leap_enabled: false
+domino_oidc_provider_nomad_enabled: false
+domino_oidc_provider_verse_enabled: false
+domino_oidc_provider_web_enabled: false
+domino_oidc_provider_enabled: false
+domino_oidc_web_apps_use_unified_registered_client: true

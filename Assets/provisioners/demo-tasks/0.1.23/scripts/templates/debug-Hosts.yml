@@ -119,7 +119,8 @@ hosts:
       additional_disks:
       # if ::ADDITIONAL_DISK::
       # TO SHI DEVs, if user wants to store thier data on a secondary disk, you would enable this block
-        - array: Array-1
+        -
+          array: Array-1
           dataset: zones
           sparse: true
           live: false
@@ -127,6 +128,7 @@ hosts:
           mount: /local
           size: 50.0G
           port: 5
+          device: vdb
           #driver: virtio-scsi #Only add if your template doesn't already use virtio-scsi(the new templates do)
           volume_name: disk1
 
@@ -264,13 +266,7 @@ hosts:
       domino_organization: STARTcloud
       #domino_admin_notes_id_password: password
 
-      # Domino OIDC Configurations
-      domino_oidc_debug: false
-      domino_oidc_provider_enabled: true
-      domino_oidc_provider_federation_enabled: true
-      domino_oidc_provider_nomad_enabled: true
-      domino_oidc_provider_verse_enabled: true
-      domino_oidc_provider_web_enabled: true
+      domino_oidc_debug: true
 
       #domino_oidc_external_providers:
       #  - name: null
@@ -278,7 +274,7 @@ hosts:
       #    client_id: null
       #    client_secret: null
 
-      ## Safe-ids to cross-certify
+      ## Safe-ids to cross-certify (only works for initial/standalone server)
       # You need to add a file matching this name to id-files/user-safe-ids
       user_safe_id: SAFE.ids
 
@@ -304,9 +300,9 @@ hosts:
 
       ## ASJA Server Settings
       # If using ASJA instead of OTS to generated Server IDs uncomment these lines
-      asja_generate_server_ids:
-        - name: additional-demo.startcloud.com
-          pass: ""
+      #asja_generate_server_ids:
+      #  - name: additional-demo.startcloud.com
+      #    pass: ""
 
       ## Genesis Variables
       genesis_packages:
@@ -315,6 +311,8 @@ hosts:
 
       ## Domino Installer Variables
       #domino_hash: 
+      # REPLACEME:   Update Domino installer and version if needed, and update the versions as well
+      # If you want to use a local copy, it must match the below name and be added to `./installers/domino/archives`
       domino_server_installer_tar: Domino_14.5_Linux_English_EA2.tar #Domino_14.0_Linux_English.tar
       domino_major_version: 14
       domino_minor_version: 5
@@ -323,14 +321,14 @@ hosts:
       ## Domino fixpack Variables
       #domino_fp_hash: 
       domino_installer_fixpack_install: false
-      #domino_fixpack_version:
-      #domino_server_fixpack_tar:
+      domino_fixpack_version:
+      domino_server_fixpack_tar:
 
       ## Domino Hotfix Variables
       #domino_hf_hash:
       domino_installer_hotfix_install: false
-      #domino_hotfix_version:
-      #domino_server_hotfix_tar:
+      domino_hotfix_version:
+      domino_server_hotfix_tar:
 
       ## Jedi Overrides
       jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
@@ -342,13 +340,15 @@ hosts:
 
       ## Nomad Web Variables
       #nomadweb_hash:
-      #nomadweb_archive:
-      #nomadweb_version:
+      #nomadweb_archive: # 1.0.15 + HF1 Fixes Bug with HTTP, recommended
+      #nomad_hotfix_version: "HF1"
+      #nomad_hotfix_install: false
 
       ## Traveler Variables
       #traveler_hash:
       #traveler_archive:
       #traveler_base_version:
+      #traveler_fixpack_install: true
       #traveler_fixpack_archive:
       #traveler_fixpack_version:
 
@@ -406,6 +406,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
+      - name: startcloud.hcl_roles.domino_oidc
+        vars:
+          run_tasks: true
       - name: startcloud.hcl_roles.domino_leap
         vars:
           run_tasks: false
@@ -418,6 +421,7 @@ hosts:
       - name: startcloud.hcl_roles.domino_verse
         vars:
           run_tasks: false
+      # Deprecated -- See: https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0105781
       - name: startcloud.hcl_roles.domino_appdevpack
         vars:
           run_tasks: false
@@ -431,6 +435,8 @@ hosts:
         vars:
           run_tasks: true
       - name: startcloud.hcl_roles.domino_vagrant_readme
+        vars:
+          run_tasks: true
       - name: startcloud.startcloud_roles.quick_start
         tags: always
         vars:
@@ -442,3 +448,5 @@ hosts:
         vars:
           run_tasks: true
       - name: startcloud.startcloud_roles.lockdown
+        vars:
+          run_tasks: true

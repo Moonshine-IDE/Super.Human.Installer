@@ -1,7 +1,12 @@
 ---
 run_tasks: true
-domino_rest_api_archive: Domino_REST_API_V1_Installer.tar.gz
-domino_rest_api_version: 1
+# Version information
+domino_rest_api_version: 1.1.2
+
+domino_rest_api_archive: "{% if domino_rest_api_version is version('1', '==') %}Domino_REST_API_V1_Installer.tar.gz{% elif domino_rest_api_version is version('1.0.9', '>=') %}Domino_REST_API_V{{ domino_rest_api_version }}_R{{ domino_major_version }}_Installer.tar.gz{% else %}Domino_REST_API_V{{ domino_rest_api_version }}_Installer.tar.gz{% endif %}"
+
+domino_rest_api_installer_jar: "{% if domino_rest_api_version is version('1', '==') %}restapiInstall.jar{% elif domino_rest_api_version is version('1.0.9', '>=') %}restapiInstall-r{{ domino_major_version }}.jar{% else %}restapiInstall.jar{% endif %}"
+
 domino_rest_api_debug: true
 installer_url_app_path: "Super.Human.Installer/Domino_rest_api"
 domino_rest_api_port_forwards:

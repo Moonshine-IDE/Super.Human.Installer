@@ -1,7 +1,17 @@
 ---
 run_tasks: true
-leap_archive: Leap-1.1.1.zip
-leap_version: 1.1.1
+leap_version: 1.1.6
+
+# HCL Domino Leap archive naming pattern: hcl.dleap-[version].[build].zip
+# Mapping of versions to their corresponding build numbers
+leap_build_map:
+  "1.1.0": "15"
+  "1.1.1": "18"
+  "1.1.5": "4"
+  "1.1.6": "25"
+
+leap_archive: "hcl.dleap-{{ leap_version }}.{{ leap_build_map[leap_version] }}.zip"
+
 leap_debug: false
 installer_url_app_path: "Super.Human.Installer/Leap"
 domino_leap_port_forwards:
@@ -12,3 +22,4 @@ domino_leap_port_forwards:
     guest: "{{ domino_install_port_forwards[1].guest }}"
     url: "leap"
 domino_leap_proxy_url: "{{ domino_leap_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+domino_oidc_provider_leap_home_url: "/volt-apps/secure/org/ide/manager.html"

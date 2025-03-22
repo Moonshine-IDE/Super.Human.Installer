@@ -3,92 +3,117 @@
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
-  -
-    name: "Creating installation directories for domino-rest-api"
-    ansible.builtin.file:
-      mode: '0644'
-      path: "{{ item }}"
-      state: directory
-    with_items:
-      - "{{ installer_dir }}/domino-rest-api/archives"
-  
-  -
-    name: "Checking if domino-rest-api installer is at domino-rest-api/archives/{{ domino_rest_api_archive }}"
-    register: domino_server_installer_check
-    ansible.builtin.stat:
-      path: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
-      get_md5: false
-  
-  -
-    name: "Checking if domino-rest-api is installed: {{ domino_rest_api_version }}"
-    register: domino_rest_api_installed_check
-    ansible.builtin.stat:
-      path: "{{ completed_dir }}/domino_rest_api_install"
-      get_md5: false
-  
-  -
-    name: "Downloading domino-rest-api from {{ domino_installer_base_url }}"
-    register: domino_rest_apiresult
-    until: "domino_rest_apiresult is not failed"
-    retries: 3
-    ansible.builtin.get_url:
-      mode: '0755'
-      validate_certs: false
-      url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ domino_rest_api_archive }}"
-      dest: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
-      username: "{{ domino_installer_url_user }}"
-      password: "{{ secrets.domino_installer_url_pass }}"
-    when: not domino_server_installer_check.stat.exists and not domino_rest_api_installed_check.stat.exists
-  
-  -
-    name: "Extracting domino-rest-api from {{ domino_rest_api_archive }}"
-    when: not domino_rest_api_installed_check.stat.exists
-    ansible.builtin.unarchive:
-      mode: "a+x"
-      owner: "{{ domino_user }}"
-      group: "{{ domino_group }}"
-      src: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
-      dest: "{{ installer_dir }}/domino-rest-api"
-      creates: "{{ installer_dir }}/domino-rest-api/restapiInstall.jar"
-      remote_src: true
-  
-  -
-    name: "Stopping Domino for domino-rest-api Installation"
-    when: not domino_rest_api_installed_check.stat.exists
-    become: true
-    ansible.builtin.service:
-      name: domino
-      state: stopped
-      enabled: true
-  
-  -
-    name: "Installing Domino Rest API"
-    ansible.builtin.shell: "{{ item }}"
-    become: true
-    become_user: "{{ service_user }}"
-    args:
-      chdir: "{{ installer_dir }}/domino-rest-api"
-      executable: /bin/bash
-      creates: "/opt/hcl/restapi/notices.txt"
-    when: not domino_rest_api_installed_check.stat.exists
-    with_items:
-      - "sudo java -jar restapiInstall.jar -d={{ domino_home_dir }} -i={{ domino_home_dir }}/notes.ini -r=/opt/hcl/restapi -p={{ domino_install_dir }} -a"
-  
-  -
-    name: "Marking Domino Rest API as installed"
-    when: not domino_rest_api_installed_check.stat.exists
-    ansible.builtin.file:
-      mode: '0644'
-      path: "{{ item }}"
-      state: touch
-    with_items:
-      - "{{ completed_dir }}/domino_rest_api_install"
-  
-  -
-    name: "Starting Domino"
-    when: not domino_rest_api_installed_check.stat.exists
-    become: true
-    ansible.builtin.service:
-      name: domino
-      state: started
-      enabled: true
+    -
+      name: "Checking if domino-rest-api is installed: {{ domino_rest_api_version }}"
+      register: domino_rest_api_installed_check
+      ansible.builtin.stat:
+        path: "{{ completed_dir }}/domino_rest_api_installed"
+        get_md5: false
+
+    -
+      name: "Installing Domino Rest API"
+      when: not domino_rest_api_installed_check.stat.exists
+      block:
+        -
+          name: "Creating installation directories for domino-rest-api"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: directory
+          with_items:
+            - "{{ installer_dir }}/domino-rest-api/archives"
+
+        -
+          name: "Checking if domino-rest-api installer is at domino-rest-api/archives/{{ domino_rest_api_archive }}"
+          register: domino_restapi_installer_check
+          ansible.builtin.stat:
+            path: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
+            get_md5: false
+
+        -
+          name: "Downloading domino-rest-api from {{ domino_installer_base_url }}"
+          register: domino_rest_apiresult
+          until: "domino_rest_apiresult is not failed"
+          retries: 3
+          ansible.builtin.get_url:
+            mode: '0755'
+            validate_certs: false
+            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ domino_rest_api_archive }}"
+            dest: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
+            username: "{{ domino_installer_url_user }}"
+            password: "{{ secrets.domino_installer_url_pass }}"
+          when: not domino_restapi_installer_check.stat.exists
+
+        -
+          name: "Extracting domino-rest-api from {{ domino_rest_api_archive }}"
+          ansible.builtin.unarchive:
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
+            dest: "{{ installer_dir }}/domino-rest-api"
+            creates: "{{ installer_dir }}/domino-rest-api/restapiInstall.jar"
+            remote_src: true
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_domino_restapi
+          until: domino_service_stopped_domino_restapi.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Installing Domino Rest API"
+          ansible.builtin.shell: "{{ item }}"
+          become: true
+          become_user: "{{ service_user }}"
+          args:
+            chdir: "{{ installer_dir }}/domino-rest-api"
+            executable: "/bin/bash"
+            creates: "/opt/hcl/restapi/notices.txt"
+          with_items:
+            - "sudo {{ domino_install_basedir }}/notes/latest/linux/java -jar {{ domino_rest_api_installer_jar }} -d={{ domino_home_dir }} -i={{ domino_home_dir }}/notes.ini -r=/opt/hcl/restapi -p={{ domino_install_dir }} -a"
+
+        -
+          name: "Marking Domino Rest API as installed"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/domino_rest_api_installed"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_domino_restapi
+          until: domino_service_start_details_domino_restapi.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let Domino HTTP fully configure"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"

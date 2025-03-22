@@ -1,0 +1,44 @@
+---
+run_tasks: true
+domino_oidc_debug: false
+
+domino_oidc_provider_enabled: "{{ 'startcloud.hcl_roles.domino_oidc' in (enabled_roles | default([])) }}"
+
+domino_oidc_provider_federation_enabled: true
+
+domino_oidc_provider_web_enabled: true
+
+domino_oidc_provider_nomad_enabled: "{{ 'startcloud.hcl_roles.domino_nomadweb' in (enabled_roles | default([])) }}"
+domino_oidc_provider_verse_enabled: "{{ 'startcloud.hcl_roles.domino_verse' in (enabled_roles | default([])) }}"
+domino_oidc_provider_leap_enabled: "{{ 'startcloud.hcl_roles.domino_leap' in (enabled_roles | default([])) }}"
+
+domino_oidc_web_apps_use_unified_registered_client: true
+
+domino_oidc_hostname: auth
+domino_oidc_install_proxy_url: "{{ domino_oidc_hostname }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+domino_oidc_client_id: "{{ settings.hostname }}_{{ settings.domain | regex_replace('\\.', '_') }}_client_id"
+domino_oidc_client_secret: "{{ lookup('ansible.builtin.password', '/dev/null', seed=inventory_hostname) }}"
+
+domino_oidc_provider_login_form: "$$LoginUserForm"
+domino_oidc_provider_login_form_db: domcfg.nsf
+domino_oidc_provider_web_home_url: "/names.nsf?open"
+domino_oidc_trusted_roots: ""
+domino_oidc_auth_type: "B"
+#None|N
+#Client secret basic|B
+#Client secret post|P
+#Private key JWT|J
+
+domino_oidc_simplify_redirect_url: "1"
+domino_oidc_bearer_options: "0"
+domino_oidc_bearer_custom_claim_names: ""
+domino_oidc_bearer_alternate_audiences: ""
+domino_oidc_bearer_allowed_client_ids: ""
+domino_oidc_log_level: "3" #1 Minimal, 2 Standard, 3 verbose
+
+domino_oidc_external_providers:
+  - name: null
+    base_url: null
+    client_id: null
+    client_secret: null

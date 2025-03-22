@@ -1,0 +1,41 @@
+{
+	"title": "Gathering the OIDC Registered Clients for Unified Clients",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 1. Export original data ---",
+			"databases": [
+				{
+					"action": "export",
+					"filePath": "idpcat.nsf",
+					"documents": [
+						{
+							"action": "export",
+							"filePath": "JavaAddin/Genesis/jsonresponse/oidc_registered_clients_for_verse_name.txt",
+							"search": {
+							   "formula":"Form=\"RegisteredOAuthClient\" & RC_client_id=\"{{ domino_oidc_client_id }}\"",
+                                        "number":0
+							},
+							"evaluate": "\"RC_Name=\"+@Implode(RC_Name)"
+						}
+					]
+				},
+				{
+					"action": "export",
+					"filePath": "idpcat.nsf",
+					"documents": [
+						{
+							"action": "export",
+							"filePath": "JavaAddin/Genesis/jsonresponse/oidc_registered_clients_for_verse_redirect_uris.txt",
+							"search": {
+							   "formula":"Form=\"RegisteredOAuthClient\" & RC_client_id=\"{{ domino_oidc_client_id }}\"",
+                                        "number":0
+							},
+							"evaluate": "\"RC_redirect_uris=\"+@Implode(RC_redirect_uris)"
+						}
+					]
+				}
+			]
+		}
+	]
+}

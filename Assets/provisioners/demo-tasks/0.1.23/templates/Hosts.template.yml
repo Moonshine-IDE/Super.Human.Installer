@@ -226,11 +226,6 @@ hosts:
 
       # Domino OIDC Configurations
       domino_oidc_debug: false
-      domino_oidc_provider_enabled: true
-      domino_oidc_provider_federation_enabled: true
-      domino_oidc_provider_nomad_enabled: true
-      domino_oidc_provider_verse_enabled: true
-      domino_oidc_provider_web_enabled: true
 
       user_safe_id: ::USER_SAFE_ID::
 
@@ -278,11 +273,15 @@ hosts:
       nomadweb_hash: ::NOMADWEB_HASH::
       nomadweb_archive: ::NOMADWEB_INSTALLER::
       nomadweb_version: ::NOMADWEB_VERSION::
+      nomad_hotfix_archive: ::NOMADWEB_HOTFIX_INSTALLER:: ### NEW VARIABLES NEEDED FOR DOMINO HOTFIX, Default to False, until the HF button is added in SHI
+      nomad_hotfix_version: ::NOMADWEB_VERSION_HOTFIX_INSTALL:: # "HF1"
+      nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
 
       # Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
       traveler_archive: ::TRAVELER_INSTALLER::
       traveler_base_version: ::TRAVELER_INSTALLER_VERSION::
+      traveler_fixpack_install: ::TRAVELER_FP_INSTALL:: ## NEW VARIABLE, Traveler now fully supprots fixpacks
       traveler_fixpack_archive: ::TRAVELER_FP_INSTALLER::
       traveler_fixpack_version: ::TRAVELER_FP_INSTALLER_VERSION::
 
@@ -338,6 +337,9 @@ hosts:
       - name: startcloud.hcl_roles.domino_java_app_example
         vars:
           run_tasks: true
+      - name: startcloud.hcl_roles.domino_oidc
+        vars:
+          run_tasks: ::ROLE_OIDC:: # Default to true
       - name: startcloud.hcl_roles.domino_leap
         vars:
           run_tasks: ::ROLE_LEAP::
@@ -374,3 +376,5 @@ hosts:
         vars:
           run_tasks: ::ROLE_STARTCLOUD_VAGRANT_README::
       - name: startcloud.startcloud_roles.lockdown
+        vars:
+          run_tasks: true

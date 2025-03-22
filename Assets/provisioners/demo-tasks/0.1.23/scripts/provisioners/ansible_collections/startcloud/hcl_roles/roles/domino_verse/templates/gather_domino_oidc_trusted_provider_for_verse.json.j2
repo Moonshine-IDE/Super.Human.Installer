@@ -1,0 +1,26 @@
+{
+	"title": "Updating the OIDC Trusted Provider",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 1. Export original data ---",
+			"databases": [
+				{
+					"action": "export",
+					"filePath": "idpcat.nsf",
+					"documents": [
+						{
+							"action": "export",
+							"filePath": "JavaAddin/Genesis/jsonresponse/oidc_hostnames_for_verse.txt",
+							"search": {
+							   "formula":"Form=\"OIDCProvider\" & OIDCProviderName=\"Domino OIDC Provider\"",
+                                        "number":0
+							},
+							"evaluate": "\"OIDCHostname=\"+@Implode(OIDCHostname)"
+						}
+					]
+				}
+			]
+		}
+	]
+}

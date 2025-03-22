@@ -4,380 +4,451 @@
   when: run_tasks
   block:
     -
-      name: "Creating installation directories for NomadWeb"
-      ansible.builtin.file:
-        mode: '0755'
-        path: "{{ item }}"
-        state: directory
-      with_items:
-        - "{{ installer_dir }}/nomadweb/archives"
-        - "{{ installer_dir }}/nomadweb/NomadWeb"
-    
-    -
-      name: "Checking if NomadWeb is installed by provisioner: {{ nomadweb_version }}"
+      name: "Checking if Nomad is installed by provisioner: {{ nomadweb_version }}"
       register: nomadweb_installed_check
       ansible.builtin.stat:
         path: "{{ completed_dir }}/nomadweb_install"
         get_md5: false
 
     -
-      name: "Checking if NomadWeb is installed (as part of Domino 14 installation)"
-      register: nomadweb_installed_via_domino_check
-      ansible.builtin.stat:
-        path: "{{ domino_install_dir }}/nomad-server-version.txt"
-        get_md5: false
-
-    -
-      name: "Reading NomadWeb version from Domino installation"
-      when: nomadweb_installed_via_domino_check.stat.exists
-      ansible.builtin.slurp:
-        src: "{{ domino_install_dir }}/nomad-server-version.txt"
-      register: nomadweb_version_content
-
-    -
-      name: "Extracting NomadWeb version number"
-      when: nomadweb_installed_via_domino_check.stat.exists
-      ansible.builtin.set_fact:
-        nomadweb_domino_installed_version: "{{ (nomadweb_version_content.content | b64decode | regex_replace('^.*?-(.*)$', '\\1')).strip() }}"
-
-    -
-      name: "Checking if the NomadWeb installer is at nomadweb/archives/{{ nomadweb_archive }}"
-      register: nomad_archive_check
-      ansible.builtin.stat:
-        path: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
-        get_md5: false
-    
-    -
-      name: "Downloading NomadWeb from {{ domino_installer_base_url }}"
-      register: nomadwebresult
-      until: "nomadwebresult is not failed"
-      retries: 3
-      ansible.builtin.get_url:
-        mode: '0755'
-        validate_certs: false
-        url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ nomadweb_archive }}"
-        dest: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
-        username: "{{ domino_installer_url_user }}"
-        password: "{{ secrets.domino_installer_url_pass }}"
-      when: >
-        not nomad_archive_check.stat.exists and 
-        not nomadweb_installed_check.stat.exists and 
-        (
-          domino_major_version is version('14', '<') or 
-          (
-            nomadweb_installed_via_domino_check.stat.exists and 
-            nomadweb_version is version(nomadweb_domino_installed_version, '>')
-          )
-        )
-    
-    -
-      name: "Extracting NomadWeb from {{ nomadweb_archive }}"
-      when: >
-        not nomadweb_installed_check.stat.exists and 
-        (
-          domino_major_version is version('14', '<') or 
-          (
-            nomadweb_installed_via_domino_check.stat.exists and 
-            nomadweb_version is version(nomadweb_domino_installed_version, '>')
-          )
-        )
-      ansible.builtin.unarchive:
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
-        dest: "{{ installer_dir }}/nomadweb/NomadWeb"
-        creates: "{{ installer_dir }}/nomadweb/NomadWeb/nwsp-linux"
-        remote_src: true
-    
-    -
-      name: "Copying Nomadweb installer files to {{ domino_install_dir }}"
-      when: >
-        not nomadweb_installed_check.stat.exists and 
-        (
-          domino_major_version is version('14', '<') or 
-          (
-            nomadweb_installed_via_domino_check.stat.exists and 
-            nomadweb_version is version(nomadweb_domino_installed_version, '>')
-          )
-        )
-      ansible.builtin.copy:
-        mode: "a+x"
-        src: "{{ installer_dir }}/nomadweb/NomadWeb/"
-        dest: "{{ domino_install_dir }}"
-    
-    -
-      name: "Configuring NomadWeb"
-      when: not nomadweb_installed_check.stat.exists and domino_nomadweb_use_proxy_url
-      ansible.builtin.shell: "{{ item }}"
-      become: true
-      args:
-        executable: "/bin/bash"
-      register: nomadweb_config_nomad_status
-      changed_when: false
-      with_items:
-        - 'domino cmd "set config NOMAD_WEB_HOST={{ domino_nomadweb_proxy_url }}" 20'
-    
-    -
-      name: "Configuring NomadWeb"
-      when: not nomadweb_installed_check.stat.exists and not domino_nomadweb_use_proxy_url
-      ansible.builtin.shell: "{{ item }}"
-      become: true
-      args:
-        executable: "/bin/bash"
-      register: nomadweb_config_status
-      changed_when: false
-      with_items:
-        - 'domino cmd "set config NOMAD_WEB_HOST={{ settings.hostname }}.{{ settings.domain }}" 20'
-    
-    -
-      name: "Configuring NomadWeb"
+      name: "Installing Nomad"
       when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.template:
-        dest: "{{ domino_home_dir }}/nomad-config.yml"
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "nomad-config.yml.j2"
-
-    -
-      name: "Configuring NomadWeb App Switche"
-      when: nomadweb_app_switcher_enabled
       block:
         -
-          name: "Configuring NomadWeb App Switcher"
-          when: not nomadweb_installed_check.stat.exists
-          ansible.builtin.template:
-            dest: "{{ domino_install_dir }}/nomad-files/config/app-config.json"
+          name: "Creating installation directories for Nomad"
+          ansible.builtin.file:
+            mode: '0755'
+            path: "{{ item }}"
+            state: directory
+          with_items:
+            - "{{ installer_dir }}/nomadweb/archives"
+            - "{{ installer_dir }}/nomadweb/NomadWeb"
+            - "{{ installer_dir }}/nomadweb/NomadWebHF"
+
+        -
+          name: "Checking if Nomad is installed (as part of Domino 14 installation)"
+          register: nomadweb_installed_via_domino_check
+          ansible.builtin.stat:
+            path: "{{ domino_install_dir }}/nomad-server-version.txt"
+            get_md5: false
+
+        -
+          name: "Reading Nomad version from Domino installation"
+          when: nomadweb_installed_via_domino_check.stat.exists
+          ansible.builtin.slurp:
+            src: "{{ domino_install_dir }}/nomad-server-version.txt"
+          register: nomadweb_version_content
+
+        -
+          name: "Extracting Nomad version number"
+          when: nomadweb_installed_via_domino_check.stat.exists
+          ansible.builtin.set_fact:
+            nomadweb_domino_installed_version: "{{ (nomadweb_version_content.content | b64decode | regex_replace('^.*?-(.*)$', '\\1')).strip() }}"
+
+        -
+          name: "Checking if the Nomad installer is at nomadweb/archives/{{ nomadweb_archive }}"
+          register: nomad_archive_check
+          ansible.builtin.stat:
+            path: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
+            get_md5: false
+
+        -
+          name: "Downloading Nomad from {{ domino_installer_base_url }}"
+          register: nomadwebresult
+          until: "nomadwebresult is not failed"
+          retries: 3
+          ansible.builtin.get_url:
+            mode: '0755'
+            validate_certs: false
+            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ nomadweb_archive }}"
+            dest: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
+            username: "{{ domino_installer_url_user }}"
+            password: "{{ secrets.domino_installer_url_pass }}"
+          when: >
+            not nomad_archive_check.stat.exists and 
+            (
+              domino_major_version is version('14', '<') or 
+              (
+                nomadweb_installed_via_domino_check.stat.exists and 
+                nomadweb_version is version(nomadweb_domino_installed_version, '>')
+              )
+            )
+
+        -
+          name: "Extracting Nomad from {{ nomadweb_archive }}"
+          when: >
+            (
+              domino_major_version is version('14', '<') or 
+              (
+                nomadweb_installed_via_domino_check.stat.exists and 
+                nomadweb_version is version(nomadweb_domino_installed_version, '>')
+              )
+            )
+          ansible.builtin.unarchive:
             mode: "a+x"
             owner: "{{ domino_user }}"
             group: "{{ domino_group }}"
-            src: "app-config.json.j2"
+            src: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
+            dest: "{{ installer_dir }}/nomadweb/NomadWeb"
+            creates: "{{ installer_dir }}/nomadweb/NomadWeb/nwsp-linux"
+            remote_src: true
 
         -
-          name: "Creating Installation Directories"
-          ansible.builtin.file:
-            path: "{{ item }}"
-            state: directory
+          name: "Copying Nomad installer files to {{ domino_install_dir }}"
+          when: >
+            (
+              domino_major_version is version('14', '<') or 
+              (
+                nomadweb_installed_via_domino_check.stat.exists and 
+                nomadweb_version is version(nomadweb_domino_installed_version, '>')
+              )
+            )
+          ansible.builtin.copy:
+            mode: "a+x"
+            src: "{{ installer_dir }}/nomadweb/NomadWeb/"
+            dest: "{{ domino_install_dir }}"
+
+        -
+          name: "Configuring Nomad"
+          when: domino_nomadweb_use_proxy_url
+          ansible.builtin.shell: "{{ item }}"
+          become: true
+          args:
+            executable: "/bin/bash"
+          register: nomadweb_config_nomad_status
+          changed_when: false
+          with_items:
+            - 'domino cmd "set config NOMAD_WEB_HOST={{ domino_nomadweb_proxy_url }}" 20'
+
+        -
+          name: "Configuring Nomad"
+          when: not domino_nomadweb_use_proxy_url
+          ansible.builtin.shell: "{{ item }}"
+          become: true
+          args:
+            executable: "/bin/bash"
+          register: nomadweb_config_status
+          changed_when: false
+          with_items:
+            - 'domino cmd "set config NOMAD_WEB_HOST={{ settings.hostname }}.{{ settings.domain }}" 20'
+
+        -
+          name: "Installing Nomad Hotfix"
+          when: not nomadweb_installed_check.stat.exists and nomad_hotfix_install
+          block:
+            -
+              name: "Downloading Nomad Hotfix from {{ domino_installer_base_url }}"
+              register: nomadwebresulthotfix
+              until: "nomadwebresulthotfix is not failed"
+              retries: 3
+              ansible.builtin.get_url:
+                mode: '0755'
+                validate_certs: false
+                url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ nomad_hotfix_archive }}"
+                dest: "{{ installer_dir }}/nomadweb/archives/{{ nomad_hotfix_archive }}"
+                username: "{{ domino_installer_url_user }}"
+                password: "{{ secrets.domino_installer_url_pass }}"
+              when: >
+                not nomad_archive_check.stat.exists and
+                (
+                  domino_major_version is version('14', '<') or 
+                  (
+                    nomadweb_installed_via_domino_check.stat.exists and 
+                    nomadweb_version is version(nomadweb_domino_installed_version, '>')
+                  )
+                )
+    
+            -
+              name: "Extracting Nomad Hotfix from {{ nomad_hotfix_archive }}"
+              when: >
+                (
+                  domino_major_version is version('14', '<') or 
+                  (
+                    nomadweb_installed_via_domino_check.stat.exists and 
+                    nomadweb_version is version(nomadweb_domino_installed_version, '>')
+                  )
+                )
+              ansible.builtin.unarchive:
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "{{ installer_dir }}/nomadweb/archives/{{ nomad_hotfix_archive }}"
+                dest: "{{ installer_dir }}/nomadweb/NomadWebHF"
+                creates: "{{ installer_dir }}/nomadweb/NomadWebHF/nwsp-linux"
+                remote_src: true
+    
+            -
+              name: "Copying Nomad installer files to {{ domino_install_dir }}"
+              when: >
+                (
+                  domino_major_version is version('14', '<') or 
+                  (
+                    nomadweb_installed_via_domino_check.stat.exists and 
+                    nomadweb_version is version(nomadweb_domino_installed_version, '>')
+                  )
+                )
+              ansible.builtin.copy:
+                mode: "a+x"
+                src: "{{ installer_dir }}/nomadweb/NomadWebHF/"
+                dest: "{{ domino_install_dir }}"
+
+        -
+          name: "Configuring Nomad"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/nomad-config.yml"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "nomad-config.yml.j2"
+
+        -
+          name: "Configuring Nomad App Switcher"
+          when: nomadweb_app_switcher_enabled
+          block:
+            -
+              name: "Configuring Nomad App Switcher"
+              ansible.builtin.template:
+                dest: "{{ domino_install_dir }}/nomad-files/config/app-config.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "app-config.json.j2"
+
+            -
+              name: "Creating Installation Directories"
+              ansible.builtin.file:
+                path: "{{ item }}"
+                state: directory
+                mode: '0755'
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+              with_items:
+                - "{{ domino_install_dir }}/nomad-files/icons"
+
+        -
+          name: "Outputting Nomad Configuration Status Logs"
+          when: ( nomadweb_debug or debug_all )
+          ansible.builtin.debug:
+            var: nomadweb_config_status
+
+        -
+          name: "Outputting Nomad Configuration Status Logs"
+          when: ( nomadweb_debug or debug_all )
+          ansible.builtin.debug:
+            var: nomadweb_config_nomad_status
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_nomad_shutdown
+          until: domino_service_stopped_nomad_shutdown.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: 30
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          notify: Domino Started
+          register: domino_service_start_details_nomad
+          until: domino_service_start_details_nomad.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+
+        -
+          name: "Checking Nomad is listening on port {{ domino_nomadweb_port_forwards[0].guest }}"
+          ansible.builtin.wait_for:
+            port: "{{ domino_nomadweb_port_forwards[0].guest }}"
+            delay: 15
+            timeout: 360
+            msg: "Timeout waiting for {{ domino_nomadweb_port_forwards[0].guest }} to respond"
+          register: port_check
+
+        -
+          name: "Check if Super.Human.Portal nomadhelper.html exists"
+          register: shp_nomadhelper_check
+          ansible.builtin.stat:
+            path: "{{ domino_home_dir }}/domino/html/Super.Human.Portal/js-release/resources/nomadhelper.html"
+            get_md5: false
+
+        -
+          name: "Configuring Nomad Helper for Super.Human.Portal from SHP"
+          when: shp_nomadhelper_check.stat.exists
+          ansible.builtin.copy:
+            dest: "{{ domino_install_dir }}/nomad-files/nomadhelper.html"
             mode: '0755'
             owner: "{{ domino_user }}"
             group: "{{ domino_group }}"
-          with_items:
-            - "{{ domino_install_dir }}/nomad-files/icons"
+            src: "{{ domino_home_dir }}/domino/html/Super.Human.Portal/js-release/resources/nomadhelper.html"
 
-    -
-      name: "Outputting NomadWeb Configuration Status Logs"
-      when: ( nomadweb_debug or debug_all ) and not nomadweb_installed_check.stat.exists
-      ansible.builtin.debug:
-        var: nomadweb_config_status
-
-    -
-      name: "Outputting NomadWeb Configuration Status Logs"
-      when: ( nomadweb_debug or debug_all ) and not nomadweb_installed_check.stat.exists
-      ansible.builtin.debug:
-        var: nomadweb_config_nomad_status
-
-    -
-      name: "Setting up Domino OIDC"
-      when: 
-        - domino_oidc_provider_enabled
-        - nomadweb_version is version('1.0.13', '>=')
-        - domino_major_version is version('14', '>=')
-        #- (domino_fixpack_version | replace('FP', '') | int) >= 2
-      block:
-        #-
-        #  name: "Reading existing OIDC config"
-        #  ansible.builtin.slurp:
-        #    src: "{{ domino_home_dir }}/oidcinfo.json"
-        #  register: oidc_config
-#
-        #-
-        #  name: "Updating OIDC config with new client"
-        #  vars:
-        #    current_config: "{{ oidc_config.content | b64decode | from_json }}"
-        #  ansible.builtin.copy:
-        #    dest: "{{ domino_home_dir }}/oidcinfo.json"
-        #    content: "{{ {'provider_info': current_config.provider_info, 'registered_clients': current_config.registered_clients + [nomad_client_config]} | to_nice_json }}"
-        #    mode: '0644'
-
-        ## Input the value bearer.vault.<Vault server hostname> into the Bearer token (JWT) approved OIDC provider configurations field
         -
-          name: "Handing IDVault JWT Bearer Token Modifications JSON to Genesis"
-          when: not nomadweb_installed_check.stat.exists
+          name: "Configuring Nomad Helper for Super.Human.Portal from template"
+          when: shp_nomadhelper_check.stat.exists
           ansible.builtin.template:
-            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_federated_nomad_idvault_bearer_configuration.json"
+            dest: "{{ domino_install_dir }}/nomad-files/nomadhelper.html"
+            mode: '0755'
+            owner: "root"
+            src: "nomadhelper.html.j2"
+
+        -
+          name: "Handing Nomad Helper templated update_nomad_helper_url JSON to Genesis"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_nomad_helper_url.json"
             mode: "a+x"
             owner: "{{ domino_user }}"
             group: "{{ domino_group }}"
-            src: "domino_oidc_federated_nomad_idvault_bearer_configuration.json.j2"
-        
+            src: "update_nomad_helper_url.json.j2"
+
         -
-          name: "Waiting until Genesis returns OK after processing domino_oidc_federated_nomad_idvault_bearer_configuration"
-          when: not nomadweb_installed_check.stat.exists
+          name: "Waiting until Genesis returns OK after processing update_nomad_helper_url"
           ansible.builtin.wait_for:
-            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_nomad_idvault_bearer_configuration.json"
-        
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_url.json"
+
         -
-          name: "Checking if Nomad Helper domino_oidc_federated_nomad_idvault_bearer_configuration JSON applied succesfully"
-          when: not nomadweb_installed_check.stat.exists
+          name: "Checking if Nomad Helper update_nomad_helper_url JSON applied succesfully"
           ansible.builtin.lineinfile:
-            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_nomad_idvault_bearer_configuration.json"
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_url.json"
             line: "OK"
             state: present
           check_mode: true
           register: presence
           failed_when: presence is changed
 
-        ## Set Bearer token (JWT) to Yes under the Additional ID Download authentication mechanisms section. 
-        #-
-        #  name: "Handing IDVault Bearer Secuirty Policy Settings Modifications JSON to Genesis"
-        #  when: not nomadweb_installed_check.stat.exists
-        #  ansible.builtin.template:
-        #    dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_federated_nomad_idvault_bearer_policy_settings.json"
-        #    mode: "a+x"
-        #    owner: "{{ domino_user }}"
-        #    group: "{{ domino_group }}"
-        #    src: "domino_oidc_federated_nomad_idvault_bearer_policy_settings.json.j2"
-        #
-        #-
-        #  name: "Waiting until Genesis returns OK after processing domino_oidc_federated_nomad_idvault_bearer_policy_settings"
-        #  when: not nomadweb_installed_check.stat.exists
-        #  ansible.builtin.wait_for:
-        #    path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_nomad_idvault_bearer_policy_settings.json"
-        #
-        #-
-        #  name: "Checking if Nomad Helper domino_oidc_federated_nomad_idvault_bearer_policy_settings JSON applied succesfully"
-        #  when: not nomadweb_installed_check.stat.exists
-        #  ansible.builtin.lineinfile:
-        #    path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_nomad_idvault_bearer_policy_settings.json"
-        #    line: "OK"
-        #    state: present
-        #  check_mode: true
-        #  register: presence
-        #  failed_when: presence is changed
+        -
+          name: "Handing Nomad Helper templated update_nomad_helper_acl JSON to Genesis"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_nomad_helper_acl.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "update_nomad_helper_acl.json.j2"
 
-    -
-      name: "Stopping Domino for Changes to take effect"
-      when: not nomadweb_installed_check.stat.exists
-      become: true
-      ansible.builtin.service:
-        name: domino
-        state: stopped
-        enabled: true
-      register: domino_service_stop_details
-      until: domino_service_stop_details.state == "stopped"
-      retries: 3
-      delay: 5
-    
-    -
-      name: "Starting Domino for Changes to take effect"
-      become: true
-      when: not nomadweb_installed_check.stat.exists
-      notify: Domino Started
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
-      register: domino_service_start_details
-      retries: 3
-      delay: 5
-      until: domino_service_start_details.state == "started"
-    
-    -
-      name: "Checking NomadWeb is listening on port {{ domino_nomadweb_port_forwards[0].guest }}"
-      ansible.builtin.wait_for:
-        port: "{{ domino_nomadweb_port_forwards[0].guest }}"
-        delay: 15
-        timeout: 360
-        msg: "Timeout waiting for {{ domino_nomadweb_port_forwards[0].guest }} to respond"
-      register: port_check
-    
-    -
-      name: "Check if Super.Human.Portal nomadhelper.html exists"
-      register: shp_nomadhelper_check
-      ansible.builtin.stat:
-        path: "{{ domino_home_dir }}/domino/html/Super.Human.Portal/js-release/resources/nomadhelper.html"
-        get_md5: false
+        -
+          name: "Waiting until Genesis returns OK after processing update_nomad_helper_acl"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_acl.json"
 
-    -
-      name: "Configuring NomadWeb Helper for Super.Human.Portal from SHP"
-      when: not nomadweb_installed_check.stat.exists and shp_nomadhelper_check.stat.exists
-      ansible.builtin.copy:
-        dest: "{{ domino_install_dir }}/nomad-files/nomadhelper.html"
-        mode: '0755'
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "{{ domino_home_dir }}/domino/html/Super.Human.Portal/js-release/resources/nomadhelper.html"
+        -
+          name: "Checking if Nomad Helper update_nomad_helper_acl JSON applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_acl.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence
+          failed_when: presence is changed
 
-    -
-      name: "Configuring NomadWeb Helper for Super.Human.Portal from template"
-      when: not nomadweb_installed_check.stat.exists and not shp_nomadhelper_check.stat.exists
-      ansible.builtin.template:
-        dest: "{{ domino_install_dir }}/nomad-files/nomadhelper.html"
-        mode: '0755'
-        owner: "root"
-        src: "nomadhelper.html.j2"
+        -
+          name: "Handing Nomad Helper templated domino_oidc_federated_nomad_registered_client JSON to Genesis"
+          when: domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and domino_major_version >= 14
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_federated_nomad_registered_client.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "domino_oidc_federated_nomad_registered_client.json.j2"
 
-    -
-      name: "Handing Nomad Helper templated update_nomad_helper_url JSON to Genesis"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.template:
-        dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_nomad_helper_url.json"
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "update_nomad_helper_url.json.j2"
-    
-    -
-      name: "Waiting until Genesis returns OK after processing update_nomad_helper_url"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.wait_for:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_url.json"
-    
-    -
-      name: "Checking if Nomad Helper update_nomad_helper_url JSON applied succesfully"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.lineinfile:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_url.json"
-        line: "OK"
-        state: present
-      check_mode: true
-      register: presence
-      failed_when: presence is changed
-    
-    -
-      name: "Handing Nomad Helper templated update_nomad_helper_acl JSON to Genesis"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.template:
-        dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/update_nomad_helper_acl.json"
-        mode: "a+x"
-        owner: "{{ domino_user }}"
-        group: "{{ domino_group }}"
-        src: "update_nomad_helper_acl.json.j2"
-    
-    -
-      name: "Waiting until Genesis returns OK after processing update_nomad_helper_acl"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.wait_for:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_acl.json"
-    
-    -
-      name: "Checking if Nomad Helper update_nomad_helper_acl JSON applied succesfully"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.lineinfile:
-        path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/update_nomad_helper_acl.json"
-        line: "OK"
-        state: present
-      check_mode: true
-      register: presence
-      failed_when: presence is changed
-    
-    -
-      name: "Configuring NomadWeb and Starting Service"
-      when: not nomadweb_installed_check.stat.exists
-      ansible.builtin.file:
-        mode: '0644'
-        path: "{{ item }}"
-        state: touch
-      with_items:
-        - "{{ completed_dir }}/nomadweb_install"
+        -
+          name: "Waiting until Genesis returns OK after processing domino_oidc_federated_nomad_registered_client"
+          when: domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and domino_major_version >= 14
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_nomad_registered_client.json"
+
+        -
+          name: "Checking if Nomad Helper domino_oidc_federated_nomad_registered_client JSON applied succesfully"
+          when: domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and domino_major_version >= 14
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_nomad_registered_client.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_nomad
+          failed_when: presence_nomad is changed
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_nomad_shutdown_2
+          until: domino_service_stopped_nomad_shutdown_2.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: 30
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          notify: Domino Started
+          register: domino_service_start_details_nomad_2
+          until: domino_service_start_details_nomad_2.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+
+        -
+          name: "Checking Nomad is listening on port {{ domino_nomadweb_port_forwards[0].guest }}"
+          ansible.builtin.wait_for:
+            port: "{{ domino_nomadweb_port_forwards[0].guest }}"
+            delay: 15
+            timeout: 360
+            msg: "Timeout waiting for {{ domino_nomadweb_port_forwards[0].guest }} to respond"
+          register: port_check_2
+
+        -
+          name: "Configuring Nomad and Starting Service"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/nomadweb_installed"
