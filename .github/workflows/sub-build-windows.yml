@@ -114,7 +114,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.73
           pushd .
-          cd C:\hostedtoolcache\windows\haxe\${{env.haxe_version}}\x64\lib\hxcpp\git\tools\hxcpp
+          cd D:\github\runners\Super.Human.Installer\_work\_tool\haxe\${{env.haxe_version}}\x64\lib\hxcpp\git\tools\hxcpp
           haxe compile.hxml
           popd
           haxelib install lime 8.2.2
