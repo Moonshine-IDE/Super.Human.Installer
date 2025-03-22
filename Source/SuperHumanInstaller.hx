@@ -197,9 +197,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverRolesCollection = [
 
 			new ServerRoleImpl( "Domino", LanguageManager.getInstance().getString( 'rolepage.roles.domino.desc' ), _defaultRoles.get( "domino" ), dominoHashes, dominoHotFixHashes, dominoFixPacksHashes, "(Domino_14.0_Linux_English.tar)" ),
-						new ServerRoleImpl( "NomadWeb", LanguageManager.getInstance().getString( 'rolepage.roles.nomadweb.desc' ), _defaultRoles.get( "nomadweb" ), nomadWebHashes, "(nomad-server-1.0.14-linux.tar.gz)" ),
-			new ServerRoleImpl( "Leap (formerly Volt)", LanguageManager.getInstance().getString( 'rolepage.roles.leap.desc' ), _defaultRoles.get( "leap" ), leapHashes, "(Leap-1.0.5.zip)" ),
-			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), travelerHashes, "(Traveler_14.0.0FP1_Linux_ML.tar.gz)" ),
+						new ServerRoleImpl( "NomadWeb", LanguageManager.getInstance().getString( 'rolepage.roles.nomadweb.desc' ), _defaultRoles.get( "nomadweb" ), nomadWebHashes, "(HCL_Nomad_server_1.0.15-IF1_linux.tar.gz)" ),
+			new ServerRoleImpl( "Leap (formerly Volt)", LanguageManager.getInstance().getString( 'rolepage.roles.leap.desc' ), _defaultRoles.get( "leap" ), leapHashes, "(hcl.dleap-1.1.7.29.zip)" ),
+			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), travelerHashes, "(Traveler_14.0.0FP2_Linux_ML.tar.gz)" ),
 			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), verseHashes, "(HCL_Verse_3.0.0.zip)" ),
 			new ServerRoleImpl( "AppDev Pack for Node.js", LanguageManager.getInstance().getString( 'rolepage.roles.appdevpack.desc' ), _defaultRoles.get( "appdevpack" ), appdevpackHashes, "(domino-appdev-pack-1.0.15.tgz)" ),
 			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), restApiHashes, "(Domino_REST_API_V1_Installer.tar.gz)" ),

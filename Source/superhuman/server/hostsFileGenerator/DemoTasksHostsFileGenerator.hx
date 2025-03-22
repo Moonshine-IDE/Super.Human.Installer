@@ -279,10 +279,14 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
             NOMADWEB_HASH: defaultProvisionerFieldValue,
             NOMADWEB_INSTALLER: defaultProvisionerFieldValue,
             NOMADWEB_VERSION: defaultProvisionerFieldValue,
+            NOMADWEB_HOTFIX_INSTALLER: defaultProvisionerFieldValue,
+            NOMADWEB_VERSION_HOTFIX_INSTALL: defaultProvisionerFieldValue,
+            NOMADWEB_HOTFIX_INSTALL: defaultProvisionerFieldValue,
             
             //Traveler Variables
             TRAVELER_INSTALLER: defaultProvisionerFieldValue,
             TRAVELER_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            TRAVELER_FP_INSTALL: defaultProvisionerFieldValue,
             TRAVELER_FP_INSTALLER: defaultProvisionerFieldValue,
             TRAVELER_FP_INSTALLER_VERSION: defaultProvisionerFieldValue,
             
@@ -316,7 +320,8 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
             ROLE_MARIADB: defaultRoleFieldValue,
             ROLE_DOCKER: defaultRoleFieldValue,
             ROLE_JEDI: defaultRoleFieldValue,
-            
+            ROLE_OIDC: true,
+
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,
         };
