@@ -155,11 +155,11 @@ jobs:
           path: ${{ env.bin_path }}
 
       - name: Print NSIS version
-        run: makensis -version
+        run: "& 'C:\Program Files\nsis-3.11\makensis.exe' -version"
 
       - name: Create NSIS installer
         run: >
-          makensis 
+          & 'C:\Program Files\nsis-3.11\makensis.exe'
           /DPRODUCT_NAME=${{ env.app_name }}
           /DPRODUCT_VERSION=${{ inputs.version }}
           /DPRODUCT_PUBLISHER="Prominic.NET"
