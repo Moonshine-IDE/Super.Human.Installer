@@ -242,9 +242,35 @@ class DynamicConfigPage extends Page {
     public function setProvisionerDefinition(definition:ProvisionerDefinition) {
         _provisionerDefinition = definition;
         
+        // Log the provisioner definition to help with debugging
+        Logger.info('Setting provisioner definition: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
+        
+        if (definition.metadata != null) {
+            Logger.info('Provisioner metadata: name=${definition.metadata.name}, type=${definition.metadata.type}');
+            
+            if (definition.metadata.configuration != null) {
+                var basicFieldCount = definition.metadata.configuration.basicFields != null ? 
+                    definition.metadata.configuration.basicFields.length : 0;
+                var advancedFieldCount = definition.metadata.configuration.advancedFields != null ? 
+                    definition.metadata.configuration.advancedFields.length : 0;
+                
+                Logger.info('Configuration fields: basic=${basicFieldCount}, advanced=${advancedFieldCount}');
+            } else {
+                Logger.warning('No configuration found in provisioner metadata');
+            }
+            
+            if (definition.metadata.roles != null) {
+                Logger.info('Roles defined: ${definition.metadata.roles.length}');
+            } else {
+                Logger.warning('No roles found in provisioner metadata');
+            }
+        } else {
+            Logger.warning('No metadata found in provisioner definition');
+        }
+        
         // Clear existing dynamic fields
         for (row in _dynamicRows) {
-            if (_form.contains(row)) {
+            if (_form != null && _form.contains(row)) {
                 _form.removeChild(row);
             }
         }
@@ -258,8 +284,11 @@ class DynamicConfigPage extends Page {
             
             // Add each field from the configuration
             for (field in _provisionerDefinition.metadata.configuration.basicFields) {
+                Logger.info('Adding field to form: ${field.name}, type: ${field.type}, label: ${field.label}');
                 _addDynamicField(field);
             }
+        } else {
+            Logger.warning('Unable to add dynamic fields - missing configuration or basicFields');
         }
     }
     

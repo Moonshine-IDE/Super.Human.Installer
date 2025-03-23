@@ -1353,9 +1353,25 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Get the provisioner definition for the custom provisioner
 		var provisionerDefinition = null;
 		var allProvisioners = ProvisionerManager.getBundledProvisioners(e.provisionerType);
-		if (allProvisioners.length > 0) {
+		
+		// If we have a specific service type data, use that to find the provisioner
+		if (e.serviceTypeData != null) {
+			Logger.info('${this}: Using service type data: ${e.serviceTypeData.value}, ${e.serviceTypeData.provisionerType}');
+			
+			// Find the provisioner that matches the service type data
+			for (provisioner in allProvisioners) {
+				if (provisioner.name == e.serviceTypeData.value) {
+					provisionerDefinition = provisioner;
+					Logger.info('${this}: Found matching provisioner: ${provisioner.name}');
+					break;
+				}
+			}
+		}
+		
+		// If we didn't find a specific provisioner, use the first one
+		if (provisionerDefinition == null && allProvisioners.length > 0) {
 			provisionerDefinition = allProvisioners[0];
-			Logger.info( '${this}: Using provisioner definition: ${provisionerDefinition.name}' );
+			Logger.info('${this}: Using first available provisioner: ${provisionerDefinition.name}');
 		}
 		
 		// Initialize the dynamic config page if it doesn't exist
