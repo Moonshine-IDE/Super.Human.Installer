@@ -450,7 +450,7 @@ class ProvisionerManager {
             var fileName = entry.fileName;
             
             // Skip directory entries
-            if (fileName.endsWith("/")) {
+            if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
                 var dirPath = Path.addTrailingSlash(directory) + fileName;
                 _createDirectoryRecursive(dirPath);
                 continue;
