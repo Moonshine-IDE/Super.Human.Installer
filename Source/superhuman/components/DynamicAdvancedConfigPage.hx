@@ -324,7 +324,7 @@ class DynamicAdvancedConfigPage extends Page {
                             // Set default value if provided
                             if (field.defaultValue != null) {
                                 for (i in 0...options.length) {
-                                    if (options[i].value == field.defaultValue) {
+                                    if (options[i][0] == field.defaultValue) {
                                         dropdown.selectedIndex = i;
                                         break;
                                     }
