@@ -55,6 +55,7 @@ import prominic.sys.applications.oracle.BridgedInterface;
 import prominic.sys.applications.oracle.VirtualBox;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
+import superhuman.managers.ProvisionerManager.ProvisionerField;
 import superhuman.server.Server;
 import superhuman.server.definitions.ProvisionerDefinition;
 
