@@ -118,37 +118,108 @@ class RolePage extends Page {
         if ( _listGroup != null) {
 
             _listGroup.removeChildren();
-
+            
+            // Check if this is a custom provisioner (not DemoTasks or AdditionalProvisioner)
+            var isCustomProvisioner = _server.provisioner.type != "demo-tasks" && 
+                                     _server.provisioner.type != "additional-provisioner" &&
+                                     _server.provisioner.type != "default";
+            
+            // Use custom roles only for custom provisioners
+            if (isCustomProvisioner) {
+                // Get the provisioner definition for the server
+                var provisionerDefinition = ProvisionerManager.getProvisionerDefinition(_server.provisioner.type, _server.provisioner.version);
+                
+                if (provisionerDefinition != null && 
+                    provisionerDefinition.metadata != null && 
+                    provisionerDefinition.metadata.roles != null && 
+                    provisionerDefinition.metadata.roles.length > 0) {
+                    
+                    var customRoles:Array<ServerRoleImpl> = [];
+                    
+                    // Create ServerRoleImpl objects from the provisioner.yml roles
+                    for (roleData in provisionerDefinition.metadata.roles) {
+                        // Check if this role already exists in the server's roles
+                        var existingRole:RoleData = null;
+                        for (r in _server.roles.value) {
+                            if (r.value == roleData.name) {
+                                existingRole = r;
+                                break;
+                            }
+                        }
+                        
+                        // If the role doesn't exist in the server's roles, create a new one
+                        if (existingRole == null) {
+                            existingRole = {
+                                value: roleData.name,
+                                enabled: roleData.defaultEnabled == true,
+                                files: {
+                                    installer: null,
+                                    installerFileName: null,
+                                    installerHash: null,
+                                    installerVersion: null,
+                                    hotfixes: [],
+                                    installerHotFixHash: null,
+                                    installerHotFixVersion: null,
+                                    fixpacks: [],
+                                    installerFixpackHash: null,
+                                    installerFixpackVersion: null
+                                }
+                            };
+                            
+                            // Add the new role to the server's roles
+                            _server.roles.value.push(existingRole);
+                        }
+                        
+                        // Create a ServerRoleImpl for the role
+                        var roleImpl = new ServerRoleImpl(
+                            roleData.label,
+                            roleData.description,
+                            existingRole,
+                            [], // No hashes for custom roles
+                            [], // No hotfix hashes
+                            [], // No fixpack hashes
+                            "" // No file hint
+                        );
+                        
+                        customRoles.push(roleImpl);
+                    }
+                    
+                    // Add the custom roles to the list
+                    for (i in customRoles) {
+                        var item = new RolePickerItem(i, _server);
+                        _listGroup.addChild(item);
+                        
+                        var line = new HLine();
+                        line.layoutData = new VerticalLayoutData(100);
+                        line.alpha = .5;
+                        _listGroup.addChild(line);
+                    }
+                    
+                    return; // Skip the default roles
+                }
+            }
+            
+            // Default behavior for built-in provisioners
             var coll = SuperHumanInstaller.getInstance().serverRolesCollection.copy();
 
-            for ( impl in coll ) {
-
-                for ( r in _server.roles.value ) {
-
-                    if ( r.value == impl.role.value ) {
-
+            for (impl in coll) {
+                for (r in _server.roles.value) {
+                    if (r.value == impl.role.value) {
                         impl.role = r;
-
                     }
-
                 }
-
             }
 
-            for ( i in coll ) {
-
-                var item = new RolePickerItem( i, _server );
-                _listGroup.addChild( item );
+            for (i in coll) {
+                var item = new RolePickerItem(i, _server);
+                _listGroup.addChild(item);
 
                 var line = new HLine();
-                line.layoutData = new VerticalLayoutData( 100 );
+                line.layoutData = new VerticalLayoutData(100);
                 line.alpha = .5;
-                _listGroup.addChild( line );
-
+                _listGroup.addChild(line);
             }
-
         }
-
     }
 
     function _buttonCloseTriggered( e:TriggerEvent ) {

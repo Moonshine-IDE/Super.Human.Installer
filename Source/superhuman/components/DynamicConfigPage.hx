@@ -219,6 +219,19 @@ class DynamicConfigPage extends Page {
             }
             
             Logger.info('${this}: Set provisioner dropdown with ${provisionerCollection.length} versions of type ${_server.provisioner.type}');
+            
+            // Get the provisioner definition for the current version
+            var provisionerDefinition = null;
+            if (selectedIndex >= 0) {
+                provisionerDefinition = provisionerCollection.get(selectedIndex);
+            } else if (provisionerCollection.length > 0) {
+                provisionerDefinition = provisionerCollection.get(0);
+            }
+            
+            // Set the provisioner definition to generate the form fields
+            if (provisionerDefinition != null) {
+                setProvisionerDefinition(provisionerDefinition);
+            }
         }
     }
     
@@ -513,6 +526,8 @@ class DynamicConfigPage extends Page {
     function _advancedLinkTriggered(e:MouseEvent) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
         evt.server = _server;
+        // Set the provisioner type to ensure it's handled as a custom provisioner
+        evt.provisionerType = _server.provisioner.type;
         this.dispatchEvent(evt);
     }
 
