@@ -52,6 +52,42 @@ import yaml.Yaml;
 import yaml.util.ObjectMap;
 
 /**
+ * Structure for a provisioner field definition
+ */
+typedef ProvisionerField = {
+    var name:String;
+    var label:String;
+    var type:String;
+    @:optional var placeholder:String;
+    @:optional var tooltip:String;
+    @:optional var required:Bool;
+    @:optional var validationKey:String;
+    @:optional var defaultValue:Dynamic;
+    @:optional var restrict:String;
+    @:optional var min:Float;
+    @:optional var max:Float;
+    @:optional var options:Array<Dynamic>;
+}
+
+/**
+ * Structure for provisioner configuration
+ */
+typedef ProvisionerConfiguration = {
+    @:optional var basicFields:Array<ProvisionerField>;
+    @:optional var advancedFields:Array<ProvisionerField>;
+}
+
+/**
+ * Structure for provisioner role definition
+ */
+typedef ProvisionerRole = {
+    var name:String;
+    var label:String;
+    var description:String;
+    @:optional var defaultEnabled:Bool;
+}
+
+/**
  * Structure for provisioner.yml metadata
  */
 typedef ProvisionerMetadata = {
@@ -61,32 +97,7 @@ typedef ProvisionerMetadata = {
     @:optional var author:String;
     @:optional var version:String;
     @:optional var configuration:ProvisionerConfiguration;
-}
-
-/**
- * Structure for configuration fields in provisioner.yml
- */
-typedef ProvisionerConfiguration = {
-    @:optional var basicFields:Array<ProvisionerField>;
-    @:optional var advancedFields:Array<ProvisionerField>;
-}
-
-/**
- * Structure for a single configuration field
- */
-typedef ProvisionerField = {
-    var name:String;
-    var type:String; // text, number, checkbox, dropdown, button
-    var label:String;
-    @:optional var defaultValue:Dynamic;
-    @:optional var required:Bool;
-    @:optional var validationKey:String; // Reference to validation key in Server class
-    @:optional var options:Array<{value:String, label:String}>; // For dropdown fields
-    @:optional var min:Float; // For number fields
-    @:optional var max:Float; // For number fields
-    @:optional var tooltip:String;
-    @:optional var placeholder:String;
-    @:optional var restrict:String; // For text fields, restricts input to specified characters
+    @:optional var roles:Array<ProvisionerRole>;
 }
 
 class ProvisionerManager {
