@@ -1,150 +1,145 @@
-# Sample provisioner.yml file for custom provisioners
-# This file defines metadata and configuration fields for a custom provisioner
+# Sample provisioner.yml file
+# This file defines the metadata, configuration fields, and roles for a custom provisioner
 
-# Basic metadata about the provisioner
-name: "Custom Provisioner Example"
-type: "custom_provisioner"
-description: "An example custom provisioner with configurable fields"
+# Basic metadata
+name: "HCL Custom Provisioner"
+type: "hcl_domino_custom_provisioner"
+description: "A custom provisioner for Domino servers"
 author: "Your Name"
 
-# Configuration fields for the provisioner
-# These fields will be displayed in the configuration forms
+# Configuration fields
 configuration:
-  # Basic fields appear on the main configuration page
+  # Basic configuration fields (shown on the main configuration page)
   basicFields:
     - name: "hostname"
-      label: "Server Hostname"
       type: "text"
+      label: "Server Hostname"
       placeholder: "Enter server hostname"
-      tooltip: "The hostname for your server"
+      tooltip: "The hostname for your Domino server"
       required: true
       validationKey: "^[a-zA-Z0-9.-]+$"
-      defaultValue: "myserver"
-    
+      restrict: "a-zA-Z0-9.-"
+      
     - name: "organization"
-      label: "Organization"
       type: "text"
+      label: "Organization"
       placeholder: "Enter organization name"
-      tooltip: "Your organization name"
+      tooltip: "The organization name for your Domino server"
       required: true
       restrict: "a-zA-Z0-9-"
-      defaultValue: "myorg"
-    
+      
     - name: "serverType"
-      label: "Server Type"
       type: "dropdown"
-      tooltip: "The type of server to create"
-      required: true
+      label: "Server Type"
+      tooltip: "The type of Domino server to create"
+      defaultValue: "standard"
       options:
-        - value: "web"
-          label: "Web Server"
-        - value: "app"
+        - value: "standard"
+          label: "Standard Domino Server"
+        - value: "mail"
+          label: "Mail Server"
+        - value: "application"
           label: "Application Server"
-        - value: "db"
-          label: "Database Server"
-      defaultValue: "web"
-    
+          
     - name: "enableSSL"
-      label: "Enable SSL"
       type: "checkbox"
-      tooltip: "Enable SSL for secure connections"
+      label: "Enable SSL"
+      tooltip: "Enable SSL for this server"
       defaultValue: true
-  
-  # Advanced fields appear on the advanced configuration page
+      
+  # Advanced configuration fields (shown on the advanced configuration page)
   advancedFields:
-    - name: "networkAddress"
-      label: "Network IP Address"
-      type: "text"
-      placeholder: "192.168.1.100"
-      tooltip: "The IP address for the server"
-      required: true
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
-      defaultValue: "192.168.1.100"
-    
-    - name: "networkNetmask"
-      label: "Network Netmask"
-      type: "text"
-      placeholder: "255.255.255.0"
-      tooltip: "The netmask for the server"
-      required: true
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
-      defaultValue: "255.255.255.0"
-    
-    - name: "networkGateway"
-      label: "Network Gateway"
-      type: "text"
-      placeholder: "192.168.1.1"
-      tooltip: "The gateway for the server"
-      required: true
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
-      defaultValue: "192.168.1.1"
-    
-    - name: "nameServer1"
-      label: "Primary DNS Server"
-      type: "text"
-      placeholder: "8.8.8.8"
-      tooltip: "Primary DNS server"
-      required: true
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
-      defaultValue: "8.8.8.8"
-    
-    - name: "nameServer2"
-      label: "Secondary DNS Server"
-      type: "text"
-      placeholder: "8.8.4.4"
-      tooltip: "Secondary DNS server"
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
-      defaultValue: "8.8.4.4"
-    
     - name: "numCPUs"
-      label: "Number of CPUs"
       type: "number"
-      tooltip: "Number of CPUs to allocate to the server"
+      label: "Number of CPUs"
+      tooltip: "The number of CPUs to allocate to this server"
+      defaultValue: 2
       min: 1
       max: 8
-      defaultValue: 2
-    
+      
     - name: "memory"
-      label: "Memory (GB)"
       type: "number"
-      tooltip: "Amount of memory to allocate to the server in GB"
-      min: 1
-      max: 16
+      label: "Memory (GB)"
+      tooltip: "The amount of memory to allocate to this server in GB"
       defaultValue: 4
-    
+      min: 2
+      max: 16
+      
+    - name: "networkAddress"
+      type: "text"
+      label: "Network Address"
+      placeholder: "192.168.1.100"
+      tooltip: "The IP address for this server"
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      restrict: "0-9."
+      
+    - name: "networkNetmask"
+      type: "text"
+      label: "Network Netmask"
+      placeholder: "255.255.255.0"
+      tooltip: "The netmask for this server"
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      restrict: "0-9."
+      
+    - name: "networkGateway"
+      type: "text"
+      label: "Network Gateway"
+      placeholder: "192.168.1.1"
+      tooltip: "The gateway for this server"
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      restrict: "0-9."
+      
+    - name: "nameServer1"
+      type: "text"
+      label: "DNS Server 1"
+      placeholder: "8.8.8.8"
+      tooltip: "The primary DNS server for this server"
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      restrict: "0-9."
+      
+    - name: "nameServer2"
+      type: "text"
+      label: "DNS Server 2"
+      placeholder: "8.8.4.4"
+      tooltip: "The secondary DNS server for this server"
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      restrict: "0-9."
+      
     - name: "openBrowser"
-      label: "Open Browser on Start"
       type: "checkbox"
-      tooltip: "Automatically open browser when server starts"
+      label: "Open Browser on Start"
+      tooltip: "Open a browser window when the server starts"
       defaultValue: true
-    
-    - name: "serverEnvironment"
-      label: "Server Environment"
-      type: "dropdown"
-      tooltip: "The environment for this server"
-      options:
-        - value: "dev"
-          label: "Development"
-        - value: "test"
-          label: "Testing"
-        - value: "prod"
-          label: "Production"
-      defaultValue: "dev"
+      
+    - name: "dhcp4"
+      type: "checkbox"
+      label: "Use DHCP"
+      tooltip: "Use DHCP for network configuration"
+      defaultValue: false
 
-# Roles supported by this provisioner
-# These roles will be available in the roles configuration page
+# Roles
 roles:
-  - name: "web_server"
-    label: "Web Server"
-    description: "Basic web server role"
+  - name: "domino_server"
+    label: "Domino Server"
+    description: "Basic Domino server role"
     defaultEnabled: true
-  
-  - name: "app_server"
-    label: "Application Server"
-    description: "Application server role"
+    
+  - name: "domino_mail"
+    label: "Mail Server"
+    description: "Domino mail server role"
     defaultEnabled: false
-  
-  - name: "db_server"
-    label: "Database Server"
-    description: "Database server role"
+    
+  - name: "domino_app"
+    label: "Application Server"
+    description: "Domino application server role"
+    defaultEnabled: false
+    
+  - name: "domino_web"
+    label: "Web Server"
+    description: "Domino web server role"
+    defaultEnabled: false
+    
+  - name: "domino_admin"
+    label: "Admin Server"
+    description: "Domino administration server role"
     defaultEnabled: false

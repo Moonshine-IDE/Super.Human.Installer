@@ -127,7 +127,7 @@ class DynamicConfigPage extends Page {
         _dropdownCoreComponentVersion.itemToText = (item:ProvisionerDefinition) -> {
             return item.name;
         };
-        _dropdownCoreComponentVersion.selectedIndex = 0;
+        // Don't set selectedIndex here, wait until we have data
         rowCoreComponentVersion.content.addChild(_dropdownCoreComponentVersion);
         _form.addChild(rowCoreComponentVersion);
 

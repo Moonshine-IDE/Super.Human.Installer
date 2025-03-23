@@ -123,7 +123,7 @@ class DynamicAdvancedConfigPage extends Page {
             if (item.name == "") return LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkinterface.default');
             return item.name;
         };
-        _dropdownNetworkInterface.selectedIndex = 0;
+        // Don't set selectedIndex here, wait until we have data
         _dropdownNetworkInterface.prompt = LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkinterface.prompt');
         _rowNetworkInterface.content.addChild(_dropdownNetworkInterface);
         _form.addChild(_rowNetworkInterface);

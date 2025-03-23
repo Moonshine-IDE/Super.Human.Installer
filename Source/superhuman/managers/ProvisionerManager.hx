@@ -396,15 +396,17 @@ class ProvisionerManager {
                 // List all version directories
                 try {
                     var versionDirs = FileSystem.readDirectory(provisionerPath);
-                    Logger.info('Found ${versionDirs.length} version directories for ${metadata.type}');
                     
-                    for (versionDir in versionDirs) {
+                    // Filter out non-directories and the provisioner.yml file
+                    var validVersionDirs = versionDirs.filter(dir -> 
+                        FileSystem.isDirectory(Path.addTrailingSlash(provisionerPath) + dir) && 
+                        dir != PROVISIONER_METADATA_FILENAME
+                    );
+                    
+                    Logger.info('Found ${validVersionDirs.length} version directories for ${metadata.type}');
+                    
+                    for (versionDir in validVersionDirs) {
                         var versionPath = Path.addTrailingSlash(provisionerPath) + versionDir;
-                        
-                        // Skip if not a directory
-                        if (!FileSystem.isDirectory(versionPath)) {
-                            continue;
-                        }
                         
                         // Check if this is a valid version directory (has scripts subdirectory)
                         var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
