@@ -202,26 +202,51 @@ class ProvisionerManager {
                 
                 Logger.info('Parsing role: ${roleData}');
                 
-                // Check for required fields
-                if (!Reflect.hasField(roleData, "name") || !Reflect.hasField(roleData, "label") || !Reflect.hasField(roleData, "description")) {
+                // Check if roleData is an ObjectMap
+                if (Std.isOfType(roleData, ObjectMap)) {
+                    var objMap:ObjectMap<String, Dynamic> = cast roleData;
+                    
+                    // Check for required fields
+                    if (!objMap.exists("name") || !objMap.exists("label") || !objMap.exists("description")) {
+                        Logger.warning('Skipping role with missing required properties: ${roleData}');
+                        continue;
+                    }
+                    
+                    var role:ProvisionerRole = {
+                        name: objMap.get("name"),
+                        label: objMap.get("label"),
+                        description: objMap.get("description")
+                    };
+                    
+                    Logger.info('Role parsed: name=${role.name}, label=${role.label}');
+                    
+                    // Add optional properties if they exist
+                    if (objMap.exists("defaultEnabled")) {
+                        role.defaultEnabled = objMap.get("defaultEnabled");
+                    }
+                    
+                    result.push(role);
+                } 
+                // Check for standard object with fields
+                else if (!Reflect.hasField(roleData, "name") || !Reflect.hasField(roleData, "label") || !Reflect.hasField(roleData, "description")) {
                     Logger.warning('Skipping role with missing required properties: ${roleData}');
                     continue;
+                } else {
+                    var role:ProvisionerRole = {
+                        name: Reflect.field(roleData, "name"),
+                        label: Reflect.field(roleData, "label"),
+                        description: Reflect.field(roleData, "description")
+                    };
+                    
+                    Logger.info('Role parsed: name=${role.name}, label=${role.label}');
+                    
+                    // Add optional properties if they exist
+                    if (Reflect.hasField(roleData, "defaultEnabled")) {
+                        role.defaultEnabled = Reflect.field(roleData, "defaultEnabled");
+                    }
+                    
+                    result.push(role);
                 }
-                
-                var role:ProvisionerRole = {
-                    name: Reflect.field(roleData, "name"),
-                    label: Reflect.field(roleData, "label"),
-                    description: Reflect.field(roleData, "description")
-                };
-                
-                Logger.info('Role parsed: name=${role.name}, label=${role.label}');
-                
-                // Add optional properties if they exist
-                if (Reflect.hasField(roleData, "defaultEnabled")) {
-                    role.defaultEnabled = Reflect.field(roleData, "defaultEnabled");
-                }
-                
-                result.push(role);
             } catch (e) {
                 Logger.error('Error parsing role: ${e}');
             }
@@ -260,8 +285,20 @@ class ProvisionerManager {
                 
                 // Try to get field properties using different methods
                 try {
+                    // First, check if fieldData is an ObjectMap
+                    if (Std.isOfType(fieldData, ObjectMap)) {
+                        var objMap:ObjectMap<String, Dynamic> = cast fieldData;
+                        if (objMap.exists("name")) fieldName = objMap.get("name");
+                        if (objMap.exists("type")) {
+                            var typeValue = objMap.get("type");
+                            fieldType = (typeValue != null && Std.string(typeValue).length > 0) ? Std.string(typeValue) : "text";
+                        }
+                        if (objMap.exists("label")) fieldLabel = objMap.get("label");
+                        
+                        Logger.info('Got field properties using ObjectMap: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
+                    }
                     // Check if fieldData has get method (ObjectMap interface)
-                    if (Reflect.hasField(fieldData, "get")) {
+                    else if (Reflect.hasField(fieldData, "get")) {
                         // Try to directly call the get method
                         try {
                             var getName = Reflect.field(fieldData, "get");
@@ -279,14 +316,20 @@ class ProvisionerManager {
                     } else if (Reflect.hasField(fieldData, "name")) {
                         // It's an object with fields
                         fieldName = Reflect.field(fieldData, "name");
-                        if (Reflect.hasField(fieldData, "type")) fieldType = Reflect.field(fieldData, "type");
+                        if (Reflect.hasField(fieldData, "type")) {
+                            var typeValue = Reflect.field(fieldData, "type");
+                            fieldType = (typeValue != null && Std.string(typeValue).length > 0) ? Std.string(typeValue) : "text";
+                        }
                         if (Reflect.hasField(fieldData, "label")) fieldLabel = Reflect.field(fieldData, "label");
                         
                         Logger.info('Got field properties using Reflect: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
                     } else if (Std.isOfType(fieldData, Dynamic) && fieldData.name != null) {
                         // It's a dynamic object with properties
                         fieldName = fieldData.name;
-                        if (fieldData.type != null) fieldType = fieldData.type;
+                        if (fieldData.type != null) {
+                            var typeValue = fieldData.type;
+                            fieldType = (typeValue != null && Std.string(typeValue).length > 0) ? Std.string(typeValue) : "text";
+                        }
                         if (fieldData.label != null) fieldLabel = fieldData.label;
                         
                         Logger.info('Got field properties using dynamic access: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
@@ -319,8 +362,17 @@ class ProvisionerManager {
                 // Try different ways to access properties
                 function getProperty(obj:Dynamic, propName:String):Dynamic {
                     try {
+                        // First, check if obj is an ObjectMap
+                        if (Std.isOfType(obj, ObjectMap)) {
+                            var objMap:ObjectMap<String, Dynamic> = cast obj;
+                            if (objMap.exists(propName)) {
+                                var value = objMap.get(propName);
+                                Logger.info('Got property ${propName} using ObjectMap: ${value}');
+                                return value;
+                            }
+                        }
                         // Check if obj has get method (ObjectMap interface)
-                        if (Reflect.hasField(obj, "get")) {
+                        else if (Reflect.hasField(obj, "get")) {
                             // Try to directly call the get method
                             try {
                                 var getName = Reflect.field(obj, "get");
@@ -366,15 +418,33 @@ class ProvisionerManager {
                 if (restrict != null) field.restrict = restrict;
                 
                 // Parse options for dropdown fields
-                if (Reflect.hasField(fieldData, "options")) {
-                    var optionsData:Array<Dynamic> = Reflect.field(fieldData, "options");
+                var optionsData = getProperty(fieldData, "options");
+                if (optionsData != null && Std.isOfType(optionsData, Array)) {
                     field.options = [];
+                    var optionsArray:Array<Dynamic> = cast optionsData;
                     
-                    for (optionData in optionsData) {
-                        if (optionData != null && Reflect.hasField(optionData, "value") && Reflect.hasField(optionData, "label")) {
+                    for (optionData in optionsArray) {
+                        var optionValue = null;
+                        var optionLabel = null;
+                        
+                        // Check if optionData is an ObjectMap
+                        if (Std.isOfType(optionData, ObjectMap)) {
+                            var objMap:ObjectMap<String, Dynamic> = cast optionData;
+                            if (objMap.exists("value") && objMap.exists("label")) {
+                                optionValue = objMap.get("value");
+                                optionLabel = objMap.get("label");
+                            }
+                        } 
+                        // Check if it's a standard object
+                        else if (optionData != null && Reflect.hasField(optionData, "value") && Reflect.hasField(optionData, "label")) {
+                            optionValue = Reflect.field(optionData, "value");
+                            optionLabel = Reflect.field(optionData, "label");
+                        }
+                        
+                        if (optionValue != null && optionLabel != null) {
                             field.options.push({
-                                value: Reflect.field(optionData, "value"),
-                                label: Reflect.field(optionData, "label")
+                                value: Std.string(optionValue),
+                                label: Std.string(optionLabel)
                             });
                         } else {
                             Logger.warning('Skipping invalid option: ${optionData}');
@@ -383,13 +453,13 @@ class ProvisionerManager {
                 }
                 
                 // Parse min/max for number fields
-                if (Reflect.hasField(fieldData, "min")) {
-                    var minValue = Reflect.field(fieldData, "min");
+                var minValue = getProperty(fieldData, "min");
+                if (minValue != null) {
                     field.min = Std.parseFloat(Std.string(minValue));
                 }
                 
-                if (Reflect.hasField(fieldData, "max")) {
-                    var maxValue = Reflect.field(fieldData, "max");
+                var maxValue = getProperty(fieldData, "max");
+                if (maxValue != null) {
                     field.max = Std.parseFloat(Std.string(maxValue));
                 }
                 
