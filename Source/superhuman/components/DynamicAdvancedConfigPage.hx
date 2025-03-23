@@ -291,9 +291,9 @@ class DynamicAdvancedConfigPage extends Page {
                         var options = [];
                         
                         // Check if options is a nested array (sometimes YAML can parse it this way)
-                        if (Std.isOfType(field.options, Array) && field.options.length > 0 && Std.isOfType(field.options[0], Array)) {
+                        if (Std.isOfType(field.options, Array) && field.options.length > 0) {
                             // Handle nested array case
-                            var nestedOptions:Array<Dynamic> = field.options[0];
+                            var nestedOptions:Array<Dynamic> = cast field.options;
                             for (option in nestedOptions) {
                                 if (option != null) {
                                     var value = null;
