@@ -253,31 +253,78 @@ class ProvisionerManager {
                 
                 Logger.info('Parsing field: ${fieldData}');
                 
-                // Check for required fields - name is the only truly required field
-                if (!Reflect.hasField(fieldData, "name")) {
+                // Check if the field has a name property
+                var fieldName = null;
+                var fieldType = "text"; // Default type
+                var fieldLabel = null;
+                
+                // Try to get field properties using different methods
+                if (Std.isOfType(fieldData, Map) || Std.isOfType(fieldData, ObjectMap)) {
+                    // It's a Map or ObjectMap
+                    var map:Dynamic = fieldData;
+                    if (map.exists("name")) fieldName = map.get("name");
+                    if (map.exists("type")) fieldType = map.get("type");
+                    if (map.exists("label")) fieldLabel = map.get("label");
+                } else if (Reflect.hasField(fieldData, "name")) {
+                    // It's an object with fields
+                    fieldName = Reflect.field(fieldData, "name");
+                    if (Reflect.hasField(fieldData, "type")) fieldType = Reflect.field(fieldData, "type");
+                    if (Reflect.hasField(fieldData, "label")) fieldLabel = Reflect.field(fieldData, "label");
+                } else if (Std.isOfType(fieldData, Dynamic) && fieldData.name != null) {
+                    // It's a dynamic object with properties
+                    fieldName = fieldData.name;
+                    if (fieldData.type != null) fieldType = fieldData.type;
+                    if (fieldData.label != null) fieldLabel = fieldData.label;
+                }
+                
+                // Skip if no name found
+                if (fieldName == null) {
                     Logger.warning('Skipping field with missing name property: ${fieldData}');
                     continue;
                 }
                 
-                // Get type and label with defaults if missing
-                var fieldType = Reflect.hasField(fieldData, "type") ? Reflect.field(fieldData, "type") : "text";
-                var fieldLabel = Reflect.hasField(fieldData, "label") ? Reflect.field(fieldData, "label") : Reflect.field(fieldData, "name");
+                // Use name as label if label is missing
+                if (fieldLabel == null) fieldLabel = fieldName;
                 
                 var field:ProvisionerField = {
-                    name: Reflect.field(fieldData, "name"),
+                    name: fieldName,
                     type: fieldType,
                     label: fieldLabel
                 };
                 
                 Logger.info('Field parsed: name=${field.name}, type=${field.type}, label=${field.label}');
-            
+                
                 // Add optional properties if they exist
-                if (Reflect.hasField(fieldData, "defaultValue")) field.defaultValue = Reflect.field(fieldData, "defaultValue");
-                if (Reflect.hasField(fieldData, "required")) field.required = Reflect.field(fieldData, "required");
-                if (Reflect.hasField(fieldData, "validationKey")) field.validationKey = Reflect.field(fieldData, "validationKey");
-                if (Reflect.hasField(fieldData, "tooltip")) field.tooltip = Reflect.field(fieldData, "tooltip");
-                if (Reflect.hasField(fieldData, "placeholder")) field.placeholder = Reflect.field(fieldData, "placeholder");
-                if (Reflect.hasField(fieldData, "restrict")) field.restrict = Reflect.field(fieldData, "restrict");
+                // Try different ways to access properties
+                function getProperty(obj:Dynamic, propName:String):Dynamic {
+                    if (Std.isOfType(obj, Map) || Std.isOfType(obj, ObjectMap)) {
+                        var map:Dynamic = obj;
+                        return map.exists(propName) ? map.get(propName) : null;
+                    } else if (Reflect.hasField(obj, propName)) {
+                        return Reflect.field(obj, propName);
+                    } else if (Std.isOfType(obj, Dynamic) && Reflect.getProperty(obj, propName) != null) {
+                        return Reflect.getProperty(obj, propName);
+                    }
+                    return null;
+                }
+                
+                var defaultValue = getProperty(fieldData, "defaultValue");
+                if (defaultValue != null) field.defaultValue = defaultValue;
+                
+                var required = getProperty(fieldData, "required");
+                if (required != null) field.required = required;
+                
+                var validationKey = getProperty(fieldData, "validationKey");
+                if (validationKey != null) field.validationKey = validationKey;
+                
+                var tooltip = getProperty(fieldData, "tooltip");
+                if (tooltip != null) field.tooltip = tooltip;
+                
+                var placeholder = getProperty(fieldData, "placeholder");
+                if (placeholder != null) field.placeholder = placeholder;
+                
+                var restrict = getProperty(fieldData, "restrict");
+                if (restrict != null) field.restrict = restrict;
                 
                 // Parse options for dropdown fields
                 if (Reflect.hasField(fieldData, "options")) {
