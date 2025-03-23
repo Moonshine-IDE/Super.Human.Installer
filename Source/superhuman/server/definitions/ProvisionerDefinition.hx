@@ -38,5 +38,6 @@ typedef ProvisionerDefinition = {
     name: String,
     root: String,
     ?supported: Bool,
+    ?metadata: superhuman.managers.ProvisionerManager.ProvisionerMetadata,
 
 }

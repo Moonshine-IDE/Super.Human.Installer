@@ -59,6 +59,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final COPY_TO_CLIPBOARD:String = "copyToClipboard";
     public static final CREATE_SERVER:String = "createServer";
     public static final CREATE_ADDITIONAL_DOMINO_SERVER:String = "createAdditionalDominoServer";
+    public static final CREATE_CUSTOM_SERVER:String = "createCustomServer";
     public static final DELETE_SERVER:String = "deleteServer";
     public static final DESTROY_SERVER:String = "destroyServer";
     public static final DOWNLOAD_VAGRANT:String = "downloadVagrant";

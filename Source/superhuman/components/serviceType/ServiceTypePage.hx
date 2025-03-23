@@ -145,11 +145,17 @@ class ServiceTypePage extends Page {
         // Log the selected service type for debugging
         champaign.core.logging.Logger.info('Selected service type: ${selectedServiceType.value}, type: ${selectedServiceType.provisionerType}, serverType: ${selectedServiceType.serverType}');
         
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = _isCustomProvisioner(selectedServiceType.provisionerType);
+        
         if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) {
             // For additional Domino servers
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER);
+        } else if (isCustomProvisioner) {
+            // For custom provisioners
+            event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER);
         } else {
-            // For standalone Domino servers and custom provisioners
+            // For standalone Domino servers
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_SERVER);
         }
         
@@ -159,6 +165,18 @@ class ServiceTypePage extends Page {
 
         this.dispatchEvent(event);
 	}
+	
+	/**
+     * Check if a provisioner type is a custom provisioner
+     * @param provisionerType The provisioner type to check
+     * @return Bool True if the provisioner type is a custom provisioner
+     */
+    private function _isCustomProvisioner(provisionerType:String):Bool {
+        // Check if the provisioner type is not one of the built-in types
+        return provisionerType != ProvisionerType.DemoTasks && 
+               provisionerType != ProvisionerType.AdditionalProvisioner &&
+               provisionerType != ProvisionerType.Default;
+    }
 	
     function _buttonCloseTriggered( e:TriggerEvent ) {
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE ) );

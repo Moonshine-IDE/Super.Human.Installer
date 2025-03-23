@@ -60,6 +60,33 @@ typedef ProvisionerMetadata = {
     var description:String;
     @:optional var author:String;
     @:optional var version:String;
+    @:optional var configuration:ProvisionerConfiguration;
+    @:optional var serverType:String; // Determines which UI type to use (e.g., "domino" or "additional-domino")
+}
+
+/**
+ * Structure for configuration fields in provisioner.yml
+ */
+typedef ProvisionerConfiguration = {
+    @:optional var basicFields:Array<ProvisionerField>;
+    @:optional var advancedFields:Array<ProvisionerField>;
+}
+
+/**
+ * Structure for a single configuration field
+ */
+typedef ProvisionerField = {
+    var name:String;
+    var type:String; // text, number, checkbox, dropdown, button
+    var label:String;
+    @:optional var defaultValue:Dynamic;
+    @:optional var required:Bool;
+    @:optional var validationKey:String; // Reference to validation key in Server class
+    @:optional var options:Array<{value:String, label:String}>; // For dropdown fields
+    @:optional var min:Float; // For number fields
+    @:optional var max:Float; // For number fields
+    @:optional var tooltip:String;
+    @:optional var placeholder:String;
 }
 
 class ProvisionerManager {
@@ -101,17 +128,76 @@ class ProvisionerManager {
                 return null;
             }
             
+            // Parse configuration if it exists
+            var configuration:ProvisionerConfiguration = null;
+            if (metadata.exists("configuration")) {
+                var configData:ObjectMap<String, Dynamic> = metadata.get("configuration");
+                configuration = {
+                    basicFields: _parseFieldsArray(configData.exists("basicFields") ? configData.get("basicFields") : null),
+                    advancedFields: _parseFieldsArray(configData.exists("advancedFields") ? configData.get("advancedFields") : null)
+                };
+            }
+            
             return {
                 name: metadata.get("name"),
                 type: metadata.get("type"),
                 description: metadata.get("description"),
                 author: metadata.exists("author") ? metadata.get("author") : null,
-                version: metadata.exists("version") ? metadata.get("version") : null
+                version: metadata.exists("version") ? metadata.get("version") : null,
+                configuration: configuration,
+                serverType: metadata.exists("serverType") ? metadata.get("serverType") : null
             };
         } catch (e) {
             Logger.error('Error reading provisioner.yml at ${metadataPath}: ${e}');
             return null;
         }
+    }
+    
+    /**
+     * Parse an array of field definitions from the YAML data
+     * @param fieldsData The array of field data from the YAML
+     * @return Array<ProvisionerField> The parsed field definitions
+     */
+    static private function _parseFieldsArray(fieldsData:Array<Dynamic>):Array<ProvisionerField> {
+        if (fieldsData == null) return null;
+        
+        var result:Array<ProvisionerField> = [];
+        
+        for (fieldData in fieldsData) {
+            var field:ProvisionerField = {
+                name: fieldData.get("name"),
+                type: fieldData.get("type"),
+                label: fieldData.get("label")
+            };
+            
+            // Add optional properties if they exist
+            if (fieldData.exists("defaultValue")) field.defaultValue = fieldData.get("defaultValue");
+            if (fieldData.exists("required")) field.required = fieldData.get("required");
+            if (fieldData.exists("validationKey")) field.validationKey = fieldData.get("validationKey");
+            if (fieldData.exists("tooltip")) field.tooltip = fieldData.get("tooltip");
+            if (fieldData.exists("placeholder")) field.placeholder = fieldData.get("placeholder");
+            
+            // Parse options for dropdown fields
+            if (fieldData.exists("options")) {
+                var optionsData:Array<Dynamic> = fieldData.get("options");
+                field.options = [];
+                
+                for (optionData in optionsData) {
+                    field.options.push({
+                        value: optionData.get("value"),
+                        label: optionData.get("label")
+                    });
+                }
+            }
+            
+            // Parse min/max for number fields
+            if (fieldData.exists("min")) field.min = Std.parseFloat(fieldData.get("min"));
+            if (fieldData.exists("max")) field.max = Std.parseFloat(fieldData.get("max"));
+            
+            result.push(field);
+        }
+        
+        return result;
     }
     
     /**
@@ -216,10 +302,15 @@ class ProvisionerManager {
                             var versionInfo = VersionInfo.fromString(versionDir);
                             Logger.info('Adding provisioner ${metadata.type} version ${versionDir}');
                             
+                            // Create a copy of the metadata with the specific version
+                            var versionMetadata = Reflect.copy(metadata);
+                            versionMetadata.version = versionDir;
+                            
                             result.push({
                                 name: '${metadata.name} v${versionDir}',
                                 data: { type: metadata.type, version: versionInfo },
-                                root: versionPath
+                                root: versionPath,
+                                metadata: versionMetadata
                             });
                         } else {
                             Logger.warning('Skipping version directory ${versionDir} as it does not have a scripts subdirectory');
@@ -245,16 +336,42 @@ class ProvisionerManager {
         return result;
     }
     
-    /**
-     * Get fallback provisioners from the application bundle
-     * @param type Optional provisioner type filter
-     * @return Array<ProvisionerDefinition> Array of bundled provisioners
-     * @deprecated This method is no longer used as provisioners are now loaded from the common directory
-     */
-    static private function _getFallbackProvisioners(type:ProvisionerType = null):Array<ProvisionerDefinition> {
-        Logger.warning('_getFallbackProvisioners is deprecated and should not be used');
-        return []; // Always return empty array
-    }
+/**
+ * Structure for a field in the provisioner configuration
+ */
+typedef ProvisionerField = {
+    var name:String;
+    var label:String;
+    var type:String;
+    @:optional var defaultValue:Dynamic;
+    @:optional var placeholder:String;
+    @:optional var tooltip:String;
+    @:optional var required:Bool;
+    @:optional var validationKey:String;
+    @:optional var min:Float;
+    @:optional var max:Float;
+    @:optional var options:Array<{value:String, label:String}>;
+}
+
+/**
+ * Structure for provisioner configuration
+ */
+typedef ProvisionerConfiguration = {
+    @:optional var fields:Array<ProvisionerField>;
+    @:optional var advancedFields:Array<ProvisionerField>;
+}
+
+/**
+ * Structure for provisioner.yml metadata
+ */
+typedef ProvisionerMetadata = {
+    var name:String;
+    var type:String;
+    var description:String;
+    @:optional var author:String;
+    @:optional var version:String;
+    @:optional var configuration:ProvisionerConfiguration;
+}
 
     static public function getBundledProvisionerCollection( ?type:ProvisionerType ):ArrayCollection<ProvisionerDefinition> {
 

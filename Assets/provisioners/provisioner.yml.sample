@@ -1,19 +1,77 @@
 # Sample provisioner.yml file
-# This file should be placed in the root of your provisioner directory
+# This file defines the metadata and configuration for a custom provisioner
 
-# Human-readable name of the provisioner
-name: "My Custom Provisioner"
-
-# Type identifier (used internally by the application)
-# This should match the directory name
-type: "my_custom_provisioner"
-
-# Description of what this provisioner does
-description: "A custom provisioner for XYZ functionality"
-
-# Optional: Author information
-author: "Your Name or Organization"
-
-# Optional: Version information (if you want to specify a version for the provisioner itself)
-# Note: Individual versions are determined by the subdirectories
+# Basic metadata
+name: "Sample Custom Provisioner"
+type: "custom-provisioner"
+description: "A sample custom provisioner that demonstrates configuration fields"
+author: "Your Name"
 version: "1.0.0"
+serverType: "domino"  # Can be "domino" or "additional-domino"
+
+# Configuration fields
+configuration:
+  # Fields shown on the main configuration page
+  basicFields:
+    - name: "hostname"
+      type: "text"
+      label: "Server Hostname"
+      defaultValue: "myserver"
+      placeholder: "Enter server hostname"
+      tooltip: "The hostname for your server"
+      required: true
+      validationKey: "hostname"
+    
+    - name: "organization"
+      type: "text"
+      label: "Organization"
+      defaultValue: "myorg"
+      placeholder: "Enter organization name"
+      tooltip: "The organization name for your server"
+      required: true
+      validationKey: "organization"
+    
+    - name: "serverType"
+      type: "dropdown"
+      label: "Server Type"
+      defaultValue: "standard"
+      tooltip: "The type of server to create"
+      options:
+        - value: "standard"
+          label: "Standard Server"
+        - value: "development"
+          label: "Development Server"
+        - value: "production"
+          label: "Production Server"
+  
+  # Fields shown on the advanced configuration page
+  advancedFields:
+    - name: "numCPUs"
+      type: "number"
+      label: "Number of CPUs"
+      defaultValue: 2
+      min: 1
+      max: 8
+      tooltip: "The number of CPUs to allocate to the server"
+    
+    - name: "memory"
+      type: "number"
+      label: "Memory (GB)"
+      defaultValue: 4
+      min: 2
+      max: 16
+      tooltip: "The amount of memory to allocate to the server in GB"
+    
+    - name: "networkAddress"
+      type: "text"
+      label: "Network IP Address"
+      defaultValue: "192.168.56.10"
+      placeholder: "Enter IP address"
+      tooltip: "The IP address for the server"
+      validationKey: "ip"
+    
+    - name: "openBrowser"
+      type: "checkbox"
+      label: "Open Browser After Start"
+      defaultValue: true
+      tooltip: "Whether to open a browser after the server starts"

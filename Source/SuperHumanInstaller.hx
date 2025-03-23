@@ -147,6 +147,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _configPage:ConfigPage;
 	var _defaultRoles:Map<String, RoleData>;
 	var _defaultServerConfigData:ServerData;
+	var _dynamicConfigPage:DynamicConfigPage;
+	var _dynamicAdvancedConfigPage:DynamicAdvancedConfigPage;
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
@@ -409,6 +411,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serviceTypePage = new ServiceTypePage(_serviceTypesCollection);
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_SERVER, _createServer);
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER, _createAdditionalDominoServer );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER, _createCustomServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
 		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
 		
@@ -1290,6 +1293,41 @@ class SuperHumanInstaller extends GenesisApplication {
 		var server:AdditionalServer = cast(_createServerAndSaveConfig( e.provisionerType ), AdditionalServer);
 
 		_showConfigureAdditionalServer( server );
+	}
+	
+	function _createCustomServer( e:SuperHumanApplicationEvent ) {
+		Logger.info( '${this}: Creating custom server with provisioner type: ${e.provisionerType}' );
+		
+		// Create the server with the custom provisioner type
+		var server = _createServerAndSaveConfig( e.provisionerType );
+		
+		// Get the provisioner definition for the custom provisioner
+		var provisionerDefinition = null;
+		var allProvisioners = ProvisionerManager.getBundledProvisioners(e.provisionerType);
+		if (allProvisioners.length > 0) {
+			provisionerDefinition = allProvisioners[0];
+			Logger.info( '${this}: Using provisioner definition: ${provisionerDefinition.name}' );
+		}
+		
+		// Initialize the dynamic config page if it doesn't exist
+		if (_dynamicConfigPage == null) {
+			_dynamicConfigPage = new DynamicConfigPage();
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER, _advancedConfigureServer );
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles );
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION, _saveServerConfiguration );
+			this.addPage( _dynamicConfigPage, "page-dynamic-config" );
+		}
+		
+		// Set the server and provisioner definition for the dynamic config page
+		_dynamicConfigPage.setServer(server);
+		if (provisionerDefinition != null) {
+			_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
+		}
+		_dynamicConfigPage.updateContent(true);
+		
+		// Show the dynamic config page
+		this.selectedPageId = "page-dynamic-config";
 	}
 
 	function _copyToClipboard( e:SuperHumanApplicationEvent ) {
