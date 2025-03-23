@@ -309,9 +309,16 @@ class SuperHumanInstaller extends GenesisApplication {
 			var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
 			var description = metadata != null ? metadata.description : provisioner.name;
 			
+			// Get the base name without version
+			var baseName = provisioner.name;
+			var versionIndex = baseName.lastIndexOf(" v");
+			if (versionIndex > 0) {
+				baseName = baseName.substring(0, versionIndex);
+			}
+			
 			// Add to service types collection
 			_serviceTypesCollection.push({
-				value: provisioner.name,
+				value: baseName,
 				description: description,
 				provisionerType: type,
 				serverType: serverType,

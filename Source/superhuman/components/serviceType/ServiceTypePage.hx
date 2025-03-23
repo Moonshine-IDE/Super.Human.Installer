@@ -102,7 +102,15 @@ class ServiceTypePage extends Page {
     	    _serviceTypeGrid.selectedIndex = 0;
     	    _serviceTypeGrid.width = _w;
     	    _serviceTypeGrid.columns = new ArrayCollection([
-			new GridViewColumn("Service", (data) -> data.value),
+			new GridViewColumn("Service", (data) -> {
+				// Strip version from display name
+				var displayName = data.value;
+				var versionIndex = displayName.lastIndexOf(" v");
+				if (versionIndex > 0) {
+					displayName = displayName.substring(0, versionIndex);
+				}
+				return displayName;
+			}),
 			new GridViewColumn("Description", (data) -> data.description),
 		]);
 		this.addChild(_serviceTypeGrid);
