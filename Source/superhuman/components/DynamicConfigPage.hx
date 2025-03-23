@@ -232,12 +232,17 @@ class DynamicConfigPage extends Page {
      * @param field The field definition from the provisioner.yml
      */
     private function _addDynamicField(field:ProvisionerField) {
+        if (field == null) {
+            Logger.warning("Attempted to add a null field to the form");
+            return;
+        }
+        
         // Create a new row for the field
         var row = new GenesisFormRow();
-        row.text = field.label;
+        row.text = field.label != null ? field.label : "Unnamed Field";
         
         // Create the appropriate form control based on the field type
-        switch (field.type) {
+        switch (field.type != null ? field.type : "") {
             case "text":
                 var input = new GenesisFormTextInput();
                 input.prompt = field.placeholder != null ? field.placeholder : "";

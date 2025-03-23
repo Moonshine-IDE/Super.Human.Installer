@@ -115,12 +115,17 @@ class ProvisionerManager {
     static public function readProvisionerMetadata(path:String):ProvisionerMetadata {
         var metadataPath = Path.addTrailingSlash(path) + PROVISIONER_METADATA_FILENAME;
         
+        Logger.info('Reading provisioner metadata from ${metadataPath}');
+        
         if (!FileSystem.exists(metadataPath)) {
+            Logger.warning('Provisioner metadata file not found at ${metadataPath}');
             return null;
         }
         
         try {
             var content = File.getContent(metadataPath);
+            Logger.info('Provisioner metadata content: ${content.substr(0, Math.min(content.length, 200))}...');
+            
             var metadata:ObjectMap<String, Dynamic> = Yaml.read(metadataPath);
             
             // Validate required fields
@@ -128,6 +133,8 @@ class ProvisionerManager {
                 Logger.warning('Invalid provisioner.yml at ${metadataPath}: missing required fields');
                 return null;
             }
+            
+            Logger.info('Provisioner metadata parsed successfully: name=${metadata.get("name")}, type=${metadata.get("type")}');
             
             // Parse configuration if it exists
             var configuration:ProvisionerConfiguration = null;
@@ -160,42 +167,55 @@ class ProvisionerManager {
      * @return Array<ProvisionerField> The parsed field definitions
      */
     static private function _parseFieldsArray(fieldsData:Array<Dynamic>):Array<ProvisionerField> {
-        if (fieldsData == null) return null;
+        if (fieldsData == null) {
+            Logger.info('No fields data provided');
+            return null;
+        }
         
+        Logger.info('Parsing ${fieldsData.length} fields');
         var result:Array<ProvisionerField> = [];
         
         for (fieldData in fieldsData) {
-            var field:ProvisionerField = {
-                name: fieldData.get("name"),
-                type: fieldData.get("type"),
-                label: fieldData.get("label")
-            };
-            
-            // Add optional properties if they exist
-            if (fieldData.exists("defaultValue")) field.defaultValue = fieldData.get("defaultValue");
-            if (fieldData.exists("required")) field.required = fieldData.get("required");
-            if (fieldData.exists("validationKey")) field.validationKey = fieldData.get("validationKey");
-            if (fieldData.exists("tooltip")) field.tooltip = fieldData.get("tooltip");
-            if (fieldData.exists("placeholder")) field.placeholder = fieldData.get("placeholder");
-            
-            // Parse options for dropdown fields
-            if (fieldData.exists("options")) {
-                var optionsData:Array<Dynamic> = fieldData.get("options");
-                field.options = [];
+            try {
+                Logger.info('Parsing field: ${fieldData}');
                 
-                for (optionData in optionsData) {
-                    field.options.push({
-                        value: optionData.get("value"),
-                        label: optionData.get("label")
-                    });
+                var field:ProvisionerField = {
+                    name: fieldData.get("name"),
+                    type: fieldData.get("type"),
+                    label: fieldData.get("label")
+                };
+                
+                Logger.info('Field parsed: name=${field.name}, type=${field.type}, label=${field.label}');
+            
+                // Add optional properties if they exist
+                if (fieldData.exists("defaultValue")) field.defaultValue = fieldData.get("defaultValue");
+                if (fieldData.exists("required")) field.required = fieldData.get("required");
+                if (fieldData.exists("validationKey")) field.validationKey = fieldData.get("validationKey");
+                if (fieldData.exists("tooltip")) field.tooltip = fieldData.get("tooltip");
+                if (fieldData.exists("placeholder")) field.placeholder = fieldData.get("placeholder");
+                if (fieldData.exists("restrict")) field.restrict = fieldData.get("restrict");
+                
+                // Parse options for dropdown fields
+                if (fieldData.exists("options")) {
+                    var optionsData:Array<Dynamic> = fieldData.get("options");
+                    field.options = [];
+                    
+                    for (optionData in optionsData) {
+                        field.options.push({
+                            value: optionData.get("value"),
+                            label: optionData.get("label")
+                        });
+                    }
                 }
+                
+                // Parse min/max for number fields
+                if (fieldData.exists("min")) field.min = Std.parseFloat(fieldData.get("min"));
+                if (fieldData.exists("max")) field.max = Std.parseFloat(fieldData.get("max"));
+                
+                result.push(field);
+            } catch (e) {
+                Logger.error('Error parsing field: ${e}');
             }
-            
-            // Parse min/max for number fields
-            if (fieldData.exists("min")) field.min = Std.parseFloat(fieldData.get("min"));
-            if (fieldData.exists("max")) field.max = Std.parseFloat(fieldData.get("max"));
-            
-            result.push(field);
         }
         
         return result;
