@@ -618,11 +618,43 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _advancedConfigureServer( e:SuperHumanApplicationEvent ) {
+		// Check if this is a custom provisioner
+		var isCustomProvisioner = e.server.provisioner.type != ProvisionerType.DemoTasks && 
+								  e.server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+								  e.server.provisioner.type != ProvisionerType.Default;
 		
-		_advancedConfigPage.setServer( e.server );
-		_advancedConfigPage.updateContent();
-		this.selectedPageId = PAGE_CONFIG_ADVANCED;
-
+		if (isCustomProvisioner) {
+			// Initialize the dynamic advanced config page if it doesn't exist
+			if (_dynamicAdvancedConfigPage == null) {
+				_dynamicAdvancedConfigPage = new DynamicAdvancedConfigPage();
+				_dynamicAdvancedConfigPage.addEventListener(SuperHumanApplicationEvent.CANCEL_PAGE, _cancelAdvancedConfigureServer);
+				_dynamicAdvancedConfigPage.addEventListener(SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION, _saveAdvancedServerConfiguration);
+				this.addPage(_dynamicAdvancedConfigPage, "page-dynamic-advanced-config");
+			}
+			
+			// Get the provisioner definition for the custom provisioner
+			var provisionerDefinition = null;
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(e.server.provisioner.type);
+			if (allProvisioners.length > 0) {
+				provisionerDefinition = allProvisioners[0];
+				Logger.info('${this}: Using provisioner definition for advanced config: ${provisionerDefinition.name}');
+			}
+			
+			// Set the server and provisioner definition for the dynamic advanced config page
+			_dynamicAdvancedConfigPage.setServer(e.server);
+			if (provisionerDefinition != null) {
+				_dynamicAdvancedConfigPage.setProvisionerDefinition(provisionerDefinition);
+			}
+			_dynamicAdvancedConfigPage.updateContent();
+			
+			// Show the dynamic advanced config page
+			this.selectedPageId = "page-dynamic-advanced-config";
+		} else {
+			// Use the standard advanced config page for built-in provisioners
+			_advancedConfigPage.setServer(e.server);
+			_advancedConfigPage.updateContent();
+			this.selectedPageId = PAGE_CONFIG_ADVANCED;
+		}
 	}
 
 	function _configureServer( e:SuperHumanApplicationEvent ) {
