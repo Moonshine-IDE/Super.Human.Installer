@@ -212,6 +212,10 @@ class DynamicConfigPage extends Page {
             }
         }
         
+        // Get the provisioners directory path
+        var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+        Logger.info('${this}: Provisioners directory: ${provisionersDir}');
+        
         // Get all provisioners of the same type
         var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
         
@@ -242,6 +246,78 @@ class DynamicConfigPage extends Page {
         for (provisioner in allProvisioners) {
             provisionerCollection.add(provisioner);
             Logger.info('${this}: Added provisioner to dropdown: ${provisioner.name}');
+        }
+        
+        // If we still have no provisioners, check if we need to manually scan for custom provisioners
+        if (provisionerCollection.length == 0) {
+            Logger.info('${this}: No provisioners found in collection, manually scanning for custom provisioners');
+            
+            // Check if the provisioners directory exists
+            if (sys.FileSystem.exists(provisionersDir)) {
+                try {
+                    // List all directories in the provisioners directory
+                    var dirs = sys.FileSystem.readDirectory(provisionersDir);
+                    
+                    for (dir in dirs) {
+                        var fullPath = haxe.io.Path.addTrailingSlash(provisionersDir) + dir;
+                        
+                        // Skip if not a directory
+                        if (!sys.FileSystem.isDirectory(fullPath)) {
+                            continue;
+                        }
+                        
+                        // Check for provisioner.yml
+                        var metadataPath = haxe.io.Path.addTrailingSlash(fullPath) + "provisioner.yml";
+                        if (sys.FileSystem.exists(metadataPath)) {
+                            Logger.info('${this}: Found provisioner metadata at ${metadataPath}');
+                            
+                            // Read the metadata
+                            var metadata = ProvisionerManager.readProvisionerMetadata(fullPath);
+                            if (metadata != null) {
+                                Logger.info('${this}: Read metadata: name=${metadata.name}, type=${metadata.type}');
+                                
+                                // Check if this is the type we're looking for
+                                if (_server.provisioner.type == null || metadata.type == _server.provisioner.type) {
+                                    // Scan for version directories
+                                    var versionDirs = sys.FileSystem.readDirectory(fullPath);
+                                    
+                                    for (versionDir in versionDirs) {
+                                        var versionPath = haxe.io.Path.addTrailingSlash(fullPath) + versionDir;
+                                        
+                                        // Skip if not a directory or if it's the provisioner.yml file
+                                        if (!sys.FileSystem.isDirectory(versionPath) || versionDir == "provisioner.yml") {
+                                            continue;
+                                        }
+                                        
+                                        // Check if this is a valid version directory (has scripts subdirectory)
+                                        var scriptsPath = haxe.io.Path.addTrailingSlash(versionPath) + "scripts";
+                                        if (sys.FileSystem.exists(scriptsPath) && sys.FileSystem.isDirectory(scriptsPath)) {
+                                            // Create a version-specific metadata copy
+                                            var versionMetadata = Reflect.copy(metadata);
+                                            versionMetadata.version = versionDir;
+                                            
+                                            // Create a provisioner definition
+                                            var versionInfo = champaign.core.primitives.VersionInfo.fromString(versionDir);
+                                            var provDef:ProvisionerDefinition = {
+                                                name: '${metadata.name} v${versionDir}',
+                                                data: { type: metadata.type, version: versionInfo },
+                                                root: versionPath,
+                                                metadata: versionMetadata
+                                            };
+                                            
+                                            // Add to collection
+                                            provisionerCollection.add(provDef);
+                                            Logger.info('${this}: Manually added provisioner version: ${versionDir}');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    Logger.error('${this}: Error scanning for custom provisioners: ${e}');
+                }
+            }
         }
         
         // Set the dropdown data provider
