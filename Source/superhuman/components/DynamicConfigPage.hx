@@ -534,8 +534,21 @@ class DynamicConfigPage extends Page {
                 case "text":
                     // Create a string property
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
-                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
-                    Reflect.setField(_server, fieldName, prop);
+                    // Check if the field already exists as a property with a different name
+                    // Some properties like "hostname" have getters/setters but the actual field has a different name (_hostname)
+                    var fieldExists = false;
+                    
+                    // Try with underscore prefix which is the common pattern
+                    var underscoreFieldName = "_" + fieldName;
+                    if (Reflect.hasField(_server, underscoreFieldName)) {
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
+                        fieldExists = true;
+                        // The field exists with an underscore, don't create a new one
+                    } else {
+                        // Create a new property
+                        var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                        Reflect.setField(_server, fieldName, prop);
+                    }
                     
                 case "number":
                     // Create a numeric property
@@ -549,8 +562,20 @@ class DynamicConfigPage extends Page {
                             defaultValue = 0.0;
                         }
                     }
-                    var prop = new champaign.core.primitives.Property<Float>(defaultValue);
-                    Reflect.setField(_server, fieldName, prop);
+                    // Check if the field already exists as a property with a different name
+                    var fieldExists = false;
+                    
+                    // Try with underscore prefix which is the common pattern
+                    var underscoreFieldName = "_" + fieldName;
+                    if (Reflect.hasField(_server, underscoreFieldName)) {
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
+                        fieldExists = true;
+                        // The field exists with an underscore, don't create a new one
+                    } else {
+                        // Create a new property
+                        var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                        Reflect.setField(_server, fieldName, prop);
+                    }
                     
                 case "checkbox":
                     // Create a boolean property
@@ -558,14 +583,38 @@ class DynamicConfigPage extends Page {
                     if (field.defaultValue != null) {
                         defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
                     }
-                    var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
-                    Reflect.setField(_server, fieldName, prop);
+                    // Check if the field already exists as a property with a different name
+                    var fieldExists = false;
+                    
+                    // Try with underscore prefix which is the common pattern
+                    var underscoreFieldName = "_" + fieldName;
+                    if (Reflect.hasField(_server, underscoreFieldName)) {
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
+                        fieldExists = true;
+                        // The field exists with an underscore, don't create a new one
+                    } else {
+                        // Create a new property
+                        var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                        Reflect.setField(_server, fieldName, prop);
+                    }
                     
                 case "dropdown":
                     // Create a string property for dropdown
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
-                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
-                    Reflect.setField(_server, fieldName, prop);
+                    // Check if the field already exists as a property with a different name
+                    var fieldExists = false;
+                    
+                    // Try with underscore prefix which is the common pattern
+                    var underscoreFieldName = "_" + fieldName;
+                    if (Reflect.hasField(_server, underscoreFieldName)) {
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
+                        fieldExists = true;
+                        // The field exists with an underscore, don't create a new one
+                    } else {
+                        // Create a new property
+                        var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                        Reflect.setField(_server, fieldName, prop);
+                    }
                     
                 default:
                     Logger.warning('${this}: Unknown field type for property initialization: ${field.type}');
