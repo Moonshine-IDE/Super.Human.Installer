@@ -186,7 +186,6 @@ class ProvisionerManager {
      */
     static private function _parseRolesArray(rolesData:Array<Dynamic>):Array<ProvisionerRole> {
         if (rolesData == null) {
-            Logger.info('No roles to parse');
             return [];
         }
         
@@ -199,8 +198,6 @@ class ProvisionerManager {
                     Logger.warning('Skipping null role data');
                     continue;
                 }
-                
-                Logger.info('Parsing role: ${roleData}');
                 
                 // Check if roleData is an ObjectMap
                 if (Std.isOfType(roleData, ObjectMap)) {
@@ -217,8 +214,6 @@ class ProvisionerManager {
                         label: objMap.get("label"),
                         description: objMap.get("description")
                     };
-                    
-                    Logger.info('Role parsed: name=${role.name}, label=${role.label}');
                     
                     // Add optional properties if they exist
                     if (objMap.exists("defaultEnabled")) {
@@ -237,8 +232,6 @@ class ProvisionerManager {
                         label: Reflect.field(roleData, "label"),
                         description: Reflect.field(roleData, "description")
                     };
-                    
-                    Logger.info('Role parsed: name=${role.name}, label=${role.label}');
                     
                     // Add optional properties if they exist
                     if (Reflect.hasField(roleData, "defaultEnabled")) {
@@ -262,11 +255,9 @@ class ProvisionerManager {
      */
     static private function _parseFieldsArray(fieldsData:Array<Dynamic>):Array<ProvisionerField> {
         if (fieldsData == null) {
-            Logger.info('No fields to parse');
             return [];
         }
         
-        Logger.info('Parsing ${fieldsData.length} fields');
         var result:Array<ProvisionerField> = [];
         
         for (fieldData in fieldsData) {
@@ -275,8 +266,6 @@ class ProvisionerManager {
                     Logger.warning('Skipping null field data');
                     continue;
                 }
-                
-                Logger.info('Parsing field: ${fieldData}');
                 
                 // Check if the field has a name property
                 var fieldName = null;
@@ -295,7 +284,6 @@ class ProvisionerManager {
                         }
                         if (objMap.exists("label")) fieldLabel = objMap.get("label");
                         
-                        Logger.info('Got field properties using ObjectMap: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
                     }
                     // Check if fieldData has get method (ObjectMap interface)
                     else if (Reflect.hasField(fieldData, "get")) {
@@ -308,7 +296,6 @@ class ProvisionerManager {
                                 fieldType = (typeValue != null && Std.string(typeValue).length > 0) ? Std.string(typeValue) : "text";
                                 fieldLabel = Reflect.callMethod(fieldData, getName, ["label"]);
                                 
-                                Logger.info('Got field properties using get method: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
                             }
                         } catch (e) {
                             Logger.error('Error calling get method: ${e}');
@@ -322,7 +309,6 @@ class ProvisionerManager {
                         }
                         if (Reflect.hasField(fieldData, "label")) fieldLabel = Reflect.field(fieldData, "label");
                         
-                        Logger.info('Got field properties using Reflect: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
                     } else if (Std.isOfType(fieldData, Dynamic) && fieldData.name != null) {
                         // It's a dynamic object with properties
                         fieldName = fieldData.name;
@@ -332,11 +318,8 @@ class ProvisionerManager {
                         }
                         if (fieldData.label != null) fieldLabel = fieldData.label;
                         
-                        Logger.info('Got field properties using dynamic access: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
                     }
                     
-                    // Log the field data
-                    Logger.info('Field data: ${fieldData}, extracted name: ${fieldName}, type: ${fieldType}, label: ${fieldLabel}');
                 } catch (e) {
                     Logger.error('Error extracting field properties: ${e}');
                 }
@@ -356,8 +339,6 @@ class ProvisionerManager {
                     label: fieldLabel
                 };
                 
-                Logger.info('Field parsed: name=${field.name}, type=${field.type}, label=${field.label}');
-                
                 // Add optional properties if they exist
                 // Try different ways to access properties
                 function getProperty(obj:Dynamic, propName:String):Dynamic {
@@ -367,7 +348,6 @@ class ProvisionerManager {
                             var objMap:ObjectMap<String, Dynamic> = cast obj;
                             if (objMap.exists(propName)) {
                                 var value = objMap.get(propName);
-                                Logger.info('Got property ${propName} using ObjectMap: ${value}');
                                 return value;
                             }
                         }
@@ -378,7 +358,6 @@ class ProvisionerManager {
                                 var getName = Reflect.field(obj, "get");
                                 if (Reflect.isFunction(getName)) {
                                     var value = Reflect.callMethod(obj, getName, [propName]);
-                                    Logger.info('Got property ${propName} using get method: ${value}');
                                     return value;
                                 }
                             } catch (e) {
@@ -386,11 +365,9 @@ class ProvisionerManager {
                             }
                         } else if (Reflect.hasField(obj, propName)) {
                             var value = Reflect.field(obj, propName);
-                            Logger.info('Got property ${propName} using Reflect: ${value}');
                             return value;
                         } else if (Std.isOfType(obj, Dynamic) && Reflect.getProperty(obj, propName) != null) {
                             var value = Reflect.getProperty(obj, propName);
-                            Logger.info('Got property ${propName} using dynamic access: ${value}');
                             return value;
                         }
                     } catch (e) {
