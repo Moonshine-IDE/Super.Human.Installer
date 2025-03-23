@@ -259,12 +259,17 @@ class ProvisionerManager {
                 var fieldLabel = null;
                 
                 // Try to get field properties using different methods
-                if (Std.isOfType(fieldData, Map)) {
-                    // It's a Map
-                    var map:Map<String, Dynamic> = cast fieldData;
-                    if (map.exists("name")) fieldName = map.get("name");
-                    if (map.exists("type")) fieldType = map.get("type");
-                    if (map.exists("label")) fieldLabel = map.get("label");
+                if (Reflect.hasField(fieldData, "exists") && Reflect.hasField(fieldData, "get")) {
+                    // It's a Map-like object with exists() and get() methods
+                    var exists = Reflect.field(fieldData, "exists");
+                    var get = Reflect.field(fieldData, "get");
+                    
+                    if (Reflect.callMethod(fieldData, exists, ["name"])) 
+                        fieldName = Reflect.callMethod(fieldData, get, ["name"]);
+                    if (Reflect.callMethod(fieldData, exists, ["type"])) 
+                        fieldType = Reflect.callMethod(fieldData, get, ["type"]);
+                    if (Reflect.callMethod(fieldData, exists, ["label"])) 
+                        fieldLabel = Reflect.callMethod(fieldData, get, ["label"]);
                 } else if (Reflect.hasField(fieldData, "name")) {
                     // It's an object with fields
                     fieldName = Reflect.field(fieldData, "name");
@@ -297,12 +302,14 @@ class ProvisionerManager {
                 // Add optional properties if they exist
                 // Try different ways to access properties
                 function getProperty(obj:Dynamic, propName:String):Dynamic {
-                    if (Std.isOfType(obj, Map)) {
-                        var map:Map<String, Dynamic> = cast obj;
-                        return map.exists(propName) ? map.get(propName) : null;
-                    } else if (Std.isOfType(obj, ObjectMap)) {
-                        var map:ObjectMap<String, Dynamic> = cast obj;
-                        return map.exists(propName) ? map.get(propName) : null;
+                    if (Reflect.hasField(obj, "exists") && Reflect.hasField(obj, "get")) {
+                        // It's a Map-like object with exists() and get() methods
+                        var exists = Reflect.field(obj, "exists");
+                        var get = Reflect.field(obj, "get");
+                        
+                        if (Reflect.callMethod(obj, exists, [propName])) 
+                            return Reflect.callMethod(obj, get, [propName]);
+                        return null;
                     } else if (Reflect.hasField(obj, propName)) {
                         return Reflect.field(obj, propName);
                     } else if (Std.isOfType(obj, Dynamic) && Reflect.getProperty(obj, propName) != null) {
