@@ -227,6 +227,7 @@ class Server {
     var _vagrantUpExecutorElapsedTimer:Timer;
     var _vagrantUpExecutorStopTimer:Timer;
     var _syncMethod:SyncMethod = SyncMethod.Rsync;
+    var _userData:Dynamic = {};
 
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
@@ -361,6 +362,10 @@ class Server {
     public var syncMethod(get, set):SyncMethod;
     function get_syncMethod() return _syncMethod;
     function set_syncMethod( value:SyncMethod ):SyncMethod { _syncMethod = value; return _syncMethod; }
+    
+    public var userData(get, set):Dynamic;
+    function get_userData() return _userData;
+    function set_userData(value:Dynamic):Dynamic { _userData = value; return _userData; }
     
     function new() {
 

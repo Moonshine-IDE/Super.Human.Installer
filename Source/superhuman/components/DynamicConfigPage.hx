@@ -201,11 +201,14 @@ class DynamicConfigPage extends Page {
         
         // Check if we already have a provisioner definition from the service type data
         var serviceTypeProvisioner = null;
-        if (_server != null && _server.userData != null && Reflect.hasField(_server.userData, "serviceTypeData")) {
-            var serviceTypeData = Reflect.field(_server.userData, "serviceTypeData");
-            if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
-                serviceTypeProvisioner = Reflect.field(serviceTypeData, "provisioner");
-                Logger.info('${this}: Found provisioner in service type data: ${serviceTypeProvisioner.name}');
+        if (_server != null && _server.userData != null) {
+            var userData = _server.userData;
+            if (Reflect.hasField(userData, "serviceTypeData")) {
+                var serviceTypeData = Reflect.field(userData, "serviceTypeData");
+                if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
+                    serviceTypeProvisioner = Reflect.field(serviceTypeData, "provisioner");
+                    Logger.info('${this}: Found provisioner in service type data: ${serviceTypeProvisioner.name}');
+                }
             }
         }
         

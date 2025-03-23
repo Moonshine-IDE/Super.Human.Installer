@@ -1354,9 +1354,10 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		// Store the service type data in the server's userData for later use
 		if (e.serviceTypeData != null) {
-			if (server.userData == null) {
-				server.userData = {};
-			}
+			// Initialize userData if needed
+			server.userData = server.userData != null ? server.userData : {};
+			
+			// Store the service type data
 			Reflect.setField(server.userData, "serviceTypeData", e.serviceTypeData);
 			Logger.info('${this}: Stored service type data in server userData: ${e.serviceTypeData.value}');
 		}
