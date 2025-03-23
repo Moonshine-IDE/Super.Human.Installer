@@ -216,11 +216,15 @@ class DynamicConfigPage extends Page {
         var provisionersDir = ProvisionerManager.getProvisionersDirectory();
         Logger.info('${this}: Provisioners directory: ${provisionersDir}');
         
+        // Get the actual provisioner type from the server
+        var provisionerType = _server.provisioner.type;
+        Logger.info('${this}: Getting provisioners for type: ${provisionerType}');
+        
         // Get all provisioners of the same type
-        var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+        var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
         
         // Log detailed information about each provisioner
-        Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${_server.provisioner.type}');
+        Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${provisionerType}');
         for (i in 0...allProvisioners.length) {
             var p = allProvisioners[i];
             Logger.info('${this}: Provisioner ${i}: name=${p.name}, type=${p.data.type}, version=${p.data.version}, root=${p.root}');
@@ -234,9 +238,15 @@ class DynamicConfigPage extends Page {
         
         // If no provisioners found, try getting all provisioners
         if (allProvisioners.length == 0) {
-            Logger.warning('${this}: No provisioners found for type ${_server.provisioner.type}, getting all provisioners');
+            Logger.warning('${this}: No provisioners found for type ${provisionerType}, getting all provisioners');
             allProvisioners = ProvisionerManager.getBundledProvisioners();
-            Logger.info('${this}: Found ${allProvisioners.length} total provisioners');
+            
+            // Filter to only include provisioners of the correct type
+            allProvisioners = allProvisioners.filter(function(p) {
+                return p.data.type == provisionerType;
+            });
+            
+            Logger.info('${this}: Found ${allProvisioners.length} filtered provisioners for type ${provisionerType}');
         }
         
         // Create a collection for the dropdown
