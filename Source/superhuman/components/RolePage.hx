@@ -31,6 +31,7 @@
 package superhuman.components;
 
 import superhuman.config.SuperHumanHashes;
+import champaign.core.logging.Logger;
 import feathers.controls.Alert;
 import feathers.controls.Button;
 import feathers.controls.Label;
@@ -56,8 +57,10 @@ import lime.ui.FileDialogType;
 import openfl.events.Event;
 import prominic.sys.io.FileTools;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.managers.ProvisionerManager;
 import superhuman.server.Server;
 import superhuman.server.data.RoleData;
+import superhuman.server.provisioners.ProvisionerType;
 import superhuman.server.roles.ServerRoleImpl;
 
 class RolePage extends Page {
@@ -137,11 +140,17 @@ class RolePage extends Page {
                     var customRoles:Array<ServerRoleImpl> = [];
                     
                     // Create ServerRoleImpl objects from the provisioner.yml roles
-                    for (roleData in provisionerDefinition.metadata.roles) {
+                    var roles:Array<Dynamic> = cast provisionerDefinition.metadata.roles;
+                    for (roleData in roles) {
                         // Check if this role already exists in the server's roles
                         var existingRole:RoleData = null;
+                        var roleName = Reflect.field(roleData, "name");
+                        var roleLabel = Reflect.field(roleData, "label");
+                        var roleDescription = Reflect.field(roleData, "description");
+                        var roleDefaultEnabled = Reflect.field(roleData, "defaultEnabled");
+                        
                         for (r in _server.roles.value) {
-                            if (r.value == roleData.name) {
+                            if (r.value == roleName) {
                                 existingRole = r;
                                 break;
                             }
@@ -150,8 +159,8 @@ class RolePage extends Page {
                         // If the role doesn't exist in the server's roles, create a new one
                         if (existingRole == null) {
                             existingRole = {
-                                value: roleData.name,
-                                enabled: roleData.defaultEnabled == true,
+                                value: roleName,
+                                enabled: roleDefaultEnabled == true,
                                 files: {
                                     installer: null,
                                     installerFileName: null,
@@ -172,8 +181,8 @@ class RolePage extends Page {
                         
                         // Create a ServerRoleImpl for the role
                         var roleImpl = new ServerRoleImpl(
-                            roleData.label,
-                            roleData.description,
+                            roleLabel,
+                            roleDescription,
                             existingRole,
                             [], // No hashes for custom roles
                             [], // No hotfix hashes
