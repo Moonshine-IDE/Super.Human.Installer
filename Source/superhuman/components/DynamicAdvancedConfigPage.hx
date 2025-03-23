@@ -322,7 +322,7 @@ class DynamicAdvancedConfigPage extends Page {
                         
                         if (options.length > 0) {
                             dropdown.dataProvider = new feathers.data.ArrayCollection(options);
-                            dropdown.itemToText = (item) -> item != null && item.label != null ? item.label : "Unknown";
+                            dropdown.itemToText = (item) -> item != null && item.length > 1 ? item[1] : "Unknown";
                             
                             // Set default value if provided
                             if (field.defaultValue != null) {
@@ -407,7 +407,7 @@ class DynamicAdvancedConfigPage extends Page {
                             var selectedValue = Reflect.hasField(value, "value") ? Reflect.field(value, "value") : value;
                             for (i in 0...dropdown.dataProvider.length) {
                                 var option = dropdown.dataProvider.get(i);
-                                if (option != null && option.value == selectedValue) {
+                                if (option != null && option.length > 0 && option[0] == selectedValue) {
                                     dropdown.selectedIndex = i;
                                     break;
                                 }
@@ -481,7 +481,7 @@ class DynamicAdvancedConfigPage extends Page {
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
-                var value = selectedItem != null && Reflect.hasField(selectedItem, "value") ? Reflect.field(selectedItem, "value") : null;
+                var value = selectedItem != null && selectedItem.length > 0 ? selectedItem[0] : null;
                 
                 // Check if the server has this property
                 if (Reflect.hasField(_server, fieldName)) {
