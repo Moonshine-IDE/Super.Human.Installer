@@ -52,6 +52,16 @@ import yaml.Yaml;
 import yaml.util.ObjectMap;
 
 /**
+ * Structure for provisioner role definition
+ */
+typedef ProvisionerRole = {
+    var name:String;
+    var label:String;
+    var description:String;
+    @:optional var defaultEnabled:Bool;
+}
+
+/**
  * Structure for provisioner.yml metadata
  */
 typedef ProvisionerMetadata = {
@@ -61,6 +71,7 @@ typedef ProvisionerMetadata = {
     @:optional var author:String;
     @:optional var version:String;
     @:optional var configuration:ProvisionerConfiguration;
+    @:optional var roles:Array<ProvisionerRole>;
 }
 
 /**
@@ -146,13 +157,21 @@ class ProvisionerManager {
                 };
             }
             
+            // Parse roles if they exist
+            var roles:Array<ProvisionerRole> = null;
+            if (metadata.exists("roles")) {
+                var rolesData:Array<Dynamic> = metadata.get("roles");
+                roles = _parseRolesArray(rolesData);
+            }
+            
             return {
                 name: metadata.get("name"),
                 type: metadata.get("type"),
                 description: metadata.get("description"),
                 author: metadata.exists("author") ? metadata.get("author") : null,
                 version: metadata.exists("version") ? metadata.get("version") : null,
-                configuration: configuration
+                configuration: configuration,
+                roles: roles
             };
         } catch (e) {
             Logger.error('Error reading provisioner.yml at ${metadataPath}: ${e}');
@@ -160,6 +179,57 @@ class ProvisionerManager {
         }
     }
         
+    /**
+     * Parse an array of role definitions from the provisioner.yml file
+     * @param rolesData The array of role data from the YAML file
+     * @return Array<ProvisionerRole> The parsed role definitions
+     */
+    static private function _parseRolesArray(rolesData:Array<Dynamic>):Array<ProvisionerRole> {
+        if (rolesData == null) {
+            Logger.info('No roles to parse');
+            return [];
+        }
+        
+        Logger.info('Parsing ${rolesData.length} roles');
+        var result:Array<ProvisionerRole> = [];
+        
+        for (roleData in rolesData) {
+            try {
+                if (roleData == null) {
+                    Logger.warning('Skipping null role data');
+                    continue;
+                }
+                
+                Logger.info('Parsing role: ${roleData}');
+                
+                // Check for required fields
+                if (!Reflect.hasField(roleData, "name") || !Reflect.hasField(roleData, "label") || !Reflect.hasField(roleData, "description")) {
+                    Logger.warning('Skipping role with missing required properties: ${roleData}');
+                    continue;
+                }
+                
+                var role:ProvisionerRole = {
+                    name: Reflect.field(roleData, "name"),
+                    label: Reflect.field(roleData, "label"),
+                    description: Reflect.field(roleData, "description")
+                };
+                
+                Logger.info('Role parsed: name=${role.name}, label=${role.label}');
+                
+                // Add optional properties if they exist
+                if (Reflect.hasField(roleData, "defaultEnabled")) {
+                    role.defaultEnabled = Reflect.field(roleData, "defaultEnabled");
+                }
+                
+                result.push(role);
+            } catch (e) {
+                Logger.error('Error parsing role: ${e}');
+            }
+        }
+        
+        return result;
+    }
+    
     /**
      * Parse an array of field definitions from the provisioner.yml file
      * @param fieldsData The array of field data from the YAML file
