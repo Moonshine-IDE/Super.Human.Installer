@@ -222,7 +222,7 @@ class DynamicAdvancedConfigPage extends Page {
                 
                 // Set validation key if provided
                 if (field.validationKey != null) {
-                    input.validationKey = field.validationKey;
+                    input.validationKey = new EReg(field.validationKey, "");
                 }
                 
                 // Set default value if provided
