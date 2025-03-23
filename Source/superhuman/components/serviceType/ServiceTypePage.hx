@@ -105,9 +105,10 @@ class ServiceTypePage extends Page {
 			new GridViewColumn("Service", (data) -> {
 				// Strip version from display name
 				var displayName = data.value;
-				var versionIndex = displayName.lastIndexOf(" v");
-				if (versionIndex > 0) {
-					displayName = displayName.substring(0, versionIndex);
+				// Use a regular expression to find and remove the version
+				var versionPattern = ~/\sv\d+(\.\d+)*$/;
+				if (versionPattern.match(displayName)) {
+					displayName = versionPattern.replace(displayName, "");
 				}
 				return displayName;
 			}),
