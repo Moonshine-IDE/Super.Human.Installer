@@ -258,6 +258,11 @@ class DynamicConfigPage extends Page {
                     input.minLength = 1;
                 }
                 
+                // Set restrict if provided (must be a valid regex)
+                if (field.restrict != null) {
+                    input.restrict = new EReg(field.restrict, "");
+                }
+                
                 // Add the input to the row
                 row.content.addChild(input);
                 
@@ -265,17 +270,13 @@ class DynamicConfigPage extends Page {
                 _dynamicFields.set(field.name, input);
                 
             case "number":
-                var stepper = new GenesisFormNumericStepper();
+                // Get default values
+                var defaultValue = field.defaultValue != null ? Std.parseFloat(Std.string(field.defaultValue)) : 0;
+                var minValue = field.min != null ? field.min : 0;
+                var maxValue = field.max != null ? field.max : 100;
+                
+                var stepper = new GenesisFormNumericStepper(defaultValue, minValue, maxValue);
                 stepper.toolTip = field.tooltip != null ? field.tooltip : "";
-                
-                // Set min/max values if provided
-                if (field.min != null) stepper.minimum = field.min;
-                if (field.max != null) stepper.maximum = field.max;
-                
-                // Set default value if provided
-                if (field.defaultValue != null) {
-                    stepper.value = Std.parseFloat(Std.string(field.defaultValue));
-                }
                 
                 // Add the stepper to the row
                 row.content.addChild(stepper);
