@@ -267,7 +267,8 @@ class ProvisionerManager {
                             var getName = Reflect.field(fieldData, "get");
                             if (Reflect.isFunction(getName)) {
                                 fieldName = Reflect.callMethod(fieldData, getName, ["name"]);
-                                fieldType = Reflect.callMethod(fieldData, getName, ["type"]) || "text";
+                                var typeValue = Reflect.callMethod(fieldData, getName, ["type"]);
+                                fieldType = (typeValue != null && Std.string(typeValue).length > 0) ? Std.string(typeValue) : "text";
                                 fieldLabel = Reflect.callMethod(fieldData, getName, ["label"]);
                                 
                                 Logger.info('Got field properties using get method: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
