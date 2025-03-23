@@ -136,13 +136,13 @@ jobs:
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         shell: cmd
-        run: >
-          haxelib run openfl build project.xml windows 
-          ${{ env.haxe_flag }} 
-          -Dlogverbose 
-          -Dlogcolor 
-          -Dgitsha=${{ github.sha }} 
-          -Dgitbranch=${{ github.ref_name }}
+        run: |
+          haxelib run openfl build project.xml windows ^
+            %haxe_flag% ^
+            -Dlogverbose ^
+            -Dlogcolor ^
+            -Dgitsha=${{ github.sha }} ^
+            -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
         run: ls -r ${{ env.bin_path }}
