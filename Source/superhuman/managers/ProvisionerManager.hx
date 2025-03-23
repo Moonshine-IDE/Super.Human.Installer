@@ -209,45 +209,78 @@ typedef ProvisionerMetadata = {
     @:optional var roles:Array<ProvisionerRole>;
 }
         
+    /**
+     * Parse an array of field definitions from the provisioner.yml file
+     * @param fieldsData The array of field data from the YAML file
+     * @return Array<ProvisionerField> The parsed field definitions
+     */
+    static private function _parseFieldsArray(fieldsData:Array<Dynamic>):Array<ProvisionerField> {
+        if (fieldsData == null) {
+            Logger.info('No fields to parse');
+            return [];
+        }
+        
         Logger.info('Parsing ${fieldsData.length} fields');
         var result:Array<ProvisionerField> = [];
         
         for (fieldData in fieldsData) {
             try {
+                if (fieldData == null) {
+                    Logger.warning('Skipping null field data');
+                    continue;
+                }
+                
                 Logger.info('Parsing field: ${fieldData}');
                 
+                // Check for required fields
+                if (!Reflect.hasField(fieldData, "name") || !Reflect.hasField(fieldData, "type") || !Reflect.hasField(fieldData, "label")) {
+                    Logger.warning('Skipping field with missing required properties: ${fieldData}');
+                    continue;
+                }
+                
                 var field:ProvisionerField = {
-                    name: fieldData.get("name"),
-                    type: fieldData.get("type"),
-                    label: fieldData.get("label")
+                    name: Reflect.field(fieldData, "name"),
+                    type: Reflect.field(fieldData, "type"),
+                    label: Reflect.field(fieldData, "label")
                 };
                 
                 Logger.info('Field parsed: name=${field.name}, type=${field.type}, label=${field.label}');
             
                 // Add optional properties if they exist
-                if (fieldData.exists("defaultValue")) field.defaultValue = fieldData.get("defaultValue");
-                if (fieldData.exists("required")) field.required = fieldData.get("required");
-                if (fieldData.exists("validationKey")) field.validationKey = fieldData.get("validationKey");
-                if (fieldData.exists("tooltip")) field.tooltip = fieldData.get("tooltip");
-                if (fieldData.exists("placeholder")) field.placeholder = fieldData.get("placeholder");
-                if (fieldData.exists("restrict")) field.restrict = fieldData.get("restrict");
+                if (Reflect.hasField(fieldData, "defaultValue")) field.defaultValue = Reflect.field(fieldData, "defaultValue");
+                if (Reflect.hasField(fieldData, "required")) field.required = Reflect.field(fieldData, "required");
+                if (Reflect.hasField(fieldData, "validationKey")) field.validationKey = Reflect.field(fieldData, "validationKey");
+                if (Reflect.hasField(fieldData, "tooltip")) field.tooltip = Reflect.field(fieldData, "tooltip");
+                if (Reflect.hasField(fieldData, "placeholder")) field.placeholder = Reflect.field(fieldData, "placeholder");
+                if (Reflect.hasField(fieldData, "restrict")) field.restrict = Reflect.field(fieldData, "restrict");
                 
                 // Parse options for dropdown fields
-                if (fieldData.exists("options")) {
-                    var optionsData:Array<Dynamic> = fieldData.get("options");
+                if (Reflect.hasField(fieldData, "options")) {
+                    var optionsData:Array<Dynamic> = Reflect.field(fieldData, "options");
                     field.options = [];
                     
                     for (optionData in optionsData) {
-                        field.options.push({
-                            value: optionData.get("value"),
-                            label: optionData.get("label")
-                        });
+                        if (optionData != null && Reflect.hasField(optionData, "value") && Reflect.hasField(optionData, "label")) {
+                            field.options.push({
+                                value: Reflect.field(optionData, "value"),
+                                label: Reflect.field(optionData, "label")
+                            });
+                        } else {
+                            Logger.warning('Skipping invalid option: ${optionData}');
+                        }
                     }
                 }
                 
                 // Parse min/max for number fields
-                if (fieldData.exists("min")) field.min = Std.parseFloat(fieldData.get("min"));
-                if (fieldData.exists("max")) field.max = Std.parseFloat(fieldData.get("max"));
+                if (Reflect.hasField(fieldData, "min")) {
+                    var minValue = Reflect.field(fieldData, "min");
+                    field.min = Std.parseFloat(Std.string(minValue));
+                }
+                
+                if (Reflect.hasField(fieldData, "max")) {
+                    var maxValue = Reflect.field(fieldData, "max");
+                    field.max = Std.parseFloat(Std.string(maxValue));
+                }
                 
                 result.push(field);
             } catch (e) {
