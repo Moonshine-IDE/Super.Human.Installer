@@ -504,6 +504,8 @@ class DynamicAdvancedConfigPage extends Page {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE);
         if (_server != null) {
             evt.server = _server;
+            // Also set the provisioner type to ensure proper page navigation
+            evt.provisionerType = _server.provisioner.type;
         }
         this.dispatchEvent(evt);
     }

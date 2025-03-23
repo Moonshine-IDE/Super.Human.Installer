@@ -746,13 +746,29 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelAdvancedConfigureServer( e:SuperHumanApplicationEvent ) {
-
-		switch ( e.server.provisioner.type ) {
+		// Get the provisioner type from the event
+		var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+		
+		// Determine which page to navigate to based on the provisioner type
+		switch (provisionerType) {
 			case ProvisionerType.AdditionalProvisioner:
+				// For additional provisioners, go to the additional server page
 				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
-			default:
+			case ProvisionerType.DemoTasks, ProvisionerType.Default, ProvisionerType.Custom:
+				// For built-in provisioner types, go to the standard config page
 				this.selectedPageId = PAGE_CONFIG;
+			default:
+				// For custom provisioner types (any other string), go to the dynamic config page
+				// Check if we're coming from the dynamic config page
+				if (this.previousPageId == "page-dynamic-config") {
+					this.selectedPageId = "page-dynamic-config";
+				} else {
+					// Otherwise go to the standard config page as a fallback
+					this.selectedPageId = PAGE_CONFIG;
+				}
 		}
+		
+		Logger.info('${this}: Canceling advanced configuration for provisioner type: ${provisionerType}, navigating to ${this.selectedPageId}');
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
