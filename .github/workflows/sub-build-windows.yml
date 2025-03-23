@@ -41,7 +41,7 @@ env:
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
   haxe_version: 4.3.6
-  bin_path: X:/Export/${{ inputs.env }}/windows/bin/
+  bin_path: Export/${{ inputs.env }}/windows/bin/
 
 jobs:
   build:
@@ -69,14 +69,6 @@ jobs:
 
       - name: Checkout LFS objects
         run: git lfs checkout
-
-      - name: Map disk
-        shell: cmd
-        run: |
-          echo "Mapping drive X: to current directory..."
-          subst X: "%CD%"
-          echo "Directory mapped to X:"
-          dir X:
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
@@ -135,15 +127,13 @@ jobs:
       - name: Build
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         shell: cmd
-        run: |
-          echo "Switching to drive X and building..."
-          X:
-          haxelib run openfl build project.xml windows ^
-            %haxe_flag% ^
-            -Dlogverbose ^
-            -Dlogcolor ^
-            -Dgitsha=${{ github.sha }} ^
-            -Dgitbranch=${{ github.ref_name }}
+        run: >
+          haxelib run openfl build project.xml windows 
+          ${{ env.haxe_flag }} 
+          -Dlogverbose 
+          -Dlogcolor 
+          -Dgitsha=${{ github.sha }} 
+          -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
         run: ls -r ${{ env.bin_path }}
@@ -168,7 +158,7 @@ jobs:
           /DPRODUCT_EXE=${{ env.app_name }}.exe
           /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
           /DROOT_KEY=HKCU
-          X:/Templates/installer/nsis-installer.nsi
+          Templates/installer/nsis-installer.nsi
 
       - name: Sign installer
         if: ${{ inputs.env == 'Production' }}
