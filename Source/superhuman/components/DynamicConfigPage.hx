@@ -231,7 +231,7 @@ class DynamicConfigPage extends Page {
      * Add a dynamic field to the form based on the field definition
      * @param field The field definition from the provisioner.yml
      */
-    private function _addDynamicField(field:ProvisionerManager.ProvisionerField) {
+    private function _addDynamicField(field:ProvisionerField) {
         // Create a new row for the field
         var row = new GenesisFormRow();
         row.text = field.label;
