@@ -1,17 +1,14 @@
-# Sample provisioner.yml file
-# This file defines the metadata for a custom provisioner
-
 # Basic information about the provisioner
-name: "My Custom Provisioner"
-type: "my-custom-provisioner"
+name: "HCL Custom Provisioner"
+type: "hcl_custom_provisioner"
 description: "A custom provisioner for specific needs"
 author: "Your Name"
 version: "1.0.0"
-serverType: "domino"  # Can be "domino" or "additional-domino"
 
 # Configuration fields for the provisioner
+# These fields will be used to dynamically generate the UI
 configuration:
-  # Basic configuration fields (shown on the main configuration page)
+  # Basic fields appear on the main configuration page
   basicFields:
     - name: "hostname"
       type: "text"
@@ -21,7 +18,8 @@ configuration:
       validationKey: "hostname"
       tooltip: "The hostname for your server"
       placeholder: "Enter hostname"
-    
+      restrict: "a-zA-Z0-9.-"
+      
     - name: "organization"
       type: "text"
       label: "Organization"
@@ -30,7 +28,8 @@ configuration:
       validationKey: "organization"
       tooltip: "The organization name for your server"
       placeholder: "Enter organization name"
-    
+      restrict: "a-zA-Z0-9-"
+      
     - name: "serverType"
       type: "dropdown"
       label: "Server Type"
@@ -44,7 +43,7 @@ configuration:
         - value: "production"
           label: "Production Server"
   
-  # Advanced configuration fields (shown on the advanced configuration page)
+  # Advanced fields appear on the advanced configuration page
   advancedFields:
     - name: "numCPUs"
       type: "number"
@@ -53,7 +52,7 @@ configuration:
       min: 1
       max: 8
       tooltip: "The number of CPUs to allocate"
-    
+      
     - name: "memory"
       type: "number"
       label: "Memory (GB)"
@@ -61,13 +60,13 @@ configuration:
       min: 2
       max: 16
       tooltip: "The amount of memory to allocate in GB"
-    
+      
     - name: "openBrowser"
       type: "checkbox"
       label: "Open Browser After Start"
       defaultValue: true
       tooltip: "Whether to open a browser after the server starts"
-    
+      
     - name: "networkAddress"
       type: "text"
       label: "Network Address"
@@ -75,7 +74,8 @@ configuration:
       validationKey: "ip"
       tooltip: "The IP address for the server"
       placeholder: "Enter IP address"
-    
+      restrict: "0-9."
+      
     - name: "networkNetmask"
       type: "text"
       label: "Network Netmask"
@@ -83,7 +83,8 @@ configuration:
       validationKey: "ip"
       tooltip: "The netmask for the server"
       placeholder: "Enter netmask"
-    
+      restrict: "0-9."
+      
     - name: "networkGateway"
       type: "text"
       label: "Network Gateway"
@@ -91,3 +92,4 @@ configuration:
       validationKey: "ip"
       tooltip: "The gateway for the server"
       placeholder: "Enter gateway"
+      restrict: "0-9."

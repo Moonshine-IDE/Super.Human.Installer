@@ -310,21 +310,57 @@ class DynamicConfigPage extends Page {
                 
                 // Add options if provided
                 if (field.options != null) {
-                    var options = [];
-                    for (option in field.options) {
-                        options.push({value: option.value, label: option.label});
-                    }
-                    dropdown.dataProvider = new feathers.data.ArrayCollection(options);
-                    dropdown.itemToText = (item) -> item.label;
-                    
-                    // Set default value if provided
-                    if (field.defaultValue != null) {
-                        for (i in 0...options.length) {
-                            if (options[i].value == field.defaultValue) {
-                                dropdown.selectedIndex = i;
-                                break;
+                    try {
+                        var options = [];
+                        
+                        // Check if options is a nested array (sometimes YAML can parse it this way)
+                        if (Std.isOfType(field.options, Array) && field.options.length > 0 && Std.isOfType(field.options[0], Array)) {
+                            // Handle nested array case
+                            var nestedOptions:Array<Dynamic> = field.options[0];
+                            for (option in nestedOptions) {
+                                if (option != null && Reflect.hasField(option, "value") && Reflect.hasField(option, "label")) {
+                                    options.push({
+                                        value: Reflect.field(option, "value"),
+                                        label: Reflect.field(option, "label")
+                                    });
+                                } else {
+                                    Logger.warning('Invalid dropdown option in field ${field.name}: ${option}');
+                                }
+                            }
+                        } else {
+                            // Handle normal array case
+                            for (option in field.options) {
+                                if (option != null) {
+                                    var value = option.value;
+                                    var label = option.label;
+                                    
+                                    if (value != null && label != null) {
+                                        options.push({value: value, label: label});
+                                    } else {
+                                        Logger.warning('Invalid dropdown option in field ${field.name}: value=${value}, label=${label}');
+                                    }
+                                }
                             }
                         }
+                        
+                        if (options.length > 0) {
+                            dropdown.dataProvider = new feathers.data.ArrayCollection(options);
+                            dropdown.itemToText = (item) -> item != null && item.label != null ? item.label : "Unknown";
+                            
+                            // Set default value if provided
+                            if (field.defaultValue != null) {
+                                for (i in 0...options.length) {
+                                    if (options[i].value == field.defaultValue) {
+                                        dropdown.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        } else {
+                            Logger.warning('No valid options found for dropdown field ${field.name}');
+                        }
+                    } catch (e) {
+                        Logger.error('Error parsing dropdown options for field ${field.name}: ${e}');
                     }
                 }
                 
@@ -403,12 +439,14 @@ class DynamicConfigPage extends Page {
                         }
                     } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                         var dropdown:GenesisFormPupUpListView = cast field;
-                        var selectedValue = Reflect.hasField(value, "value") ? Reflect.field(value, "value") : value;
-                        for (i in 0...dropdown.dataProvider.length) {
-                            var option = dropdown.dataProvider.get(i);
-                            if (option.value == selectedValue) {
-                                dropdown.selectedIndex = i;
-                                break;
+                        if (dropdown.dataProvider != null && dropdown.dataProvider.length > 0) {
+                            var selectedValue = Reflect.hasField(value, "value") ? Reflect.field(value, "value") : value;
+                            for (i in 0...dropdown.dataProvider.length) {
+                                var option = dropdown.dataProvider.get(i);
+                                if (option != null && option.value == selectedValue) {
+                                    dropdown.selectedIndex = i;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -502,7 +540,7 @@ class DynamicConfigPage extends Page {
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
-                var value = selectedItem != null ? selectedItem.value : null;
+                var value = selectedItem != null && Reflect.hasField(selectedItem, "value") ? Reflect.field(selectedItem, "value") : null;
                 
                 // Check if the server has this property
                 if (Reflect.hasField(_server, fieldName)) {

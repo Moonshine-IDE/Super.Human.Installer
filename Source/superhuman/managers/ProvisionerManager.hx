@@ -61,7 +61,6 @@ typedef ProvisionerMetadata = {
     @:optional var author:String;
     @:optional var version:String;
     @:optional var configuration:ProvisionerConfiguration;
-    @:optional var serverType:String; // Determines which UI type to use (e.g., "domino" or "additional-domino")
 }
 
 /**
@@ -153,8 +152,7 @@ class ProvisionerManager {
                 description: metadata.get("description"),
                 author: metadata.exists("author") ? metadata.get("author") : null,
                 version: metadata.exists("version") ? metadata.get("version") : null,
-                configuration: configuration,
-                serverType: metadata.exists("serverType") ? metadata.get("serverType") : null
+                configuration: configuration
             };
         } catch (e) {
             Logger.error('Error reading provisioner.yml at ${metadataPath}: ${e}');
