@@ -639,6 +639,16 @@ class DynamicAdvancedConfigPage extends Page {
         }
     }
 
+    /**
+     * Handler for property changes to propagate to the server
+     * @param property The property that changed
+     */
+    private function _propertyChangedHandler<T>(property:T):Void {
+        if (_server != null) {
+            _server.setServerStatus();
+        }
+    }
+    
     override function _cancel(?e:Dynamic) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE);
         if (_server != null) {
