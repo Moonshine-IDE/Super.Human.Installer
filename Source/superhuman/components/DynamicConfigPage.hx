@@ -186,8 +186,23 @@ class DynamicConfigPage extends Page {
         
         // Update the provisioner dropdown with versions of the same type
         if (_dropdownCoreComponentVersion != null) {
+            Logger.info('${this}: Setting up provisioner dropdown for server with type: ${_server.provisioner.type}, version: ${_server.provisioner.version}');
+            
             // Get all provisioners of the same type
             var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+            
+            // Log detailed information about each provisioner
+            Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${_server.provisioner.type}');
+            for (i in 0...allProvisioners.length) {
+                var p = allProvisioners[i];
+                Logger.info('${this}: Provisioner ${i}: name=${p.name}, type=${p.data.type}, version=${p.data.version}, root=${p.root}');
+                
+                if (p.metadata != null) {
+                    Logger.info('${this}: Metadata: name=${p.metadata.name}, type=${p.metadata.type}, version=${p.metadata.version}');
+                } else {
+                    Logger.warning('${this}: No metadata for provisioner ${p.name}');
+                }
+            }
             
             // Create a collection for the dropdown
             var provisionerCollection = new feathers.data.ArrayCollection<ProvisionerDefinition>();
@@ -195,43 +210,58 @@ class DynamicConfigPage extends Page {
             // Add all provisioners of the same type to the collection
             for (provisioner in allProvisioners) {
                 provisionerCollection.add(provisioner);
+                Logger.info('${this}: Added provisioner to dropdown: ${provisioner.name}');
             }
             
             // Set the dropdown data provider
             _dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+            Logger.info('${this}: Set dropdown data provider with ${provisionerCollection.length} items');
             
             // Select the current provisioner version
             var selectedIndex = -1;
             for (i in 0...provisionerCollection.length) {
                 var d:ProvisionerDefinition = provisionerCollection.get(i);
+                Logger.info('${this}: Checking provisioner at index ${i}: ${d.name}, version=${d.data.version} against server version=${_server.provisioner.version}');
+                
                 if (d.data.version == _server.provisioner.version) {
                     selectedIndex = i;
+                    Logger.info('${this}: Found matching version at index ${i}');
                     break;
                 }
             }
             
             // If we found a match, select it
             if (selectedIndex >= 0) {
+                Logger.info('${this}: Setting selected index to ${selectedIndex}');
                 _dropdownCoreComponentVersion.selectedIndex = selectedIndex;
             } else if (provisionerCollection.length > 0) {
                 // Otherwise select the first one
+                Logger.info('${this}: No matching version found, setting selected index to 0');
                 _dropdownCoreComponentVersion.selectedIndex = 0;
+            } else {
+                Logger.warning('${this}: No provisioners in collection, cannot set selected index');
             }
-            
-            Logger.info('${this}: Set provisioner dropdown with ${provisionerCollection.length} versions of type ${_server.provisioner.type}');
             
             // Get the provisioner definition for the current version
             var provisionerDefinition = null;
             if (selectedIndex >= 0) {
                 provisionerDefinition = provisionerCollection.get(selectedIndex);
+                Logger.info('${this}: Using provisioner definition at index ${selectedIndex}: ${provisionerDefinition.name}');
             } else if (provisionerCollection.length > 0) {
                 provisionerDefinition = provisionerCollection.get(0);
+                Logger.info('${this}: Using first provisioner definition: ${provisionerDefinition.name}');
+            } else {
+                Logger.warning('${this}: No provisioner definition available');
             }
             
             // Set the provisioner definition to generate the form fields
             if (provisionerDefinition != null) {
                 setProvisionerDefinition(provisionerDefinition);
+            } else {
+                Logger.warning('${this}: Cannot set provisioner definition, it is null');
             }
+        } else {
+            Logger.warning('${this}: Dropdown is null, cannot set provisioner versions');
         }
     }
     
