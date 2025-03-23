@@ -124,7 +124,7 @@ class ProvisionerManager {
         
         try {
             var content = File.getContent(metadataPath);
-            Logger.info('Provisioner metadata content: ${content.substr(0, Math.min(content.length, 200))}...');
+            Logger.info('Provisioner metadata content: ${content.substr(0, Math.min(Std.int(content.length), 200))}...');
             
             var metadata:ObjectMap<String, Dynamic> = Yaml.read(metadataPath);
             
