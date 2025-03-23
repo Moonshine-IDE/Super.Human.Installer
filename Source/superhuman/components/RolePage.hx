@@ -295,6 +295,8 @@ class RolePickerItem extends LayoutGroup {
 
         }
 
+        _hotfixButton.enabled = _roleImpl.role.enabled;
+
         if ( _roleImpl.role.files.hotfixes != null ) {
 
             _hotfixButton.includeInLayout = _hotfixButton.visible = true;
@@ -310,6 +312,7 @@ class RolePickerItem extends LayoutGroup {
 
         }
 
+        _fixpackButton.enabled = _roleImpl.role.enabled;
         if ( _roleImpl.role.files.fixpacks != null ) {
 
             _fixpackButton.includeInLayout = _fixpackButton.visible = true;

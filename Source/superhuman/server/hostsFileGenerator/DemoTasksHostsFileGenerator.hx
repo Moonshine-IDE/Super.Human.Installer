@@ -119,6 +119,16 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
                 replace.NOMADWEB_HASH = installerHash;
                 replace.NOMADWEB_INSTALLER = installerName;
                 replace.NOMADWEB_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
+
+                if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
+                {
+                    var hotfixesPath = new Path(r.files.hotfixes[0]);
+                    
+                    replace.NOMADWEB_HOTFIX_INSTALL = true;
+                    replace.NOMADWEB_HOTFIX_INSTALLER = hotfixesPath.file + "." + hotfixesPath.ext;
+                    replace.NOMADWEB_VERSION_HOTFIX_INSTALL = hotfixVersion == null ? defaultProvisionerFieldValue : hotfixVersion.fullVersion;
+                }
+
                 replace.ROLE_NOMADWEB = replaceWith;
             }
 
@@ -129,6 +139,16 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
             	    
                 replace.TRAVELER_INSTALLER = installerName;
                 replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
+
+                if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
+                {
+                    var fixPacksPath = new Path(r.files.fixpacks[0]);
+                    
+                    replace.TRAVELER_FP_INSTALL = true;
+                    replace.TRAVELER_FP_INSTALLER = fixPacksPath.file + "." + fixPacksPath.ext;
+                    replace.TRAVELER_FP_INSTALLER_VERSION = fixpackVersion == null ? defaultProvisionerFieldValue : fixpackVersion.fullVersion;
+                }
+
                 replace.ROLE_TRAVELER = replaceWith;
             }
 
@@ -279,14 +299,14 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
             NOMADWEB_HASH: defaultProvisionerFieldValue,
             NOMADWEB_INSTALLER: defaultProvisionerFieldValue,
             NOMADWEB_VERSION: defaultProvisionerFieldValue,
+            NOMADWEB_HOTFIX_INSTALL: false,
             NOMADWEB_HOTFIX_INSTALLER: defaultProvisionerFieldValue,
             NOMADWEB_VERSION_HOTFIX_INSTALL: defaultProvisionerFieldValue,
-            NOMADWEB_HOTFIX_INSTALL: defaultProvisionerFieldValue,
             
             //Traveler Variables
             TRAVELER_INSTALLER: defaultProvisionerFieldValue,
             TRAVELER_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            TRAVELER_FP_INSTALL: defaultProvisionerFieldValue,
+            TRAVELER_FP_INSTALL: false,
             TRAVELER_FP_INSTALLER: defaultProvisionerFieldValue,
             TRAVELER_FP_INSTALLER_VERSION: defaultProvisionerFieldValue,
             

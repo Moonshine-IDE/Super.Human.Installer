@@ -139,6 +139,16 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
                 replace.NOMADWEB_HASH = installerHash;
                 replace.NOMADWEB_INSTALLER = installerName;
                 replace.NOMADWEB_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
+
+                if (r.files.hotfixes != null && r.files.hotfixes.length > 0)
+                {
+                    var hotfixesPath = new Path(r.files.hotfixes[0]);
+                    
+                    replace.NOMADWEB_HOTFIX_INSTALL = true;
+                    replace.NOMADWEB_HOTFIX_INSTALLER = hotfixesPath.file + "." + hotfixesPath.ext;
+                    replace.NOMADWEB_VERSION_HOTFIX_INSTALL = hotfixVersion == null ? defaultProvisionerFieldValue : hotfixVersion.fullVersion;
+                }
+
                 replace.ROLE_NOMADWEB = replaceWith;
             }
 
@@ -149,6 +159,16 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
             	    
                 replace.TRAVELER_INSTALLER = installerName;
                 replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
+
+                if (r.files.fixpacks != null && r.files.fixpacks.length > 0)
+                {
+                    var fixPacksPath = new Path(r.files.fixpacks[0]);
+                    
+                    replace.TRAVELER_FP_INSTALL = true;
+                    replace.TRAVELER_FP_INSTALLER = fixPacksPath.file + "." + fixPacksPath.ext;
+                    replace.TRAVELER_FP_INSTALLER_VERSION = fixpackVersion == null ? defaultProvisionerFieldValue : fixpackVersion.fullVersion;
+                }
+
                 replace.ROLE_TRAVELER = replaceWith;
             }
 

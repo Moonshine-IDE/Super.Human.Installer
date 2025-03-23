@@ -84,9 +84,9 @@ class DemoTasks extends AbstractProvisioner {
 
             "domino" => { value: "domino", enabled: true, files: { hotfixes: [], fixpacks: [] }, isdefault: true },
             "appdevpack" => { value: "appdevpack", enabled: false, files: {} },
-            "nomadweb" => { value: "nomadweb", enabled: false, files: {} },
+            "nomadweb" => { value: "nomadweb", enabled: false, files: { hotfixes: []} },
             "leap" => { value: "leap", enabled: false, files: {} },
-            "traveler" => { value: "traveler", enabled: false, files: {} },
+            "traveler" => { value: "traveler", enabled: false, files: { fixpacks: []} },
             "verse" => { value: "verse", enabled: false, files: {} },
             "domino-rest-api" => { value: "domino-rest-api", enabled: false, files: {} },
 
