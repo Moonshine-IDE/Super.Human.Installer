@@ -704,8 +704,18 @@ class DynamicConfigPage extends Page {
     function _advancedLinkTriggered(e:MouseEvent) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
         evt.server = _server;
-        // Set the provisioner type to ensure it's handled as a custom provisioner
+        
+        // Explicitly set the provisioner type to ensure it's handled as a custom provisioner
+        // This is important because the _advancedConfigureServer method checks server.provisioner.type
+        // to determine whether to use DynamicAdvancedConfigPage or AdvancedConfigPage
         evt.provisionerType = _server.provisioner.type;
+        
+        // Store the provisioner definition in the event if available
+        if (_provisionerDefinition != null) {
+            evt.data = _provisionerDefinition.name;
+            Logger.info('${this}: Sending provisioner definition in event: ${_provisionerDefinition.name}');
+        }
+        
         this.dispatchEvent(evt);
     }
 

@@ -108,13 +108,13 @@ class Server {
 
             if ( provisioner != null ) {
 
-                sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, provisioner.root, sc._serverDir, sc );
+                sc._provisioner = new DemoTasks(data.provisioner.type, provisioner.root, sc._serverDir, sc );
 
             } else {
 
                 // The server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, null, sc._serverDir, sc );
+                sc._provisioner = new DemoTasks(data.provisioner.type, null, sc._serverDir, sc );
 
             }
 

@@ -625,9 +625,13 @@ class SuperHumanInstaller extends GenesisApplication {
 		var server = e.server;
 		
 		// Check if this is a custom provisioner
-		var isCustomProvisioner = server.provisioner.type != ProvisionerType.DemoTasks && 
-								  server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
-								  server.provisioner.type != ProvisionerType.Default;
+		// We can use either the event's provisionerType or the server's provisioner type
+		var provisionerType = e.provisionerType != null ? e.provisionerType : server.provisioner.type;
+		var isCustomProvisioner = provisionerType != ProvisionerType.DemoTasks && 
+								  provisionerType != ProvisionerType.AdditionalProvisioner &&
+								  provisionerType != ProvisionerType.Default;
+		
+		Logger.info('${this}: Advanced configure server with provisioner type: ${provisionerType}, isCustom: ${isCustomProvisioner}');
 		
 		if (isCustomProvisioner) {
 			// Initialize the dynamic advanced config page if it doesn't exist
@@ -640,28 +644,51 @@ class SuperHumanInstaller extends GenesisApplication {
 			
 			// Get the provisioner definition for the custom provisioner
 			var provisionerDefinition = null;
-			var allProvisioners = ProvisionerManager.getBundledProvisioners(server.provisioner.type);
-			if (allProvisioners.length > 0) {
-				// Find the exact provisioner version that matches the server's provisioner
+			
+			// First check if we have a provisioner definition name in the event data
+			if (e.data != null && e.data is String) {
+				var provisionerName:String = e.data;
+				Logger.info('${this}: Looking for provisioner definition by name: ${provisionerName}');
+				
+				// Try to find the provisioner definition by name
+				var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
 				for (provisioner in allProvisioners) {
-					if (provisioner.data.version == server.provisioner.version) {
+					if (provisioner.name == provisionerName) {
 						provisionerDefinition = provisioner;
+						Logger.info('${this}: Found provisioner definition by name: ${provisioner.name}');
 						break;
 					}
 				}
-				
-				// If no exact match, use the first one
-				if (provisionerDefinition == null && allProvisioners.length > 0) {
-					provisionerDefinition = allProvisioners[0];
+			}
+			
+			// If we didn't find a provisioner definition by name, try to find it by version
+			if (provisionerDefinition == null) {
+				var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+				if (allProvisioners.length > 0) {
+					// Find the exact provisioner version that matches the server's provisioner
+					for (provisioner in allProvisioners) {
+						if (provisioner.data.version == server.provisioner.version) {
+							provisionerDefinition = provisioner;
+							Logger.info('${this}: Found provisioner definition by version: ${provisioner.data.version}');
+							break;
+						}
+					}
+					
+					// If no exact match, use the first one
+					if (provisionerDefinition == null && allProvisioners.length > 0) {
+						provisionerDefinition = allProvisioners[0];
+						Logger.info('${this}: Using first available provisioner definition: ${provisionerDefinition.name}');
+					}
 				}
-				
-				Logger.info('${this}: Using provisioner definition for advanced config: ${provisionerDefinition.name}');
 			}
 			
 			// Set the server and provisioner definition for the dynamic advanced config page
 			_dynamicAdvancedConfigPage.setServer(server);
 			if (provisionerDefinition != null) {
 				_dynamicAdvancedConfigPage.setProvisionerDefinition(provisionerDefinition);
+				Logger.info('${this}: Using provisioner definition for advanced config: ${provisionerDefinition.name}');
+			} else {
+				Logger.warning('${this}: No provisioner definition found for advanced config');
 			}
 			_dynamicAdvancedConfigPage.updateContent();
 			
