@@ -317,6 +317,8 @@ class ProvisionerManager {
             // Look for version directories in the source directory
             var versionDirs = FileSystem.readDirectory(sourcePath);
             var versionsImported = 0;
+            var versionsAlreadyExist = 0;
+            var validVersionsFound = 0;
             
             for (versionDir in versionDirs) {
                 var versionSourcePath = Path.addTrailingSlash(sourcePath) + versionDir;
@@ -333,10 +335,14 @@ class ProvisionerManager {
                     continue;
                 }
                 
+                // Count valid version directories
+                validVersionsFound++;
+                
                 // Create the destination version directory
                 var versionDestPath = Path.addTrailingSlash(destPath) + versionDir;
                 if (FileSystem.exists(versionDestPath)) {
                     Logger.warning('Version ${versionDir} already exists at ${versionDestPath}, skipping');
+                    versionsAlreadyExist++;
                     continue;
                 }
                 
@@ -358,12 +364,18 @@ class ProvisionerManager {
                 }
             }
             
-            if (versionsImported == 0) {
+            if (validVersionsFound == 0) {
                 Logger.warning('No valid version directories found in ${sourcePath}');
                 return false;
             }
             
-            Logger.info('Successfully imported ${versionsImported} versions of provisioner ${metadata.type}');
+            if (versionsImported == 0 && versionsAlreadyExist > 0) {
+                Logger.info('All versions of provisioner ${metadata.type} already exist (${versionsAlreadyExist} versions)');
+                return true; // Return success if all versions already exist
+            }
+            
+            Logger.info('Successfully imported ${versionsImported} versions of provisioner ${metadata.type}' + 
+                        (versionsAlreadyExist > 0 ? ' (${versionsAlreadyExist} versions already existed)' : ''));
             return true;
             
         } catch (e) {
