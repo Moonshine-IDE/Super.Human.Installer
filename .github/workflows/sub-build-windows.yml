@@ -48,6 +48,10 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Show Current Path
+        run: |
+          pwd
+
       - name: Build info
         run: |
           echo "Ref: ${{ github.ref_name }}"
@@ -69,6 +73,10 @@ jobs:
 
       - name: Checkout LFS objects
         run: git lfs checkout
+
+      - name: Show Current Path
+        run: |
+          pwd
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
