@@ -83,6 +83,9 @@ class DynamicConfigPage extends Page {
     var _server:Server;
     var _titleGroup:LayoutGroup;
     var _provisionerDefinition:ProvisionerDefinition;
+    var _pendingProvisionerDefinition:ProvisionerDefinition;
+    var _formInitialized:Bool = false;
+    var _pendingUpdateContent:Bool = false;
     
     // Dynamic form fields
     var _dynamicFields:Map<String, Dynamic> = new Map();
@@ -94,6 +97,9 @@ class DynamicConfigPage extends Page {
 
     override function initialize() {
         super.initialize();
+        
+        // Add event listener for when the component is added to stage
+        this.addEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
 
         _titleGroup = new LayoutGroup();
         var _titleGroupLayout = new HorizontalLayout();
@@ -171,6 +177,53 @@ class DynamicConfigPage extends Page {
         _labelMandatory = new Label(LanguageManager.getInstance().getString('serverconfigpage.form.info'));
         _labelMandatory.variant = GenesisApplicationTheme.LABEL_COPYRIGHT_CENTER;
         this.addChild(_labelMandatory);
+        
+        // Mark the form as initialized
+        _formInitialized = true;
+        
+        // If we have a pending provisioner definition, apply it now
+        if (_pendingProvisionerDefinition != null) {
+            Logger.info('${this}: Applying pending provisioner definition after initialization');
+            setProvisionerDefinition(_pendingProvisionerDefinition);
+            _pendingProvisionerDefinition = null;
+        }
+        
+        // If we have a pending updateContent call, process it now
+        if (_pendingUpdateContent) {
+            Logger.info('${this}: Processing pending updateContent call');
+            _pendingUpdateContent = false;
+            haxe.Timer.delay(function() {
+                updateContent(true);
+            }, 100); // Small delay to ensure UI is ready
+        }
+    }
+    
+    /**
+     * Handler for when the component is added to the stage
+     * This ensures all UI components are fully initialized
+     */
+    private function _onAddedToStage(e:openfl.events.Event):Void {
+        Logger.info('${this}: Added to stage, ensuring UI is ready');
+        
+        // Remove the listener as we only need it once
+        this.removeEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
+        
+        // Delay the initialization slightly to ensure all UI components are ready
+        haxe.Timer.delay(function() {
+            // If we have a pending provisioner definition, apply it now
+            if (_pendingProvisionerDefinition != null) {
+                Logger.info('${this}: Applying pending provisioner definition after added to stage');
+                setProvisionerDefinition(_pendingProvisionerDefinition);
+                _pendingProvisionerDefinition = null;
+            }
+            
+            // If we have a pending updateContent call, process it now
+            if (_pendingUpdateContent) {
+                Logger.info('${this}: Processing pending updateContent call after added to stage');
+                _pendingUpdateContent = false;
+                updateContent(true);
+            }
+        }, 200); // Small delay to ensure UI is ready
     }
 
     /**
@@ -184,6 +237,8 @@ class DynamicConfigPage extends Page {
         if (_label != null) {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
         }
+        
+        Logger.info('${this}: Server set: ${server.id}, provisioner type: ${server.provisioner.type}');
         
         // We'll update the dropdown in updateContent() to ensure it's initialized
     }
@@ -383,10 +438,17 @@ class DynamicConfigPage extends Page {
      * @param definition The provisioner definition
      */
     public function setProvisionerDefinition(definition:ProvisionerDefinition) {
+        // If the form is not initialized yet, store the definition for later
+        if (!_formInitialized || _form == null) {
+            Logger.info('${this}: Form not initialized yet, storing provisioner definition for later');
+            _pendingProvisionerDefinition = definition;
+            return;
+        }
+        
         _provisionerDefinition = definition;
         
         // Log the provisioner definition to help with debugging
-        Logger.info('Setting provisioner definition: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
+        Logger.info('${this}: Setting provisioner definition: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
         
         if (definition.metadata != null) {
             Logger.info('Provisioner metadata: name=${definition.metadata.name}, type=${definition.metadata.type}');
@@ -618,7 +680,16 @@ class DynamicConfigPage extends Page {
     override function updateContent(forced:Bool = false) {
         super.updateContent();
 
-        if (_form != null) {
+        // If the form is not initialized yet, store the update request for later
+        if (!_formInitialized || _form == null || _server == null) {
+            Logger.info('${this}: Form not initialized yet, storing updateContent request for later');
+            _pendingUpdateContent = true;
+            return;
+        }
+        
+        Logger.info('${this}: Updating content (forced=${forced})');
+        
+        if (_form != null && _server != null) {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
             
             // Update SafeID button
@@ -636,7 +707,11 @@ class DynamicConfigPage extends Page {
             // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
             if (forced || _dropdownCoreComponentVersion.dataProvider.length == 0) {
                 Logger.info('${this}: Updating provisioner dropdown (forced=${forced}, current items=${_dropdownCoreComponentVersion.dataProvider.length})');
-                _updateProvisionerDropdown();
+                
+                // Use a small delay to ensure the UI is ready
+                haxe.Timer.delay(function() {
+                    _updateProvisionerDropdown();
+                }, 100);
             } else {
                 // Just update the selected index if needed
                 if (_dropdownCoreComponentVersion.selectedIndex == -1) {

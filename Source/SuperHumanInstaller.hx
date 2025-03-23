@@ -1483,33 +1483,47 @@ class SuperHumanInstaller extends GenesisApplication {
 			this.addPage( _dynamicConfigPage, "page-dynamic-config" );
 		}
 		
-		// Set the server and provisioner definition for the dynamic config page
+		// Set the server for the dynamic config page
 		_dynamicConfigPage.setServer(server);
 		
-		// Force the dropdown to be populated with all provisioners of this type
-		if (_dynamicConfigPage._dropdownCoreComponentVersion != null) {
-			var provisionerCollection = ProvisionerManager.getBundledProvisionerCollection(e.provisionerType);
-			Logger.info('${this}: Setting dropdown data provider with ${provisionerCollection.length} items');
-			_dynamicConfigPage._dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+		// Store the provisioner definition and type in the server's userData for later use
+		if (provisionerDefinition != null) {
+			// Initialize userData if needed
+			server.userData = server.userData != null ? server.userData : {};
 			
-			// Select the current provisioner version if available
-			if (provisionerDefinition != null) {
-				for (i in 0...provisionerCollection.length) {
-					var d = provisionerCollection.get(i);
-					if (d.data.version == provisionerDefinition.data.version) {
-						_dynamicConfigPage._dropdownCoreComponentVersion.selectedIndex = i;
-						break;
+			// Store the provisioner definition
+			Reflect.setField(server.userData, "provisionerDefinition", provisionerDefinition);
+			Logger.info('${this}: Stored provisioner definition in server userData: ${provisionerDefinition.name}');
+		}
+		
+		// Force the updateContent call with a delay to ensure the UI is ready
+		haxe.Timer.delay(function() {
+			// Force the dropdown to be populated with all provisioners of this type
+			if (_dynamicConfigPage._dropdownCoreComponentVersion != null) {
+				var provisionerCollection = ProvisionerManager.getBundledProvisionerCollection(e.provisionerType);
+				Logger.info('${this}: Setting dropdown data provider with ${provisionerCollection.length} items');
+				_dynamicConfigPage._dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+				
+				// Select the current provisioner version if available
+				if (provisionerDefinition != null) {
+					for (i in 0...provisionerCollection.length) {
+						var d = provisionerCollection.get(i);
+						if (d.data.version == provisionerDefinition.data.version) {
+							_dynamicConfigPage._dropdownCoreComponentVersion.selectedIndex = i;
+							break;
+						}
 					}
 				}
 			}
-		}
-		
-		// Set the provisioner definition to generate form fields
-		if (provisionerDefinition != null) {
-			_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
-		}
-		
-		_dynamicConfigPage.updateContent(true);
+			
+			// Set the provisioner definition to generate form fields
+			if (provisionerDefinition != null) {
+				_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
+			}
+			
+			// Update the content with forced=true to ensure all fields are created
+			_dynamicConfigPage.updateContent(true);
+		}, 100); // Small delay to ensure UI is ready
 		
 		// Show the dynamic config page
 		this.selectedPageId = "page-dynamic-config";

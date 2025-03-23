@@ -80,6 +80,7 @@ class DynamicAdvancedConfigPage extends Page {
     var _provisionerDefinition:ProvisionerDefinition;
     var _pendingProvisionerDefinition:ProvisionerDefinition;
     var _formInitialized:Bool = false;
+    var _pendingUpdateContent:Bool = false;
     
     // Standard form fields
     var _dropdownNetworkInterface:GenesisFormPupUpListView;
@@ -95,6 +96,9 @@ class DynamicAdvancedConfigPage extends Page {
 
     override function initialize() {
         super.initialize();
+        
+        // Add event listener for when the component is added to stage
+        this.addEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
 
         _titleGroup = new LayoutGroup();
         var _titleGroupLayout = new HorizontalLayout();
@@ -157,9 +161,47 @@ class DynamicAdvancedConfigPage extends Page {
         
         // If we have a pending provisioner definition, apply it now
         if (_pendingProvisionerDefinition != null) {
+            Logger.info('${this}: Applying pending provisioner definition after initialization');
             setProvisionerDefinition(_pendingProvisionerDefinition);
             _pendingProvisionerDefinition = null;
         }
+        
+        // If we have a pending updateContent call, process it now
+        if (_pendingUpdateContent) {
+            Logger.info('${this}: Processing pending updateContent call');
+            _pendingUpdateContent = false;
+            haxe.Timer.delay(function() {
+                updateContent(true);
+            }, 100); // Small delay to ensure UI is ready
+        }
+    }
+    
+    /**
+     * Handler for when the component is added to the stage
+     * This ensures all UI components are fully initialized
+     */
+    private function _onAddedToStage(e:openfl.events.Event):Void {
+        Logger.info('${this}: Added to stage, ensuring UI is ready');
+        
+        // Remove the listener as we only need it once
+        this.removeEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
+        
+        // Delay the initialization slightly to ensure all UI components are ready
+        haxe.Timer.delay(function() {
+            // If we have a pending provisioner definition, apply it now
+            if (_pendingProvisionerDefinition != null) {
+                Logger.info('${this}: Applying pending provisioner definition after added to stage');
+                setProvisionerDefinition(_pendingProvisionerDefinition);
+                _pendingProvisionerDefinition = null;
+            }
+            
+            // If we have a pending updateContent call, process it now
+            if (_pendingUpdateContent) {
+                Logger.info('${this}: Processing pending updateContent call after added to stage');
+                _pendingUpdateContent = false;
+                updateContent(true);
+            }
+        }, 200); // Small delay to ensure UI is ready
     }
 
     /**
@@ -436,6 +478,15 @@ class DynamicAdvancedConfigPage extends Page {
     override function updateContent(forced:Bool = false) {
         super.updateContent();
 
+        // If the form is not initialized yet, store the update request for later
+        if (!_formInitialized || _form == null || _server == null) {
+            Logger.info('${this}: Form not initialized yet, storing updateContent request for later');
+            _pendingUpdateContent = true;
+            return;
+        }
+        
+        Logger.info('${this}: Updating content (forced=${forced})');
+        
         if (_form != null && _server != null && _dropdownNetworkInterface != null) {
             _label.text = LanguageManager.getInstance().getString('serveradvancedconfigpage.title', Std.string(_server.id));
             
