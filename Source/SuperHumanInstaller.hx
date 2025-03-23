@@ -93,6 +93,7 @@ import sys.io.File;
 import superhuman.application.ApplicationData;
 import superhuman.application.Applications;
 import superhuman.server.data.ServerUIType;
+import superhuman.server.definitions.ProvisionerDefinition;
 using champaign.core.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
@@ -272,18 +273,18 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
 	
-		// Get all available provisioners
-	var allProvisioners = ProvisionerManager.getBundledProvisioners();
-	Logger.info('${this}: Available provisioners: ${allProvisioners.length}');
-	
-	// Initialize service types collection
+		// Initialize service types collection
 	_serviceTypesCollection = [];
+	
+	// Get all available provisioners
+	var allProvisioners:Array<ProvisionerDefinition> = ProvisionerManager.getBundledProvisioners();
+	Logger.info('${this}: Available provisioners: ${allProvisioners.length}');
 	
 	// Group provisioners by type to avoid duplicates
 	var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
 	
 	for (provisioner in allProvisioners) {
-		var type = provisioner.data.type;
+		var type:String = provisioner.data.type;
 		if (!provisionersByType.exists(type)) {
 			provisionersByType.set(type, []);
 		}
@@ -294,25 +295,24 @@ class SuperHumanInstaller extends GenesisApplication {
 	for (type in provisionersByType.keys()) {
 		// Get the newest version of this provisioner type
 		var provisioners = provisionersByType.get(type);
-		provisioners.sort((a, b) -> {
-			return b.data.version > a.data.version ? 1 : (b.data.version < a.data.version ? -1 : 0);
-		});
 		
-		var provisioner = provisioners[0];
-		
-		// Determine server UI type based on naming convention
-		// Default to Domino for unknown types
-		var serverType = type.indexOf("additional") >= 0 ? 
-			ServerUIType.AdditionalDomino : ServerUIType.Domino;
-		
-		// Add to service types collection
-		_serviceTypesCollection.push({
-			value: provisioner.name,
-			description: provisioner.name,
-			provisionerType: type,
-			serverType: serverType,
-			isEnabled: true
-		});
+		if (provisioners.length > 0) {
+			var provisioner = provisioners[0];
+			
+			// Determine server UI type based on naming convention
+			// Default to Domino for unknown types
+			var serverType = type.indexOf("additional") >= 0 ? 
+				ServerUIType.AdditionalDomino : ServerUIType.Domino;
+			
+			// Add to service types collection
+			_serviceTypesCollection.push({
+				value: provisioner.name,
+				description: provisioner.name,
+				provisionerType: type,
+				serverType: serverType,
+				isEnabled: true
+			});
+		}
 	}
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
@@ -905,7 +905,7 @@ class SuperHumanInstaller extends GenesisApplication {
      */
     function _provisionerImported(e:SuperHumanApplicationEvent) {
         // Refresh the list of available provisioners
-        var allProvisioners = ProvisionerManager.getBundledProvisioners();
+        var allProvisioners:Array<ProvisionerDefinition> = ProvisionerManager.getBundledProvisioners();
         Logger.info('${this}: Available provisioners after import: ${allProvisioners.length}');
         
         // Reinitialize service types collection
@@ -915,7 +915,7 @@ class SuperHumanInstaller extends GenesisApplication {
         var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
         
         for (provisioner in allProvisioners) {
-            var type = provisioner.data.type;
+            var type:String = provisioner.data.type;
             if (!provisionersByType.exists(type)) {
                 provisionersByType.set(type, []);
             }
@@ -926,25 +926,24 @@ class SuperHumanInstaller extends GenesisApplication {
         for (type in provisionersByType.keys()) {
             // Get the newest version of this provisioner type
             var provisioners = provisionersByType.get(type);
-            provisioners.sort((a, b) -> {
-                return b.data.version > a.data.version ? 1 : (b.data.version < a.data.version ? -1 : 0);
-            });
             
-            var provisioner = provisioners[0];
-            
-            // Determine server UI type based on naming convention
-            // Default to Domino for unknown types
-            var serverType = type.indexOf("additional") >= 0 ? 
-                ServerUIType.AdditionalDomino : ServerUIType.Domino;
-            
-            // Add to service types collection
-            _serviceTypesCollection.push({
-                value: provisioner.name,
-                description: provisioner.name,
-                provisionerType: type,
-                serverType: serverType,
-                isEnabled: true
-            });
+            if (provisioners.length > 0) {
+                var provisioner = provisioners[0];
+                
+                // Determine server UI type based on naming convention
+                // Default to Domino for unknown types
+                var serverType = type.indexOf("additional") >= 0 ? 
+                    ServerUIType.AdditionalDomino : ServerUIType.Domino;
+                
+                // Add to service types collection
+                _serviceTypesCollection.push({
+                    value: provisioner.name,
+                    description: provisioner.name,
+                    provisionerType: type,
+                    serverType: serverType,
+                    isEnabled: true
+                });
+            }
         }
         
         // Update the service type page with the new collection
