@@ -34,6 +34,7 @@ import superhuman.server.AdditionalServer;
 import openfl.Assets;
 import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
+import haxe.io.Path;
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
 import openfl.desktop.ClipboardFormats;
@@ -304,10 +305,14 @@ class SuperHumanInstaller extends GenesisApplication {
 			var serverType = type.indexOf("additional") >= 0 ? 
 				ServerUIType.AdditionalDomino : ServerUIType.Domino;
 			
+			// Read the provisioner metadata to get the description
+			var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
+			var description = metadata != null ? metadata.description : provisioner.name;
+			
 			// Add to service types collection
 			_serviceTypesCollection.push({
 				value: provisioner.name,
-				description: provisioner.name,
+				description: description,
 				provisionerType: type,
 				serverType: serverType,
 				isEnabled: true
@@ -935,10 +940,14 @@ class SuperHumanInstaller extends GenesisApplication {
                 var serverType = type.indexOf("additional") >= 0 ? 
                     ServerUIType.AdditionalDomino : ServerUIType.Domino;
                 
+                // Read the provisioner metadata to get the description
+                var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
+                var description = metadata != null ? metadata.description : provisioner.name;
+                
                 // Add to service types collection
                 _serviceTypesCollection.push({
                     value: provisioner.name,
-                    description: provisioner.name,
+                    description: description,
                     provisionerType: type,
                     serverType: serverType,
                     isEnabled: true
