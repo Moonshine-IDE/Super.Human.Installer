@@ -35,7 +35,14 @@ import superhuman.server.provisioners.DemoTasks;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import feathers.data.ArrayCollection;
+import haxe.io.Bytes;
+import haxe.io.BytesInput;
+import haxe.io.BytesOutput;
 import haxe.io.Path;
+import haxe.zip.Entry;
+import haxe.zip.Reader;
+import haxe.zip.Tools;
+import haxe.zip.Writer;
 import lime.system.System;
 import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
@@ -333,10 +340,22 @@ class ProvisionerManager {
                     continue;
                 }
                 
-                // Copy the version directory
-                _copyDirectory(versionSourcePath, versionDestPath);
-                Logger.info('Imported version ${versionDir} to ${versionDestPath}');
-                versionsImported++;
+                // Use zip/unzip to copy the version directory instead of direct file copying
+                try {
+                    // Create the destination directory
+                    FileSystem.createDirectory(versionDestPath);
+                    
+                    // Zip the source directory
+                    var zipBytes = _zipDirectory(versionSourcePath);
+                    
+                    // Unzip to the destination directory
+                    _unzipToDirectory(zipBytes, versionDestPath);
+                    
+                    Logger.info('Imported version ${versionDir} to ${versionDestPath}');
+                    versionsImported++;
+                } catch (e) {
+                    Logger.error('Error importing version ${versionDir}: ${e}');
+                }
             }
             
             if (versionsImported == 0) {
@@ -354,30 +373,118 @@ class ProvisionerManager {
     }
     
     /**
-     * Helper method to recursively copy a directory
-     * @param source Source directory path
-     * @param destination Destination directory path
+     * Zip a directory and return the zipped bytes
+     * @param directory The directory to zip
+     * @return Bytes The zipped content
      */
-    static private function _copyDirectory(source:String, destination:String):Void {
-        // Create the destination directory if it doesn't exist
-        if (!FileSystem.exists(destination)) {
-            FileSystem.createDirectory(destination);
-        }
+    static private function _zipDirectory(directory:String):Bytes {
+        var entries:List<Entry> = new List<Entry>();
+        _addDirectoryToZip(directory, "", entries);
         
-        // Copy all files and subdirectories
-        var items = FileSystem.readDirectory(source);
+        var out = new BytesOutput();
+        var writer = new Writer(out);
+        writer.write(entries);
+        
+        return out.getBytes();
+    }
+    
+    /**
+     * Helper function to recursively add files to a zip archive
+     * @param directory The base directory
+     * @param path The current path within the zip
+     * @param entries The list of zip entries
+     */
+    static private function _addDirectoryToZip(directory:String, path:String, entries:List<Entry>):Void {
+        var items = FileSystem.readDirectory(directory);
+        
         for (item in items) {
-            var sourcePath = Path.addTrailingSlash(source) + item;
-            var destPath = Path.addTrailingSlash(destination) + item;
+            var itemPath = Path.addTrailingSlash(directory) + item;
+            var zipPath = path.length > 0 ? path + "/" + item : item;
             
-            if (FileSystem.isDirectory(sourcePath)) {
-                // Recursively copy subdirectory
-                _copyDirectory(sourcePath, destPath);
+            if (FileSystem.isDirectory(itemPath)) {
+                // Add directory entry
+                var entry:Entry = {
+                    fileName: zipPath + "/",
+                    fileSize: 0,
+                    fileTime: Date.now(),
+                    compressed: false,
+                    dataSize: 0,
+                    data: Bytes.alloc(0),
+                    crc32: 0
+                };
+                entries.add(entry);
+                
+                // Recursively add directory contents
+                _addDirectoryToZip(itemPath, zipPath, entries);
             } else {
-                // Copy file
-                File.copy(sourcePath, destPath);
+                // Add file entry
+                try {
+                    var data = File.getBytes(itemPath);
+                    var entry:Entry = {
+                        fileName: zipPath,
+                        fileSize: data.length,
+                        fileTime: FileSystem.stat(itemPath).mtime,
+                        compressed: true,
+                        dataSize: 0,
+                        data: data,
+                        crc32: haxe.crypto.Crc32.make(data)
+                    };
+                    Tools.compress(entry, 9);
+                    entries.add(entry);
+                } catch (e) {
+                    Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
+                }
             }
         }
+    }
+    
+    /**
+     * Unzip bytes to a directory
+     * @param zipBytes The zipped content
+     * @param directory The directory to unzip to
+     */
+    static private function _unzipToDirectory(zipBytes:Bytes, directory:String):Void {
+        var entries = Reader.readZip(new BytesInput(zipBytes));
+        
+        for (entry in entries) {
+            var fileName = entry.fileName;
+            
+            // Skip directory entries
+            if (fileName.endsWith("/")) {
+                var dirPath = Path.addTrailingSlash(directory) + fileName;
+                _createDirectoryRecursive(dirPath);
+                continue;
+            }
+            
+            // Create parent directories if needed
+            var filePath = Path.addTrailingSlash(directory) + fileName;
+            var parentDir = Path.directory(filePath);
+            _createDirectoryRecursive(parentDir);
+            
+            // Extract file
+            try {
+                var data = entry.data;
+                if (entry.compressed) {
+                    Tools.uncompress(entry);
+                }
+                File.saveBytes(filePath, entry.data);
+            } catch (e) {
+                Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
+            }
+        }
+    }
+    
+    /**
+     * Create a directory and all parent directories if they don't exist
+     * @param directory The directory path to create
+     */
+    static private function _createDirectoryRecursive(directory:String):Void {
+        if (directory == null || directory == "" || FileSystem.exists(directory)) {
+            return;
+        }
+        
+        _createDirectoryRecursive(Path.directory(directory));
+        FileSystem.createDirectory(directory);
     }
 
 }
