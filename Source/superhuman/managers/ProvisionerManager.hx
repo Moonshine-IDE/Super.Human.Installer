@@ -259,9 +259,9 @@ class ProvisionerManager {
                 var fieldLabel = null;
                 
                 // Try to get field properties using different methods
-                if (Std.isOfType(fieldData, Map) || Std.isOfType(fieldData, ObjectMap)) {
-                    // It's a Map or ObjectMap
-                    var map:Dynamic = fieldData;
+                if (Std.isOfType(fieldData, Map)) {
+                    // It's a Map
+                    var map:Map<String, Dynamic> = cast fieldData;
                     if (map.exists("name")) fieldName = map.get("name");
                     if (map.exists("type")) fieldType = map.get("type");
                     if (map.exists("label")) fieldLabel = map.get("label");
@@ -297,8 +297,11 @@ class ProvisionerManager {
                 // Add optional properties if they exist
                 // Try different ways to access properties
                 function getProperty(obj:Dynamic, propName:String):Dynamic {
-                    if (Std.isOfType(obj, Map) || Std.isOfType(obj, ObjectMap)) {
-                        var map:Dynamic = obj;
+                    if (Std.isOfType(obj, Map)) {
+                        var map:Map<String, Dynamic> = cast obj;
+                        return map.exists(propName) ? map.get(propName) : null;
+                    } else if (Std.isOfType(obj, ObjectMap)) {
+                        var map:ObjectMap<String, Dynamic> = cast obj;
                         return map.exists(propName) ? map.get(propName) : null;
                     } else if (Reflect.hasField(obj, propName)) {
                         return Reflect.field(obj, propName);
