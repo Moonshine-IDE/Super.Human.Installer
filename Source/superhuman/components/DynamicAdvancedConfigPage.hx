@@ -374,7 +374,8 @@ class DynamicAdvancedConfigPage extends Page {
                     if (prop != null && Reflect.hasField(prop, "onChange")) {
                         var onChange = Reflect.field(prop, "onChange");
                         if (onChange != null && Reflect.hasField(onChange, "add")) {
-                            Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { _propertyChangedHandler(p); }]);
+                            var self = this;
+                            Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
                         }
                     }
         } else {
@@ -677,7 +678,8 @@ class DynamicAdvancedConfigPage extends Page {
                     // Add property change listener
                     var onChange = Reflect.field(prop, "onChange");
                     if (onChange != null && Reflect.hasField(onChange, "add")) {
-                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { _propertyChangedHandler(p); }]);
+                        var self = this;
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
                     }
                 }
                 
@@ -711,7 +713,8 @@ class DynamicAdvancedConfigPage extends Page {
                     // Add property change listener
                     var onChange = Reflect.field(prop, "onChange");
                     if (onChange != null && Reflect.hasField(onChange, "add")) {
-                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { _propertyChangedHandler(p); }]);
+                        var self = this;
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
                     }
                 }
                 
@@ -745,7 +748,8 @@ class DynamicAdvancedConfigPage extends Page {
                     // Add property change listener
                     var onChange = Reflect.field(prop, "onChange");
                     if (onChange != null && Reflect.hasField(onChange, "add")) {
-                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { _propertyChangedHandler(p); }]);
+                        var self = this;
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
                     }
                 }
                 
@@ -780,7 +784,8 @@ class DynamicAdvancedConfigPage extends Page {
                     // Add property change listener
                     var onChange = Reflect.field(prop, "onChange");
                     if (onChange != null && Reflect.hasField(onChange, "add")) {
-                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { _propertyChangedHandler(p); }]);
+                        var self = this;
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
                     }
                 }
                 
