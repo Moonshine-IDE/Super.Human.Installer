@@ -620,10 +620,13 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _advancedConfigureServer( e:SuperHumanApplicationEvent ) {
+		// Store the server reference to ensure we're working with the same server
+		var server = e.server;
+		
 		// Check if this is a custom provisioner
-		var isCustomProvisioner = e.server.provisioner.type != ProvisionerType.DemoTasks && 
-								  e.server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
-								  e.server.provisioner.type != ProvisionerType.Default;
+		var isCustomProvisioner = server.provisioner.type != ProvisionerType.DemoTasks && 
+								  server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+								  server.provisioner.type != ProvisionerType.Default;
 		
 		if (isCustomProvisioner) {
 			// Initialize the dynamic advanced config page if it doesn't exist
@@ -636,14 +639,26 @@ class SuperHumanInstaller extends GenesisApplication {
 			
 			// Get the provisioner definition for the custom provisioner
 			var provisionerDefinition = null;
-			var allProvisioners = ProvisionerManager.getBundledProvisioners(e.server.provisioner.type);
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(server.provisioner.type);
 			if (allProvisioners.length > 0) {
-				provisionerDefinition = allProvisioners[0];
+				// Find the exact provisioner version that matches the server's provisioner
+				for (provisioner in allProvisioners) {
+					if (provisioner.data.version == server.provisioner.version) {
+						provisionerDefinition = provisioner;
+						break;
+					}
+				}
+				
+				// If no exact match, use the first one
+				if (provisionerDefinition == null && allProvisioners.length > 0) {
+					provisionerDefinition = allProvisioners[0];
+				}
+				
 				Logger.info('${this}: Using provisioner definition for advanced config: ${provisionerDefinition.name}');
 			}
 			
 			// Set the server and provisioner definition for the dynamic advanced config page
-			_dynamicAdvancedConfigPage.setServer(e.server);
+			_dynamicAdvancedConfigPage.setServer(server);
 			if (provisionerDefinition != null) {
 				_dynamicAdvancedConfigPage.setProvisionerDefinition(provisionerDefinition);
 			}
@@ -653,7 +668,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			this.selectedPageId = "page-dynamic-advanced-config";
 		} else {
 			// Use the standard advanced config page for built-in provisioners
-			_advancedConfigPage.setServer(e.server);
+			_advancedConfigPage.setServer(server);
 			_advancedConfigPage.updateContent();
 			this.selectedPageId = PAGE_CONFIG_ADVANCED;
 		}

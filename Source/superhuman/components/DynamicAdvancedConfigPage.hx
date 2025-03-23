@@ -166,14 +166,23 @@ class DynamicAdvancedConfigPage extends Page {
         
         // Update the network interface dropdown
         if (_dropdownNetworkInterface != null) {
+            // Reset the selected index
+            _dropdownNetworkInterface.selectedIndex = 0;
+            
+            // Find the matching network interface
             for (i in 0..._dropdownNetworkInterface.dataProvider.length) {
                 var d = _dropdownNetworkInterface.dataProvider.get(i);
-                if (d.name == _server.networkBridge.value) {
+                if (d != null && d.name == _server.networkBridge.value) {
                     _dropdownNetworkInterface.selectedIndex = i;
                     break;
                 }
             }
+            
+            // Update the enabled state
+            _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
         }
+        
+        Logger.info('${this}: Set server for advanced config page, server ID: ${_server.id}');
     }
     
     /**
@@ -409,9 +418,15 @@ class DynamicAdvancedConfigPage extends Page {
                     if (Std.isOfType(field, GenesisFormTextInput)) {
                         var input:GenesisFormTextInput = cast field;
                         if (Reflect.hasField(value, "value")) {
-                            input.text = Reflect.field(value, "value");
+                            var fieldValue = Reflect.field(value, "value");
+                            input.text = fieldValue != null ? Std.string(fieldValue) : "";
                         } else {
-                            input.text = Std.string(value);
+                            // Remove "Property: " prefix if present
+                            var valueStr = Std.string(value);
+                            if (valueStr.indexOf("Property: ") == 0) {
+                                valueStr = valueStr.substr(10); // Remove "Property: " prefix
+                            }
+                            input.text = valueStr;
                         }
                     } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                         var stepper:GenesisFormNumericStepper = cast field;

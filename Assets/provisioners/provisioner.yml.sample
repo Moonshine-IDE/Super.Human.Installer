@@ -1,94 +1,150 @@
-# Basic information about the provisioner
-name: "HCL Custom Provisioner"
-type: "hcl_custom_provisioner"
-description: "A custom provisioner for specific needs"
+# Sample provisioner.yml file for custom provisioners
+# This file defines metadata and configuration fields for a custom provisioner
+
+# Basic metadata about the provisioner
+name: "Custom Provisioner Example"
+type: "custom_provisioner"
+description: "An example custom provisioner with configurable fields"
 author: "Your Name"
 
 # Configuration fields for the provisioner
-# These fields will be used to dynamically generate the UI
+# These fields will be displayed in the configuration forms
 configuration:
   # Basic fields appear on the main configuration page
   basicFields:
     - name: "hostname"
-      type: "text"
       label: "Server Hostname"
-      defaultValue: "myserver"
-      required: true
-      validationKey: "hostname"
-      tooltip: "The hostname for your server"
-      placeholder: "Enter hostname"
-      restrict: "a-zA-Z0-9.-"
-      
-    - name: "organization"
       type: "text"
-      label: "Organization"
-      defaultValue: "myorg"
+      placeholder: "Enter server hostname"
+      tooltip: "The hostname for your server"
       required: true
-      validationKey: "organization"
-      tooltip: "The organization name for your server"
+      validationKey: "^[a-zA-Z0-9.-]+$"
+      defaultValue: "myserver"
+    
+    - name: "organization"
+      label: "Organization"
+      type: "text"
       placeholder: "Enter organization name"
+      tooltip: "Your organization name"
+      required: true
       restrict: "a-zA-Z0-9-"
-      
+      defaultValue: "myorg"
+    
     - name: "serverType"
-      type: "dropdown"
       label: "Server Type"
-      defaultValue: "standard"
+      type: "dropdown"
       tooltip: "The type of server to create"
+      required: true
       options:
-        - value: "standard"
-          label: "Standard Server"
-        - value: "development"
-          label: "Development Server"
-        - value: "production"
-          label: "Production Server"
+        - value: "web"
+          label: "Web Server"
+        - value: "app"
+          label: "Application Server"
+        - value: "db"
+          label: "Database Server"
+      defaultValue: "web"
+    
+    - name: "enableSSL"
+      label: "Enable SSL"
+      type: "checkbox"
+      tooltip: "Enable SSL for secure connections"
+      defaultValue: true
   
   # Advanced fields appear on the advanced configuration page
   advancedFields:
+    - name: "networkAddress"
+      label: "Network IP Address"
+      type: "text"
+      placeholder: "192.168.1.100"
+      tooltip: "The IP address for the server"
+      required: true
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      defaultValue: "192.168.1.100"
+    
+    - name: "networkNetmask"
+      label: "Network Netmask"
+      type: "text"
+      placeholder: "255.255.255.0"
+      tooltip: "The netmask for the server"
+      required: true
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      defaultValue: "255.255.255.0"
+    
+    - name: "networkGateway"
+      label: "Network Gateway"
+      type: "text"
+      placeholder: "192.168.1.1"
+      tooltip: "The gateway for the server"
+      required: true
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      defaultValue: "192.168.1.1"
+    
+    - name: "nameServer1"
+      label: "Primary DNS Server"
+      type: "text"
+      placeholder: "8.8.8.8"
+      tooltip: "Primary DNS server"
+      required: true
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      defaultValue: "8.8.8.8"
+    
+    - name: "nameServer2"
+      label: "Secondary DNS Server"
+      type: "text"
+      placeholder: "8.8.4.4"
+      tooltip: "Secondary DNS server"
+      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
+      defaultValue: "8.8.4.4"
+    
     - name: "numCPUs"
-      type: "number"
       label: "Number of CPUs"
-      defaultValue: 2
+      type: "number"
+      tooltip: "Number of CPUs to allocate to the server"
       min: 1
       max: 8
-      tooltip: "The number of CPUs to allocate"
-      
+      defaultValue: 2
+    
     - name: "memory"
-      type: "number"
       label: "Memory (GB)"
-      defaultValue: 4
-      min: 2
+      type: "number"
+      tooltip: "Amount of memory to allocate to the server in GB"
+      min: 1
       max: 16
-      tooltip: "The amount of memory to allocate in GB"
-      
+      defaultValue: 4
+    
     - name: "openBrowser"
+      label: "Open Browser on Start"
       type: "checkbox"
-      label: "Open Browser After Start"
+      tooltip: "Automatically open browser when server starts"
       defaultValue: true
-      tooltip: "Whether to open a browser after the server starts"
-      
-    - name: "networkAddress"
-      type: "text"
-      label: "Network Address"
-      defaultValue: "192.168.56.10"
-      validationKey: "ip"
-      tooltip: "The IP address for the server"
-      placeholder: "Enter IP address"
-      restrict: "0-9."
-      
-    - name: "networkNetmask"
-      type: "text"
-      label: "Network Netmask"
-      defaultValue: "255.255.255.0"
-      validationKey: "ip"
-      tooltip: "The netmask for the server"
-      placeholder: "Enter netmask"
-      restrict: "0-9."
-      
-    - name: "networkGateway"
-      type: "text"
-      label: "Network Gateway"
-      defaultValue: "192.168.56.1"
-      validationKey: "ip"
-      tooltip: "The gateway for the server"
-      placeholder: "Enter gateway"
-      restrict: "0-9."
+    
+    - name: "serverEnvironment"
+      label: "Server Environment"
+      type: "dropdown"
+      tooltip: "The environment for this server"
+      options:
+        - value: "dev"
+          label: "Development"
+        - value: "test"
+          label: "Testing"
+        - value: "prod"
+          label: "Production"
+      defaultValue: "dev"
+
+# Roles supported by this provisioner
+# These roles will be available in the roles configuration page
+roles:
+  - name: "web_server"
+    label: "Web Server"
+    description: "Basic web server role"
+    defaultEnabled: true
+  
+  - name: "app_server"
+    label: "Application Server"
+    description: "Application server role"
+    defaultEnabled: false
+  
+  - name: "db_server"
+    label: "Database Server"
+    description: "Database server role"
+    defaultEnabled: false

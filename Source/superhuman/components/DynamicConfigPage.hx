@@ -123,7 +123,7 @@ class DynamicConfigPage extends Page {
         // Core component version dropdown
         var rowCoreComponentVersion = new GenesisFormRow();
         rowCoreComponentVersion.text = LanguageManager.getInstance().getString('serverconfigpage.form.provisioner.text');
-        _dropdownCoreComponentVersion = new GenesisFormPupUpListView(ProvisionerManager.getBundledProvisionerCollection(_server?.provisioner?.type));
+        _dropdownCoreComponentVersion = new GenesisFormPupUpListView(new feathers.data.ArrayCollection<ProvisionerDefinition>([]));
         _dropdownCoreComponentVersion.itemToText = (item:ProvisionerDefinition) -> {
             return item.name;
         };
@@ -184,18 +184,41 @@ class DynamicConfigPage extends Page {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
         }
         
-        // Update the provisioner dropdown
+        // Update the provisioner dropdown with versions of the same type
         if (_dropdownCoreComponentVersion != null) {
-            _dropdownCoreComponentVersion.dataProvider = ProvisionerManager.getBundledProvisionerCollection(_server.provisioner.type);
+            // Get all provisioners of the same type
+            var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+            
+            // Create a collection for the dropdown
+            var provisionerCollection = new feathers.data.ArrayCollection<ProvisionerDefinition>();
+            
+            // Add all provisioners of the same type to the collection
+            for (provisioner in allProvisioners) {
+                provisionerCollection.add(provisioner);
+            }
+            
+            // Set the dropdown data provider
+            _dropdownCoreComponentVersion.dataProvider = provisionerCollection;
             
             // Select the current provisioner version
-            for (i in 0..._dropdownCoreComponentVersion.dataProvider.length) {
-                var d:ProvisionerDefinition = _dropdownCoreComponentVersion.dataProvider.get(i);
+            var selectedIndex = -1;
+            for (i in 0...provisionerCollection.length) {
+                var d:ProvisionerDefinition = provisionerCollection.get(i);
                 if (d.data.version == _server.provisioner.version) {
-                    _dropdownCoreComponentVersion.selectedIndex = i;
+                    selectedIndex = i;
                     break;
                 }
             }
+            
+            // If we found a match, select it
+            if (selectedIndex >= 0) {
+                _dropdownCoreComponentVersion.selectedIndex = selectedIndex;
+            } else if (provisionerCollection.length > 0) {
+                // Otherwise select the first one
+                _dropdownCoreComponentVersion.selectedIndex = 0;
+            }
+            
+            Logger.info('${this}: Set provisioner dropdown with ${provisionerCollection.length} versions of type ${_server.provisioner.type}');
         }
     }
     
@@ -445,9 +468,15 @@ class DynamicConfigPage extends Page {
                     if (Std.isOfType(field, GenesisFormTextInput)) {
                         var input:GenesisFormTextInput = cast field;
                         if (Reflect.hasField(value, "value")) {
-                            input.text = Reflect.field(value, "value");
+                            var fieldValue = Reflect.field(value, "value");
+                            input.text = fieldValue != null ? Std.string(fieldValue) : "";
                         } else {
-                            input.text = Std.string(value);
+                            // Remove "Property: " prefix if present
+                            var valueStr = Std.string(value);
+                            if (valueStr.indexOf("Property: ") == 0) {
+                                valueStr = valueStr.substr(10); // Remove "Property: " prefix
+                            }
+                            input.text = valueStr;
                         }
                     } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                         var stepper:GenesisFormNumericStepper = cast field;

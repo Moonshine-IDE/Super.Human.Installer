@@ -160,16 +160,54 @@ class ProvisionerManager {
         }
     }
     
-    /**
-     * Parse an array of field definitions from the YAML data
-     * @param fieldsData The array of field data from the YAML
-     * @return Array<ProvisionerField> The parsed field definitions
-     */
-    static private function _parseFieldsArray(fieldsData:Array<Dynamic>):Array<ProvisionerField> {
-        if (fieldsData == null) {
-            Logger.info('No fields data provided');
-            return null;
-        }
+/**
+ * Structure for a provisioner field definition
+ */
+typedef ProvisionerField = {
+    var name:String;
+    var label:String;
+    var type:String;
+    @:optional var placeholder:String;
+    @:optional var tooltip:String;
+    @:optional var required:Bool;
+    @:optional var validationKey:String;
+    @:optional var defaultValue:Dynamic;
+    @:optional var restrict:String;
+    @:optional var min:Float;
+    @:optional var max:Float;
+    @:optional var options:Array<Dynamic>;
+}
+
+/**
+ * Structure for provisioner configuration
+ */
+typedef ProvisionerConfiguration = {
+    @:optional var basicFields:Array<ProvisionerField>;
+    @:optional var advancedFields:Array<ProvisionerField>;
+}
+
+/**
+ * Structure for provisioner role definition
+ */
+typedef ProvisionerRole = {
+    var name:String;
+    var label:String;
+    var description:String;
+    @:optional var defaultEnabled:Bool;
+}
+
+/**
+ * Structure for provisioner.yml metadata
+ */
+typedef ProvisionerMetadata = {
+    var name:String;
+    var type:String;
+    var description:String;
+    @:optional var author:String;
+    @:optional var version:String;
+    @:optional var configuration:ProvisionerConfiguration;
+    @:optional var roles:Array<ProvisionerRole>;
+}
         
         Logger.info('Parsing ${fieldsData.length} fields');
         var result:Array<ProvisionerField> = [];
