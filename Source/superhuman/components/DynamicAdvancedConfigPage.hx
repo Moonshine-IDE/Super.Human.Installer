@@ -79,7 +79,7 @@ class DynamicAdvancedConfigPage extends Page {
     var _titleGroup:LayoutGroup;
     var _provisionerDefinition:ProvisionerDefinition;
     var _pendingProvisionerDefinition:ProvisionerDefinition;
-    var _initialized:Bool = false;
+    var _formInitialized:Bool = false;
     
     // Standard form fields
     var _dropdownNetworkInterface:GenesisFormPupUpListView;
@@ -153,7 +153,7 @@ class DynamicAdvancedConfigPage extends Page {
         _labelMandatory.variant = GenesisApplicationTheme.LABEL_COPYRIGHT_CENTER;
         this.addChild(_labelMandatory);
         
-        _initialized = true;
+        _formInitialized = true;
         
         // If we have a pending provisioner definition, apply it now
         if (_pendingProvisionerDefinition != null) {
@@ -201,7 +201,7 @@ class DynamicAdvancedConfigPage extends Page {
      */
     public function setProvisionerDefinition(definition:ProvisionerDefinition) {
         // If the component is not initialized yet, store the definition for later
-        if (!_initialized || _form == null) {
+        if (!_formInitialized || _form == null) {
             _pendingProvisionerDefinition = definition;
             Logger.info('Component not initialized yet, storing provisioner definition for later');
             return;
