@@ -90,6 +90,8 @@ class DynamicConfigPage extends Page {
     // Dynamic form fields
     var _dynamicFields:Map<String, Dynamic> = new Map();
     var _dynamicRows:Map<String, GenesisFormRow> = new Map();
+    // Local storage for custom properties not already in the server
+    var _customProperties:Map<String, Dynamic> = new Map();
 
     public function new() {
         super();
@@ -523,39 +525,23 @@ class DynamicConfigPage extends Page {
         var fieldName = field.name;
         Logger.info('${this}: Initializing server property: ${fieldName}, type: ${field.type}');
         
-        // Check if the property already exists
-        var propertyExists = Reflect.hasField(_server, fieldName);
+        // Check if the property already exists on the server - checking multiple ways
+        var directExists = Reflect.hasField(_server, fieldName);
+        var underscoreExists = Reflect.hasField(_server, "_" + fieldName);
+        var getterExists = Reflect.hasField(_server, "get_" + fieldName);
+        var propertyExists = directExists || underscoreExists || getterExists;
         
         if (!propertyExists) {
-            Logger.info('${this}: Creating new property on server: ${fieldName}');
+            Logger.info('${this}: Creating custom property: ${fieldName}');
             
             // Create the property based on the field type
             switch (field.type) {
                 case "text":
                     // Create a string property
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
-                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
-                    var underscoreFieldName = "_" + fieldName;
-                    
-                    if (Reflect.hasField(_server, fieldName)) {
-                        // The property already exists directly, no need to create it
-                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
-                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
-                        // The property exists as an underscore field, don't create it
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
-                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
-                        // Property has getter or setter but no direct field
-                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
-                    } else {
-                        try {
-                            // Create a new property ONLY if it doesn't exist in any form
-                            var prop = new champaign.core.primitives.Property<String>(defaultValue);
-                            Reflect.setField(_server, fieldName, prop);
-                            Logger.info('${this}: Created new property ${fieldName}');
-                        } catch (e) {
-                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
-                        }
-                    }
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                    _customProperties.set(fieldName, prop);
+                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "number":
                     // Create a numeric property
@@ -569,28 +555,9 @@ class DynamicConfigPage extends Page {
                             defaultValue = 0.0;
                         }
                     }
-                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
-                    var underscoreFieldName = "_" + fieldName;
-                    
-                    if (Reflect.hasField(_server, fieldName)) {
-                        // The property already exists directly, no need to create it
-                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
-                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
-                        // The property exists as an underscore field, don't create it
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
-                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
-                        // Property has getter or setter but no direct field
-                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
-                    } else {
-                        try {
-                            // Create a new property ONLY if it doesn't exist in any form
-                            var prop = new champaign.core.primitives.Property<Float>(defaultValue);
-                            Reflect.setField(_server, fieldName, prop);
-                            Logger.info('${this}: Created new property ${fieldName}');
-                        } catch (e) {
-                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
-                        }
-                    }
+                    var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                    _customProperties.set(fieldName, prop);
+                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "checkbox":
                     // Create a boolean property
@@ -598,68 +565,30 @@ class DynamicConfigPage extends Page {
                     if (field.defaultValue != null) {
                         defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
                     }
-                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
-                    var underscoreFieldName = "_" + fieldName;
-                    
-                    if (Reflect.hasField(_server, fieldName)) {
-                        // The property already exists directly, no need to create it
-                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
-                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
-                        // The property exists as an underscore field, don't create it
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
-                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
-                        // Property has getter or setter but no direct field
-                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
-                    } else {
-                        try {
-                            // Create a new property ONLY if it doesn't exist in any form
-                            var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
-                            Reflect.setField(_server, fieldName, prop);
-                            Logger.info('${this}: Created new property ${fieldName}');
-                        } catch (e) {
-                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
-                        }
-                    }
+                    var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                    _customProperties.set(fieldName, prop);
+                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "dropdown":
                     // Create a string property for dropdown
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
-                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
-                    var underscoreFieldName = "_" + fieldName;
-                    
-                    if (Reflect.hasField(_server, fieldName)) {
-                        // The property already exists directly, no need to create it
-                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
-                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
-                        // The property exists as an underscore field, don't create it
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
-                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
-                        // Property has getter or setter but no direct field
-                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
-                    } else {
-                        try {
-                            // Create a new property ONLY if it doesn't exist in any form
-                            var prop = new champaign.core.primitives.Property<String>(defaultValue);
-                            Reflect.setField(_server, fieldName, prop);
-                            Logger.info('${this}: Created new property ${fieldName}');
-                        } catch (e) {
-                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
-                        }
-                    }
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                    _customProperties.set(fieldName, prop);
+                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 default:
                     Logger.warning('${this}: Unknown field type for property initialization: ${field.type}');
             }
             
-                    // Add property change listener
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (prop != null && Reflect.hasField(prop, "onChange")) {
-                        var onChange = Reflect.field(prop, "onChange");
-                        if (onChange != null && Reflect.hasField(onChange, "add")) {
-                            var self = this;
-                            Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                        }
-                    }
+            // Add property change listener to custom properties
+            var prop = _customProperties.get(fieldName);
+            if (prop != null && Reflect.hasField(prop, "onChange")) {
+                var onChange = Reflect.field(prop, "onChange");
+                if (onChange != null && Reflect.hasField(onChange, "add")) {
+                    var self = this;
+                    Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                }
+            }
         } else {
             Logger.info('${this}: Property already exists on server: ${fieldName}');
         }
@@ -894,10 +823,28 @@ class DynamicConfigPage extends Page {
             }
             _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
             
-            // Update dynamic fields with server values
+            // Update dynamic fields with server or custom values
             for (fieldName => field in _dynamicFields) {
-                // Get the server property value if it exists
-                var value = Reflect.getProperty(_server, fieldName);
+                // Try to get the server property value first
+                var value = null;
+                
+                // Check if we need to get value from server or custom properties
+                if (_customProperties.exists(fieldName)) {
+                    value = _customProperties.get(fieldName);
+                } else {
+                    try {
+                        value = Reflect.getProperty(_server, fieldName);
+                    } catch (e) {
+                        // If can't get property directly, try with underscore
+                        try {
+                            value = Reflect.getProperty(_server, "_" + fieldName);
+                        } catch (e2) {
+                            // Failed to get value
+                            Logger.warning('${this}: Could not get property value for ${fieldName}');
+                        }
+                    }
+                }
+                
                 if (value != null) {
                     if (Std.isOfType(field, GenesisFormTextInput)) {
                         var input:GenesisFormTextInput = cast field;
@@ -1003,66 +950,65 @@ class DynamicConfigPage extends Page {
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {
+            var value = null;
+            
             if (Std.isOfType(field, GenesisFormTextInput)) {
                 var input:GenesisFormTextInput = cast field;
-                var value = StringTools.trim(input.text);
-                
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
-                        // It's a property with a value field
-                        Reflect.setField(prop, "value", value);
-                    } else {
-                        // It's a direct property
-                        Reflect.setProperty(_server, fieldName, value);
-                    }
-                }
+                value = StringTools.trim(input.text);
             } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                 var stepper:GenesisFormNumericStepper = cast field;
-                var value = stepper.value;
-                
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
-                        // It's a property with a value field
-                        Reflect.setField(prop, "value", value);
-                    } else {
-                        // It's a direct property
-                        Reflect.setProperty(_server, fieldName, value);
-                    }
-                }
+                value = stepper.value;
             } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                 var checkbox:GenesisFormCheckBox = cast field;
-                var value = checkbox.selected;
-                
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
-                        // It's a property with a value field
-                        Reflect.setField(prop, "value", value);
-                    } else {
-                        // It's a direct property
-                        Reflect.setProperty(_server, fieldName, value);
-                    }
-                }
+                value = checkbox.selected;
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
-                var value = selectedItem != null && selectedItem.length > 0 ? selectedItem[0] : null;
-                
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
-                        // It's a property with a value field
+                value = selectedItem != null && selectedItem.length > 0 ? selectedItem[0] : null;
+            }
+            
+            if (value != null) {
+                // Check if we need to update server or custom properties
+                if (_customProperties.exists(fieldName)) {
+                    // Update custom property
+                    var prop = _customProperties.get(fieldName);
+                    if (prop != null && Reflect.hasField(prop, "value")) {
                         Reflect.setField(prop, "value", value);
-                    } else {
-                        // It's a direct property
-                        Reflect.setProperty(_server, fieldName, value);
+                        Logger.info('${this}: Updated custom property ${fieldName} value to ${value}');
                     }
+                } else {
+                    // Try to update server property
+                    try {
+                        var prop = Reflect.getProperty(_server, fieldName);
+                        if (prop != null && Reflect.hasField(prop, "value")) {
+                            Reflect.setField(prop, "value", value);
+                            Logger.info('${this}: Updated server property ${fieldName} value to ${value}');
+                        }
+                    } catch (e) {
+                        Logger.warning('${this}: Could not update property ${fieldName}: ${e}');
+                    }
+                }
+            }
+        }
+        
+        // Store custom properties in server's userData if available
+        if (_server != null && _customProperties.keys().hasNext()) {
+            // Make sure userData is initialized
+            if (_server.userData == null) {
+                _server.userData = {};
+            }
+            
+            // Create or update the dynamicCustomProperties field to hold our custom properties
+            var userData:Dynamic = _server.userData;
+            if (!Reflect.hasField(userData, "dynamicCustomProperties")) {
+                Reflect.setField(userData, "dynamicCustomProperties", {});
+            }
+            
+            var customPropsObj = Reflect.field(userData, "dynamicCustomProperties");
+            for (key => prop in _customProperties) {
+                if (Reflect.hasField(prop, "value")) {
+                    Reflect.setField(customPropsObj, key, Reflect.field(prop, "value"));
+                    Logger.info('${this}: Stored custom property ${key} in server userData');
                 }
             }
         }
