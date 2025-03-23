@@ -71,6 +71,8 @@ import prominic.sys.tools.StrTools;
 import prominic.sys.tools.SysTools.CPUArchitecture;
 import superhuman.components.AdvancedConfigPage;
 import superhuman.components.ConfigPage;
+import superhuman.components.DynamicAdvancedConfigPage;
+import superhuman.components.DynamicConfigPage;
 import superhuman.components.HelpPage;
 import superhuman.components.LoadingPage;
 import superhuman.components.RolePage;
