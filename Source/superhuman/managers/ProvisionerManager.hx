@@ -336,42 +336,6 @@ class ProvisionerManager {
         return result;
     }
     
-/**
- * Structure for a field in the provisioner configuration
- */
-typedef ProvisionerField = {
-    var name:String;
-    var label:String;
-    var type:String;
-    @:optional var defaultValue:Dynamic;
-    @:optional var placeholder:String;
-    @:optional var tooltip:String;
-    @:optional var required:Bool;
-    @:optional var validationKey:String;
-    @:optional var min:Float;
-    @:optional var max:Float;
-    @:optional var options:Array<{value:String, label:String}>;
-}
-
-/**
- * Structure for provisioner configuration
- */
-typedef ProvisionerConfiguration = {
-    @:optional var fields:Array<ProvisionerField>;
-    @:optional var advancedFields:Array<ProvisionerField>;
-}
-
-/**
- * Structure for provisioner.yml metadata
- */
-typedef ProvisionerMetadata = {
-    var name:String;
-    var type:String;
-    var description:String;
-    @:optional var author:String;
-    @:optional var version:String;
-    @:optional var configuration:ProvisionerConfiguration;
-}
 
     static public function getBundledProvisionerCollection( ?type:ProvisionerType ):ArrayCollection<ProvisionerDefinition> {
 
