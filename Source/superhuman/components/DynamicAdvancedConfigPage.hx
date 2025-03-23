@@ -78,6 +78,8 @@ class DynamicAdvancedConfigPage extends Page {
     var _server:Server;
     var _titleGroup:LayoutGroup;
     var _provisionerDefinition:ProvisionerDefinition;
+    var _pendingProvisionerDefinition:ProvisionerDefinition;
+    var _initialized:Bool = false;
     
     // Standard form fields
     var _dropdownNetworkInterface:GenesisFormPupUpListView;
@@ -150,6 +152,14 @@ class DynamicAdvancedConfigPage extends Page {
         _labelMandatory = new Label(LanguageManager.getInstance().getString('serveradvancedconfigpage.form.info'));
         _labelMandatory.variant = GenesisApplicationTheme.LABEL_COPYRIGHT_CENTER;
         this.addChild(_labelMandatory);
+        
+        _initialized = true;
+        
+        // If we have a pending provisioner definition, apply it now
+        if (_pendingProvisionerDefinition != null) {
+            setProvisionerDefinition(_pendingProvisionerDefinition);
+            _pendingProvisionerDefinition = null;
+        }
     }
 
     /**
@@ -190,6 +200,13 @@ class DynamicAdvancedConfigPage extends Page {
      * @param definition The provisioner definition
      */
     public function setProvisionerDefinition(definition:ProvisionerDefinition) {
+        // If the component is not initialized yet, store the definition for later
+        if (!_initialized || _form == null) {
+            _pendingProvisionerDefinition = definition;
+            Logger.info('Component not initialized yet, storing provisioner definition for later');
+            return;
+        }
+        
         _provisionerDefinition = definition;
         
         // Log the provisioner definition to help with debugging
@@ -419,14 +436,14 @@ class DynamicAdvancedConfigPage extends Page {
     override function updateContent(forced:Bool = false) {
         super.updateContent();
 
-        if (_form != null && _server != null) {
+        if (_form != null && _server != null && _dropdownNetworkInterface != null) {
             _label.text = LanguageManager.getInstance().getString('serveradvancedconfigpage.title', Std.string(_server.id));
             
             // Update network interface dropdown
             _dropdownNetworkInterface.selectedIndex = 0;
             for (i in 0..._dropdownNetworkInterface.dataProvider.length) {
                 var d = _dropdownNetworkInterface.dataProvider.get(i);
-                if (d.name == _server.networkBridge.value) {
+                if (d != null && d.name == _server.networkBridge.value) {
                     _dropdownNetworkInterface.selectedIndex = i;
                     break;
                 }
@@ -485,12 +502,14 @@ class DynamicAdvancedConfigPage extends Page {
 
     override function _cancel(?e:Dynamic) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE);
-        evt.server = _server;
+        if (_server != null) {
+            evt.server = _server;
+        }
         this.dispatchEvent(evt);
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
-        if (!_form.isValid()) return;
+        if (!_form.isValid() || _server == null) return;
 
         // Update standard fields
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
@@ -504,7 +523,7 @@ class DynamicAdvancedConfigPage extends Page {
                 // Check if the server has this property
                 if (Reflect.hasField(_server, fieldName)) {
                     var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
+                    if (prop != null && Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
                     } else {
@@ -519,7 +538,7 @@ class DynamicAdvancedConfigPage extends Page {
                 // Check if the server has this property
                 if (Reflect.hasField(_server, fieldName)) {
                     var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
+                    if (prop != null && Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
                     } else {
@@ -534,7 +553,7 @@ class DynamicAdvancedConfigPage extends Page {
                 // Check if the server has this property
                 if (Reflect.hasField(_server, fieldName)) {
                     var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
+                    if (prop != null && Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
                     } else {
@@ -550,7 +569,7 @@ class DynamicAdvancedConfigPage extends Page {
                 // Check if the server has this property
                 if (Reflect.hasField(_server, fieldName)) {
                     var prop = Reflect.getProperty(_server, fieldName);
-                    if (Reflect.hasField(prop, "value")) {
+                    if (prop != null && Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
                     } else {

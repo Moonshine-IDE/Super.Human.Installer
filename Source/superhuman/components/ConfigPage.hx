@@ -108,7 +108,7 @@ class ConfigPage extends Page {
         this.addChild( _titleGroup );
 
         _label = new Label();
-        _label.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
+        _label.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', _server != null ? Std.string( _server.id ) : "" );
         _label.variant = GenesisApplicationTheme.LABEL_LARGE;
         _label.layoutData = new HorizontalLayoutData( 100 );
         _titleGroup.addChild( _label );
