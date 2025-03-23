@@ -31,6 +31,8 @@
 package superhuman.components;
 
 import genesis.application.components.GenesisFormRow;
+import lime.ui.FileDialog;
+import lime.ui.FileDialogType;
 import superhuman.server.SyncMethod;
 import superhuman.components.filesync.FileSyncSetting;
 import superhuman.application.ApplicationData;
@@ -38,6 +40,8 @@ import superhuman.components.applications.ApplicationsList;
 import feathers.data.ArrayCollection;
 import superhuman.components.browsers.BrowsersList;
 import superhuman.browser.BrowserData;
+import superhuman.managers.ProvisionerManager;
+import genesis.application.managers.ToastManager;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -79,6 +83,8 @@ class SettingsPage extends Page {
     var _fileSyncSetting:FileSyncSetting;
     var _rowBrowsers:GenesisFormRow;
     var _rowApplications:GenesisFormRow;
+    var _rowProvisioners:GenesisFormRow;
+    var _buttonImportProvisioner:GenesisFormButton;
 
     var _browsersList:BrowsersList;
     var _applicationsList:ApplicationsList;
@@ -191,6 +197,20 @@ class SettingsPage extends Page {
         _rowApplications.content.addChild(_applicationsList);
         _form.addChild(_rowApplications);
         
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add provisioner management section
+        _rowProvisioners = new GenesisFormRow();
+        _rowProvisioners.text = "Provisioner Management";
+        
+        _buttonImportProvisioner = new GenesisFormButton("Import Provisioner");
+        _buttonImportProvisioner.addEventListener(TriggerEvent.TRIGGER, _importProvisioner);
+        _rowProvisioners.content.addChild(_buttonImportProvisioner);
+        
+        _form.addChild(_rowProvisioners);
+        
         var line = new HLine();
         line.width = _width;
         this.addChild( line );
@@ -276,5 +296,29 @@ class SettingsPage extends Page {
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
+    }
+    
+    /**
+     * Handle the import provisioner button click
+     * @param e The trigger event
+     */
+    function _importProvisioner(e:TriggerEvent) {
+        var fd = new FileDialog();
+        fd.onSelect.add(path -> {
+            // Import the provisioner
+            var success = ProvisionerManager.importProvisioner(path);
+            
+            if (success) {
+                ToastManager.getInstance().showToast("Provisioner imported successfully");
+                
+                // Dispatch event to notify the application that a provisioner was imported
+                var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
+                this.dispatchEvent(event);
+            } else {
+                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner.yml file and at least one version directory with scripts.");
+            }
+        });
+        
+        fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, "Select Provisioner Directory");
     }
 }

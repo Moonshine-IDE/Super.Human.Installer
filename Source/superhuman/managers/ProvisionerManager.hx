@@ -155,13 +155,14 @@ class ProvisionerManager {
                 Logger.info('Created provisioners directory at ${commonDir}');
             } catch (e) {
                 Logger.error('Failed to create provisioners directory at ${commonDir}: ${e}');
-                return _getFallbackProvisioners(type);
+                return []; // Return empty array instead of falling back
             }
         }
         
         try {
             // List all directories in the common directory
             var provisionerDirs = FileSystem.readDirectory(commonDir);
+            Logger.info('Found ${provisionerDirs.length} provisioner directories in ${commonDir}');
             
             for (provisionerDir in provisionerDirs) {
                 var provisionerPath = Path.addTrailingSlash(commonDir) + provisionerDir;
@@ -175,13 +176,22 @@ class ProvisionerManager {
                 var metadata = readProvisionerMetadata(provisionerPath);
                 
                 // Skip if no metadata or if filtering by type and type doesn't match
-                if (metadata == null || (type != null && metadata.type != type)) {
+                if (metadata == null) {
+                    Logger.warning('No valid metadata found for provisioner at ${provisionerPath}');
                     continue;
                 }
+                
+                if (type != null && metadata.type != type) {
+                    Logger.verbose('Skipping provisioner ${metadata.type} as it does not match requested type ${type}');
+                    continue;
+                }
+                
+                Logger.info('Processing provisioner ${metadata.name} (${metadata.type})');
                 
                 // List all version directories
                 try {
                     var versionDirs = FileSystem.readDirectory(provisionerPath);
+                    Logger.info('Found ${versionDirs.length} version directories for ${metadata.type}');
                     
                     for (versionDir in versionDirs) {
                         var versionPath = Path.addTrailingSlash(provisionerPath) + versionDir;
@@ -191,19 +201,21 @@ class ProvisionerManager {
                             continue;
                         }
                         
-                        // Check if this is a valid version directory (has scripts and templates subdirectories)
+                        // Check if this is a valid version directory (has scripts subdirectory)
                         var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
-                        var templatesPath = Path.addTrailingSlash(versionPath) + "templates";
                         
                         if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath)) {
                             // Create provisioner definition
                             var versionInfo = VersionInfo.fromString(versionDir);
+                            Logger.info('Adding provisioner ${metadata.type} version ${versionDir}');
                             
                             result.push({
                                 name: '${metadata.name} v${versionDir}',
                                 data: { type: metadata.type, version: versionInfo },
                                 root: versionPath
                             });
+                        } else {
+                            Logger.warning('Skipping version directory ${versionDir} as it does not have a scripts subdirectory');
                         }
                     }
                 } catch (e) {
@@ -212,12 +224,7 @@ class ProvisionerManager {
             }
         } catch (e) {
             Logger.error('Error reading provisioners directory: ${e}');
-            return _getFallbackProvisioners(type);
-        }
-        
-        // If no provisioners found in common directory, fall back to bundled ones
-        if (result.length == 0) {
-            return _getFallbackProvisioners(type);
+            return []; // Return empty array instead of falling back
         }
         
         // Sort by version, newest first
@@ -227,6 +234,7 @@ class ProvisionerManager {
             return versionB > versionA ? 1 : (versionB < versionA ? -1 : 0);
         });
         
+        Logger.info('Returning ${result.length} provisioner definitions');
         return result;
     }
     
@@ -234,39 +242,11 @@ class ProvisionerManager {
      * Get fallback provisioners from the application bundle
      * @param type Optional provisioner type filter
      * @return Array<ProvisionerDefinition> Array of bundled provisioners
+     * @deprecated This method is no longer used as provisioners are now loaded from the common directory
      */
     static private function _getFallbackProvisioners(type:ProvisionerType = null):Array<ProvisionerDefinition> {
-        Logger.warning('No provisioners found in common directory, falling back to bundled provisioners');
-        
-        if (type == ProvisionerType.AdditionalProvisioner) {
-            return [
-                {
-                    name: "HCL Additional Provisioner v0.1.23",
-                    data: { type: ProvisionerType.AdditionalProvisioner, version: VersionInfo.fromString("0.1.23") },
-                    root: Path.addTrailingSlash(System.applicationDirectory) + PROVISIONER_ADDITIONAL_LOCAL_PATH + "0.1.23"
-                },
-            ];
-        } else if (type == ProvisionerType.DemoTasks || type == null) {
-            return [
-                {
-                    name: "HCL Standalone Provisioner v0.1.23",
-                    data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString("0.1.23") },
-                    root: Path.addTrailingSlash(System.applicationDirectory) + PROVISIONER_STANDALONE_LOCAL_PATH + "0.1.23"
-                },
-                {
-                    name: "HCL Standalone Provisioner v0.1.22",
-                    data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString("0.1.22") },
-                    root: Path.addTrailingSlash(System.applicationDirectory) + PROVISIONER_STANDALONE_LOCAL_PATH + "0.1.22"
-                },
-                {
-                    name: "HCL Standalone Provisioner v0.1.20",
-                    data: { type: ProvisionerType.DemoTasks, version: VersionInfo.fromString("0.1.20") },
-                    root: Path.addTrailingSlash(System.applicationDirectory) + PROVISIONER_STANDALONE_LOCAL_PATH + "0.1.20"
-                }
-            ];
-        }
-        
-        return [];
+        Logger.warning('_getFallbackProvisioners is deprecated and should not be used');
+        return []; // Always return empty array
     }
 
     static public function getBundledProvisionerCollection( ?type:ProvisionerType ):ArrayCollection<ProvisionerDefinition> {
@@ -292,6 +272,112 @@ class ProvisionerManager {
 
 		return null;
 
+    }
+    
+    /**
+     * Import a provisioner from a source directory to the common provisioners directory
+     * @param sourcePath Path to the source provisioner directory
+     * @return Bool True if import was successful, false otherwise
+     */
+    static public function importProvisioner(sourcePath:String):Bool {
+        // Validate that the source directory contains a valid provisioner
+        var metadata = readProvisionerMetadata(sourcePath);
+        if (metadata == null) {
+            Logger.error('Invalid provisioner at ${sourcePath}: missing or invalid provisioner.yml');
+            return false;
+        }
+        
+        // Create the destination directory
+        var destPath = Path.addTrailingSlash(getProvisionersDirectory()) + metadata.type;
+        try {
+            if (!FileSystem.exists(destPath)) {
+                FileSystem.createDirectory(destPath);
+                Logger.info('Created provisioner directory at ${destPath}');
+            }
+            
+            // Copy provisioner.yml to the destination directory
+            var sourceMetadataPath = Path.addTrailingSlash(sourcePath) + PROVISIONER_METADATA_FILENAME;
+            var destMetadataPath = Path.addTrailingSlash(destPath) + PROVISIONER_METADATA_FILENAME;
+            
+            if (!FileSystem.exists(sourceMetadataPath)) {
+                Logger.error('Provisioner metadata file not found at ${sourceMetadataPath}');
+                return false;
+            }
+            
+            File.copy(sourceMetadataPath, destMetadataPath);
+            Logger.info('Copied provisioner metadata to ${destMetadataPath}');
+            
+            // Look for version directories in the source directory
+            var versionDirs = FileSystem.readDirectory(sourcePath);
+            var versionsImported = 0;
+            
+            for (versionDir in versionDirs) {
+                var versionSourcePath = Path.addTrailingSlash(sourcePath) + versionDir;
+                
+                // Skip if not a directory or if it's the provisioner.yml file
+                if (!FileSystem.isDirectory(versionSourcePath) || versionDir == PROVISIONER_METADATA_FILENAME) {
+                    continue;
+                }
+                
+                // Check if this is a valid version directory (has scripts subdirectory)
+                var scriptsSourcePath = Path.addTrailingSlash(versionSourcePath) + "scripts";
+                if (!FileSystem.exists(scriptsSourcePath) || !FileSystem.isDirectory(scriptsSourcePath)) {
+                    Logger.warning('Skipping version directory ${versionDir} as it does not have a scripts subdirectory');
+                    continue;
+                }
+                
+                // Create the destination version directory
+                var versionDestPath = Path.addTrailingSlash(destPath) + versionDir;
+                if (FileSystem.exists(versionDestPath)) {
+                    Logger.warning('Version ${versionDir} already exists at ${versionDestPath}, skipping');
+                    continue;
+                }
+                
+                // Copy the version directory
+                _copyDirectory(versionSourcePath, versionDestPath);
+                Logger.info('Imported version ${versionDir} to ${versionDestPath}');
+                versionsImported++;
+            }
+            
+            if (versionsImported == 0) {
+                Logger.warning('No valid version directories found in ${sourcePath}');
+                return false;
+            }
+            
+            Logger.info('Successfully imported ${versionsImported} versions of provisioner ${metadata.type}');
+            return true;
+            
+        } catch (e) {
+            Logger.error('Error importing provisioner: ${e}');
+            return false;
+        }
+    }
+    
+    /**
+     * Helper method to recursively copy a directory
+     * @param source Source directory path
+     * @param destination Destination directory path
+     */
+    static private function _copyDirectory(source:String, destination:String):Void {
+        // Create the destination directory if it doesn't exist
+        if (!FileSystem.exists(destination)) {
+            FileSystem.createDirectory(destination);
+        }
+        
+        // Copy all files and subdirectories
+        var items = FileSystem.readDirectory(source);
+        for (item in items) {
+            var sourcePath = Path.addTrailingSlash(source) + item;
+            var destPath = Path.addTrailingSlash(destination) + item;
+            
+            if (FileSystem.isDirectory(sourcePath)) {
+                // Recursively copy subdirectory
+                _copyDirectory(sourcePath, destPath);
+            } else {
+                // Copy file
+                File.copy(sourcePath, destPath);
+            }
+        }
     }
 
 }

@@ -395,11 +395,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 
 		_settingsPage = new SettingsPage();
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
-		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
-		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplicationPage);
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+        _settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
+        _settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplicationPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
 
@@ -869,9 +870,25 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.selectedPageId = this.previousPageId;	
 	}
 	
-	function _closeSetupAppPage(e:SuperHumanApplicationEvent) {
-		this.selectedPageId = this.previousPageId;
-	}
+    function _closeSetupAppPage(e:SuperHumanApplicationEvent) {
+        this.selectedPageId = this.previousPageId;
+    }
+    
+    /**
+     * Handle the provisioner imported event
+     * @param e The event
+     */
+    function _provisionerImported(e:SuperHumanApplicationEvent) {
+        // Refresh the server page to show the new provisioner
+        if (_serverPage != null) {
+            // Force a refresh of the server page
+            for (server in ServerManager.getInstance().servers) {
+                server.setServerStatus();
+            }
+        }
+        
+        Logger.info('${this}: Provisioner imported successfully');
+    }
 	
 	function _initializeApplicationsCollection() {
 		if (this.previousPageId != PAGE_SETUP_APPLICATIONS) {

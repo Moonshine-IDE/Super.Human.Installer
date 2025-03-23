@@ -33,6 +33,7 @@
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
 	<!-- Provisioners are now loaded from a common directory instead of being included in the binary -->
+	<!-- The provisioner assets are copied by the installer to the common directory -->
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>
 	<assets rename="assets/bin" path="Assets/bin/windows" include="*" if="windows"/>
 	<assets rename="assets/bin" path="Assets/bin/linux" include="*" if="linux"/>
