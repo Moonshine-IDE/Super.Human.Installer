@@ -87,6 +87,7 @@ typedef ProvisionerField = {
     @:optional var max:Float; // For number fields
     @:optional var tooltip:String;
     @:optional var placeholder:String;
+    @:optional var restrict:String; // For text fields, restricts input to specified characters
 }
 
 class ProvisionerManager {

@@ -258,9 +258,9 @@ class DynamicConfigPage extends Page {
                     input.minLength = 1;
                 }
                 
-                // Set restrict if provided (must be a valid regex)
+                // Set restrict if provided
                 if (field.restrict != null) {
-                    input.restrict = new EReg(field.restrict, "");
+                    input.restrict = field.restrict;
                 }
                 
                 // Add the input to the row
