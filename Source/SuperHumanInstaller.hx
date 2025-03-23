@@ -1016,14 +1016,15 @@ class SuperHumanInstaller extends GenesisApplication {
                     baseName = baseName.substring(0, versionIndex);
                 }
                 
-                // Add to service types collection
-                _serviceTypesCollection.push({
-                    value: provisioner.name, // Keep the full name with version in the value
-                    description: description,
-                    provisionerType: type,
-                    serverType: serverType,
-                    isEnabled: true
-                });
+	// Add to service types collection
+	_serviceTypesCollection.push({
+		value: provisioner.name, // Keep the full name with version in the value
+		description: description,
+		provisionerType: type,
+		serverType: serverType,
+		isEnabled: true,
+		provisioner: provisioner // Store the actual provisioner definition
+	});
                 
                 Logger.info('${this}: Added provisioner to service types: ${baseName}, type: ${type}, serverType: ${serverType}');
             }
@@ -1353,17 +1354,47 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Get the provisioner definition for the custom provisioner
 		var provisionerDefinition = null;
 		var allProvisioners = ProvisionerManager.getBundledProvisioners(e.provisionerType);
+		Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${e.provisionerType}');
+		
+		// Log all available provisioners for debugging
+		for (i in 0...allProvisioners.length) {
+			var p = allProvisioners[i];
+			Logger.info('${this}: Provisioner ${i}: name=${p.name}, type=${p.data.type}, version=${p.data.version}, root=${p.root}');
+			
+			if (p.metadata != null) {
+				Logger.info('${this}: Metadata: name=${p.metadata.name}, type=${p.metadata.type}, version=${p.metadata.version}');
+			} else {
+				Logger.warning('${this}: No metadata for provisioner ${p.name}');
+			}
+		}
 		
 		// If we have a specific service type data, use that to find the provisioner
 		if (e.serviceTypeData != null) {
 			Logger.info('${this}: Using service type data: ${e.serviceTypeData.value}, ${e.serviceTypeData.provisionerType}');
 			
-			// Find the provisioner that matches the service type data
-			for (provisioner in allProvisioners) {
-				if (provisioner.name == e.serviceTypeData.value) {
-					provisionerDefinition = provisioner;
-					Logger.info('${this}: Found matching provisioner: ${provisioner.name}');
-					break;
+			// First check if the service type data has a provisioner field
+			if (e.serviceTypeData.provisioner != null) {
+				provisionerDefinition = e.serviceTypeData.provisioner;
+				Logger.info('${this}: Using provisioner directly from service type data: ${provisionerDefinition.name}');
+			} else {
+				// Find the provisioner that matches the service type data
+				for (provisioner in allProvisioners) {
+					if (provisioner.name == e.serviceTypeData.value) {
+						provisionerDefinition = provisioner;
+						Logger.info('${this}: Found matching provisioner by name: ${provisioner.name}');
+						break;
+					}
+				}
+				
+				// If we didn't find a match by name, try matching by version
+				if (provisionerDefinition == null) {
+					for (provisioner in allProvisioners) {
+						if (provisioner.data.version == server.provisioner.version) {
+							provisionerDefinition = provisioner;
+							Logger.info('${this}: Found matching provisioner by version: ${provisioner.name}, version: ${provisioner.data.version}');
+							break;
+						}
+					}
 				}
 			}
 		}

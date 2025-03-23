@@ -30,11 +30,14 @@
 
 package superhuman.server.data;
 
+import superhuman.server.definitions.ProvisionerDefinition;
+
 typedef ServiceTypeData = {
 
     value:String,
 	description:String,
 	provisionerType:String,
 	serverType:String,
-	isEnabled:Bool
+	isEnabled:Bool,
+	?provisioner:ProvisionerDefinition
 }
