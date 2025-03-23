@@ -3,7 +3,6 @@ name: "HCL Custom Provisioner"
 type: "hcl_custom_provisioner"
 description: "A custom provisioner for specific needs"
 author: "Your Name"
-version: "1.0.0"
 
 # Configuration fields for the provisioner
 # These fields will be used to dynamically generate the UI

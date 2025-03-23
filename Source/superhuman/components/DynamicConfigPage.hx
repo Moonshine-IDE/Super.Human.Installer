@@ -335,7 +335,7 @@ class DynamicConfigPage extends Page {
                                     var label = option.label;
                                     
                                     if (value != null && label != null) {
-                                        options.push({value: value, label: label});
+                                        options.push([value, label]);
                                     } else {
                                         Logger.warning('Invalid dropdown option in field ${field.name}: value=${value}, label=${label}');
                                     }
