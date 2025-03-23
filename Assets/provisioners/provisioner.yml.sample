@@ -1,15 +1,9 @@
-# Sample provisioner.yml file
-# This file defines the metadata, configuration fields, and roles for a custom provisioner
-
-# Basic metadata
 name: "HCL Custom Provisioner"
 type: "hcl_domino_custom_provisioner"
 description: "A custom provisioner for Domino servers"
 author: "Your Name"
 
-# Configuration fields
 configuration:
-  # Basic configuration fields (shown on the main configuration page)
   basicFields:
     - name: "hostname"
       type: "text"
@@ -28,26 +22,19 @@ configuration:
       required: true
       restrict: "a-zA-Z0-9-"
       
-    - name: "serverType"
-      type: "dropdown"
-      label: "Server Type"
-      tooltip: "The type of Domino server to create"
-      defaultValue: "standard"
-      options:
-        - value: "standard"
-          label: "Standard Domino Server"
-        - value: "mail"
-          label: "Mail Server"
-        - value: "application"
-          label: "Application Server"
-          
-    - name: "enableSSL"
+    - name: "userEmail"
+      type: "text"
+      label: "Email Address"
+      placeholder: "Enter your email address"
+      tooltip: "Your email address for notifications"
+      validationKey: "^(([^<>()\[\]\\.,;:\s@\"]+(\.[^<>()\[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$"
+      
+    - name: "openBrowser"
       type: "checkbox"
-      label: "Enable SSL"
-      tooltip: "Enable SSL for this server"
+      label: "Open Browser on Start"
+      tooltip: "Open a browser window when the server starts"
       defaultValue: true
       
-  # Advanced configuration fields (shown on the advanced configuration page)
   advancedFields:
     - name: "numCPUs"
       type: "number"
@@ -105,41 +92,58 @@ configuration:
       validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
       restrict: "0-9."
       
-    - name: "openBrowser"
-      type: "checkbox"
-      label: "Open Browser on Start"
-      tooltip: "Open a browser window when the server starts"
-      defaultValue: true
+    - name: "networkBridge"
+      type: "text"
+      label: "Network Bridge"
+      tooltip: "The network bridge to use"
       
     - name: "dhcp4"
       type: "checkbox"
       label: "Use DHCP"
       tooltip: "Use DHCP for network configuration"
+      defaultValue: true
+      
+    - name: "disableBridgeAdapter"
+      type: "checkbox"
+      label: "Disable Bridge Adapter"
+      tooltip: "Disable the bridge adapter"
       defaultValue: false
+      
+    - name: "setupWait"
+      type: "number"
+      label: "Setup Wait Time (seconds)"
+      tooltip: "Time to wait for setup to complete"
+      defaultValue: 300
+      min: 60
+      max: 600
 
-# Roles
 roles:
-  - name: "domino_server"
+  - name: "domino"
     label: "Domino Server"
     description: "Basic Domino server role"
     defaultEnabled: true
     
-  - name: "domino_mail"
-    label: "Mail Server"
-    description: "Domino mail server role"
+  - name: "nomadweb"
+    label: "Nomad Web"
+    description: "HCL Nomad Web server"
     defaultEnabled: false
     
-  - name: "domino_app"
-    label: "Application Server"
-    description: "Domino application server role"
+  - name: "leap"
+    label: "Leap"
+    description: "HCL Leap application server"
     defaultEnabled: false
     
-  - name: "domino_web"
-    label: "Web Server"
-    description: "Domino web server role"
+  - name: "traveler"
+    label: "Traveler"
+    description: "HCL Traveler server for mobile devices"
     defaultEnabled: false
     
-  - name: "domino_admin"
-    label: "Admin Server"
-    description: "Domino administration server role"
+  - name: "verse"
+    label: "Verse"
+    description: "HCL Verse web mail client"
+    defaultEnabled: false
+    
+  - name: "domino-rest-api"
+    label: "Domino REST API"
+    description: "Domino REST API for application access"
     defaultEnabled: false
