@@ -128,22 +128,44 @@ class ServiceTypePage extends Page {
     }
     
     function _continueButtonTriggered(e:TriggerEvent) {
-        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
-            event.provisionerType = ProvisionerType.DemoTasks;
-            
         var selectedServiceType = _serviceTypeGrid.selectedItem;
-        if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) 
-        {
+        
+        // Create the appropriate event based on server type
+        var event:SuperHumanApplicationEvent;
+        
+        if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) {
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER);
-            event.provisionerType = ProvisionerType.AdditionalProvisioner;
+        } else {
+            event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_SERVER);
         }
-
+        
+        // Set the provisioner type from the selected service type
+        event.provisionerType = selectedServiceType.provisionerType;
         event.serviceTypeData = selectedServiceType;
 
-        this.dispatchEvent( event );
+        this.dispatchEvent(event);
 	}
 	
     function _buttonCloseTriggered( e:TriggerEvent ) {
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE ) );
+    }
+    
+    /**
+     * Update the service types collection and refresh the grid
+     * @param serviceTypes The new service types collection
+     */
+    public function updateServiceTypes(serviceTypes:Array<ServiceTypeData>) {
+        // Update the internal collection
+        _serviceTypesCollection = serviceTypes;
+        
+        // Update the grid's data provider
+        if (_serviceTypeGrid != null) {
+            _serviceTypeGrid.dataProvider = new ArrayCollection(_serviceTypesCollection);
+            
+            // Select the first item if available
+            if (_serviceTypesCollection.length > 0) {
+                _serviceTypeGrid.selectedIndex = 0;
+            }
+        }
     }
 }

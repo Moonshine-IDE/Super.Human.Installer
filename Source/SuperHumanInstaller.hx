@@ -272,48 +272,48 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
 	
-		// Get provisioners from the ProvisionerManager
-	var provisioners = ProvisionerManager.getBundledProvisioners();
-	Logger.info('${this}: Available provisioners: ${provisioners.length}');
+		// Get all available provisioners
+	var allProvisioners = ProvisionerManager.getBundledProvisioners();
+	Logger.info('${this}: Available provisioners: ${allProvisioners.length}');
 	
 	// Initialize service types collection
 	_serviceTypesCollection = [];
 	
-	// Add provisioners to service types collection
-	for (provisioner in provisioners) {
-		// Extract type from provisioner data
-		var provType = provisioner.data.type;
-		var serverType = "";
-		
-		// Determine server UI type based on provisioner type
-		if (provType == ProvisionerType.DemoTasks) {
-			serverType = ServerUIType.Domino;
-		} else if (provType == ProvisionerType.AdditionalProvisioner) {
-			serverType = ServerUIType.AdditionalDomino;
+	// Group provisioners by type to avoid duplicates
+	var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
+	
+	for (provisioner in allProvisioners) {
+		var type = provisioner.data.type;
+		if (!provisionersByType.exists(type)) {
+			provisionersByType.set(type, []);
 		}
-		
-		// Only add if we have a valid server type
-		if (serverType != "") {
-			_serviceTypesCollection.push({
-				value: provisioner.name,
-				description: provisioner.data.type == ProvisionerType.DemoTasks ? 
-					"A new, independent Domino Server" : 
-					"Join a new server to an existing Domino environment",
-				provisionerType: provType,
-				serverType: serverType,
-				isEnabled: true
-			});
-		}
+		provisionersByType.get(type).push(provisioner);
 	}
 	
-	// Add "Coming soon" option
-	_serviceTypesCollection.push({
-		value: "Volt MX Go Foundry Server", 
-		description: "Coming soon!", 
-		provisionerType: "",
-		serverType: "",
-		isEnabled: false
-	});
+	// Create a service type entry for each unique provisioner type
+	for (type in provisionersByType.keys()) {
+		// Get the newest version of this provisioner type
+		var provisioners = provisionersByType.get(type);
+		provisioners.sort((a, b) -> {
+			return b.data.version > a.data.version ? 1 : (b.data.version < a.data.version ? -1 : 0);
+		});
+		
+		var provisioner = provisioners[0];
+		
+		// Determine server UI type based on naming convention
+		// Default to Domino for unknown types
+		var serverType = type.indexOf("additional") >= 0 ? 
+			ServerUIType.AdditionalDomino : ServerUIType.Domino;
+		
+		// Add to service types collection
+		_serviceTypesCollection.push({
+			value: provisioner.name,
+			description: provisioner.name,
+			provisionerType: type,
+			serverType: serverType,
+			isEnabled: true
+		});
+	}
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
 		Shell.getInstance().findProcessId( 'SuperHumanInstaller', null, _processIdFound );
@@ -904,6 +904,54 @@ class SuperHumanInstaller extends GenesisApplication {
      * @param e The event
      */
     function _provisionerImported(e:SuperHumanApplicationEvent) {
+        // Refresh the list of available provisioners
+        var allProvisioners = ProvisionerManager.getBundledProvisioners();
+        Logger.info('${this}: Available provisioners after import: ${allProvisioners.length}');
+        
+        // Reinitialize service types collection
+        _serviceTypesCollection = [];
+        
+        // Group provisioners by type to avoid duplicates
+        var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
+        
+        for (provisioner in allProvisioners) {
+            var type = provisioner.data.type;
+            if (!provisionersByType.exists(type)) {
+                provisionersByType.set(type, []);
+            }
+            provisionersByType.get(type).push(provisioner);
+        }
+        
+        // Create a service type entry for each unique provisioner type
+        for (type in provisionersByType.keys()) {
+            // Get the newest version of this provisioner type
+            var provisioners = provisionersByType.get(type);
+            provisioners.sort((a, b) -> {
+                return b.data.version > a.data.version ? 1 : (b.data.version < a.data.version ? -1 : 0);
+            });
+            
+            var provisioner = provisioners[0];
+            
+            // Determine server UI type based on naming convention
+            // Default to Domino for unknown types
+            var serverType = type.indexOf("additional") >= 0 ? 
+                ServerUIType.AdditionalDomino : ServerUIType.Domino;
+            
+            // Add to service types collection
+            _serviceTypesCollection.push({
+                value: provisioner.name,
+                description: provisioner.name,
+                provisionerType: type,
+                serverType: serverType,
+                isEnabled: true
+            });
+        }
+        
+        // Update the service type page with the new collection
+        if (_serviceTypePage != null) {
+            _serviceTypePage.updateServiceTypes(_serviceTypesCollection);
+        }
+        
         // Refresh the server page to show the new provisioner
         if (_serverPage != null) {
             // Force a refresh of the server page
