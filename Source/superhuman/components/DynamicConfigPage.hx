@@ -897,6 +897,16 @@ class DynamicConfigPage extends Page {
         this.dispatchEvent(evt);
     }
 
+    /**
+     * Handler for property changes to propagate to the server
+     * @param property The property that changed
+     */
+    private function _propertyChangedHandler<T>(property:T):Void {
+        if (_server != null) {
+            _server.setServerStatus();
+        }
+    }
+    
     function _saveButtonTriggered(e:TriggerEvent) {
         _buttonSafeId.setValidity(_server.safeIdExists());
         _buttonRoles.setValidity(_server.areRolesValid());
