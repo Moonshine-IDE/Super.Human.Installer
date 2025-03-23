@@ -1349,19 +1349,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _createCustomServer( e:SuperHumanApplicationEvent ) {
 		Logger.info( '${this}: Creating custom server with provisioner type: ${e.provisionerType}' );
 		
-		// Create the server with the custom provisioner type
-		var server = _createServerAndSaveConfig( e.provisionerType );
-		
-		// Store the service type data in the server's userData for later use
-		if (e.serviceTypeData != null) {
-			// Initialize userData if needed
-			server.userData = server.userData != null ? server.userData : {};
-			
-			// Store the service type data
-			Reflect.setField(server.userData, "serviceTypeData", e.serviceTypeData);
-			Logger.info('${this}: Stored service type data in server userData: ${e.serviceTypeData.value}');
-		}
-		
 		// Get the provisioner definition for the custom provisioner
 		var provisionerDefinition = null;
 		var allProvisioners = ProvisionerManager.getBundledProvisioners(e.provisionerType);
@@ -1396,17 +1383,6 @@ class SuperHumanInstaller extends GenesisApplication {
 						break;
 					}
 				}
-				
-				// If we didn't find a match by name, try matching by version
-				if (provisionerDefinition == null) {
-					for (provisioner in allProvisioners) {
-						if (provisioner.data.version == server.provisioner.version) {
-							provisionerDefinition = provisioner;
-							Logger.info('${this}: Found matching provisioner by version: ${provisioner.name}, version: ${provisioner.data.version}');
-							break;
-						}
-					}
-				}
 			}
 		}
 		
@@ -1414,6 +1390,44 @@ class SuperHumanInstaller extends GenesisApplication {
 		if (provisionerDefinition == null && allProvisioners.length > 0) {
 			provisionerDefinition = allProvisioners[0];
 			Logger.info('${this}: Using first available provisioner: ${provisionerDefinition.name}');
+		}
+		
+		// Create a new server data with the correct provisioner type
+		var newServerData = ServerManager.getInstance().getDefaultServerData(ProvisionerType.DemoTasks);
+		
+		// Override the provisioner type and version with the custom provisioner
+		if (provisionerDefinition != null) {
+			newServerData.provisioner = {
+				type: e.provisionerType,
+				version: provisionerDefinition.data.version
+			};
+			Logger.info('${this}: Set provisioner type to ${e.provisionerType} and version to ${provisionerDefinition.data.version}');
+		} else {
+			newServerData.provisioner = {
+				type: e.provisionerType,
+				version: null
+			};
+			Logger.info('${this}: Set provisioner type to ${e.provisionerType} but no version available');
+		}
+		
+		// Create the server with the custom provisioner type
+		var server = ServerManager.getInstance().createServer(newServerData, e.provisionerType);
+		server.onUpdate.add(onServerPropertyChanged);
+		
+		Logger.info('${this}: New ${server} created with provisioner type ${e.provisionerType}');
+		
+		ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.servercreated', 'with id ${server.id}'));
+		
+		_saveConfig();
+		
+		// Store the service type data in the server's userData for later use
+		if (e.serviceTypeData != null) {
+			// Initialize userData if needed
+			server.userData = server.userData != null ? server.userData : {};
+			
+			// Store the service type data
+			Reflect.setField(server.userData, "serviceTypeData", e.serviceTypeData);
+			Logger.info('${this}: Stored service type data in server userData: ${e.serviceTypeData.value}');
 		}
 		
 		// Initialize the dynamic config page if it doesn't exist

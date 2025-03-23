@@ -128,6 +128,18 @@ class ServerManager {
             // Update the provisioner type to the custom type
             if (data != null && data.provisioner != null) {
                 data.provisioner.type = type;
+                
+                // Try to find a valid version for this provisioner type
+                var allProvisioners = ProvisionerManager.getBundledProvisioners(type);
+                if (allProvisioners.length > 0) {
+                    // Use the first (newest) version
+                    data.provisioner.version = allProvisioners[0].data.version;
+                    Logger.info('${this}: Using version ${data.provisioner.version} for custom provisioner type ${type}');
+                } else {
+                    Logger.warning('${this}: No versions found for custom provisioner type ${type}');
+                    // Set to null to indicate no version is available
+                    data.provisioner.version = null;
+                }
             }
             
             return data;
