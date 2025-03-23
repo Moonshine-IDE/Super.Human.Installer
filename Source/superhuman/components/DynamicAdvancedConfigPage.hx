@@ -332,20 +332,27 @@ class DynamicAdvancedConfigPage extends Page {
                 case "text":
                     // Create a string property
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
-                    // Check if the field already exists as a property with a different name
-                    // Some properties like "hostname" have getters/setters but the actual field has a different name (_hostname)
-                    var fieldExists = false;
-                    
-                    // Try with underscore prefix which is the common pattern
+                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
                     var underscoreFieldName = "_" + fieldName;
-                    if (Reflect.hasField(_server, underscoreFieldName)) {
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
-                        fieldExists = true;
-                        // The field exists with an underscore, don't create a new one
+                    
+                    if (Reflect.hasField(_server, fieldName)) {
+                        // The property already exists directly, no need to create it
+                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
+                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
+                        // The property exists as an underscore field, don't create it
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
+                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
+                        // Property has getter or setter but no direct field
+                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
                     } else {
-                        // Create a new property
-                        var prop = new champaign.core.primitives.Property<String>(defaultValue);
-                        Reflect.setField(_server, fieldName, prop);
+                        try {
+                            // Create a new property ONLY if it doesn't exist in any form
+                            var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                            Reflect.setField(_server, fieldName, prop);
+                            Logger.info('${this}: Created new property ${fieldName}');
+                        } catch (e) {
+                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
+                        }
                     }
                     
                 case "number":
@@ -360,19 +367,27 @@ class DynamicAdvancedConfigPage extends Page {
                             defaultValue = 0.0;
                         }
                     }
-                    // Check if the field already exists as a property with a different name
-                    var fieldExists = false;
-                    
-                    // Try with underscore prefix which is the common pattern
+                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
                     var underscoreFieldName = "_" + fieldName;
-                    if (Reflect.hasField(_server, underscoreFieldName)) {
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
-                        fieldExists = true;
-                        // The field exists with an underscore, don't create a new one
+                    
+                    if (Reflect.hasField(_server, fieldName)) {
+                        // The property already exists directly, no need to create it
+                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
+                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
+                        // The property exists as an underscore field, don't create it
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
+                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
+                        // Property has getter or setter but no direct field
+                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
                     } else {
-                        // Create a new property
-                        var prop = new champaign.core.primitives.Property<Float>(defaultValue);
-                        Reflect.setField(_server, fieldName, prop);
+                        try {
+                            // Create a new property ONLY if it doesn't exist in any form
+                            var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                            Reflect.setField(_server, fieldName, prop);
+                            Logger.info('${this}: Created new property ${fieldName}');
+                        } catch (e) {
+                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
+                        }
                     }
                     
                 case "checkbox":
@@ -381,37 +396,53 @@ class DynamicAdvancedConfigPage extends Page {
                     if (field.defaultValue != null) {
                         defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
                     }
-                    // Check if the field already exists as a property with a different name
-                    var fieldExists = false;
-                    
-                    // Try with underscore prefix which is the common pattern
+                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
                     var underscoreFieldName = "_" + fieldName;
-                    if (Reflect.hasField(_server, underscoreFieldName)) {
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
-                        fieldExists = true;
-                        // The field exists with an underscore, don't create a new one
+                    
+                    if (Reflect.hasField(_server, fieldName)) {
+                        // The property already exists directly, no need to create it
+                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
+                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
+                        // The property exists as an underscore field, don't create it
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
+                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
+                        // Property has getter or setter but no direct field
+                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
                     } else {
-                        // Create a new property
-                        var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
-                        Reflect.setField(_server, fieldName, prop);
+                        try {
+                            // Create a new property ONLY if it doesn't exist in any form
+                            var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                            Reflect.setField(_server, fieldName, prop);
+                            Logger.info('${this}: Created new property ${fieldName}');
+                        } catch (e) {
+                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
+                        }
                     }
                     
                 case "dropdown":
                     // Create a string property for dropdown
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
-                    // Check if the field already exists as a property with a different name
-                    var fieldExists = false;
-                    
-                    // Try with underscore prefix which is the common pattern
+                    // Some Server properties like "hostname" have getters/setters with fields named "_hostname"
                     var underscoreFieldName = "_" + fieldName;
-                    if (Reflect.hasField(_server, underscoreFieldName)) {
-                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, using that instead');
-                        fieldExists = true;
-                        // The field exists with an underscore, don't create a new one
+                    
+                    if (Reflect.hasField(_server, fieldName)) {
+                        // The property already exists directly, no need to create it
+                        Logger.info('${this}: Field ${fieldName} already exists directly, not creating it');
+                    } else if (Reflect.hasField(_server, underscoreFieldName)) {
+                        // The property exists as an underscore field, don't create it
+                        Logger.info('${this}: Field ${fieldName} exists as property ${underscoreFieldName}, not creating it');
+                    } else if (Reflect.hasField(_server, "get_" + fieldName) || Reflect.hasField(_server, "set_" + fieldName)) {
+                        // Property has getter or setter but no direct field
+                        Logger.info('${this}: Field ${fieldName} has getter/setter methods, not creating it');
                     } else {
-                        // Create a new property
-                        var prop = new champaign.core.primitives.Property<String>(defaultValue);
-                        Reflect.setField(_server, fieldName, prop);
+                        try {
+                            // Create a new property ONLY if it doesn't exist in any form
+                            var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                            Reflect.setField(_server, fieldName, prop);
+                            Logger.info('${this}: Created new property ${fieldName}');
+                        } catch (e) {
+                            Logger.error('${this}: Failed to create property ${fieldName}: ${e}');
+                        }
                     }
                     
                 default:
