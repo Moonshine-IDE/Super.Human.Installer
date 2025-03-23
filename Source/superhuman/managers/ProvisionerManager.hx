@@ -259,27 +259,42 @@ class ProvisionerManager {
                 var fieldLabel = null;
                 
                 // Try to get field properties using different methods
-                if (Reflect.hasField(fieldData, "exists") && Reflect.hasField(fieldData, "get")) {
-                    // It's a Map-like object with exists() and get() methods
-                    var exists = Reflect.field(fieldData, "exists");
-                    var get = Reflect.field(fieldData, "get");
+                try {
+                    // Check if fieldData has get method (ObjectMap interface)
+                    if (Reflect.hasField(fieldData, "get")) {
+                        // Try to directly call the get method
+                        try {
+                            var getName = Reflect.field(fieldData, "get");
+                            if (Reflect.isFunction(getName)) {
+                                fieldName = Reflect.callMethod(fieldData, getName, ["name"]);
+                                fieldType = Reflect.callMethod(fieldData, getName, ["type"]) || "text";
+                                fieldLabel = Reflect.callMethod(fieldData, getName, ["label"]);
+                                
+                                Logger.info('Got field properties using get method: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
+                            }
+                        } catch (e) {
+                            Logger.error('Error calling get method: ${e}');
+                        }
+                    } else if (Reflect.hasField(fieldData, "name")) {
+                        // It's an object with fields
+                        fieldName = Reflect.field(fieldData, "name");
+                        if (Reflect.hasField(fieldData, "type")) fieldType = Reflect.field(fieldData, "type");
+                        if (Reflect.hasField(fieldData, "label")) fieldLabel = Reflect.field(fieldData, "label");
+                        
+                        Logger.info('Got field properties using Reflect: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
+                    } else if (Std.isOfType(fieldData, Dynamic) && fieldData.name != null) {
+                        // It's a dynamic object with properties
+                        fieldName = fieldData.name;
+                        if (fieldData.type != null) fieldType = fieldData.type;
+                        if (fieldData.label != null) fieldLabel = fieldData.label;
+                        
+                        Logger.info('Got field properties using dynamic access: name=${fieldName}, type=${fieldType}, label=${fieldLabel}');
+                    }
                     
-                    if (Reflect.callMethod(fieldData, exists, ["name"])) 
-                        fieldName = Reflect.callMethod(fieldData, get, ["name"]);
-                    if (Reflect.callMethod(fieldData, exists, ["type"])) 
-                        fieldType = Reflect.callMethod(fieldData, get, ["type"]);
-                    if (Reflect.callMethod(fieldData, exists, ["label"])) 
-                        fieldLabel = Reflect.callMethod(fieldData, get, ["label"]);
-                } else if (Reflect.hasField(fieldData, "name")) {
-                    // It's an object with fields
-                    fieldName = Reflect.field(fieldData, "name");
-                    if (Reflect.hasField(fieldData, "type")) fieldType = Reflect.field(fieldData, "type");
-                    if (Reflect.hasField(fieldData, "label")) fieldLabel = Reflect.field(fieldData, "label");
-                } else if (Std.isOfType(fieldData, Dynamic) && fieldData.name != null) {
-                    // It's a dynamic object with properties
-                    fieldName = fieldData.name;
-                    if (fieldData.type != null) fieldType = fieldData.type;
-                    if (fieldData.label != null) fieldLabel = fieldData.label;
+                    // Log the field data
+                    Logger.info('Field data: ${fieldData}, extracted name: ${fieldName}, type: ${fieldType}, label: ${fieldLabel}');
+                } catch (e) {
+                    Logger.error('Error extracting field properties: ${e}');
                 }
                 
                 // Skip if no name found
@@ -302,18 +317,31 @@ class ProvisionerManager {
                 // Add optional properties if they exist
                 // Try different ways to access properties
                 function getProperty(obj:Dynamic, propName:String):Dynamic {
-                    if (Reflect.hasField(obj, "exists") && Reflect.hasField(obj, "get")) {
-                        // It's a Map-like object with exists() and get() methods
-                        var exists = Reflect.field(obj, "exists");
-                        var get = Reflect.field(obj, "get");
-                        
-                        if (Reflect.callMethod(obj, exists, [propName])) 
-                            return Reflect.callMethod(obj, get, [propName]);
-                        return null;
-                    } else if (Reflect.hasField(obj, propName)) {
-                        return Reflect.field(obj, propName);
-                    } else if (Std.isOfType(obj, Dynamic) && Reflect.getProperty(obj, propName) != null) {
-                        return Reflect.getProperty(obj, propName);
+                    try {
+                        // Check if obj has get method (ObjectMap interface)
+                        if (Reflect.hasField(obj, "get")) {
+                            // Try to directly call the get method
+                            try {
+                                var getName = Reflect.field(obj, "get");
+                                if (Reflect.isFunction(getName)) {
+                                    var value = Reflect.callMethod(obj, getName, [propName]);
+                                    Logger.info('Got property ${propName} using get method: ${value}');
+                                    return value;
+                                }
+                            } catch (e) {
+                                Logger.error('Error calling get method for property ${propName}: ${e}');
+                            }
+                        } else if (Reflect.hasField(obj, propName)) {
+                            var value = Reflect.field(obj, propName);
+                            Logger.info('Got property ${propName} using Reflect: ${value}');
+                            return value;
+                        } else if (Std.isOfType(obj, Dynamic) && Reflect.getProperty(obj, propName) != null) {
+                            var value = Reflect.getProperty(obj, propName);
+                            Logger.info('Got property ${propName} using dynamic access: ${value}');
+                            return value;
+                        }
+                    } catch (e) {
+                        Logger.error('Error getting property ${propName}: ${e}');
                     }
                     return null;
                 }
