@@ -83,12 +83,29 @@ class ServerManager {
 
     public function createServer( serverData:ServerData, type:ProvisionerType = ProvisionerType.DemoTasks ):Server {
 
-        var server = type == ProvisionerType.DemoTasks ? 
-                             Server.create( serverData, serverRootDirectory ) : 
-                             AdditionalServer.create( serverData, serverRootDirectory );
-        _servers.add( server );
+        var server:Server;
+        
+        // Handle different provisioner types
+        if (type == ProvisionerType.DemoTasks || type == ProvisionerType.Default || type == ProvisionerType.Custom) {
+            // Use the standard Server class for standalone provisioners and custom types
+            server = Server.create(serverData, serverRootDirectory);
+        } else if (type == ProvisionerType.AdditionalProvisioner) {
+            // Use the AdditionalServer class for additional provisioners
+            server = AdditionalServer.create(serverData, serverRootDirectory);
+        } else {
+            // For any other custom type, default to standard Server
+            // This is safer than defaulting to AdditionalServer which has more specific requirements
+            Logger.info('${this}: Creating server with custom provisioner type: ${type}');
+            server = Server.create(serverData, serverRootDirectory);
+        }
+        
+        if (server != null) {
+            _servers.add(server);
+        } else {
+            Logger.error('${this}: Failed to create server with provisioner type: ${type}');
+        }
+        
         return server;
-
     }
 
     public function getDefaultServerData( type:ProvisionerType ):ServerData {
@@ -101,9 +118,20 @@ class ServerManager {
         {
             return superhuman.server.provisioners.AdditionalProvisioner.getDefaultServerData( superhuman.server.provisioners.AdditionalProvisioner.getRandomServerId( _serverRootDirectory ) );
         }
-        
-        return null;
-
+        else 
+        {
+            // For custom provisioner types, use the DemoTasks as a base
+            // This ensures we have a valid ServerData object for any provisioner type
+            var serverId = superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory );
+            var data = superhuman.server.provisioners.DemoTasks.getDefaultServerData( serverId );
+            
+            // Update the provisioner type to the custom type
+            if (data != null && data.provisioner != null) {
+                data.provisioner.type = type;
+            }
+            
+            return data;
+        }
     }
 
     public function getRealStatus( server:Server ):ServerStatus {

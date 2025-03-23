@@ -142,9 +142,14 @@ class ServiceTypePage extends Page {
         // Create the appropriate event based on server type
         var event:SuperHumanApplicationEvent;
         
+        // Log the selected service type for debugging
+        champaign.core.logging.Logger.info('Selected service type: ${selectedServiceType.value}, type: ${selectedServiceType.provisionerType}, serverType: ${selectedServiceType.serverType}');
+        
         if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) {
+            // For additional Domino servers
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER);
         } else {
+            // For standalone Domino servers and custom provisioners
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_SERVER);
         }
         

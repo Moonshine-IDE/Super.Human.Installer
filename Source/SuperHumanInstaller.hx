@@ -942,23 +942,38 @@ class SuperHumanInstaller extends GenesisApplication {
             if (provisioners.length > 0) {
                 var provisioner = provisioners[0];
                 
-                // Determine server UI type based on naming convention
-                // Default to Domino for unknown types
-                var serverType = type.indexOf("additional") >= 0 ? 
-                    ServerUIType.AdditionalDomino : ServerUIType.Domino;
+                // Determine server UI type based on naming convention or content
+                var serverType = ServerUIType.Domino; // Default to standard Domino
+                
+                // Check if this is an additional server provisioner
+                if (type.indexOf("additional") >= 0) {
+                    serverType = ServerUIType.AdditionalDomino;
+                } else if (type != ProvisionerType.DemoTasks && type != ProvisionerType.AdditionalProvisioner) {
+                    // This is a custom provisioner type
+                    Logger.info('${this}: Detected custom provisioner type: ${type}');
+                }
                 
                 // Read the provisioner metadata to get the description
                 var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
                 var description = metadata != null ? metadata.description : provisioner.name;
                 
+                // Get the base name without version
+                var baseName = provisioner.name;
+                var versionIndex = baseName.lastIndexOf(" v");
+                if (versionIndex > 0) {
+                    baseName = baseName.substring(0, versionIndex);
+                }
+                
                 // Add to service types collection
                 _serviceTypesCollection.push({
-                    value: provisioner.name,
+                    value: provisioner.name, // Keep the full name with version in the value
                     description: description,
                     provisionerType: type,
                     serverType: serverType,
                     isEnabled: true
                 });
+                
+                Logger.info('${this}: Added provisioner to service types: ${baseName}, type: ${type}, serverType: ${serverType}');
             }
         }
         
