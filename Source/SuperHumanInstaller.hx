@@ -119,7 +119,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
 	
-	static public final DEMO_TASKS_PATH:String = "assets/vagrant/demo-tasks/";
+	static public final DEMO_TASKS_PATH:String = "assets/vagrant/hcl_domino_standalone_provisioner/";
 
 	static var _instance:SuperHumanInstaller;
 
@@ -333,6 +333,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
 
 		this._header.logo = Assets.getPath( SuperHumanInstallerTheme.IMAGE_ICON );
+
+		// Initialize provisioners directory
+		_initializeProvisionersDirectory();
 
 		ExecutorManager.getInstance().onExecutorListChanged.add( _onExecutorListChanged );
 
@@ -1246,6 +1249,23 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		return '[Super.Human.Installer]';
 
+	}
+
+	/**
+	 * Initialize the provisioners directory
+	 * This ensures the directory exists and is ready for use
+	 */
+	function _initializeProvisionersDirectory() {
+		var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+		
+		if (!FileSystem.exists(provisionersDir)) {
+			try {
+				FileSystem.createDirectory(provisionersDir);
+				Logger.info('Created provisioners directory at ${provisionersDir}');
+			} catch (e) {
+				Logger.error('Failed to create provisioners directory at ${provisionersDir}: ${e}');
+			}
+		}
 	}
 
 	function _onExecutorListChanged() {

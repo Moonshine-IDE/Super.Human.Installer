@@ -58,7 +58,7 @@ class AdditionalServer extends Server {
          var sc = new AdditionalServer();
 
         sc._id = data.server_id;
-        sc._serverDir = Path.normalize( rootDir + "/additional-provisioner/" + sc._id );
+        sc._serverDir = Path.normalize( rootDir + "/hcl_domino_additional_provisioner/" + sc._id );
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 

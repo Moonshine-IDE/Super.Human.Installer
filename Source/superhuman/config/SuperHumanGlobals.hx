@@ -91,4 +91,7 @@ class SuperHumanGlobals {
     // YAML Wikipedia page url
     static public final YAML_WIKI_URL:String = "https://en.wikipedia.org/wiki/YAML";
 
+    // Common directory for provisioners
+    static public final PROVISIONERS_DIRECTORY:String = "provisioners/";
+
 }

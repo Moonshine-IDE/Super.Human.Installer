@@ -1,0 +1,19 @@
+# Sample provisioner.yml file
+# This file should be placed in the root of your provisioner directory
+
+# Human-readable name of the provisioner
+name: "My Custom Provisioner"
+
+# Type identifier (used internally by the application)
+# This should match the directory name
+type: "my_custom_provisioner"
+
+# Description of what this provisioner does
+description: "A custom provisioner for XYZ functionality"
+
+# Optional: Author information
+author: "Your Name or Organization"
+
+# Optional: Version information (if you want to specify a version for the provisioner itself)
+# Note: Individual versions are determined by the subdirectories
+version: "1.0.0"
