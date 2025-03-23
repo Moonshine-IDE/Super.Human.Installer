@@ -295,10 +295,23 @@ class DynamicAdvancedConfigPage extends Page {
                             // Handle nested array case
                             var nestedOptions:Array<Dynamic> = field.options[0];
                             for (option in nestedOptions) {
-                                if (option != null && Reflect.hasField(option, "value") && Reflect.hasField(option, "label")) {
-                                    options.push([Reflect.field(option, "value"), Reflect.field(option, "label")]);
-                                } else {
-                                    Logger.warning('Invalid dropdown option in field ${field.name}: ${option}');
+                                if (option != null) {
+                                    var value = null;
+                                    var label = null;
+                                    
+                                    if (Reflect.hasField(option, "value")) {
+                                        value = Reflect.field(option, "value");
+                                    }
+                                    
+                                    if (Reflect.hasField(option, "label")) {
+                                        label = Reflect.field(option, "label");
+                                    }
+                                    
+                                    if (value != null && label != null) {
+                                        options.push([value, label]);
+                                    } else {
+                                        Logger.warning('Invalid dropdown option in field ${field.name}: ${option}');
+                                    }
                                 }
                             }
                         } else {
