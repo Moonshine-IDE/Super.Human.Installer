@@ -318,13 +318,23 @@ class DynamicAdvancedConfigPage extends Page {
                             // Handle normal array case
                             for (option in field.options) {
                                 if (option != null) {
-                                    var value = option.value;
-                                    var label = option.label;
+                                    var value = null;
+                                    var label = null;
                                     
-                                    if (value != null && label != null) {
-                                        options.push([value, label]);
-                                    } else {
-                                        Logger.warning('Invalid dropdown option in field ${field.name}: value=${value}, label=${label}');
+                                    if (option != null) {
+                                        if (Reflect.hasField(option, "value")) {
+                                            value = Reflect.field(option, "value");
+                                        }
+                                        
+                                        if (Reflect.hasField(option, "label")) {
+                                            label = Reflect.field(option, "label");
+                                        }
+                                        
+                                        if (value != null && label != null) {
+                                            options.push([value, label]);
+                                        } else {
+                                            Logger.warning('Invalid dropdown option in field ${field.name}: value=${value}, label=${label}');
+                                        }
                                     }
                                 }
                             }
