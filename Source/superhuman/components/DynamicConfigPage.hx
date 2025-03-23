@@ -394,11 +394,17 @@ class DynamicConfigPage extends Page {
                 Logger.warning('Unknown field type: ${field.type} for field ${field.name}');
         }
         
-        // Add the row to the form
-        _form.addChild(row);
-        
-        // Store the row in the dynamic rows map
-        _dynamicRows.set(field.name, row);
+        // Add the row to the form if both row and form are not null
+        if (row != null && _form != null) {
+            _form.addChild(row);
+            
+            // Store the row in the dynamic rows map
+            if (field.name != null) {
+                _dynamicRows.set(field.name, row);
+            }
+        } else {
+            Logger.warning('Could not add row to form: row=${row != null}, form=${_form != null}, field.name=${field.name != null}');
+        }
     }
 
     override function updateContent(forced:Bool = false) {
