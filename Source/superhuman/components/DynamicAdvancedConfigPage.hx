@@ -245,14 +245,27 @@ class DynamicAdvancedConfigPage extends Page {
         // If the component is not initialized yet, store the definition for later
         if (!_formInitialized || _form == null) {
             _pendingProvisionerDefinition = definition;
-            Logger.info('Component not initialized yet, storing provisioner definition for later');
+            Logger.info('${this}: Component not initialized yet, storing provisioner definition for later');
             return;
         }
         
         _provisionerDefinition = definition;
         
         // Log the provisioner definition to help with debugging
-        Logger.info('Setting provisioner definition for advanced config: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
+        Logger.info('${this}: Setting provisioner definition for advanced config: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
+        
+        // Initialize server properties for all fields in the provisioner definition
+        if (_server != null && definition.metadata != null && 
+            definition.metadata.configuration != null && 
+            definition.metadata.configuration.advancedFields != null) {
+            
+            Logger.info('${this}: Initializing server properties for advanced fields');
+            
+            // Create properties for each field in the advanced configuration
+            for (field in definition.metadata.configuration.advancedFields) {
+                _initializeServerProperty(field);
+            }
+        }
         
         if (definition.metadata != null) {
             Logger.info('Provisioner metadata: name=${definition.metadata.name}, type=${definition.metadata.type}');
@@ -292,6 +305,80 @@ class DynamicAdvancedConfigPage extends Page {
             }
         } else {
             Logger.warning('Unable to add dynamic advanced fields - missing configuration or advancedFields');
+        }
+    }
+    
+    /**
+     * Initialize a server property based on the field definition
+     * @param field The field definition from the provisioner.yml
+     */
+    private function _initializeServerProperty(field:ProvisionerField) {
+        if (field == null || field.name == null || _server == null) {
+            Logger.warning('${this}: Cannot initialize server property: field=${field != null}, name=${field != null ? field.name != null : false}, server=${_server != null}');
+            return;
+        }
+        
+        var fieldName = field.name;
+        Logger.info('${this}: Initializing server property: ${fieldName}, type: ${field.type}');
+        
+        // Check if the property already exists
+        var propertyExists = Reflect.hasField(_server, fieldName);
+        
+        if (!propertyExists) {
+            Logger.info('${this}: Creating new property on server: ${fieldName}');
+            
+            // Create the property based on the field type
+            switch (field.type) {
+                case "text":
+                    // Create a string property
+                    var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                case "number":
+                    // Create a numeric property
+                    var defaultValue = 0.0;
+                    if (field.defaultValue != null) {
+                        try {
+                            defaultValue = Std.parseFloat(Std.string(field.defaultValue));
+                            if (Math.isNaN(defaultValue)) defaultValue = 0.0;
+                        } catch (e) {
+                            Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
+                            defaultValue = 0.0;
+                        }
+                    }
+                    var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                case "checkbox":
+                    // Create a boolean property
+                    var defaultValue = false;
+                    if (field.defaultValue != null) {
+                        defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
+                    }
+                    var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                case "dropdown":
+                    // Create a string property for dropdown
+                    var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                default:
+                    Logger.warning('${this}: Unknown field type for property initialization: ${field.type}');
+            }
+            
+            // Add property change listener
+            var prop = Reflect.getProperty(_server, fieldName);
+            if (prop != null && Reflect.hasField(prop, "onChange")) {
+                var onChange = Reflect.field(prop, "onChange");
+                if (onChange != null && Reflect.hasField(onChange, "add")) {
+                    Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [_server._propertyChanged]);
+                }
+            }
+        } else {
+            Logger.info('${this}: Property already exists on server: ${fieldName}');
         }
     }
     
@@ -562,10 +649,16 @@ class DynamicAdvancedConfigPage extends Page {
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
-        if (!_form.isValid() || _server == null) return;
+        Logger.info('${this}: Save button triggered, form valid: ${_form.isValid()}, server: ${_server != null}');
+        
+        if (!_form.isValid() || _server == null) {
+            Logger.warning('${this}: Form validation failed, cannot save');
+            return;
+        }
 
         // Update standard fields
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
+        Logger.info('${this}: Updated network bridge to: ${_server.networkBridge.value}');
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {
@@ -573,62 +666,138 @@ class DynamicAdvancedConfigPage extends Page {
                 var input:GenesisFormTextInput = cast field;
                 var value = StringTools.trim(input.text);
                 
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
+                Logger.info('${this}: Saving text field ${fieldName} with value: ${value}');
+                
+                // Ensure the property exists on the server
+                if (!Reflect.hasField(_server, fieldName)) {
+                    Logger.info('${this}: Creating missing property on server: ${fieldName}');
+                    var prop = new champaign.core.primitives.Property<String>(value);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                    // Add property change listener
+                    var onChange = Reflect.field(prop, "onChange");
+                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [_server._propertyChanged]);
+                    }
+                }
+                
+                // Set the property value
+                var prop = Reflect.getProperty(_server, fieldName);
+                if (prop != null) {
+                    if (Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
+                        Logger.info('${this}: Updated property ${fieldName}.value to: ${value}');
                     } else {
                         // It's a direct property
                         Reflect.setProperty(_server, fieldName, value);
+                        Logger.info('${this}: Updated direct property ${fieldName} to: ${value}');
                     }
+                } else {
+                    Logger.warning('${this}: Failed to get property ${fieldName} from server');
                 }
             } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                 var stepper:GenesisFormNumericStepper = cast field;
                 var value = stepper.value;
                 
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
+                Logger.info('${this}: Saving numeric field ${fieldName} with value: ${value}');
+                
+                // Ensure the property exists on the server
+                if (!Reflect.hasField(_server, fieldName)) {
+                    Logger.info('${this}: Creating missing property on server: ${fieldName}');
+                    var prop = new champaign.core.primitives.Property<Float>(value);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                    // Add property change listener
+                    var onChange = Reflect.field(prop, "onChange");
+                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [_server._propertyChanged]);
+                    }
+                }
+                
+                // Set the property value
+                var prop = Reflect.getProperty(_server, fieldName);
+                if (prop != null) {
+                    if (Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
+                        Logger.info('${this}: Updated property ${fieldName}.value to: ${value}');
                     } else {
                         // It's a direct property
                         Reflect.setProperty(_server, fieldName, value);
+                        Logger.info('${this}: Updated direct property ${fieldName} to: ${value}');
                     }
+                } else {
+                    Logger.warning('${this}: Failed to get property ${fieldName} from server');
                 }
             } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                 var checkbox:GenesisFormCheckBox = cast field;
                 var value = checkbox.selected;
                 
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
+                Logger.info('${this}: Saving checkbox field ${fieldName} with value: ${value}');
+                
+                // Ensure the property exists on the server
+                if (!Reflect.hasField(_server, fieldName)) {
+                    Logger.info('${this}: Creating missing property on server: ${fieldName}');
+                    var prop = new champaign.core.primitives.Property<Bool>(value);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                    // Add property change listener
+                    var onChange = Reflect.field(prop, "onChange");
+                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [_server._propertyChanged]);
+                    }
+                }
+                
+                // Set the property value
+                var prop = Reflect.getProperty(_server, fieldName);
+                if (prop != null) {
+                    if (Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
+                        Logger.info('${this}: Updated property ${fieldName}.value to: ${value}');
                     } else {
                         // It's a direct property
                         Reflect.setProperty(_server, fieldName, value);
+                        Logger.info('${this}: Updated direct property ${fieldName} to: ${value}');
                     }
+                } else {
+                    Logger.warning('${this}: Failed to get property ${fieldName} from server');
                 }
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
                 var value = selectedItem != null && selectedItem.length > 0 ? selectedItem[0] : null;
                 
-                // Check if the server has this property
-                if (Reflect.hasField(_server, fieldName)) {
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
+                Logger.info('${this}: Saving dropdown field ${fieldName} with value: ${value}');
+                
+                // Ensure the property exists on the server
+                if (!Reflect.hasField(_server, fieldName)) {
+                    Logger.info('${this}: Creating missing property on server: ${fieldName}');
+                    var prop = new champaign.core.primitives.Property<String>(value);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                    // Add property change listener
+                    var onChange = Reflect.field(prop, "onChange");
+                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [_server._propertyChanged]);
+                    }
+                }
+                
+                // Set the property value
+                var prop = Reflect.getProperty(_server, fieldName);
+                if (prop != null) {
+                    if (Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
+                        Logger.info('${this}: Updated property ${fieldName}.value to: ${value}');
                     } else {
                         // It's a direct property
                         Reflect.setProperty(_server, fieldName, value);
+                        Logger.info('${this}: Updated direct property ${fieldName} to: ${value}');
                     }
+                } else {
+                    Logger.warning('${this}: Failed to get property ${fieldName} from server');
                 }
             }
         }

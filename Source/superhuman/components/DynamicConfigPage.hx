@@ -450,6 +450,19 @@ class DynamicConfigPage extends Page {
         // Log the provisioner definition to help with debugging
         Logger.info('${this}: Setting provisioner definition: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
         
+        // Initialize server properties for all fields in the provisioner definition
+        if (_server != null && definition.metadata != null && 
+            definition.metadata.configuration != null && 
+            definition.metadata.configuration.basicFields != null) {
+            
+            Logger.info('${this}: Initializing server properties for basic fields');
+            
+            // Create properties for each field in the basic configuration
+            for (field in definition.metadata.configuration.basicFields) {
+                _initializeServerProperty(field);
+            }
+        }
+        
         if (definition.metadata != null) {
             Logger.info('Provisioner metadata: name=${definition.metadata.name}, type=${definition.metadata.type}');
             
@@ -494,6 +507,80 @@ class DynamicConfigPage extends Page {
             }
         } else {
             Logger.warning('Unable to add dynamic fields - missing configuration or basicFields');
+        }
+    }
+    
+    /**
+     * Initialize a server property based on the field definition
+     * @param field The field definition from the provisioner.yml
+     */
+    private function _initializeServerProperty(field:ProvisionerField) {
+        if (field == null || field.name == null || _server == null) {
+            Logger.warning('${this}: Cannot initialize server property: field=${field != null}, name=${field != null ? field.name != null : false}, server=${_server != null}');
+            return;
+        }
+        
+        var fieldName = field.name;
+        Logger.info('${this}: Initializing server property: ${fieldName}, type: ${field.type}');
+        
+        // Check if the property already exists
+        var propertyExists = Reflect.hasField(_server, fieldName);
+        
+        if (!propertyExists) {
+            Logger.info('${this}: Creating new property on server: ${fieldName}');
+            
+            // Create the property based on the field type
+            switch (field.type) {
+                case "text":
+                    // Create a string property
+                    var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                case "number":
+                    // Create a numeric property
+                    var defaultValue = 0.0;
+                    if (field.defaultValue != null) {
+                        try {
+                            defaultValue = Std.parseFloat(Std.string(field.defaultValue));
+                            if (Math.isNaN(defaultValue)) defaultValue = 0.0;
+                        } catch (e) {
+                            Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
+                            defaultValue = 0.0;
+                        }
+                    }
+                    var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                case "checkbox":
+                    // Create a boolean property
+                    var defaultValue = false;
+                    if (field.defaultValue != null) {
+                        defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
+                    }
+                    var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                case "dropdown":
+                    // Create a string property for dropdown
+                    var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
+                    Reflect.setField(_server, fieldName, prop);
+                    
+                default:
+                    Logger.warning('${this}: Unknown field type for property initialization: ${field.type}');
+            }
+            
+            // Add property change listener
+            var prop = Reflect.getProperty(_server, fieldName);
+            if (prop != null && Reflect.hasField(prop, "onChange")) {
+                var onChange = Reflect.field(prop, "onChange");
+                if (onChange != null && Reflect.hasField(onChange, "add")) {
+                    Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [_server._propertyChanged]);
+                }
+            }
+        } else {
+            Logger.info('${this}: Property already exists on server: ${fieldName}');
         }
     }
     
