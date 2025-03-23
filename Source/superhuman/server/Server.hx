@@ -1101,6 +1101,64 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
+        // If this is the first time starting the server, install the vagrant-scp-sync plugin first
+        if (!_provisionedBeforeStart) {
+            _installVagrantPlugin();
+        } else {
+            _executeVagrantUp();
+        }
+    }
+    
+    /**
+     * Install the vagrant-scp-sync plugin before running vagrant up for the first time
+     */
+    function _installVagrantPlugin() {
+        if (console != null) console.appendText("Installing vagrant-scp-sync plugin...");
+        Logger.info('${this}: Installing vagrant-scp-sync plugin');
+        
+        // Create a custom executor for the plugin installation command
+        var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", "vagrant-scp-sync"]);
+        pluginExecutor.onStart.add(_pluginInstallStarted);
+        pluginExecutor.onStop.add(_pluginInstallStopped);
+        pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
+        pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
+        
+        pluginExecutor.execute(_serverDir);
+    }
+    
+    function _pluginInstallStarted(executor:AbstractExecutor) {
+        Logger.info('${this}: Vagrant plugin installation started');
+        if (console != null) console.appendText("Vagrant plugin installation started");
+    }
+    
+    function _pluginInstallStopped(executor:AbstractExecutor) {
+        Logger.info('${this}: Vagrant plugin installation completed with exit code: ${executor.exitCode}');
+        if (console != null) {
+            if (executor.exitCode == 0) {
+                console.appendText("Vagrant plugin installation completed successfully");
+            } else {
+                console.appendText("Vagrant plugin installation failed with exit code: ${executor.exitCode}", true);
+            }
+        }
+        
+        // Now proceed with vagrant up, regardless of whether the plugin installation succeeded
+        _executeVagrantUp();
+    }
+    
+    function _pluginInstallStandardOutputData(executor:AbstractExecutor, data:String) {
+        if (console != null) console.appendText(data);
+        Logger.info('${this}: Vagrant plugin installation: ${data}');
+    }
+    
+    function _pluginInstallStandardErrorData(executor:AbstractExecutor, data:String) {
+        if (console != null) console.appendText(data, true);
+        Logger.error('${this}: Vagrant plugin installation error: ${data}');
+    }
+    
+    /**
+     * Execute the vagrant up command
+     */
+    function _executeVagrantUp() {
         _vagrantUpExecutor = Vagrant.getInstance().getUp( this._combinedVirtualMachine.value.vagrantMachine, _forceVagrantProvisioning, [] )
             .onStart.add( _vagrantUpStarted )
             .onStop.add( _vagrantUpStopped )
@@ -1110,7 +1168,6 @@ class Server {
         _vagrantUpExecutor.execute( _serverDir );
         _vagrantUpElapsedTime = 0;
         _startVagrantUpElapsedTimer();
-
     }
 
     function _vagrantUpStarted( executor:AbstractExecutor ) {
