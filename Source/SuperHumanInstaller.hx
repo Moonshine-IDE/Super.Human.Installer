@@ -272,23 +272,48 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
 	
-		_serviceTypesCollection = [
-			{value: "Standalone Domino Server", 
-			 description: "A new, independent Domino Server", 
-			 provisionerType: ProvisionerType.DemoTasks,
-			 serverType: ServerUIType.Domino,
-			 isEnabled: true},
-			{value: "Additional Domino Server", 
-			 description: "Join a new server to an existing Domino environment", 
-			 provisionerType: ProvisionerType.AdditionalProvisioner,
-			 serverType: ServerUIType.AdditionalDomino,
-			 isEnabled: true},
-			{value: "Volt MX Go Foundry Server", 
-			 description: "Coming soon!", 
-			 provisionerType: "",
-			 serverType: "",
-			 isEnabled: false}
-		];
+		// Get provisioners from the ProvisionerManager
+	var provisioners = ProvisionerManager.getBundledProvisioners();
+	Logger.info('${this}: Available provisioners: ${provisioners.length}');
+	
+	// Initialize service types collection
+	_serviceTypesCollection = [];
+	
+	// Add provisioners to service types collection
+	for (provisioner in provisioners) {
+		// Extract type from provisioner data
+		var provType = provisioner.data.type;
+		var serverType = "";
+		
+		// Determine server UI type based on provisioner type
+		if (provType == ProvisionerType.DemoTasks) {
+			serverType = ServerUIType.Domino;
+		} else if (provType == ProvisionerType.AdditionalProvisioner) {
+			serverType = ServerUIType.AdditionalDomino;
+		}
+		
+		// Only add if we have a valid server type
+		if (serverType != "") {
+			_serviceTypesCollection.push({
+				value: provisioner.name,
+				description: provisioner.data.type == ProvisionerType.DemoTasks ? 
+					"A new, independent Domino Server" : 
+					"Join a new server to an existing Domino environment",
+				provisionerType: provType,
+				serverType: serverType,
+				isEnabled: true
+			});
+		}
+	}
+	
+	// Add "Coming soon" option
+	_serviceTypesCollection.push({
+		value: "Volt MX Go Foundry Server", 
+		description: "Coming soon!", 
+		provisionerType: "",
+		serverType: "",
+		isEnabled: false
+	});
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
 		Shell.getInstance().findProcessId( 'SuperHumanInstaller', null, _processIdFound );
