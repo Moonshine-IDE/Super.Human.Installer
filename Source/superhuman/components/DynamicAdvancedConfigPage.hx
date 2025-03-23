@@ -237,7 +237,7 @@ class DynamicAdvancedConfigPage extends Page {
                 
                 // Set restrict if provided
                 if (field.restrict != null) {
-                    input.restrict = field.restrict;
+                    input.restrict = new EReg(field.restrict, "");
                 }
                 
                 // Add the input to the row
