@@ -220,33 +220,97 @@ class DynamicConfigPage extends Page {
         var provisionerType = _server.provisioner.type;
         Logger.info('${this}: Getting provisioners for type: ${provisionerType}');
         
-        // Get all provisioners of the same type
-        var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+        // Create a collection for the dropdown
+        var provisionerCollection = new feathers.data.ArrayCollection<ProvisionerDefinition>();
         
-        // Log detailed information about each provisioner
-        Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${provisionerType}');
-        for (i in 0...allProvisioners.length) {
-            var p = allProvisioners[i];
-            Logger.info('${this}: Provisioner ${i}: name=${p.name}, type=${p.data.type}, version=${p.data.version}, root=${p.root}');
-            
-            if (p.metadata != null) {
-                Logger.info('${this}: Metadata: name=${p.metadata.name}, type=${p.metadata.type}, version=${p.metadata.version}');
-            } else {
-                Logger.warning('${this}: No metadata for provisioner ${p.name}');
+        // First try to get provisioners directly from the directory
+        if (sys.FileSystem.exists(provisionersDir)) {
+            try {
+                // Check if the specific provisioner directory exists
+                var provisionerPath = haxe.io.Path.addTrailingSlash(provisionersDir) + provisionerType;
+                if (sys.FileSystem.exists(provisionerPath) && sys.FileSystem.isDirectory(provisionerPath)) {
+                    Logger.info('${this}: Found provisioner directory at ${provisionerPath}');
+                    
+                    // Read the metadata
+                    var metadata = ProvisionerManager.readProvisionerMetadata(provisionerPath);
+                    if (metadata != null) {
+                        Logger.info('${this}: Read metadata: name=${metadata.name}, type=${metadata.type}');
+                        
+                        // Scan for version directories
+                        var versionDirs = sys.FileSystem.readDirectory(provisionerPath);
+                        
+                        for (versionDir in versionDirs) {
+                            var versionPath = haxe.io.Path.addTrailingSlash(provisionerPath) + versionDir;
+                            
+                            // Skip if not a directory or if it's the provisioner.yml file
+                            if (!sys.FileSystem.isDirectory(versionPath) || versionDir == "provisioner.yml") {
+                                continue;
+                            }
+                            
+                            // Check if this is a valid version directory (has scripts subdirectory)
+                            var scriptsPath = haxe.io.Path.addTrailingSlash(versionPath) + "scripts";
+                            if (sys.FileSystem.exists(scriptsPath) && sys.FileSystem.isDirectory(scriptsPath)) {
+                                // Create a version-specific metadata copy
+                                var versionMetadata = Reflect.copy(metadata);
+                                versionMetadata.version = versionDir;
+                                
+                                // Create a provisioner definition
+                                var versionInfo = champaign.core.primitives.VersionInfo.fromString(versionDir);
+                                var provDef:ProvisionerDefinition = {
+                                    name: '${metadata.name} v${versionDir}',
+                                    data: { type: metadata.type, version: versionInfo },
+                                    root: versionPath,
+                                    metadata: versionMetadata
+                                };
+                                
+                                // Add to collection
+                                provisionerCollection.add(provDef);
+                                Logger.info('${this}: Manually added provisioner version: ${versionDir}');
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                Logger.error('${this}: Error scanning for custom provisioners: ${e}');
             }
         }
         
-        // If no provisioners found, try getting all provisioners
-        if (allProvisioners.length == 0) {
-            Logger.warning('${this}: No provisioners found for type ${provisionerType}, getting all provisioners');
-            allProvisioners = ProvisionerManager.getBundledProvisioners();
+        // If we didn't find any versions directly, try using the API
+        if (provisionerCollection.length == 0) {
+            // Get all provisioners of the same type
+            var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
             
-            // Filter to only include provisioners of the correct type
-            allProvisioners = allProvisioners.filter(function(p) {
-                return p.data.type == provisionerType;
-            });
+            // Log detailed information about each provisioner
+            Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${provisionerType}');
+            for (i in 0...allProvisioners.length) {
+                var p = allProvisioners[i];
+                Logger.info('${this}: Provisioner ${i}: name=${p.name}, type=${p.data.type}, version=${p.data.version}, root=${p.root}');
+                
+                if (p.metadata != null) {
+                    Logger.info('${this}: Metadata: name=${p.metadata.name}, type=${p.metadata.type}, version=${p.metadata.version}');
+                } else {
+                    Logger.warning('${this}: No metadata for provisioner ${p.name}');
+                }
+                
+                // Add to collection
+                provisionerCollection.add(p);
+            }
             
-            Logger.info('${this}: Found ${allProvisioners.length} filtered provisioners for type ${provisionerType}');
+            // If no provisioners found, try getting all provisioners
+            if (provisionerCollection.length == 0) {
+                Logger.warning('${this}: No provisioners found for type ${provisionerType}, getting all provisioners');
+                allProvisioners = ProvisionerManager.getBundledProvisioners();
+                
+                // Filter to only include provisioners of the correct type
+                for (p in allProvisioners) {
+                    if (p.data.type == provisionerType) {
+                        provisionerCollection.add(p);
+                        Logger.info('${this}: Added filtered provisioner: ${p.name}');
+                    }
+                }
+                
+                Logger.info('${this}: Found ${provisionerCollection.length} filtered provisioners for type ${provisionerType}');
+            }
         }
         
         // Create a collection for the dropdown
