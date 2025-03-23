@@ -253,16 +253,20 @@ class ProvisionerManager {
                 
                 Logger.info('Parsing field: ${fieldData}');
                 
-                // Check for required fields
-                if (!Reflect.hasField(fieldData, "name") || !Reflect.hasField(fieldData, "type") || !Reflect.hasField(fieldData, "label")) {
-                    Logger.warning('Skipping field with missing required properties: ${fieldData}');
+                // Check for required fields - name is the only truly required field
+                if (!Reflect.hasField(fieldData, "name")) {
+                    Logger.warning('Skipping field with missing name property: ${fieldData}');
                     continue;
                 }
                 
+                // Get type and label with defaults if missing
+                var fieldType = Reflect.hasField(fieldData, "type") ? Reflect.field(fieldData, "type") : "text";
+                var fieldLabel = Reflect.hasField(fieldData, "label") ? Reflect.field(fieldData, "label") : Reflect.field(fieldData, "name");
+                
                 var field:ProvisionerField = {
                     name: Reflect.field(fieldData, "name"),
-                    type: Reflect.field(fieldData, "type"),
-                    label: Reflect.field(fieldData, "label")
+                    type: fieldType,
+                    label: fieldLabel
                 };
                 
                 Logger.info('Field parsed: name=${field.name}, type=${field.type}, label=${field.label}');

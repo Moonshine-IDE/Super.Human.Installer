@@ -320,14 +320,15 @@ class SuperHumanInstaller extends GenesisApplication {
 				baseName = baseName.substring(0, versionIndex);
 			}
 			
-			// Add to service types collection
-			_serviceTypesCollection.push({
-				value: baseName,
-				description: description,
-				provisionerType: type,
-				serverType: serverType,
-				isEnabled: true
-			});
+	// Add to service types collection
+	_serviceTypesCollection.push({
+		value: provisioner.name,
+		description: description,
+		provisionerType: type,
+		serverType: serverType,
+		isEnabled: true,
+		provisioner: provisioner // Store the actual provisioner definition
+	});
 		}
 	}
 
@@ -1350,6 +1351,15 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		// Create the server with the custom provisioner type
 		var server = _createServerAndSaveConfig( e.provisionerType );
+		
+		// Store the service type data in the server's userData for later use
+		if (e.serviceTypeData != null) {
+			if (server.userData == null) {
+				server.userData = {};
+			}
+			Reflect.setField(server.userData, "serviceTypeData", e.serviceTypeData);
+			Logger.info('${this}: Stored service type data in server userData: ${e.serviceTypeData.value}');
+		}
 		
 		// Get the provisioner definition for the custom provisioner
 		var provisionerDefinition = null;

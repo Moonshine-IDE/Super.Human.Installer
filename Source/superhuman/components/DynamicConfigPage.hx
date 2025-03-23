@@ -199,6 +199,16 @@ class DynamicConfigPage extends Page {
         
         Logger.info('${this}: Setting up provisioner dropdown for server with type: ${_server.provisioner.type}, version: ${_server.provisioner.version}');
         
+        // Check if we already have a provisioner definition from the service type data
+        var serviceTypeProvisioner = null;
+        if (_server != null && _server.userData != null && Reflect.hasField(_server.userData, "serviceTypeData")) {
+            var serviceTypeData = Reflect.field(_server.userData, "serviceTypeData");
+            if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
+                serviceTypeProvisioner = Reflect.field(serviceTypeData, "provisioner");
+                Logger.info('${this}: Found provisioner in service type data: ${serviceTypeProvisioner.name}');
+            }
+        }
+        
         // Get all provisioners of the same type
         var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
         
@@ -215,6 +225,13 @@ class DynamicConfigPage extends Page {
             }
         }
         
+        // If no provisioners found, try getting all provisioners
+        if (allProvisioners.length == 0) {
+            Logger.warning('${this}: No provisioners found for type ${_server.provisioner.type}, getting all provisioners');
+            allProvisioners = ProvisionerManager.getBundledProvisioners();
+            Logger.info('${this}: Found ${allProvisioners.length} total provisioners');
+        }
+        
         // Create a collection for the dropdown
         var provisionerCollection = new feathers.data.ArrayCollection<ProvisionerDefinition>();
         
@@ -228,16 +245,30 @@ class DynamicConfigPage extends Page {
         _dropdownCoreComponentVersion.dataProvider = provisionerCollection;
         Logger.info('${this}: Set dropdown data provider with ${provisionerCollection.length} items');
         
-        // Select the current provisioner version
+        // First try to select the provisioner from service type data if available
         var selectedIndex = -1;
-        for (i in 0...provisionerCollection.length) {
-            var d:ProvisionerDefinition = provisionerCollection.get(i);
-            Logger.info('${this}: Checking provisioner at index ${i}: ${d.name}, version=${d.data.version} against server version=${_server.provisioner.version}');
-            
-            if (d.data.version == _server.provisioner.version) {
-                selectedIndex = i;
-                Logger.info('${this}: Found matching version at index ${i}');
-                break;
+        if (serviceTypeProvisioner != null) {
+            for (i in 0...provisionerCollection.length) {
+                var d:ProvisionerDefinition = provisionerCollection.get(i);
+                if (d.name == serviceTypeProvisioner.name && d.data.version == serviceTypeProvisioner.data.version) {
+                    selectedIndex = i;
+                    Logger.info('${this}: Found matching service type provisioner at index ${i}');
+                    break;
+                }
+            }
+        }
+        
+        // If no match from service type data, try to match by server's provisioner version
+        if (selectedIndex < 0) {
+            for (i in 0...provisionerCollection.length) {
+                var d:ProvisionerDefinition = provisionerCollection.get(i);
+                Logger.info('${this}: Checking provisioner at index ${i}: ${d.name}, version=${d.data.version} against server version=${_server.provisioner.version}');
+                
+                if (d.data.version == _server.provisioner.version) {
+                    selectedIndex = i;
+                    Logger.info('${this}: Found matching version at index ${i}');
+                    break;
+                }
             }
         }
         
