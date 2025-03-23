@@ -51,6 +51,7 @@ jobs:
       - name: Show Current Path
         run: |
           pwd
+          ls
 
       - name: Build info
         run: |
