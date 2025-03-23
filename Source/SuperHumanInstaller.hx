@@ -1417,9 +1417,30 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		// Set the server and provisioner definition for the dynamic config page
 		_dynamicConfigPage.setServer(server);
+		
+		// Force the dropdown to be populated with all provisioners of this type
+		if (_dynamicConfigPage._dropdownCoreComponentVersion != null) {
+			var provisionerCollection = ProvisionerManager.getBundledProvisionerCollection(e.provisionerType);
+			Logger.info('${this}: Setting dropdown data provider with ${provisionerCollection.length} items');
+			_dynamicConfigPage._dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+			
+			// Select the current provisioner version if available
+			if (provisionerDefinition != null) {
+				for (i in 0...provisionerCollection.length) {
+					var d = provisionerCollection.get(i);
+					if (d.data.version == provisionerDefinition.data.version) {
+						_dynamicConfigPage._dropdownCoreComponentVersion.selectedIndex = i;
+						break;
+					}
+				}
+			}
+		}
+		
+		// Set the provisioner definition to generate form fields
 		if (provisionerDefinition != null) {
 			_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
 		}
+		
 		_dynamicConfigPage.updateContent(true);
 		
 		// Show the dynamic config page

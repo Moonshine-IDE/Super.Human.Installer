@@ -76,7 +76,7 @@ class DynamicConfigPage extends Page {
     var _buttonRoles:GenesisFormButton;
     var _buttonSafeId:GenesisFormButton;
     var _buttonSave:GenesisFormButton;
-    var _dropdownCoreComponentVersion:GenesisFormPupUpListView;
+    public var _dropdownCoreComponentVersion:GenesisFormPupUpListView;
     var _form:GenesisForm;
     var _label:Label;
     var _labelMandatory:Label;
@@ -123,11 +123,12 @@ class DynamicConfigPage extends Page {
         // Core component version dropdown
         var rowCoreComponentVersion = new GenesisFormRow();
         rowCoreComponentVersion.text = LanguageManager.getInstance().getString('serverconfigpage.form.provisioner.text');
+        
+        // Initialize with empty collection - we'll set it properly in setServer
         _dropdownCoreComponentVersion = new GenesisFormPupUpListView(new feathers.data.ArrayCollection<ProvisionerDefinition>([]));
         _dropdownCoreComponentVersion.itemToText = (item:ProvisionerDefinition) -> {
             return item.name;
         };
-        // Don't set selectedIndex here, wait until we have data
         rowCoreComponentVersion.content.addChild(_dropdownCoreComponentVersion);
         _form.addChild(rowCoreComponentVersion);
 
