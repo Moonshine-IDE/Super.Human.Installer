@@ -319,10 +319,7 @@ class DynamicConfigPage extends Page {
                             var nestedOptions:Array<Dynamic> = field.options[0];
                             for (option in nestedOptions) {
                                 if (option != null && Reflect.hasField(option, "value") && Reflect.hasField(option, "label")) {
-                                    options.push({
-                                        value: Reflect.field(option, "value"),
-                                        label: Reflect.field(option, "label")
-                                    });
+                                    options.push([Reflect.field(option, "value"), Reflect.field(option, "label")]);
                                 } else {
                                     Logger.warning('Invalid dropdown option in field ${field.name}: ${option}');
                                 }
