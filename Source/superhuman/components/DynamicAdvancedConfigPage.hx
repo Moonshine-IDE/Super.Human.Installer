@@ -852,8 +852,6 @@ class DynamicAdvancedConfigPage extends Page {
 
         // Update standard fields
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
-        Reflect.setField(_server, "network_bridge", _dropdownNetworkInterface.selectedItem.name);
-        Logger.info('${this}: Updated network bridge to: ${_server.networkBridge.value}');
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {
