@@ -125,8 +125,6 @@ class ProvisionerManager {
     static public function readProvisionerMetadata(path:String):ProvisionerMetadata {
         var metadataPath = Path.addTrailingSlash(path) + PROVISIONER_METADATA_FILENAME;
         
-        Logger.info('Reading provisioner metadata from ${metadataPath}');
-        
         if (!FileSystem.exists(metadataPath)) {
             Logger.warning('Provisioner metadata file not found at ${metadataPath}');
             return null;
@@ -135,7 +133,6 @@ class ProvisionerManager {
         try {
             var content = File.getContent(metadataPath);
             var previewLength = content.length > 200 ? 200 : content.length;
-            Logger.info('Provisioner metadata content: ${content.substr(0, previewLength)}...');
             
             var metadata:ObjectMap<String, Dynamic> = Yaml.read(metadataPath);
             
@@ -144,8 +141,6 @@ class ProvisionerManager {
                 Logger.warning('Invalid provisioner.yml at ${metadataPath}: missing required fields');
                 return null;
             }
-            
-            Logger.info('Provisioner metadata parsed successfully: name=${metadata.get("name")}, type=${metadata.get("type")}');
             
             // Parse configuration if it exists
             var configuration:ProvisionerConfiguration = null;
@@ -189,7 +184,6 @@ class ProvisionerManager {
             return [];
         }
         
-        Logger.info('Parsing ${rolesData.length} roles');
         var result:Array<ProvisionerRole> = [];
         
         for (roleData in rolesData) {
@@ -494,7 +488,6 @@ class ProvisionerManager {
             // Create the directory if it doesn't exist
             try {
                 FileSystem.createDirectory(commonDir);
-                Logger.info('Created provisioners directory at ${commonDir}');
             } catch (e) {
                 Logger.error('Failed to create provisioners directory at ${commonDir}: ${e}');
                 return []; // Return empty array instead of falling back
@@ -504,7 +497,6 @@ class ProvisionerManager {
         try {
             // List all directories in the common directory
             var provisionerDirs = FileSystem.readDirectory(commonDir);
-            Logger.info('Found ${provisionerDirs.length} provisioner directories in ${commonDir}');
             
             for (provisionerDir in provisionerDirs) {
                 var provisionerPath = Path.addTrailingSlash(commonDir) + provisionerDir;
@@ -528,8 +520,6 @@ class ProvisionerManager {
                     continue;
                 }
                 
-                Logger.info('Processing provisioner ${metadata.name} (${metadata.type})');
-                
                 // List all version directories
                 try {
                     var versionDirs = FileSystem.readDirectory(provisionerPath);
@@ -540,8 +530,6 @@ class ProvisionerManager {
                         dir != PROVISIONER_METADATA_FILENAME
                     );
                     
-                    Logger.info('Found ${validVersionDirs.length} version directories for ${metadata.type}');
-                    
                     for (versionDir in validVersionDirs) {
                         var versionPath = Path.addTrailingSlash(provisionerPath) + versionDir;
                         
@@ -551,7 +539,6 @@ class ProvisionerManager {
                         if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath)) {
                             // Create provisioner definition
                             var versionInfo = VersionInfo.fromString(versionDir);
-                            Logger.info('Adding provisioner ${metadata.type} version ${versionDir}');
                             
                             // Create a copy of the metadata with the specific version
                             var versionMetadata = Reflect.copy(metadata);
@@ -583,7 +570,6 @@ class ProvisionerManager {
             return versionB > versionA ? 1 : (versionB < versionA ? -1 : 0);
         });
         
-        Logger.info('Returning ${result.length} provisioner definitions');
         return result;
     }
     
@@ -631,7 +617,6 @@ class ProvisionerManager {
         try {
             if (!FileSystem.exists(destPath)) {
                 FileSystem.createDirectory(destPath);
-                Logger.info('Created provisioner directory at ${destPath}');
             }
             
             // Copy provisioner.yml to the destination directory
@@ -644,8 +629,7 @@ class ProvisionerManager {
             }
             
             File.copy(sourceMetadataPath, destMetadataPath);
-            Logger.info('Copied provisioner metadata to ${destMetadataPath}');
-            
+
             // Look for version directories in the source directory
             var versionDirs = FileSystem.readDirectory(sourcePath);
             var versionsImported = 0;
@@ -689,7 +673,6 @@ class ProvisionerManager {
                     // Unzip to the destination directory
                     _unzipToDirectory(zipBytes, versionDestPath);
                     
-                    Logger.info('Imported version ${versionDir} to ${versionDestPath}');
                     versionsImported++;
                 } catch (e) {
                     Logger.error('Error importing version ${versionDir}: ${e}');
@@ -702,12 +685,9 @@ class ProvisionerManager {
             }
             
             if (versionsImported == 0 && versionsAlreadyExist > 0) {
-                Logger.info('All versions of provisioner ${metadata.type} already exist (${versionsAlreadyExist} versions)');
                 return true; // Return success if all versions already exist
             }
-            
-            Logger.info('Successfully imported ${versionsImported} versions of provisioner ${metadata.type}' + 
-                        (versionsAlreadyExist > 0 ? ' (${versionsAlreadyExist} versions already existed)' : ''));
+
             return true;
             
         } catch (e) {
