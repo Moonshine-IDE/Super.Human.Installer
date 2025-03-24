@@ -255,7 +255,7 @@ class DynamicAdvancedConfigPage extends Page {
                         if (Std.isOfType(value, String)) {
                             prop = new champaign.core.primitives.Property<String>(value);
                         } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
-                            prop = new champaign.core.primitives.Property<Float>(Std.parseFloat(Std.string(value)));
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
                         } else if (Std.isOfType(value, Bool)) {
                             prop = new champaign.core.primitives.Property<Bool>(value);
                         }
@@ -411,7 +411,7 @@ class DynamicAdvancedConfigPage extends Page {
                     if (field.defaultValue != null) {
                         defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
                     }
-                    var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue ? "true" : "false");
                     _customProperties.set(fieldName, prop);
                     Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     

@@ -555,7 +555,7 @@ class DynamicConfigPage extends Page {
                             defaultValue = 0.0;
                         }
                     }
-                    var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                    var prop = new champaign.core.primitives.Property<String>(Std.string(defaultValue));
                     _customProperties.set(fieldName, prop);
                     Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
@@ -565,7 +565,7 @@ class DynamicConfigPage extends Page {
                     if (field.defaultValue != null) {
                         defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
                     }
-                    var prop = new champaign.core.primitives.Property<Bool>(defaultValue);
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue ? "true" : "false");
                     _customProperties.set(fieldName, prop);
                     Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
