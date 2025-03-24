@@ -391,27 +391,28 @@ class DynamicAdvancedConfigPage extends Page {
                     
                 case "number":
                     // Create a numeric property
-                    var defaultValue = 0.0;
+                    var defaultValue = "0.0";
                     if (field.defaultValue != null) {
                         try {
-                            defaultValue = Std.parseFloat(Std.string(field.defaultValue));
-                            if (Math.isNaN(defaultValue)) defaultValue = 0.0;
+                            var floatVal = Std.parseFloat(Std.string(field.defaultValue));
+                            if (Math.isNaN(floatVal)) defaultValue = "0.0";
+                            else defaultValue = Std.string(floatVal);
                         } catch (e) {
                             Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
-                            defaultValue = 0.0;
+                            defaultValue = "0.0";
                         }
                     }
-                    var prop = new champaign.core.primitives.Property<Float>(defaultValue);
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
                     Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "checkbox":
                     // Create a boolean property
-                    var defaultValue = false;
+                    var defaultValue = "false";
                     if (field.defaultValue != null) {
-                        defaultValue = Std.string(field.defaultValue).toLowerCase() == "true";
+                        defaultValue = Std.string(field.defaultValue).toLowerCase() == "true" ? "true" : "false";
                     }
-                    var prop = new champaign.core.primitives.Property<String>(defaultValue ? "true" : "false");
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
                     Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
