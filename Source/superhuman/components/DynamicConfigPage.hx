@@ -973,37 +973,55 @@ class DynamicConfigPage extends Page {
                 // Important: Map known custom provisioner fields to server standard fields
                 if (fieldName == "hostname") {
                     // Set the server hostname directly
-                    _server.hostname.value = value;
+                    try {
+                        var hostnameProp = Reflect.getProperty(_server, "hostname");
+                        if (hostnameProp != null && Reflect.hasField(hostnameProp, "value")) {
+                            Reflect.setField(hostnameProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "server_hostname", value);
                     Logger.info('${this}: Set server hostname to ${value}');
                 } else if (fieldName == "organization") {
                     // Set the server organization directly
-                    _server.organization.value = value;
+                    try {
+                        var orgProp = Reflect.getProperty(_server, "organization");
+                        if (orgProp != null && Reflect.hasField(orgProp, "value")) {
+                            Reflect.setField(orgProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "server_organization", value);
                     Logger.info('${this}: Set server organization to ${value}');
                 } else if (fieldName == "userEmail") {
                     // Set user email directly
-                    _server.userEmail.value = value;
+                    try {
+                        var emailProp = Reflect.getProperty(_server, "userEmail");
+                        if (emailProp != null && Reflect.hasField(emailProp, "value")) {
+                            Reflect.setField(emailProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "user_email", value);
                     Logger.info('${this}: Set user email to ${value}');
                 } else if (fieldName == "openBrowser") {
                     // Set open browser flag directly
-                    _server.envOpenBrowser.value = value.toLowerCase() == "true";
-                    Reflect.setField(_server, "env_open_browser", value.toLowerCase() == "true");
+                    var boolValue = value.toLowerCase() == "true";
+                    Reflect.setField(_server, "env_open_browser", boolValue);
                     Logger.info('${this}: Set open browser to ${value}');
                 } else if (fieldName == "numCPUs") {
                     // Set CPU count directly
-                    _server.resourcesCpu.value = Std.parseInt(value);
                     Reflect.setField(_server, "resources_cpu", Std.parseInt(value));
                     Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
                     // Set memory directly
-                    _server.resourcesRam.value = Std.parseInt(value);
                     Reflect.setField(_server, "resources_ram", Std.parseInt(value));
                     Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
                     // Set network address directly
-                    _server.networkAddress.value = value;
+                    try {
+                        var networkAddressProp = Reflect.getProperty(_server, "networkAddress");
+                        if (networkAddressProp != null && Reflect.hasField(networkAddressProp, "value")) {
+                            Reflect.setField(networkAddressProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "network_address", value);
                     Logger.info('${this}: Set network address to ${value}');
                 } else if (_customProperties.exists(fieldName)) {

@@ -797,50 +797,78 @@ class DynamicAdvancedConfigPage extends Page {
             }
             
             if (value != null) {
-                // Handle special cases for standard server properties
+                // Handle special cases for standard server properties by field name
+                // Instead of direct property access, we'll rely on reflection to avoid compiler errors
                 if (fieldName == "numCPUs") {
-                    // Set CPU count directly
-                    _server.resourcesCpu.value = Std.parseInt(value);
+                    // Set CPU count
                     Reflect.setField(_server, "resources_cpu", Std.parseInt(value));
                 } else if (fieldName == "memory") {
-                    // Set memory directly
-                    _server.resourcesRam.value = Std.parseInt(value);
+                    // Set memory
                     Reflect.setField(_server, "resources_ram", Std.parseInt(value));
                 } else if (fieldName == "networkAddress") {
-                    // Set network address directly
-                    _server.networkAddress.value = value;
+                    // Set network address
+                    try {
+                        var networkAddressProp = Reflect.getProperty(_server, "networkAddress");
+                        if (networkAddressProp != null && Reflect.hasField(networkAddressProp, "value")) {
+                            Reflect.setField(networkAddressProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "network_address", value);
                 } else if (fieldName == "networkNetmask") {
-                    // Set network netmask directly
-                    _server.networkNetmask.value = value;
+                    // Set network netmask
+                    try {
+                        var netmaskProp = Reflect.getProperty(_server, "networkNetmask");
+                        if (netmaskProp != null && Reflect.hasField(netmaskProp, "value")) {
+                            Reflect.setField(netmaskProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "network_netmask", value);
                 } else if (fieldName == "networkGateway") {
-                    // Set network gateway directly
-                    _server.networkGateway.value = value;
+                    // Set network gateway
+                    try {
+                        var gatewayProp = Reflect.getProperty(_server, "networkGateway");
+                        if (gatewayProp != null && Reflect.hasField(gatewayProp, "value")) {
+                            Reflect.setField(gatewayProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "network_gateway", value);
                 } else if (fieldName == "nameServer1") {
-                    // Set DNS server 1 directly
-                    _server.networkDnsNameserver1.value = value;
+                    // Set DNS server 1
                     Reflect.setField(_server, "network_dns_nameserver_1", value);
                 } else if (fieldName == "nameServer2") {
-                    // Set DNS server 2 directly
-                    _server.networkDnsNameserver2.value = value;
+                    // Set DNS server 2
                     Reflect.setField(_server, "network_dns_nameserver_2", value);
                 } else if (fieldName == "networkBridge") {
-                    // Set network bridge directly
-                    _server.networkBridge.value = value;
+                    // Set network bridge
+                    try {
+                        var bridgeProp = Reflect.getProperty(_server, "networkBridge");
+                        if (bridgeProp != null && Reflect.hasField(bridgeProp, "value")) {
+                            Reflect.setField(bridgeProp, "value", value);
+                        }
+                    } catch (e) {}
                     Reflect.setField(_server, "network_bridge", value);
                 } else if (fieldName == "dhcp4") {
-                    // Set DHCP flag directly
-                    _server.dhcp4.value = value.toLowerCase() == "true";
-                    Reflect.setField(_server, "dhcp4", value.toLowerCase() == "true");
+                    // Set DHCP flag
+                    var boolValue = value.toLowerCase() == "true";
+                    try {
+                        var dhcpProp = Reflect.getProperty(_server, "dhcp4");
+                        if (dhcpProp != null && Reflect.hasField(dhcpProp, "value")) {
+                            Reflect.setField(dhcpProp, "value", boolValue);
+                        }
+                    } catch (e) {}
+                    Reflect.setField(_server, "dhcp4", boolValue);
                 } else if (fieldName == "disableBridgeAdapter") {
-                    // Set disable bridge adapter flag directly
-                    _server.disableBridgeAdapter.value = value.toLowerCase() == "true";
-                    Reflect.setField(_server, "disable_bridge_adapter", value.toLowerCase() == "true");
+                    // Set disable bridge adapter flag
+                    var boolValue = value.toLowerCase() == "true";
+                    try {
+                        var disableBridgeProp = Reflect.getProperty(_server, "disableBridgeAdapter");
+                        if (disableBridgeProp != null && Reflect.hasField(disableBridgeProp, "value")) {
+                            Reflect.setField(disableBridgeProp, "value", boolValue);
+                        }
+                    } catch (e) {}
+                    Reflect.setField(_server, "disable_bridge_adapter", boolValue);
                 } else if (fieldName == "setupWait") {
-                    // Set setup wait time directly
-                    _server.envSetupWait.value = Std.parseInt(value);
+                    // Set setup wait time
                     Reflect.setField(_server, "env_setup_wait", Std.parseInt(value));
                 } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
