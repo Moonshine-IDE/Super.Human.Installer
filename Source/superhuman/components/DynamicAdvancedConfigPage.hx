@@ -236,9 +236,9 @@ class DynamicAdvancedConfigPage extends Page {
             _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
         }
         
-        // Load any custom properties from server.userData
-        if (_server.userData != null && Reflect.hasField(_server.userData, "dynamicAdvancedCustomProperties")) {
-            var customPropsObj = Reflect.field(_server.userData, "dynamicAdvancedCustomProperties");
+        // Load any custom properties from server.customProperties
+        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+            var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
             if (customPropsObj != null) {
                 Logger.info('${this}: Loading custom properties from server userData');
                 
@@ -839,20 +839,20 @@ class DynamicAdvancedConfigPage extends Page {
             }
         }
         
-        // Store custom properties in server's userData if available
+        // Store custom properties in server's customProperties if available
         if (_server != null && _customProperties.keys().hasNext()) {
-            // Make sure userData is initialized
-            if (_server.userData == null) {
-                _server.userData = {};
+            // Make sure customProperties is initialized
+            if (_server.customProperties == null) {
+                _server.customProperties = {};
             }
             
-            // Create or update the dynamicCustomProperties field to hold our custom properties
-            var userData:Dynamic = _server.userData;
-            if (!Reflect.hasField(userData, "dynamicAdvancedCustomProperties")) {
-                Reflect.setField(userData, "dynamicAdvancedCustomProperties", {});
+            // Create or update the dynamicAdvancedCustomProperties field to hold our custom properties
+            var customProperties:Dynamic = _server.customProperties;
+            if (!Reflect.hasField(customProperties, "dynamicAdvancedCustomProperties")) {
+                Reflect.setField(customProperties, "dynamicAdvancedCustomProperties", {});
             }
             
-            var customPropsObj = Reflect.field(userData, "dynamicAdvancedCustomProperties");
+            var customPropsObj = Reflect.field(customProperties, "dynamicAdvancedCustomProperties");
             for (key => prop in _customProperties) {
                 if (Reflect.hasField(prop, "value")) {
                     Reflect.setField(customPropsObj, key, Reflect.field(prop, "value"));

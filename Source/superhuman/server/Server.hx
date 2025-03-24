@@ -142,6 +142,12 @@ class Server {
         sc._combinedVirtualMachine.value = { home: sc._serverDir, serverId: sc._id, vagrantMachine: { vagrantId: null, serverId: sc._id }, virtualBoxMachine: { virtualBoxId: null, serverId: sc._id } };
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
+        
+        // Initialize customProperties from data if available
+        if (data.customProperties != null) {
+            sc._customProperties = data.customProperties;
+        }
+        
         sc._created = true;
         sc._setServerStatus();
         return sc;
@@ -227,7 +233,7 @@ class Server {
     var _vagrantUpExecutorElapsedTimer:Timer;
     var _vagrantUpExecutorStopTimer:Timer;
     var _syncMethod:SyncMethod = SyncMethod.Rsync;
-    var _userData:Dynamic = {};
+    var _customProperties:Dynamic = {};
 
     public var busy( get, never ):Bool;
     function get_busy() return _busy.value;
@@ -363,9 +369,14 @@ class Server {
     function get_syncMethod() return _syncMethod;
     function set_syncMethod( value:SyncMethod ):SyncMethod { _syncMethod = value; return _syncMethod; }
     
+    public var customProperties(get, set):Dynamic;
+    function get_customProperties() return _customProperties;
+    function set_customProperties(value:Dynamic):Dynamic { _customProperties = value; return _customProperties; }
+    
+    // Backwards compatibility accessor
     public var userData(get, set):Dynamic;
-    function get_userData() return _userData;
-    function set_userData(value:Dynamic):Dynamic { _userData = value; return _userData; }
+    function get_userData() return _customProperties;
+    function set_userData(value:Dynamic):Dynamic { _customProperties = value; return _customProperties; }
     
     function new() {
 
@@ -492,7 +503,8 @@ class Server {
             disable_bridge_adapter: this._disableBridgeAdapter.value,
             syncMethod: this._syncMethod,
             existingServerName: "",
-            existingServerIpAddress: ""
+            existingServerIpAddress: "",
+            customProperties: this._customProperties
         };
 
         return data;

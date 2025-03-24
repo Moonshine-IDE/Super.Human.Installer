@@ -67,5 +67,7 @@ typedef ServerData = {
 
     ?provisioner:ProvisionerData,
     syncMethod:SyncMethod,
+    
+    ?customProperties:Dynamic,
 
 }

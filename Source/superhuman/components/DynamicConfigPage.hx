@@ -258,10 +258,10 @@ class DynamicConfigPage extends Page {
         
         // Check if we already have a provisioner definition from the service type data
         var serviceTypeProvisioner = null;
-        if (_server != null && _server.userData != null) {
-            var userData = _server.userData;
-            if (Reflect.hasField(userData, "serviceTypeData")) {
-                var serviceTypeData = Reflect.field(userData, "serviceTypeData");
+        if (_server != null && _server.customProperties != null) {
+            var customProperties = _server.customProperties;
+            if (Reflect.hasField(customProperties, "serviceTypeData")) {
+                var serviceTypeData = Reflect.field(customProperties, "serviceTypeData");
                 if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
                     serviceTypeProvisioner = Reflect.field(serviceTypeData, "provisioner");
                     Logger.info('${this}: Found provisioner in service type data: ${serviceTypeProvisioner.name}');
@@ -991,20 +991,20 @@ class DynamicConfigPage extends Page {
             }
         }
         
-        // Store custom properties in server's userData if available
+        // Store custom properties in server's customProperties if available
         if (_server != null && _customProperties.keys().hasNext()) {
-            // Make sure userData is initialized
-            if (_server.userData == null) {
-                _server.userData = {};
+            // Make sure customProperties is initialized
+            if (_server.customProperties == null) {
+                _server.customProperties = {};
             }
             
             // Create or update the dynamicCustomProperties field to hold our custom properties
-            var userData:Dynamic = _server.userData;
-            if (!Reflect.hasField(userData, "dynamicCustomProperties")) {
-                Reflect.setField(userData, "dynamicCustomProperties", {});
+            var customProperties:Dynamic = _server.customProperties;
+            if (!Reflect.hasField(customProperties, "dynamicCustomProperties")) {
+                Reflect.setField(customProperties, "dynamicCustomProperties", {});
             }
             
-            var customPropsObj = Reflect.field(userData, "dynamicCustomProperties");
+            var customPropsObj = Reflect.field(customProperties, "dynamicCustomProperties");
             for (key => prop in _customProperties) {
                 if (Reflect.hasField(prop, "value")) {
                     Reflect.setField(customPropsObj, key, Reflect.field(prop, "value"));
