@@ -1221,7 +1221,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		switch ( e.server.provisioner.type ) {
 			case ProvisionerType.AdditionalProvisioner:
-				_additionalServerPage.setServer(e.server);
+				_additionalServerPage.setServer(cast(e.server, AdditionalServer));
 				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
 			case ProvisionerType.DemoTasks, ProvisionerType.Default:
 				_configPage.setServer(e.server);
