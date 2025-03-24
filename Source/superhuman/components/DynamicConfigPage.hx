@@ -242,6 +242,62 @@ class DynamicConfigPage extends Page {
         
         Logger.info('${this}: Server set: ${server.id}, provisioner type: ${server.provisioner.type}');
         
+        // Load any custom properties from server.customProperties
+        if (_server.customProperties != null) {
+            if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                if (customPropsObj != null) {
+                    Logger.info('${this}: Loading custom properties from server customProperties');
+                    
+                    // Iterate over fields in the custom properties object
+                    var fields = Reflect.fields(customPropsObj);
+                    for (field in fields) {
+                        var value = Reflect.field(customPropsObj, field);
+                        Logger.info('${this}: Found custom property: ${field} = ${value}');
+                        
+                        // If we don't already have this property locally, create it
+                        if (!_customProperties.exists(field)) {
+                            var prop = null;
+                            
+                            if (Std.isOfType(value, String)) {
+                                prop = new champaign.core.primitives.Property<String>(value);
+                            } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                                prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            } else if (Std.isOfType(value, Bool)) {
+                                // Convert Boolean to String for consistency
+                                var boolValue:Bool = cast value;
+                                var boolStr = boolValue ? "true" : "false";
+                                prop = new champaign.core.primitives.Property<String>(boolStr);
+                            } else {
+                                // For other types, convert to string
+                                prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            }
+                            
+                            if (prop != null) {
+                                _customProperties.set(field, prop);
+                                
+                                // Add property change listener
+                                var onChange = Reflect.field(prop, "onChange");
+                                if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                    var self = this;
+                                    Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                                }
+                                
+                                Logger.info('${this}: Created custom property: ${field}');
+                            }
+                        } else {
+                            // Update existing property
+                            var prop = _customProperties.get(field);
+                            if (prop != null && Reflect.hasField(prop, "value")) {
+                                Reflect.setField(prop, "value", value);
+                                Logger.info('${this}: Updated existing custom property: ${field}');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         // We'll update the dropdown in updateContent() to ensure it's initialized
     }
     
@@ -1157,16 +1213,15 @@ class DynamicConfigPage extends Page {
                     Logger.info('${this}: Set user email to ${value}');
                 } else if (fieldName == "openBrowser") {
                     // Set open browser flag via Property object
-                    var boolValue = value.toLowerCase() == "true";
-                    _server.openBrowser.value = boolValue;
+                    _server.openBrowser.value = value;
                     Logger.info('${this}: Set open browser to ${value}');
                 } else if (fieldName == "numCPUs") {
                     // Set CPU count via Property object
-                    _server.numCPUs.value = Std.parseInt(value);
+                    _server.numCPUs.value = value;
                     Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
                     // Set memory via Property object
-                    _server.memory.value = Std.parseFloat(value);
+                    _server.memory.value = value;
                     Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
                     // Set network address via Property object
