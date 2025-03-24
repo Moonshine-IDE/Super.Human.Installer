@@ -257,7 +257,9 @@ class DynamicAdvancedConfigPage extends Page {
                         } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
                             prop = new champaign.core.primitives.Property<String>(Std.string(value));
                         } else if (Std.isOfType(value, Bool)) {
-                            prop = new champaign.core.primitives.Property<Bool>(value);
+                            // Need to convert Boolean to Null<Bool> for Property constructor
+                            var boolValue:Null<Bool> = value;
+                            prop = new champaign.core.primitives.Property<Bool>(boolValue);
                         }
                         
                         if (prop != null) {
