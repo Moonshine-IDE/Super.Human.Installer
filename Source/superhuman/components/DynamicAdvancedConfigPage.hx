@@ -662,129 +662,27 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Update dynamic fields with server or custom property values
             for (fieldName => field in _dynamicFields) {
-                // First try to get the value from the standard Server properties
                 var value = null;
-                var valueFound = false;
+                var valueField = null;
                 
-                // Check for standard properties first
-                if (fieldName == "hostname") {
-                    value = _server.hostname.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "organization") {
-                    value = _server.organization.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "userEmail") {
-                    value = _server.userEmail.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "openBrowser") {
-                    value = _server.openBrowser.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "numCPUs") {
-                    value = _server.numCPUs.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "memory") {
-                    value = _server.memory.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "networkAddress") {
-                    value = _server.networkAddress.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "networkNetmask") {
-                    value = _server.networkNetmask.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "networkGateway") {
-                    value = _server.networkGateway.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "nameServer1") {
-                    value = _server.nameServer1.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "nameServer2") {
-                    value = _server.nameServer2.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "networkBridge") {
-                    value = _server.networkBridge.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "dhcp4") {
-                    value = _server.dhcp4.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "disableBridgeAdapter") {
-                    value = _server.disableBridgeAdapter.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                } else if (fieldName == "setupWait") {
-                    value = _server.setupWait.value;
-                    valueFound = true;
-                    Logger.info('${this}: Using standard property for ${fieldName} = ${value}');
-                }
-                
-                // If not found in standard properties, check in local custom properties
-                if (!valueFound && _customProperties.exists(fieldName)) {
-                    var prop = _customProperties.get(fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
-                        value = Reflect.field(prop, "value");
-                        valueFound = true;
-                        Logger.info('${this}: Using local custom property for ${fieldName} = ${value}');
+                // First check if it's a custom property
+                if (_customProperties.exists(fieldName)) {
+                    value = _customProperties.get(fieldName);
+                    if (value != null && Reflect.hasField(value, "value")) {
+                        valueField = Reflect.field(value, "value");
                     }
-                }
-                
-                // If not found in local custom properties, check server's customProperties
-                if (!valueFound && _server.customProperties != null) {
-                    if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
-                        var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
-                        if (customPropsObj != null && Reflect.hasField(customPropsObj, fieldName)) {
-                            value = Reflect.field(customPropsObj, fieldName);
-                            valueFound = true;
-                            Logger.info('${this}: Using server customProperties for ${fieldName} = ${value}');
-                        }
-                    }
-                }
-                
-                // If still not found, try generic reflection on server as last resort
-                if (!valueFound) {
+                } else {
+                    // If not, try to get it from the server
                     try {
-                        var prop = Reflect.getProperty(_server, fieldName);
-                        if (prop != null) {
-                            if (Reflect.hasField(prop, "value")) {
-                                value = Reflect.field(prop, "value");
-                                valueFound = true;
-                                Logger.info('${this}: Using reflected server property for ${fieldName} = ${value}');
-                            } else {
-                                value = prop;
-                                valueFound = true;
-                                Logger.info('${this}: Using reflected server value for ${fieldName} = ${value}');
-                            }
+                        value = Reflect.getProperty(_server, fieldName);
+                        if (value != null && Reflect.hasField(value, "value")) {
+                            valueField = Reflect.field(value, "value");
+                        } else {
+                            valueField = value;
                         }
                     } catch (e) {
-                        // If can't get property directly, try with underscore
-                        try {
-                            var prop = Reflect.getProperty(_server, "_" + fieldName);
-                            if (prop != null) {
-                                if (Reflect.hasField(prop, "value")) {
-                                    value = Reflect.field(prop, "value");
-                                    valueFound = true;
-                                    Logger.info('${this}: Using reflected underscore server property for ${fieldName} = ${value}');
-                                } else {
-                                    value = prop;
-                                    valueFound = true;
-                                    Logger.info('${this}: Using reflected underscore server value for ${fieldName} = ${value}');
-                                }
-                            }
-                        } catch (e2) {
-                            // Failed to get value
-                            Logger.warning('${this}: Could not get any property value for ${fieldName}');
-                        }
+                        // Property doesn't exist on server
+                        Logger.warning('${this}: Could not get property value for ${fieldName}: ${e}');
                     }
                 }
                 
@@ -792,31 +690,46 @@ class DynamicAdvancedConfigPage extends Page {
                 if (value != null) {
                     if (Std.isOfType(field, GenesisFormTextInput)) {
                         var input:GenesisFormTextInput = cast field;
-                        input.text = Std.string(value);
-                        Logger.info('${this}: Set text field ${fieldName} to "${input.text}"');
+                        var displayValue = "";
+                        
+                        if (valueField != null) {
+                            // Use the .value field if it exists
+                            displayValue = Std.string(valueField);
+                        } else {
+                            // Remove "Property: " prefix if present
+                            var valueStr = Std.string(value);
+                            if (valueStr.indexOf("Property: ") == 0) {
+                                valueStr = valueStr.substr(10); // Remove "Property: " prefix
+                            }
+                            displayValue = valueStr;
+                        }
+                        
+                        input.text = displayValue;
+                        
                     } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                         var stepper:GenesisFormNumericStepper = cast field;
-                        stepper.value = Std.parseFloat(Std.string(value));
-                        Logger.info('${this}: Set numeric field ${fieldName} to ${stepper.value}');
+                        if (valueField != null) {
+                            stepper.value = Std.parseFloat(Std.string(valueField));
+                        } else {
+                            stepper.value = Std.parseFloat(Std.string(value));
+                        }
+                        
                     } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                         var checkbox:GenesisFormCheckBox = cast field;
-                        if (Std.isOfType(value, Bool)) {
-                            checkbox.selected = value;
-                        } else if (Std.isOfType(value, String)) {
-                            checkbox.selected = Std.string(value).toLowerCase() == "true";
+                        if (valueField != null) {
+                            checkbox.selected = valueField;
                         } else {
-                            checkbox.selected = (value != null && value != 0 && value != "");
+                            checkbox.selected = value;
                         }
-                        Logger.info('${this}: Set checkbox field ${fieldName} to ${checkbox.selected}');
+                        
                     } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                         var dropdown:GenesisFormPupUpListView = cast field;
                         if (dropdown.dataProvider != null && dropdown.dataProvider.length > 0) {
-                            var strValue = Std.string(value);
+                            var selectedValue = valueField != null ? valueField : value;
                             for (i in 0...dropdown.dataProvider.length) {
                                 var option = dropdown.dataProvider.get(i);
-                                if (option != null && option.length > 0 && Std.string(option[0]) == strValue) {
+                                if (option != null && option.length > 0 && option[0] == selectedValue) {
                                     dropdown.selectedIndex = i;
-                                    Logger.info('${this}: Set dropdown field ${fieldName} to option with index ${i}');
                                     break;
                                 }
                             }
@@ -919,11 +832,13 @@ class DynamicAdvancedConfigPage extends Page {
                     Logger.info('${this}: Set network bridge to ${value}');
                 } else if (fieldName == "dhcp4") {
                     // Set DHCP flag via Property object
-                    _server.dhcp4.value = value.toLowerCase() == "true";
+                    var boolValue = value.toLowerCase() == "true";
+                    _server.dhcp4.value = boolValue;
                     Logger.info('${this}: Set DHCP flag to ${value}');
                 } else if (fieldName == "disableBridgeAdapter") {
                     // Set disable bridge adapter flag via Property object
-                    _server.disableBridgeAdapter.value = value.toLowerCase() == "true";
+                    var boolValue = value.toLowerCase() == "true";
+                    _server.disableBridgeAdapter.value = boolValue;
                     Logger.info('${this}: Set disable bridge adapter to ${value}');
                 } else if (fieldName == "setupWait") {
                     // Set setup wait time via Property object
