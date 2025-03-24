@@ -258,7 +258,8 @@ class DynamicAdvancedConfigPage extends Page {
                             prop = new champaign.core.primitives.Property<String>(Std.string(value));
                         } else if (Std.isOfType(value, Bool)) {
                             // Convert Boolean to String for consistency
-                            var boolStr = value ? "true" : "false";
+                            var boolValue:Bool = cast value;
+                            var boolStr = boolValue ? "true" : "false";
                             prop = new champaign.core.primitives.Property<String>(boolStr);
                         }
                         
