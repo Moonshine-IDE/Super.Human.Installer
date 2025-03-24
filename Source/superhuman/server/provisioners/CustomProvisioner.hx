@@ -40,6 +40,7 @@ import sys.FileSystem;
 import sys.io.File;
 import yaml.Yaml;
 import yaml.util.ObjectMap;
+import StringTools;
 
 /**
  * CustomProvisioner is a provisioner implementation for custom provisioner types.
@@ -106,28 +107,28 @@ class CustomProvisioner extends DemoTasks {
         var content = _hostsTemplate;
         
         // Replace variables with server values
-        content = content.replace("{{SERVER_HOSTNAME}}", _server.hostname.value);
-        content = content.replace("{{SERVER_ORGANIZATION}}", _server.organization.value);
-        content = content.replace("{{SERVER_ID}}", Std.string(_server.id));
-        content = content.replace("{{SERVER_MEMORY}}", Std.string(_server.memory.value));
-        content = content.replace("{{SERVER_CPUS}}", Std.string(_server.numCPUs.value));
-        content = content.replace("{{SERVER_DHCP}}", _server.dhcp4.value ? "true" : "false");
+        content = StringTools.replace(content, "{{SERVER_HOSTNAME}}", _server.hostname.value);
+        content = StringTools.replace(content, "{{SERVER_ORGANIZATION}}", _server.organization.value);
+        content = StringTools.replace(content, "{{SERVER_ID}}", Std.string(_server.id));
+        content = StringTools.replace(content, "{{SERVER_MEMORY}}", Std.string(_server.memory.value));
+        content = StringTools.replace(content, "{{SERVER_CPUS}}", Std.string(_server.numCPUs.value));
+        content = StringTools.replace(content, "{{SERVER_DHCP}}", _server.dhcp4.value ? "true" : "false");
         
         // Network settings
         if (!_server.dhcp4.value) {
-            content = content.replace("{{NETWORK_ADDRESS}}", _server.networkAddress.value);
-            content = content.replace("{{NETWORK_NETMASK}}", _server.networkNetmask.value);
-            content = content.replace("{{NETWORK_GATEWAY}}", _server.networkGateway.value);
-            content = content.replace("{{NETWORK_DNS1}}", _server.nameServer1.value);
-            content = content.replace("{{NETWORK_DNS2}}", _server.nameServer2.value);
+            content = StringTools.replace(content, "{{NETWORK_ADDRESS}}", _server.networkAddress.value);
+            content = StringTools.replace(content, "{{NETWORK_NETMASK}}", _server.networkNetmask.value);
+            content = StringTools.replace(content, "{{NETWORK_GATEWAY}}", _server.networkGateway.value);
+            content = StringTools.replace(content, "{{NETWORK_DNS1}}", _server.nameServer1.value);
+            content = StringTools.replace(content, "{{NETWORK_DNS2}}", _server.nameServer2.value);
         }
         
         // Bridge adapter
-        content = content.replace("{{NETWORK_BRIDGE}}", _server.networkBridge.value);
-        content = content.replace("{{DISABLE_BRIDGE_ADAPTER}}", _server.disableBridgeAdapter.value ? "true" : "false");
+        content = StringTools.replace(content, "{{NETWORK_BRIDGE}}", _server.networkBridge.value);
+        content = StringTools.replace(content, "{{DISABLE_BRIDGE_ADAPTER}}", _server.disableBridgeAdapter.value ? "true" : "false");
         
         // User settings
-        content = content.replace("{{USER_EMAIL}}", _server.userEmail.value);
+        content = StringTools.replace(content, "{{USER_EMAIL}}", _server.userEmail.value);
         
         // Add custom properties if available
         if (_server.customProperties != null) {
@@ -137,7 +138,7 @@ class CustomProvisioner extends DemoTasks {
                 var fields = Reflect.fields(dynamicProps);
                 for (field in fields) {
                     var value = Reflect.field(dynamicProps, field);
-                    content = content.replace("{{" + field.toUpperCase() + "}}", Std.string(value));
+                    content = StringTools.replace(content, "{{" + field.toUpperCase() + "}}", Std.string(value));
                 }
             }
             
@@ -146,7 +147,7 @@ class CustomProvisioner extends DemoTasks {
                 var fields = Reflect.fields(advancedProps);
                 for (field in fields) {
                     var value = Reflect.field(advancedProps, field);
-                    content = content.replace("{{" + field.toUpperCase() + "}}", Std.string(value));
+                    content = StringTools.replace(content, "{{" + field.toUpperCase() + "}}", Std.string(value));
                 }
             }
         }
