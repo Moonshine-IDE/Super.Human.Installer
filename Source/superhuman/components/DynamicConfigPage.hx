@@ -658,7 +658,7 @@ class DynamicConfigPage extends Page {
                 _dynamicFields.set(field.name, stepper);
                 
             case "checkbox":
-                var checkbox = new GenesisFormCheckBox(field.label, field.defaultValue != null ? Std.string(field.defaultValue).toLowerCase() == "true" : false);
+                var checkbox = new GenesisFormCheckBox(field.label, field.defaultValue != null && Std.string(field.defaultValue).toLowerCase() == "true");
                 checkbox.toolTip = field.tooltip != null ? field.tooltip : "";
                 
                 // Add the checkbox to the row
@@ -946,21 +946,21 @@ class DynamicConfigPage extends Page {
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {
-            var value = null;
+            var value:String = null;
             
             if (Std.isOfType(field, GenesisFormTextInput)) {
                 var input:GenesisFormTextInput = cast field;
                 value = StringTools.trim(input.text);
             } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                 var stepper:GenesisFormNumericStepper = cast field;
-                value = stepper.value;
+                value = Std.string(stepper.value);
             } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                 var checkbox:GenesisFormCheckBox = cast field;
-                value = checkbox.selected;
+                value = checkbox.selected ? "true" : "false";
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
-                value = selectedItem != null && selectedItem.length > 0 ? selectedItem[0] : null;
+                value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
             }
             
             if (value != null) {
