@@ -1213,15 +1213,15 @@ class DynamicConfigPage extends Page {
                     Logger.info('${this}: Set user email to ${value}');
                 } else if (fieldName == "openBrowser") {
                     // Set open browser flag via Property object
-                    _server.openBrowser.value = value;
+                    _server.openBrowser.value = value.toLowerCase() == "true";
                     Logger.info('${this}: Set open browser to ${value}');
                 } else if (fieldName == "numCPUs") {
                     // Set CPU count via Property object
-                    _server.numCPUs.value = value;
+                    _server.numCPUs.value = Std.parseInt(value);
                     Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
                     // Set memory via Property object
-                    _server.memory.value = value;
+                    _server.memory.value = Std.parseFloat(value);
                     Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
                     // Set network address via Property object

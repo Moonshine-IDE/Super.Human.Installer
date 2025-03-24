@@ -887,11 +887,11 @@ class DynamicAdvancedConfigPage extends Page {
                 // Handle special cases for standard server properties by field name
                 if (fieldName == "numCPUs") {
                     // Set CPU count via Property object
-                    _server.numCPUs.value = value;
+                    _server.numCPUs.value = Std.parseInt(value);
                     Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
                     // Set memory via Property object
-                    _server.memory.value = value;
+                    _server.memory.value = Std.parseFloat(value);
                     Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
                     // Set network address via Property object
@@ -919,15 +919,15 @@ class DynamicAdvancedConfigPage extends Page {
                     Logger.info('${this}: Set network bridge to ${value}');
                 } else if (fieldName == "dhcp4") {
                     // Set DHCP flag via Property object
-                    _server.dhcp4.value = value;
+                    _server.dhcp4.value = value.toLowerCase() == "true";
                     Logger.info('${this}: Set DHCP flag to ${value}');
                 } else if (fieldName == "disableBridgeAdapter") {
                     // Set disable bridge adapter flag via Property object
-                    _server.disableBridgeAdapter.value = value;
+                    _server.disableBridgeAdapter.value = value.toLowerCase() == "true";
                     Logger.info('${this}: Set disable bridge adapter to ${value}');
                 } else if (fieldName == "setupWait") {
                     // Set setup wait time via Property object
-                    _server.setupWait.value = value;
+                    _server.setupWait.value = Std.parseInt(value);
                     Logger.info('${this}: Set setup wait to ${value}');
                 } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
