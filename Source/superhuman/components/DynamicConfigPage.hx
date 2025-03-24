@@ -240,6 +240,71 @@ class DynamicConfigPage extends Page {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
         }
         
+        // Load any custom properties from server.customProperties
+        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            if (customPropsObj != null) {
+                Logger.info('${this}: Loading custom properties from server customProperties: ${customPropsObj}');
+                
+                // Iterate over fields in the object
+                var fields = Reflect.fields(customPropsObj);
+                Logger.info('${this}: Found ${fields.length} custom properties to load');
+                
+                for (field in fields) {
+                    var value = Reflect.field(customPropsObj, field);
+                    Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
+                    
+                    // Create a property based on the value type if it doesn't already exist
+                    if (!_customProperties.exists(field)) {
+                        var prop = null;
+                        
+                        if (Std.isOfType(value, String)) {
+                            prop = new champaign.core.primitives.Property<String>(value);
+                            Logger.info('${this}: Created String property for ${field} with value ${value}');
+                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            Logger.info('${this}: Created numeric property for ${field} with value ${value}');
+                        } else if (Std.isOfType(value, Bool)) {
+                            // Convert Boolean to String for consistency
+                            var boolValue:Bool = cast value;
+                            var boolStr = boolValue ? "true" : "false";
+                            prop = new champaign.core.primitives.Property<String>(boolStr);
+                            Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
+                        } else {
+                            // Handle other types by converting to string
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
+                        }
+                        
+                        if (prop != null) {
+                            _customProperties.set(field, prop);
+                            
+                            // Add property change listener
+                            var onChange = Reflect.field(prop, "onChange");
+                            if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                var self = this;
+                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                            }
+                            
+                            Logger.info('${this}: Created custom property from customProperties: ${field}');
+                        }
+                    } else {
+                        // Update existing property
+                        var prop = _customProperties.get(field);
+                        if (prop != null && Reflect.hasField(prop, "value")) {
+                            Reflect.setField(prop, "value", value);
+                            Logger.info('${this}: Updated existing custom property from customProperties: ${field} to ${value}');
+                        }
+                    }
+                }
+                
+                // Force an update of the UI once properties are loaded
+                _pendingUpdateContent = true;
+            }
+        } else {
+            Logger.info('${this}: No dynamicCustomProperties found in server customProperties');
+        }
+        
         Logger.info('${this}: Server set: ${server.id}, provisioner type: ${server.provisioner.type}');
         
         // We'll update the dropdown in updateContent() to ensure it's initialized
@@ -824,73 +889,236 @@ class DynamicConfigPage extends Page {
             }
             _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
             
-            // Update dynamic fields with server or custom values
+            // Log information about available dynamic fields
+            Logger.info('${this}: Updating ${_dynamicFields.count()} dynamic fields with server or custom property values');
+            
+            // Look for dynamic custom properties in server.customProperties if they exist
+            var customPropValues = new Map<String, Dynamic>();
+            if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                if (customPropsObj != null) {
+                    var fields = Reflect.fields(customPropsObj);
+                    for (field in fields) {
+                        var value = Reflect.field(customPropsObj, field);
+                        customPropValues.set(field, value);
+                        Logger.info('${this}: Found field in customProperties: ${field} = ${value}');
+                    }
+                }
+            }
+            
+            // Update dynamic fields with server or custom property values
             for (fieldName => field in _dynamicFields) {
-                // Try to get the server property value first
                 var value = null;
+                var valueField = null;
+                var valueSource = "none";
                 
-                // Check if we need to get value from server or custom properties
-                if (_customProperties.exists(fieldName)) {
+                // First check if it's in the customPropValues map (direct from customProperties)
+                if (customPropValues.exists(fieldName)) {
+                    valueField = customPropValues.get(fieldName);
+                    Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
+                    valueSource = "customProperties";
+                }
+                // Then check if it's a custom property in our local map
+                else if (_customProperties.exists(fieldName)) {
                     value = _customProperties.get(fieldName);
-                } else {
+                    if (value != null && Reflect.hasField(value, "value")) {
+                        valueField = Reflect.field(value, "value");
+                    }
+                    Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
+                    valueSource = "customPropertiesMap";
+                } 
+                // If not, try to get it from the server
+                else {
                     try {
                         value = Reflect.getProperty(_server, fieldName);
+                        if (value != null && Reflect.hasField(value, "value")) {
+                            valueField = Reflect.field(value, "value");
+                        } else {
+                            valueField = value;
+                        }
+                        Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
+                        valueSource = "serverProperty";
                     } catch (e) {
-                        // If can't get property directly, try with underscore
+                        // Try with underscore prefix
                         try {
                             value = Reflect.getProperty(_server, "_" + fieldName);
+                            if (value != null && Reflect.hasField(value, "value")) {
+                                valueField = Reflect.field(value, "value");
+                            } else {
+                                valueField = value;
+                            }
+                            Logger.info('${this}: Using value from server property _${fieldName}: ${valueField}');
+                            valueSource = "serverPropertyUnderscore";
                         } catch (e2) {
-                            // Failed to get value
-                            Logger.warning('${this}: Could not get property value for ${fieldName}');
+                            // Property doesn't exist on server
+                            Logger.warning('${this}: Could not get property value for ${fieldName}: ${e2}');
                         }
                     }
                 }
                 
-                if (value != null) {
+                // Apply the value to the field
+                if (valueField != null || value != null) {
                     if (Std.isOfType(field, GenesisFormTextInput)) {
                         var input:GenesisFormTextInput = cast field;
-                        if (Reflect.hasField(value, "value")) {
-                            var fieldValue = Reflect.field(value, "value");
-                            input.text = fieldValue != null ? Std.string(fieldValue) : "";
-                        } else {
+                        var displayValue = "";
+                        
+                        if (valueField != null) {
+                            // Use the valueField directly
+                            displayValue = Std.string(valueField);
+                        } else if (value != null) {
                             // Remove "Property: " prefix if present
                             var valueStr = Std.string(value);
                             if (valueStr.indexOf("Property: ") == 0) {
                                 valueStr = valueStr.substr(10); // Remove "Property: " prefix
                             }
-                            input.text = valueStr;
+                            displayValue = valueStr;
                         }
+                        
+                        input.text = displayValue;
+                        Logger.info('${this}: Set text input ${fieldName} to "${displayValue}" (source: ${valueSource})');
+                        
                     } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                         var stepper:GenesisFormNumericStepper = cast field;
-                        if (Reflect.hasField(value, "value")) {
-                            stepper.value = Std.parseFloat(Std.string(Reflect.field(value, "value")));
-                        } else {
-                            stepper.value = Std.parseFloat(Std.string(value));
+                        var numValue:Float = 0;
+                        
+                        if (valueField != null) {
+                            numValue = Std.parseFloat(Std.string(valueField));
+                        } else if (value != null) {
+                            numValue = Std.parseFloat(Std.string(value));
                         }
+                        
+                        stepper.value = numValue;
+                        Logger.info('${this}: Set numeric stepper ${fieldName} to ${numValue} (source: ${valueSource})');
+                        
                     } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                         var checkbox:GenesisFormCheckBox = cast field;
-                        if (Reflect.hasField(value, "value")) {
-                            checkbox.selected = Reflect.field(value, "value");
-                        } else {
-                            checkbox.selected = value;
+                        var boolValue:Bool = false;
+                        
+                        if (valueField != null) {
+                            if (Std.isOfType(valueField, Bool)) {
+                                boolValue = cast valueField;
+                            } else if (Std.isOfType(valueField, String)) {
+                                boolValue = Std.string(valueField).toLowerCase() == "true";
+                            } else {
+                                boolValue = valueField != null; // Convert to boolean
+                            }
+                        } else if (value != null) {
+                            boolValue = value;
                         }
+                        
+                        checkbox.selected = boolValue;
+                        Logger.info('${this}: Set checkbox ${fieldName} to ${boolValue} (source: ${valueSource})');
+                        
                     } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                         var dropdown:GenesisFormPupUpListView = cast field;
                         if (dropdown.dataProvider != null && dropdown.dataProvider.length > 0) {
-                            var selectedValue = Reflect.hasField(value, "value") ? Reflect.field(value, "value") : value;
+                            var selectedValue = valueField != null ? valueField : value;
+                            var foundMatch = false;
+                            
+                            Logger.info('${this}: Looking for dropdown match for ${fieldName} with value ${selectedValue}');
+                            
                             for (i in 0...dropdown.dataProvider.length) {
                                 var option = dropdown.dataProvider.get(i);
-                                if (option != null && option.length > 0 && option[0] == selectedValue) {
-                                    dropdown.selectedIndex = i;
-                                    break;
+                                if (option != null && option.length > 0) {
+                                    Logger.info('${this}: Checking dropdown option ${i}: ${option[0]} == ${selectedValue}');
+                                    
+                                    if (option[0] == selectedValue) {
+                                        dropdown.selectedIndex = i;
+                                        foundMatch = true;
+                                        Logger.info('${this}: Set dropdown ${fieldName} to index ${i} (${option[1]}) (source: ${valueSource})');
+                                        break;
+                                    }
                                 }
+                            }
+                            
+                            if (!foundMatch) {
+                                Logger.warning('${this}: Could not find matching option for dropdown ${fieldName} with value ${selectedValue}');
                             }
                         }
                     }
+                } else {
+                    Logger.info('${this}: No value found for field ${fieldName}');
                 }
             }
         }
     }
+
+    function _advancedLinkTriggered(e:MouseEvent) {
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
+        evt.server = _server;
+        
+        // Explicitly set the provisioner type to ensure it's handled as a custom provisioner
+        // This is important because the _advancedConfigureServer method checks server.provisioner.type
+        // to determine whether to use DynamicAdvancedConfigPage or AdvancedConfigPage
+        evt.provisionerType = _server.provisioner.type;
+        
+        // Store the provisioner definition in the event if available
+        if (_provisionerDefinition != null) {
+            evt.data = _provisionerDefinition.name;
+            Logger.info('${this}: Sending provisioner definition in event: ${_provisionerDefinition.name}');
+        }
+        
+        this.dispatchEvent(evt);
+    }
+
+    function _buttonSafeIdTriggered(e:TriggerEvent) {
+        _server.locateNotesSafeId(_safeIdLocated);
+    }
+
+    function _safeIdLocated() {
+        _buttonSafeId.setValidity(true);
+        _buttonSafeId.icon = (_buttonSafeId.isValid()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
+        _buttonSafeId.text = (_buttonSafeId.isValid()) ? LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocateagain') : LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocate');
+    }
+
+    function _buttonRolesTriggered(e:TriggerEvent) {
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_ROLES);
+        evt.server = this._server;
+        this.dispatchEvent(evt);
+    }
+
+    /**
+     * Handler for property changes to propagate to the server
+     * @param property The property that changed
+     */
+    private function _propertyChangedHandler<T>(property:T):Void {
+        if (_server != null) {
+            _server.setServerStatus();
+        }
+    }
+    
+    function _saveButtonTriggered(e:TriggerEvent) {
+        _buttonSafeId.setValidity(_server.safeIdExists());
+        _buttonRoles.setValidity(_server.areRolesValid());
+
+        if (!_form.isValid() || !_server.safeIdExists() || !_server.areRolesValid()) {
+            return;
+        }
+
+        // Making sure the event is fired
+        var a = _server.roles.value.copy();
+        _server.roles.value = a;
+        _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
+        
+        Logger.info('${this}: Saving form data for ${_dynamicFields.count()} fields');
+        
+        // Update server properties from dynamic fields
+        for (fieldName => field in _dynamicFields) {
+            var value:String = null;
+            
+            if (Std.isOfType(field, GenesisFormTextInput)) {
+                var input:GenesisFormTextInput = cast field;
+                value = StringTools.trim(input.text);
+                Logger.info('${this}: Saving text field ${fieldName} with value: ${value}');
+            } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                var stepper:GenesisFormNumericStepper = cast field;
+                value = Std.string(stepper.value);
+                Logger.info('${this}: Saving numeric field ${fieldName} with value: ${value}');
+            } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                var checkbox:GenesisFormCheckBox = cast field;
+                value = checkbox.selected ? "true" : "false";
+                Logger.info('${this}: Saving checkbox field ${fieldName} with value: ${value}');
+            } else if (
 
     function _advancedLinkTriggered(e:MouseEvent) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
