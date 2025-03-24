@@ -1221,9 +1221,20 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		switch ( e.server.provisioner.type ) {
 			case ProvisionerType.AdditionalProvisioner:
+				_additionalServerPage.setServer(e.server);
 				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
-			default:
+			case ProvisionerType.DemoTasks, ProvisionerType.Default:
+				_configPage.setServer(e.server);
 				this.selectedPageId = PAGE_CONFIG;
+			default:
+				// For custom provisioner types, go back to the dynamic config page
+				if (_dynamicConfigPage != null) {
+					_dynamicConfigPage.setServer(e.server);
+					this.selectedPageId = "page-dynamic-config";
+				} else {
+					// Fallback to server page if dynamic config page is not available
+					this.selectedPageId = PAGE_SERVER;
+				}
 		}
 	}
 
