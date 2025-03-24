@@ -703,14 +703,107 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _configureServer( e:SuperHumanApplicationEvent ) {
-
-		switch ( e.provisionerType ) {
-			case ProvisionerType.AdditionalProvisioner:
-				_showConfigureAdditionalServer( cast(e.server, AdditionalServer) );
-			default:
-				_showConfigureServer( e.server );
+		// Get the provisioner type from the event or the server
+		var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+		
+		// Check if this is a custom provisioner (not one of the built-in types)
+		var isCustomProvisioner = provisionerType != ProvisionerType.DemoTasks && 
+								  provisionerType != ProvisionerType.AdditionalProvisioner &&
+								  provisionerType != ProvisionerType.Default;
+		
+		Logger.info('${this}: Configure server with provisioner type: ${provisionerType}, isCustom: ${isCustomProvisioner}');
+		
+		if (isCustomProvisioner) {
+			// For custom provisioners, use the dynamic config page
+			_showConfigureCustomServer(e.server);
+		} else {
+			// For built-in provisioner types, use the standard config pages
+			switch (provisionerType) {
+				case ProvisionerType.AdditionalProvisioner:
+					_showConfigureAdditionalServer(cast(e.server, AdditionalServer));
+				default:
+					_showConfigureServer(e.server);
+			}
 		}
-
+	}
+	
+	/**
+	 * Show the dynamic configuration page for custom provisioners
+	 * @param server The server to configure
+	 */
+	function _showConfigureCustomServer(server:Server) {
+		// Initialize the dynamic config page if it doesn't exist
+		if (_dynamicConfigPage == null) {
+			_dynamicConfigPage = new DynamicConfigPage();
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER, _advancedConfigureServer);
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer);
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles);
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION, _saveServerConfiguration);
+			this.addPage(_dynamicConfigPage, "page-dynamic-config");
+		}
+		
+		// Set the server for the dynamic config page
+		_dynamicConfigPage.setServer(server);
+		
+		// Get the provisioner definition for the current server
+		var provisionerDefinition = null;
+		
+		// Check if we have a stored provisioner definition in the server's userData
+		if (server.userData != null && Reflect.hasField(server.userData, "provisionerDefinition")) {
+			provisionerDefinition = Reflect.field(server.userData, "provisionerDefinition");
+			Logger.info('${this}: Found provisioner definition in server userData: ${provisionerDefinition.name}');
+		} else {
+			// Try to find the provisioner definition by type and version
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(server.provisioner.type);
+			if (allProvisioners.length > 0) {
+				// Find the exact provisioner version that matches the server's provisioner
+				for (provisioner in allProvisioners) {
+					if (provisioner.data.version == server.provisioner.version) {
+						provisionerDefinition = provisioner;
+						Logger.info('${this}: Found provisioner definition by version: ${provisioner.data.version}');
+						break;
+					}
+				}
+				
+				// If no exact match, use the first one
+				if (provisionerDefinition == null && allProvisioners.length > 0) {
+					provisionerDefinition = allProvisioners[0];
+					Logger.info('${this}: Using first available provisioner definition: ${provisionerDefinition.name}');
+				}
+			}
+		}
+		
+		// Force the updateContent call with a delay to ensure the UI is ready
+		haxe.Timer.delay(function() {
+			// Force the dropdown to be populated with all provisioners of this type
+			if (_dynamicConfigPage._dropdownCoreComponentVersion != null) {
+				var provisionerCollection = ProvisionerManager.getBundledProvisionerCollection(server.provisioner.type);
+				Logger.info('${this}: Setting dropdown data provider with ${provisionerCollection.length} items');
+				_dynamicConfigPage._dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+				
+				// Select the current provisioner version if available
+				if (provisionerDefinition != null) {
+					for (i in 0...provisionerCollection.length) {
+						var d = provisionerCollection.get(i);
+						if (d.data.version == provisionerDefinition.data.version) {
+							_dynamicConfigPage._dropdownCoreComponentVersion.selectedIndex = i;
+							break;
+						}
+					}
+				}
+			}
+			
+			// Set the provisioner definition to generate form fields
+			if (provisionerDefinition != null) {
+				_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
+			}
+			
+			// Update the content with forced=true to ensure all fields are created
+			_dynamicConfigPage.updateContent(true);
+		}, 100);
+		
+		// Show the dynamic config page
+		this.selectedPageId = "page-dynamic-config";
 	}
 
 	function _showConfigureServer( server:Server ) {
