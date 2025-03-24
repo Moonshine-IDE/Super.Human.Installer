@@ -658,13 +658,8 @@ class DynamicConfigPage extends Page {
                 _dynamicFields.set(field.name, stepper);
                 
             case "checkbox":
-                var checkbox = new GenesisFormCheckBox(field.label);
+                var checkbox = new GenesisFormCheckBox(field.label, field.defaultValue != null ? Std.string(field.defaultValue).toLowerCase() == "true" : false);
                 checkbox.toolTip = field.tooltip != null ? field.tooltip : "";
-                
-                // Set default value if provided
-                if (field.defaultValue != null) {
-                    checkbox.selected = Std.string(field.defaultValue).toLowerCase() == "true";
-                }
                 
                 // Add the checkbox to the row
                 row.content.addChild(checkbox);

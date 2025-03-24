@@ -504,7 +504,7 @@ class DynamicAdvancedConfigPage extends Page {
                     var minValue = field.min != null ? field.min : 0;
                     var maxValue = field.max != null ? field.max : 100;
                     
-                    var stepper = new GenesisFormNumericStepper(defaultValue != null ? defaultValue : null, minValue, maxValue);
+                    var stepper = new GenesisFormNumericStepper(defaultValue, minValue, maxValue);
                 stepper.toolTip = field.tooltip != null ? field.tooltip : "";
                 
                 // Add the stepper to the row
@@ -514,7 +514,7 @@ class DynamicAdvancedConfigPage extends Page {
                 _dynamicFields.set(field.name, stepper);
                 
             case "checkbox":
-                var checkbox = new GenesisFormCheckBox(field.label);
+                var checkbox = new GenesisFormCheckBox(field.label, field.defaultValue != null ? Std.string(field.defaultValue).toLowerCase() == "true" : false);
                 checkbox.toolTip = field.tooltip != null ? field.tooltip : "";
                 
                 // Set default value if provided
