@@ -1003,7 +1003,13 @@ class DynamicConfigPage extends Page {
                                 boolValue = valueField != null; // Convert to boolean
                             }
                         } else if (value != null) {
-                            boolValue = value;
+                            if (Std.isOfType(value, Bool)) {
+                                boolValue = cast value;
+                            } else if (Std.isOfType(value, String)) {
+                                boolValue = Std.string(value).toLowerCase() == "true";
+                            } else {
+                                boolValue = value != null; // Convert to boolean
+                            }
                         }
                         
                         checkbox.selected = boolValue;
