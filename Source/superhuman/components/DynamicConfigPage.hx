@@ -1118,82 +1118,11 @@ class DynamicConfigPage extends Page {
                 var checkbox:GenesisFormCheckBox = cast field;
                 value = checkbox.selected ? "true" : "false";
                 Logger.info('${this}: Saving checkbox field ${fieldName} with value: ${value}');
-            } else if (
-
-    function _advancedLinkTriggered(e:MouseEvent) {
-        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
-        evt.server = _server;
-        
-        // Explicitly set the provisioner type to ensure it's handled as a custom provisioner
-        // This is important because the _advancedConfigureServer method checks server.provisioner.type
-        // to determine whether to use DynamicAdvancedConfigPage or AdvancedConfigPage
-        evt.provisionerType = _server.provisioner.type;
-        
-        // Store the provisioner definition in the event if available
-        if (_provisionerDefinition != null) {
-            evt.data = _provisionerDefinition.name;
-            Logger.info('${this}: Sending provisioner definition in event: ${_provisionerDefinition.name}');
-        }
-        
-        this.dispatchEvent(evt);
-    }
-
-    function _buttonSafeIdTriggered(e:TriggerEvent) {
-        _server.locateNotesSafeId(_safeIdLocated);
-    }
-
-    function _safeIdLocated() {
-        _buttonSafeId.setValidity(true);
-        _buttonSafeId.icon = (_buttonSafeId.isValid()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
-        _buttonSafeId.text = (_buttonSafeId.isValid()) ? LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocateagain') : LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocate');
-    }
-
-    function _buttonRolesTriggered(e:TriggerEvent) {
-        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_ROLES);
-        evt.server = this._server;
-        this.dispatchEvent(evt);
-    }
-
-    /**
-     * Handler for property changes to propagate to the server
-     * @param property The property that changed
-     */
-    private function _propertyChangedHandler<T>(property:T):Void {
-        if (_server != null) {
-            _server.setServerStatus();
-        }
-    }
-    
-    function _saveButtonTriggered(e:TriggerEvent) {
-        _buttonSafeId.setValidity(_server.safeIdExists());
-        _buttonRoles.setValidity(_server.areRolesValid());
-
-        if (!_form.isValid() || !_server.safeIdExists() || !_server.areRolesValid()) {
-            return;
-        }
-
-        // Making sure the event is fired
-        var a = _server.roles.value.copy();
-        _server.roles.value = a;
-        _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
-        
-        // Update server properties from dynamic fields
-        for (fieldName => field in _dynamicFields) {
-            var value:String = null;
-            
-            if (Std.isOfType(field, GenesisFormTextInput)) {
-                var input:GenesisFormTextInput = cast field;
-                value = StringTools.trim(input.text);
-            } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
-                var stepper:GenesisFormNumericStepper = cast field;
-                value = Std.string(stepper.value);
-            } else if (Std.isOfType(field, GenesisFormCheckBox)) {
-                var checkbox:GenesisFormCheckBox = cast field;
-                value = checkbox.selected ? "true" : "false";
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
                 value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
+                Logger.info('${this}: Saving dropdown field ${fieldName} with value: ${value}');
             }
             
             if (value != null) {
