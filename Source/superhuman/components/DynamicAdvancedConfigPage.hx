@@ -497,13 +497,13 @@ class DynamicAdvancedConfigPage extends Page {
                 // Store the input in the dynamic fields map
                 _dynamicFields.set(field.name, input);
                 
-            case "number":
-                // Get default values
-                var defaultValue = field.defaultValue != null ? Std.parseFloat(Std.string(field.defaultValue)) : 0;
-                var minValue = field.min != null ? field.min : 0;
-                var maxValue = field.max != null ? field.max : 100;
-                
-                var stepper = new GenesisFormNumericStepper(defaultValue, minValue, maxValue);
+                case "number":
+                    // Get default values
+                    var defaultValue = field.defaultValue != null ? Std.parseFloat(Std.string(field.defaultValue)) : 0;
+                    var minValue = field.min != null ? field.min : 0;
+                    var maxValue = field.max != null ? field.max : 100;
+                    
+                    var stepper = new GenesisFormNumericStepper(defaultValue != null ? defaultValue : null, minValue, maxValue);
                 stepper.toolTip = field.tooltip != null ? field.tooltip : "";
                 
                 // Add the stepper to the row
