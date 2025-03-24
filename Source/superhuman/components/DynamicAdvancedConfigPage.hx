@@ -847,39 +847,6 @@ class DynamicAdvancedConfigPage extends Page {
         // Update standard fields
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
         Reflect.setField(_server, "network_bridge", _dropdownNetworkInterface.selectedItem.name);
-        Logger.info('${this}: Updated network bridge to
-
-    /**
-     * Handler for property changes to propagate to the server
-     * @param property The property that changed
-     */
-    private function _propertyChangedHandler<T>(property:T):Void {
-        if (_server != null) {
-            _server.setServerStatus();
-        }
-    }
-    
-    override function _cancel(?e:Dynamic) {
-        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE);
-        if (_server != null) {
-            evt.server = _server;
-            // Also set the provisioner type to ensure proper page navigation
-            evt.provisionerType = _server.provisioner.type;
-        }
-        this.dispatchEvent(evt);
-    }
-    
-    function _saveButtonTriggered(e:TriggerEvent) {
-        Logger.info('${this}: Save button triggered, form valid: ${_form.isValid()}, server: ${_server != null}');
-        
-        if (!_form.isValid() || _server == null) {
-            Logger.warning('${this}: Form validation failed, cannot save');
-            return;
-        }
-
-        // Update standard fields
-        _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
-        Reflect.setField(_server, "network_bridge", _dropdownNetworkInterface.selectedItem.name);
         Logger.info('${this}: Updated network bridge to: ${_server.networkBridge.value}');
         
         // Update server properties from dynamic fields
