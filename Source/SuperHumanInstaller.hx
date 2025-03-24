@@ -376,8 +376,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		this._header.logo = Assets.getPath( SuperHumanInstallerTheme.IMAGE_ICON );
 
-		// Initialize provisioners directory
+		// Initialize provisioners directory and cache
 		_initializeProvisionersDirectory();
+		ProvisionerManager.initializeCache();
 
 		ExecutorManager.getInstance().onExecutorListChanged.add( _onExecutorListChanged );
 

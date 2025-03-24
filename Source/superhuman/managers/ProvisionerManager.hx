@@ -101,6 +101,8 @@ typedef ProvisionerField = {
 }
 
 class ProvisionerManager {
+    // Static cache of all provisioner definitions
+    static private var _cachedProvisioners:Map<String, Array<ProvisionerDefinition>> = null;
 
     // Paths for bundled provisioners (included in the binary)
     static final PROVISIONER_STANDALONE_LOCAL_PATH:String = "assets/provisioners/hcl_domino_standalone_provisioner/"; // Renamed from demo-tasks
@@ -115,6 +117,128 @@ class ProvisionerManager {
      */
     static public function getProvisionersDirectory():String {
         return Path.addTrailingSlash(System.applicationStorageDirectory) + SuperHumanGlobals.PROVISIONERS_DIRECTORY;
+    }
+    
+    /**
+     * Initialize the provisioner cache
+     * This should be called at application startup
+     */
+    static public function initializeCache():Void {
+        if (_cachedProvisioners != null) {
+            Logger.info('Provisioner cache already initialized with ${Lambda.count(_cachedProvisioners)} types');
+            return; // Already initialized
+        }
+        
+        Logger.info('Initializing provisioner cache...');
+        _cachedProvisioners = new Map<String, Array<ProvisionerDefinition>>();
+        
+        // Scan provisioners directory
+        var provisionersDir = getProvisionersDirectory();
+        if (!FileSystem.exists(provisionersDir)) {
+            FileSystem.createDirectory(provisionersDir);
+            Logger.info('Created provisioners directory at ${provisionersDir}');
+        }
+        
+        // Read all provisioner types
+        try {
+            var provisionerDirs = FileSystem.readDirectory(provisionersDir);
+            Logger.info('Found ${provisionerDirs.length} potential provisioner directories');
+            
+            for (provisionerDir in provisionerDirs) {
+                var provisionerPath = Path.addTrailingSlash(provisionersDir) + provisionerDir;
+                
+                // Skip if not a directory
+                if (!FileSystem.isDirectory(provisionerPath)) {
+                    Logger.verbose('Skipping non-directory: ${provisionerPath}');
+                    continue;
+                }
+                
+                // Read provisioner metadata
+                var metadata = readProvisionerMetadata(provisionerPath);
+                if (metadata == null) {
+                    Logger.verbose('Skipping directory without valid metadata: ${provisionerPath}');
+                    continue;
+                }
+                
+                Logger.info('Found provisioner type: ${metadata.type} (${metadata.name})');
+                
+                // Create array for this type if it doesn't exist
+                if (!_cachedProvisioners.exists(metadata.type)) {
+                    _cachedProvisioners.set(metadata.type, []);
+                }
+                
+                // Add all versions of this provisioner
+                _addProvisionerVersionsToCache(provisionerPath, metadata);
+            }
+            
+            // Log summary of cached provisioners
+            var totalProvisioners = 0;
+            for (type in _cachedProvisioners.keys()) {
+                var count = _cachedProvisioners.get(type).length;
+                totalProvisioners += count;
+                Logger.info('Cached ${count} provisioners of type ${type}');
+            }
+            Logger.info('Provisioner cache initialized with ${totalProvisioners} total provisioners');
+            
+        } catch (e) {
+            Logger.error('Error initializing provisioner cache: ${e}');
+        }
+    }
+    
+    /**
+     * Add all versions of a provisioner to the cache
+     * @param provisionerPath Path to the provisioner directory
+     * @param metadata The provisioner metadata
+     */
+    static private function _addProvisionerVersionsToCache(provisionerPath:String, metadata:ProvisionerMetadata):Void {
+        try {
+            var versionDirs = FileSystem.readDirectory(provisionerPath);
+            
+            for (versionDir in versionDirs) {
+                var versionPath = Path.addTrailingSlash(provisionerPath) + versionDir;
+                
+                // Skip if not a directory or if it's the provisioner.yml file
+                if (!FileSystem.isDirectory(versionPath) || versionDir == "provisioner.yml") {
+                    continue;
+                }
+                
+                // Check if this is a valid version directory (has scripts subdirectory)
+                var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
+                if (!FileSystem.exists(scriptsPath) || !FileSystem.isDirectory(scriptsPath)) {
+                    Logger.verbose('Skipping invalid version directory (no scripts folder): ${versionPath}');
+                    continue;
+                }
+                
+                // Create a version-specific metadata copy
+                var versionMetadata = Reflect.copy(metadata);
+                versionMetadata.version = versionDir;
+                
+                // Create provisioner definition
+                var versionInfo = VersionInfo.fromString(versionDir);
+                var provDef:ProvisionerDefinition = {
+                    name: '${metadata.name} v${versionDir}',
+                    data: { type: metadata.type, version: versionInfo },
+                    root: versionPath,
+                    metadata: versionMetadata
+                };
+                
+                // Add to cache
+                _cachedProvisioners.get(metadata.type).push(provDef);
+                Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
+            }
+            
+            // Sort the provisioners by version, newest first
+            if (_cachedProvisioners.exists(metadata.type)) {
+                _cachedProvisioners.get(metadata.type).sort((a, b) -> {
+                    var versionA = a.data.version;
+                    var versionB = b.data.version;
+                    return versionB > versionA ? 1 : (versionB < versionA ? -1 : 0);
+                });
+            }
+            
+        } catch (e) {
+            Logger.error('Error adding provisioner versions to cache: ${e}');
+        }
     }
     
     /**
@@ -475,102 +599,44 @@ class ProvisionerManager {
     }
 
     /**
-     * Get available provisioners from the common directory
+     * Get available provisioners from the cache
      * @param type Optional provisioner type filter
      * @return Array<ProvisionerDefinition> Array of available provisioners
      */
     static public function getBundledProvisioners(type:ProvisionerType = null):Array<ProvisionerDefinition> {
-        var result:Array<ProvisionerDefinition> = [];
-        
-        // Check for provisioners in the common directory
-        var commonDir = getProvisionersDirectory();
-        if (!FileSystem.exists(commonDir)) {
-            // Create the directory if it doesn't exist
-            try {
-                FileSystem.createDirectory(commonDir);
-            } catch (e) {
-                Logger.error('Failed to create provisioners directory at ${commonDir}: ${e}');
-                return []; // Return empty array instead of falling back
-            }
+        // Initialize cache if needed
+        if (_cachedProvisioners == null) {
+            initializeCache();
         }
         
-        try {
-            // List all directories in the common directory
-            var provisionerDirs = FileSystem.readDirectory(commonDir);
+        // If no type specified, return all provisioners
+        if (type == null) {
+            var allProvisioners:Array<ProvisionerDefinition> = [];
+            for (typeProvisioners in _cachedProvisioners) {
+                for (provisioner in typeProvisioners) {
+                    allProvisioners.push(provisioner);
+                }
+            }
             
-            for (provisionerDir in provisionerDirs) {
-                var provisionerPath = Path.addTrailingSlash(commonDir) + provisionerDir;
-                
-                // Skip if not a directory
-                if (!FileSystem.isDirectory(provisionerPath)) {
-                    continue;
-                }
-                
-                // Read provisioner metadata
-                var metadata = readProvisionerMetadata(provisionerPath);
-                
-                // Skip if no metadata or if filtering by type and type doesn't match
-                if (metadata == null) {
-                    Logger.warning('No valid metadata found for provisioner at ${provisionerPath}');
-                    continue;
-                }
-                
-                if (type != null && metadata.type != type) {
-                    Logger.verbose('Skipping provisioner ${metadata.type} as it does not match requested type ${type}');
-                    continue;
-                }
-                
-                // List all version directories
-                try {
-                    var versionDirs = FileSystem.readDirectory(provisionerPath);
-                    
-                    // Filter out non-directories and the provisioner.yml file
-                    var validVersionDirs = versionDirs.filter(dir -> 
-                        FileSystem.isDirectory(Path.addTrailingSlash(provisionerPath) + dir) && 
-                        dir != PROVISIONER_METADATA_FILENAME
-                    );
-                    
-                    for (versionDir in validVersionDirs) {
-                        var versionPath = Path.addTrailingSlash(provisionerPath) + versionDir;
-                        
-                        // Check if this is a valid version directory (has scripts subdirectory)
-                        var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
-                        
-                        if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath)) {
-                            // Create provisioner definition
-                            var versionInfo = VersionInfo.fromString(versionDir);
-                            
-                            // Create a copy of the metadata with the specific version
-                            var versionMetadata = Reflect.copy(metadata);
-                            versionMetadata.version = versionDir;
-                            
-                            result.push({
-                                name: '${metadata.name} v${versionDir}',
-                                data: { type: metadata.type, version: versionInfo },
-                                root: versionPath,
-                                metadata: versionMetadata
-                            });
-                        } else {
-                            Logger.warning('Skipping version directory ${versionDir} as it does not have a scripts subdirectory');
-                        }
-                    }
-                } catch (e) {
-                    Logger.error('Error reading version directories for provisioner ${provisionerDir}: ${e}');
-                }
-            }
-        } catch (e) {
-            Logger.error('Error reading provisioners directory: ${e}');
-            return []; // Return empty array instead of falling back
+            // Sort by version, newest first
+            allProvisioners.sort((a, b) -> {
+                var versionA = a.data.version;
+                var versionB = b.data.version;
+                return versionB > versionA ? 1 : (versionB < versionA ? -1 : 0);
+            });
+            
+            return allProvisioners;
         }
         
-        // Sort by version, newest first
-        result.sort((a, b) -> {
-            var versionA = a.data.version;
-            var versionB = b.data.version;
-            return versionB > versionA ? 1 : (versionB < versionA ? -1 : 0);
-        });
+        // Return provisioners of the specified type
+        if (_cachedProvisioners.exists(type)) {
+            // Return a copy to prevent modification of the cache
+            return _cachedProvisioners.get(type).copy();
+        }
         
-        return result;
+        // No provisioners of this type found
+        Logger.warning('No provisioners found for type ${type}');
+        return [];
     }
     
 
