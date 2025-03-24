@@ -514,15 +514,11 @@ class DynamicAdvancedConfigPage extends Page {
                 _dynamicFields.set(field.name, stepper);
                 
             case "checkbox":
-                // Create checkbox with proper null handling for defaultValue
-                var isSelected:Null<Bool> = null;
-                if (field.defaultValue != null) {
-                    isSelected = Std.string(field.defaultValue).toLowerCase() == "true";
-                }
-                var checkbox = new GenesisFormCheckBox(field.label, isSelected);
+                // Create checkbox with null as second parameter 
+                var checkbox = new GenesisFormCheckBox(field.label, null);
                 checkbox.toolTip = field.tooltip != null ? field.tooltip : "";
                 
-                // Set default value if provided
+                // Set value after creation
                 if (field.defaultValue != null) {
                     checkbox.selected = Std.string(field.defaultValue).toLowerCase() == "true";
                 }
