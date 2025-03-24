@@ -658,8 +658,8 @@ class DynamicConfigPage extends Page {
                 _dynamicFields.set(field.name, stepper);
                 
             case "checkbox":
-                // Create checkbox with proper null handling for defaultValue
-                var isSelected:Null<Bool> = null;
+                // Create checkbox with default value of false
+                var isSelected = false;
                 if (field.defaultValue != null) {
                     isSelected = Std.string(field.defaultValue).toLowerCase() == "true";
                 }
