@@ -855,9 +855,11 @@ class DynamicAdvancedConfigPage extends Page {
             for (key => prop in _customProperties) {
                 if (Reflect.hasField(prop, "value")) {
                     Reflect.setField(customPropsObj, key, Reflect.field(prop, "value"));
-                    Logger.info('${this}: Stored custom property ${key} in server userData');
                 }
             }
+            
+            // Force an immediate save of server data to avoid race conditions
+            _server.saveData();
         }
 
         _server.saveHostsFile();

@@ -622,12 +622,27 @@ class Server {
     
     public function saveData() {
         try {
-			
-        	 	var s = Json.stringify( getData() );
-            File.saveContent( Path.addTrailingSlash( this._serverDir ) + _CONFIG_FILE, s );
+            // Get the server data with customProperties included
+            var data = getData();
+            
+            // Log what we're saving
+            Logger.info('${this}: Saving server data to ${Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE}');
+            Logger.info('${this}: customProperties included in save: ${this._customProperties != null}');
+            
+            // Check if customProperties exists and has dynamic custom properties
+            if (this._customProperties != null) {
+                var hasCustomProps = Reflect.hasField(this._customProperties, "dynamicCustomProperties");
+                var hasAdvancedProps = Reflect.hasField(this._customProperties, "dynamicAdvancedCustomProperties");
+                Logger.info('${this}: customProperties has: dynamicCustomProperties=${hasCustomProps}, dynamicAdvancedCustomProperties=${hasAdvancedProps}');
+            }
+            
+            var s = Json.stringify(data);
+            File.saveContent(Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE, s);
+            Logger.info('${this}: Server data saved successfully');
 
-        } catch ( e ) {};
-
+        } catch (e) {
+            Logger.error('${this}: Error saving server data: ${e}');
+        };
     }
 
     public function start( provision:Bool = false ) {
