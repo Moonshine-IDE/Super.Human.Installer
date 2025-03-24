@@ -979,11 +979,14 @@ class DynamicConfigPage extends Page {
                         var prop = Reflect.getProperty(_server, fieldName);
                         if (prop != null) {
                             if (Reflect.hasField(prop, "value")) {
-                                value = Reflect.field(prop, "value");
+                                var propValue = Reflect.field(prop, "value");
+                                // Convert to string for consistent handling
+                                value = Std.string(propValue);
                                 valueFound = true;
                                 Logger.info('${this}: Using reflected server property for ${fieldName} = ${value}');
                             } else {
-                                value = prop;
+                                // Convert to string for consistent handling
+                                value = Std.string(prop);
                                 valueFound = true;
                                 Logger.info('${this}: Using reflected server value for ${fieldName} = ${value}');
                             }
@@ -1142,15 +1145,18 @@ class DynamicConfigPage extends Page {
                     Logger.info('${this}: Set user email to ${value}');
                 } else if (fieldName == "openBrowser") {
                     // Set open browser flag via Property object
-                    _server.openBrowser.value = value;
+                    var boolValue = value.toLowerCase() == "true";
+                    _server.openBrowser.value = boolValue;
                     Logger.info('${this}: Set open browser to ${value}');
                 } else if (fieldName == "numCPUs") {
                     // Set CPU count via Property object
-                    _server.numCPUs.value = value;
+                    var intValue = Std.parseInt(value);
+                    _server.numCPUs.value = intValue;
                     Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
                     // Set memory via Property object
-                    _server.memory.value = value;
+                    var floatValue = Std.parseFloat(value);
+                    _server.memory.value = floatValue;
                     Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
                     // Set network address via Property object
@@ -1178,15 +1184,18 @@ class DynamicConfigPage extends Page {
                     Logger.info('${this}: Set network bridge to ${value}');
                 } else if (fieldName == "dhcp4") {
                     // Set DHCP flag via Property object
-                    _server.dhcp4.value = value;
+                    var boolValue = value.toLowerCase() == "true";
+                    _server.dhcp4.value = boolValue;
                     Logger.info('${this}: Set DHCP flag to ${value}');
                 } else if (fieldName == "disableBridgeAdapter") {
                     // Set disable bridge adapter flag via Property object
-                    _server.disableBridgeAdapter.value = value;
+                    var boolValue = value.toLowerCase() == "true";
+                    _server.disableBridgeAdapter.value = boolValue;
                     Logger.info('${this}: Set disable bridge adapter to ${value}');
                 } else if (fieldName == "setupWait") {
                     // Set setup wait time via Property object
-                    _server.setupWait.value = value;
+                    var intValue = Std.parseInt(value);
+                    _server.setupWait.value = intValue;
                     Logger.info('${this}: Set setup wait to ${value}');
                 } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
