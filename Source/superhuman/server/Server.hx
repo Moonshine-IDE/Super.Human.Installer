@@ -60,6 +60,7 @@ import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.CustomProvisioner;
 import sys.FileSystem;
 import sys.io.File;
 import yaml.util.ObjectMap;
@@ -92,32 +93,45 @@ class Server {
         var sc = new Server();
 
         sc._id = data.server_id;
-        sc._serverDir = Path.normalize( rootDir + "/hcl_domino_standalone_provisioner/" + sc._id );
+        
+        // Determine the server directory based on provisioner type
+        var provisionerTypeForPath = data.provisioner != null ? data.provisioner.type : ProvisionerType.DemoTasks;
+        sc._serverDir = Path.normalize( rootDir + "/" + provisionerTypeForPath + "/" + sc._id );
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
         var latestDemoTasks = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
         if ( data.provisioner == null ) {
-
+            // Default to DemoTasks for null provisioner
             sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, latestDemoTasks.root, sc._serverDir, sc );
-
         } else {
-
             var provisioner = ProvisionerManager.getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
 
             if ( provisioner != null ) {
-
-                sc._provisioner = new DemoTasks(data.provisioner.type, provisioner.root, sc._serverDir, sc );
-
+                // Create the appropriate provisioner based on type
+                if (data.provisioner.type == ProvisionerType.DemoTasks || 
+                    data.provisioner.type == ProvisionerType.AdditionalProvisioner) {
+                    // Use DemoTasks for built-in provisioner types
+                    sc._provisioner = new DemoTasks(data.provisioner.type, provisioner.root, sc._serverDir, sc );
+                } else {
+                    // For custom provisioner types, use CustomProvisioner
+                    sc._provisioner = new CustomProvisioner(data.provisioner.type, provisioner.root, sc._serverDir, sc );
+                    Logger.info('${sc}: Created custom provisioner of type ${data.provisioner.type}');
+                }
             } else {
-
                 // The server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                sc._provisioner = new DemoTasks(data.provisioner.type, null, sc._serverDir, sc );
-
+                if (data.provisioner.type == ProvisionerType.DemoTasks || 
+                    data.provisioner.type == ProvisionerType.AdditionalProvisioner) {
+                    // Use DemoTasks for built-in provisioner types
+                    sc._provisioner = new DemoTasks(data.provisioner.type, null, sc._serverDir, sc );
+                } else {
+                    // For custom provisioner types, use CustomProvisioner
+                    sc._provisioner = new CustomProvisioner(data.provisioner.type, null, sc._serverDir, sc );
+                    Logger.info('${sc}: Created custom provisioner of type ${data.provisioner.type} with null root');
+                }
             }
-
         }
 
         sc._hostname.value = data.server_hostname;
