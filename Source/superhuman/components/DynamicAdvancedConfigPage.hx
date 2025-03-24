@@ -798,78 +798,52 @@ class DynamicAdvancedConfigPage extends Page {
             
             if (value != null) {
                 // Handle special cases for standard server properties by field name
-                // Instead of direct property access, we'll rely on reflection to avoid compiler errors
                 if (fieldName == "numCPUs") {
-                    // Set CPU count
-                    Reflect.setField(_server, "resources_cpu", Std.parseInt(value));
+                    // Set CPU count via Property object
+                    _server.numCPUs.value = Std.parseInt(value);
+                    Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
-                    // Set memory
-                    Reflect.setField(_server, "resources_ram", Std.parseInt(value));
+                    // Set memory via Property object
+                    _server.memory.value = Std.parseFloat(value);
+                    Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
-                    // Set network address
-                    try {
-                        var networkAddressProp = Reflect.getProperty(_server, "networkAddress");
-                        if (networkAddressProp != null && Reflect.hasField(networkAddressProp, "value")) {
-                            Reflect.setField(networkAddressProp, "value", value);
-                        }
-                    } catch (e) {}
-                    Reflect.setField(_server, "network_address", value);
+                    // Set network address via Property object
+                    _server.networkAddress.value = value;
+                    Logger.info('${this}: Set network address to ${value}');
                 } else if (fieldName == "networkNetmask") {
-                    // Set network netmask
-                    try {
-                        var netmaskProp = Reflect.getProperty(_server, "networkNetmask");
-                        if (netmaskProp != null && Reflect.hasField(netmaskProp, "value")) {
-                            Reflect.setField(netmaskProp, "value", value);
-                        }
-                    } catch (e) {}
-                    Reflect.setField(_server, "network_netmask", value);
+                    // Set network netmask via Property object
+                    _server.networkNetmask.value = value;
+                    Logger.info('${this}: Set network netmask to ${value}');
                 } else if (fieldName == "networkGateway") {
-                    // Set network gateway
-                    try {
-                        var gatewayProp = Reflect.getProperty(_server, "networkGateway");
-                        if (gatewayProp != null && Reflect.hasField(gatewayProp, "value")) {
-                            Reflect.setField(gatewayProp, "value", value);
-                        }
-                    } catch (e) {}
-                    Reflect.setField(_server, "network_gateway", value);
+                    // Set network gateway via Property object
+                    _server.networkGateway.value = value;
+                    Logger.info('${this}: Set network gateway to ${value}');
                 } else if (fieldName == "nameServer1") {
-                    // Set DNS server 1
-                    Reflect.setField(_server, "network_dns_nameserver_1", value);
+                    // Set DNS server 1 via Property object
+                    _server.nameServer1.value = value;
+                    Logger.info('${this}: Set DNS server 1 to ${value}');
                 } else if (fieldName == "nameServer2") {
-                    // Set DNS server 2
-                    Reflect.setField(_server, "network_dns_nameserver_2", value);
+                    // Set DNS server 2 via Property object
+                    _server.nameServer2.value = value;
+                    Logger.info('${this}: Set DNS server 2 to ${value}');
                 } else if (fieldName == "networkBridge") {
-                    // Set network bridge
-                    try {
-                        var bridgeProp = Reflect.getProperty(_server, "networkBridge");
-                        if (bridgeProp != null && Reflect.hasField(bridgeProp, "value")) {
-                            Reflect.setField(bridgeProp, "value", value);
-                        }
-                    } catch (e) {}
-                    Reflect.setField(_server, "network_bridge", value);
+                    // Set network bridge via Property object
+                    _server.networkBridge.value = value;
+                    Logger.info('${this}: Set network bridge to ${value}');
                 } else if (fieldName == "dhcp4") {
-                    // Set DHCP flag
+                    // Set DHCP flag via Property object
                     var boolValue = value.toLowerCase() == "true";
-                    try {
-                        var dhcpProp = Reflect.getProperty(_server, "dhcp4");
-                        if (dhcpProp != null && Reflect.hasField(dhcpProp, "value")) {
-                            Reflect.setField(dhcpProp, "value", boolValue);
-                        }
-                    } catch (e) {}
-                    Reflect.setField(_server, "dhcp4", boolValue);
+                    _server.dhcp4.value = boolValue;
+                    Logger.info('${this}: Set DHCP flag to ${value}');
                 } else if (fieldName == "disableBridgeAdapter") {
-                    // Set disable bridge adapter flag
+                    // Set disable bridge adapter flag via Property object
                     var boolValue = value.toLowerCase() == "true";
-                    try {
-                        var disableBridgeProp = Reflect.getProperty(_server, "disableBridgeAdapter");
-                        if (disableBridgeProp != null && Reflect.hasField(disableBridgeProp, "value")) {
-                            Reflect.setField(disableBridgeProp, "value", boolValue);
-                        }
-                    } catch (e) {}
-                    Reflect.setField(_server, "disable_bridge_adapter", boolValue);
+                    _server.disableBridgeAdapter.value = boolValue;
+                    Logger.info('${this}: Set disable bridge adapter to ${value}');
                 } else if (fieldName == "setupWait") {
-                    // Set setup wait time
-                    Reflect.setField(_server, "env_setup_wait", Std.parseInt(value));
+                    // Set setup wait time via Property object
+                    _server.setupWait.value = Std.parseInt(value);
+                    Logger.info('${this}: Set setup wait to ${value}');
                 } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
                     var prop = _customProperties.get(fieldName);
