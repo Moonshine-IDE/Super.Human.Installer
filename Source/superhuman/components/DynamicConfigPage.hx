@@ -890,7 +890,7 @@ class DynamicConfigPage extends Page {
             _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
             
             // Log information about available dynamic fields
-            Logger.info('${this}: Updating ${_dynamicFields.count()} dynamic fields with server or custom property values');
+            Logger.info('${this}: Updating ${Lambda.count(_dynamicFields)} dynamic fields with server or custom property values');
             
             // Look for dynamic custom properties in server.customProperties if they exist
             var customPropValues = new Map<String, Dynamic>();
@@ -1100,7 +1100,7 @@ class DynamicConfigPage extends Page {
         _server.roles.value = a;
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         
-        Logger.info('${this}: Saving form data for ${_dynamicFields.count()} fields');
+        Logger.info('${this}: Saving form data for ${Lambda.count(_dynamicFields)} fields');
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {

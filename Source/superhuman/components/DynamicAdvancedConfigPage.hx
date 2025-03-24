@@ -675,7 +675,7 @@ class DynamicAdvancedConfigPage extends Page {
             _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
             
             // Log information about available dynamic fields
-            Logger.info('${this}: Updating ${_dynamicFields.count()} dynamic fields with server or custom property values');
+            Logger.info('${this}: Updating ${Lambda.count(_dynamicFields)} dynamic fields with server or custom property values');
             
             // Look for dynamic custom properties in server.customProperties if they exist
             var customPropValues = new Map<String, Dynamic>();
@@ -776,7 +776,13 @@ class DynamicAdvancedConfigPage extends Page {
                                 boolValue = valueField != null; // Convert to boolean
                             }
                         } else if (value != null) {
-                            boolValue = value;
+                            if (Std.isOfType(value, Bool)) {
+                                boolValue = cast value;
+                            } else if (Std.isOfType(value, String)) {
+                                boolValue = Std.string(value).toLowerCase() == "true";
+                            } else {
+                                boolValue = value != null; // Convert to boolean
+                            }
                         }
                         
                         checkbox.selected = boolValue;
