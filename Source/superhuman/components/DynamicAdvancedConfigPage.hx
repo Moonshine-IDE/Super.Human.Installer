@@ -770,6 +770,7 @@ class DynamicAdvancedConfigPage extends Page {
 
         // Update standard fields
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
+        Reflect.setField(_server, "network_bridge", _dropdownNetworkInterface.selectedItem.name);
         Logger.info('${this}: Updated network bridge to: ${_server.networkBridge.value}');
         
         // Update server properties from dynamic fields
@@ -796,13 +797,77 @@ class DynamicAdvancedConfigPage extends Page {
             }
             
             if (value != null) {
-                // Check if we need to update server or custom properties
-                if (_customProperties.exists(fieldName)) {
+                // Handle special cases for standard server properties
+                if (fieldName == "numCPUs") {
+                    // Set CPU count directly
+                    _server.resourcesCpu.value = Std.parseInt(value);
+                    Reflect.setField(_server, "resources_cpu", Std.parseInt(value));
+                } else if (fieldName == "memory") {
+                    // Set memory directly
+                    _server.resourcesRam.value = Std.parseInt(value);
+                    Reflect.setField(_server, "resources_ram", Std.parseInt(value));
+                } else if (fieldName == "networkAddress") {
+                    // Set network address directly
+                    _server.networkAddress.value = value;
+                    Reflect.setField(_server, "network_address", value);
+                } else if (fieldName == "networkNetmask") {
+                    // Set network netmask directly
+                    _server.networkNetmask.value = value;
+                    Reflect.setField(_server, "network_netmask", value);
+                } else if (fieldName == "networkGateway") {
+                    // Set network gateway directly
+                    _server.networkGateway.value = value;
+                    Reflect.setField(_server, "network_gateway", value);
+                } else if (fieldName == "nameServer1") {
+                    // Set DNS server 1 directly
+                    _server.networkDnsNameserver1.value = value;
+                    Reflect.setField(_server, "network_dns_nameserver_1", value);
+                } else if (fieldName == "nameServer2") {
+                    // Set DNS server 2 directly
+                    _server.networkDnsNameserver2.value = value;
+                    Reflect.setField(_server, "network_dns_nameserver_2", value);
+                } else if (fieldName == "networkBridge") {
+                    // Set network bridge directly
+                    _server.networkBridge.value = value;
+                    Reflect.setField(_server, "network_bridge", value);
+                } else if (fieldName == "dhcp4") {
+                    // Set DHCP flag directly
+                    _server.dhcp4.value = value.toLowerCase() == "true";
+                    Reflect.setField(_server, "dhcp4", value.toLowerCase() == "true");
+                } else if (fieldName == "disableBridgeAdapter") {
+                    // Set disable bridge adapter flag directly
+                    _server.disableBridgeAdapter.value = value.toLowerCase() == "true";
+                    Reflect.setField(_server, "disable_bridge_adapter", value.toLowerCase() == "true");
+                } else if (fieldName == "setupWait") {
+                    // Set setup wait time directly
+                    _server.envSetupWait.value = Std.parseInt(value);
+                    Reflect.setField(_server, "env_setup_wait", Std.parseInt(value));
+                } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
                     var prop = _customProperties.get(fieldName);
                     if (prop != null && Reflect.hasField(prop, "value")) {
                         Reflect.setField(prop, "value", value);
-                        Logger.info('${this}: Updated custom property ${fieldName} value to ${value}');
+                        
+                        // Also update the server field directly if it exists
+                        try {
+                            var propName = fieldName;
+                            // Convert camelCase to snake_case for server property names
+                            if (propName.indexOf("_") < 0) {
+                                var snakeCase = "";
+                                for (i in 0...propName.length) {
+                                    var char = propName.charAt(i);
+                                    if (i > 0 && char >= "A" && char <= "Z") {
+                                        snakeCase += "_" + char.toLowerCase();
+                                    } else {
+                                        snakeCase += char.toLowerCase();
+                                    }
+                                }
+                                propName = snakeCase;
+                            }
+                            Reflect.setField(_server, propName, value);
+                        } catch (e) {
+                            // Just continue if the field doesn't exist
+                        }
                     }
                 } else if (Reflect.hasField(_server, fieldName)) {
                     // Update server property
@@ -810,19 +875,13 @@ class DynamicAdvancedConfigPage extends Page {
                     if (prop != null && Reflect.hasField(prop, "value")) {
                         // It's a property with a value field
                         Reflect.setField(prop, "value", value);
-                        Logger.info('${this}: Updated server property ${fieldName}.value to ${value}');
                     } else {
                         // It's a direct property
                         Reflect.setProperty(_server, fieldName, value);
-                        Logger.info('${this}: Updated direct server property ${fieldName} to ${value}');
                     }
                 } else {
                     // Create a custom property if it doesn't exist in any form
-                    Logger.info('${this}: Creating custom property for field that does not exist on server: ${fieldName}');
-                    var prop = null;
-                    
-                    // All property values are stored as strings for consistency
-                    prop = new champaign.core.primitives.Property<String>(value);
+                    var prop = new champaign.core.primitives.Property<String>(value);
                     
                     if (prop != null) {
                         _customProperties.set(fieldName, prop);

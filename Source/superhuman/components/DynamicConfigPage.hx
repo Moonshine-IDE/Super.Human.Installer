@@ -969,13 +969,57 @@ class DynamicConfigPage extends Page {
             }
             
             if (value != null) {
-                // Check if we need to update server or custom properties
-                if (_customProperties.exists(fieldName)) {
+                // Handle special cases for standard server properties
+                // Important: Map known custom provisioner fields to server standard fields
+                if (fieldName == "hostname") {
+                    // Set the server hostname directly
+                    _server.hostname.value = value;
+                    Reflect.setField(_server, "server_hostname", value);
+                    Logger.info('${this}: Set server hostname to ${value}');
+                } else if (fieldName == "organization") {
+                    // Set the server organization directly
+                    _server.organization.value = value;
+                    Reflect.setField(_server, "server_organization", value);
+                    Logger.info('${this}: Set server organization to ${value}');
+                } else if (fieldName == "userEmail") {
+                    // Set user email directly
+                    _server.userEmail.value = value;
+                    Reflect.setField(_server, "user_email", value);
+                    Logger.info('${this}: Set user email to ${value}');
+                } else if (fieldName == "openBrowser") {
+                    // Set open browser flag directly
+                    _server.envOpenBrowser.value = value.toLowerCase() == "true";
+                    Reflect.setField(_server, "env_open_browser", value.toLowerCase() == "true");
+                    Logger.info('${this}: Set open browser to ${value}');
+                } else if (fieldName == "numCPUs") {
+                    // Set CPU count directly
+                    _server.resourcesCpu.value = Std.parseInt(value);
+                    Reflect.setField(_server, "resources_cpu", Std.parseInt(value));
+                    Logger.info('${this}: Set resources CPU to ${value}');
+                } else if (fieldName == "memory") {
+                    // Set memory directly
+                    _server.resourcesRam.value = Std.parseInt(value);
+                    Reflect.setField(_server, "resources_ram", Std.parseInt(value));
+                    Logger.info('${this}: Set resources RAM to ${value}');
+                } else if (fieldName == "networkAddress") {
+                    // Set network address directly
+                    _server.networkAddress.value = value;
+                    Reflect.setField(_server, "network_address", value);
+                    Logger.info('${this}: Set network address to ${value}');
+                } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
                     var prop = _customProperties.get(fieldName);
                     if (prop != null && Reflect.hasField(prop, "value")) {
                         Reflect.setField(prop, "value", value);
                         Logger.info('${this}: Updated custom property ${fieldName} value to ${value}');
+                        
+                        // Also update the server field directly if it exists
+                        try {
+                            var propName = 'server_${fieldName}';
+                            Reflect.setField(_server, propName, value);
+                        } catch (e) {
+                            // Just continue if the field doesn't exist
+                        }
                     }
                 } else {
                     // Try to update server property
