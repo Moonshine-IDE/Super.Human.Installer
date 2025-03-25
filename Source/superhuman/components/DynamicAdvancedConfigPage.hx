@@ -1145,9 +1145,10 @@ class DynamicAdvancedConfigPage extends Page {
                     // Get reference to dynamicAdvancedCustomProperties
                     var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
                     
-                    // Only store in dynamicAdvancedCustomProperties to avoid duplication
+                    // Save in both locations to ensure compatibility
                     Reflect.setField(customPropsObj, fieldName, value);
-                    Logger.info('${this}: Stored custom property ${fieldName} with value ${value} in dynamicAdvancedCustomProperties');
+                    Reflect.setField(_server.customProperties, fieldName, value);
+                    Logger.info('${this}: Stored custom property ${fieldName} with value ${value} in both locations');
                     
                     // Also create a custom property for change tracking
                     var prop = new champaign.core.primitives.Property<String>(value);
