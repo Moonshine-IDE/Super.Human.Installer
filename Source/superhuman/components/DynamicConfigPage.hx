@@ -538,7 +538,10 @@ class DynamicConfigPage extends Page {
                     if (_server.customProperties == null) {
                         _server.customProperties = {};
                     }
+                    
+                    // Save both regular and uppercase versions for template access
                     Reflect.setField(_server.customProperties, fieldName, defaultValue);
+                    Reflect.setField(_server.customProperties, fieldName.toUpperCase(), defaultValue);
                     
                 case "number":
                     // Create a numeric property
@@ -1145,20 +1148,35 @@ class DynamicConfigPage extends Page {
                     // Update custom property
                     var prop = _customProperties.get(fieldName);
                     if (prop != null && Reflect.hasField(prop, "value")) {
+                        // Update the Property object
                         Reflect.setField(prop, "value", value);
                         
-                        // Save to server's customProperties
+                        // Initialize customProperties if needed
                         if (_server.customProperties == null) {
                             _server.customProperties = {};
                         }
-                        Reflect.setField(_server.customProperties, fieldName, value);
                         
-                        // Also save to dynamicCustomProperties
+                        // Initialize dynamicCustomProperties if needed
                         if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
                             Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
                         }
+                        
+                        // Get reference to dynamicCustomProperties
                         var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                        
+                        // Save the value in multiple places to ensure template access
+                        // 1. In dynamicCustomProperties for persistence
                         Reflect.setField(customPropsObj, fieldName, value);
+                        
+                        // 2. In root customProperties for direct access
+                        Reflect.setField(_server.customProperties, fieldName, value);
+                        
+                        // 3. As uppercase for template variables
+                        var upperFieldName = fieldName.toUpperCase();
+                        Reflect.setField(_server.customProperties, upperFieldName, value);
+                        
+                        // Force an immediate save to persist changes
+                        _server.saveData();
                     }
                 } else {
                     // Try to update server property
