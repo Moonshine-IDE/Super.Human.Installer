@@ -649,22 +649,42 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = true;
 
                 var ipAddress:String = "";
+                var provisionerVersion:String = "";
+                
+                // Get IP address based on provisioner type
                 switch (_server.provisioner.type)
                 {
                     case AdditionalProvisioner:
                         {
                             ipAddress = cast(_server.provisioner, StandaloneProvisioner).ipAddress;
-
                         }
                         default:
                         {
                             ipAddress = cast(_server.provisioner, AdditionalProvisioner).ipAddress;
                         }
                 }
+                
+                // For custom provisioners, use serverProvisionerId as source of truth for version
+                if (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                    _server.provisioner.type != ProvisionerType.AdditionalProvisioner) {
+                    
+                    if (_server.serverProvisionerId != null && 
+                        _server.serverProvisionerId.value != null && 
+                        _server.serverProvisionerId.value != "" && 
+                        _server.serverProvisionerId.value != "0.0.0") {
+                        
+                        provisionerVersion = ' v${_server.serverProvisionerId.value}';
+                    } else {
+                        provisionerVersion = ' v${_server.provisioner.version}';
+                    }
+                }
+                
                 if (hasError) {
-                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.runningwitherrors', (_server.provisioned) ? '(IP: ${ipAddress})' : '');
+                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.runningwitherrors', 
+                        (_server.provisioned) ? '(IP: ${ipAddress}${provisionerVersion})' : '');
                 } else {
-                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.running', (_server.provisioned) ? '(IP: ${ipAddress})' : '');
+                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.running', 
+                        (_server.provisioned) ? '(IP: ${ipAddress}${provisionerVersion})' : '');
                 }
 
             case ServerStatus.Unconfigured:
