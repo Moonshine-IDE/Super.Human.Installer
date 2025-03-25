@@ -540,6 +540,11 @@ class DynamicConfigPage extends Page {
                             if (Math.isNaN(floatVal)) defaultValue = "0.0";
                             else defaultValue = Std.string(floatVal);
                         } catch (e) {
+                            Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
+                            defaultValue = "0.0";
+                        }
+                    }
+                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
                     
                 case "checkbox":
