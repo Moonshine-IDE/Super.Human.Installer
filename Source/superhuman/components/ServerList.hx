@@ -717,11 +717,22 @@ class ServerItem extends LayoutGroupItemRenderer {
                 {
                     case AdditionalProvisioner:
                         {
+                            ipAddress = cast(_server.provisioner, AdditionalProvisioner).ipAddress;
+                        }
+                    case ProvisionerType.StandaloneProvisioner:
+                        {
                             ipAddress = cast(_server.provisioner, StandaloneProvisioner).ipAddress;
                         }
-                        default:
+                    default:
                         {
-                            ipAddress = cast(_server.provisioner, AdditionalProvisioner).ipAddress;
+                            // For custom provisioners, try to get IP if possible
+                            try {
+                                var customProvisioner = cast(_server.provisioner, StandaloneProvisioner);
+                                ipAddress = customProvisioner.ipAddress;
+                            } catch (e) {
+                                // If casting fails, just use empty string
+                                ipAddress = "";
+                            }
                         }
                 }
                 
@@ -810,10 +821,25 @@ class ServerItem extends LayoutGroupItemRenderer {
                         numberOfStartedTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfStartedTasks;
                         numberOfTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfTasks;
                     }
-                    default:
+                case ProvisionerType.StandaloneProvisioner:
                     {
-                        numberOfStartedTasks = cast(_server.provisioner, AdditionalProvisioner).numberOfStartedTasks;
-                        numberOfTasks = cast(_server.provisioner, AdditionalProvisioner).numberOfTasks;  
+                        numberOfStartedTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfStartedTasks;
+                        numberOfTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfTasks;
+                    }
+                default:
+                    {
+                        // For custom provisioners, default to 0 - they may not support tasks
+                        numberOfStartedTasks = 0;
+                        numberOfTasks = 0;
+                        
+                        // Try to cast to StandaloneProvisioner if possible (many custom provisioners extend it)
+                        try {
+                            var customProvisioner = cast(_server.provisioner, StandaloneProvisioner);
+                            numberOfStartedTasks = customProvisioner.numberOfStartedTasks;
+                            numberOfTasks = customProvisioner.numberOfTasks;
+                        } catch (e) {
+                            // If casting fails, just use default values
+                        }
                     }
             }
             //var percentage = StrTools.calculatePercentage( _server.provisioner.numberOfStartedTasks, _server.provisioner.numberOfTasks );

@@ -323,8 +323,26 @@ override public function get_hostFileExists():Bool {
  */
 override public function saveHostsFile() {
     Logger.info('${this}: Saving Hosts.yml file for custom provisioner');
-    // Save the hosts file without validation to ensure it's created
-    _saveHostsFile();
+    
+    // Create target directory and ensure it exists
+    createTargetDirectory();
+
+    // Generate the content for Hosts.yml file
+    var content = generateHostsFileContent();
+
+    if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.hostsfilecontent', content));
+
+    try {
+        // Save the content to the file
+        var hostsFilePath = Path.addTrailingSlash(_targetPath) + HOSTS_FILE;
+        File.saveContent(hostsFilePath, content);
+        
+        Logger.info('${this}: Custom provisioner created Hosts.yml at ${hostsFilePath}');
+        if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfile', hostsFilePath));
+    } catch (e:Exception) {
+        Logger.error('${this}: Custom provisioner could not create Hosts.yml file. Details: ${e.details()} Message: ${e.message}');
+        if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfileerror', Path.addTrailingSlash(_targetPath) + HOSTS_FILE, '${e.details()} Message: ${e.message}'), true);
+    }
 }
 
     /**
