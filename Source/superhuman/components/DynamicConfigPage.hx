@@ -1132,43 +1132,59 @@ class DynamicConfigPage extends Page {
             _server.saveData();
         }
         
-        // Update the provisioner with the selected version
-        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-        if (dvv != null) {
-            Logger.info('${this}: Updating provisioner to version ${dvv.data.version}');
-            
-            // Create a copy of the provisioner data to ensure we don't lose the version
-            var updatedData = {
-                type: dvv.data.type,
-                version: dvv.data.version,
-                basedon: dvv.data.basedon,
-                roles: dvv.data.roles
-            };
-            
-            // Explicitly set the string version in the server's userData/customProperties
-            if (_server.customProperties == null) {
-                _server.customProperties = {};
-            }
-            if (!Reflect.hasField(_server.customProperties, "serviceTypeData")) {
-                Reflect.setField(_server.customProperties, "serviceTypeData", {});
-            }
-            var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
-            
-            // Update the provisioner version in serviceTypeData
-            if (Reflect.hasField(serviceTypeData, "provisioner")) {
-                var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
-                if (Reflect.hasField(stProvisioner, "data")) {
-                    Reflect.setField(stProvisioner.data, "version", dvv.data.version);
-                }
-            }
-            
-            // Update the server's provisioner data using the appropriate method
-            _server.updateProvisioner(updatedData);
-            
-            // Make sure to save data after updating provisioner
-            _server.saveData();
-            
-            Logger.info('${this}: Updated provisioner data with version ${dvv.data.version} saved');
+    // Update the provisioner with the selected version
+    var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+    if (dvv != null) {
+        Logger.info('${this}: Updating provisioner to version ${dvv.data.version}');
+        
+        // Create a copy of the provisioner data with the right VersionInfo object
+        var updatedData = {
+            type: dvv.data.type,
+            version: dvv.data.version,
+            basedon: dvv.data.basedon,
+            roles: dvv.data.roles
+        };
+        
+        // Store the entire provisioner definition in customProperties
+        if (_server.customProperties == null) {
+            _server.customProperties = {};
+        }
+        
+        // Store the complete provisioner definition
+        Reflect.setField(_server.customProperties, "provisionerDefinition", dvv);
+        
+        // Also make sure we have proper serviceTypeData structure
+        if (!Reflect.hasField(_server.customProperties, "serviceTypeData")) {
+            Reflect.setField(_server.customProperties, "serviceTypeData", {});
+        }
+        var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
+        
+        if (!Reflect.hasField(serviceTypeData, "provisioner")) {
+            Reflect.setField(serviceTypeData, "provisioner", {});
+        }
+        var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
+        
+        if (!Reflect.hasField(stProvisioner, "data")) {
+            Reflect.setField(stProvisioner, "data", {});
+        }
+        var provData = Reflect.field(stProvisioner, "data");
+        
+        // Store the version in the correct place - using both formats
+        Reflect.setField(provData, "version", dvv.data.version.toString());
+        Reflect.setField(provData, "versionInfo", dvv.data.version);
+        
+        // Also store it directly in the provisioner ID which is checked in some places
+        if (_server.serverProvisionerId != null) {
+            _server.serverProvisionerId.value = dvv.data.version.toString();
+        }
+        
+        // Update the server's provisioner data using the appropriate method
+        _server.updateProvisioner(updatedData);
+        
+        // Make sure to save data after updating provisioner
+        _server.saveData();
+        
+        Logger.info('${this}: Updated provisioner data with version ${dvv.data.version} saved');
         } else {
             Logger.warning('${this}: No provisioner selected in dropdown');
         }
