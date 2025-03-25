@@ -364,6 +364,13 @@ override public function generateHostsFileContent():String {
         content = _replaceVariable(content, "ENV_SETUP_WAIT", Std.string(_server.setupWait.value));
         content = _replaceVariable(content, "SYNC_METHOD", Std.string(_server.syncMethod));
         
+        // Process all roles using exact names from provisioner.yml
+        for (role in _server.roles.value) {
+            var roleValue = role.enabled ? "true" : "false";
+            content = _replaceVariable(content, role.value, roleValue);
+            Logger.info('${this}: Setting role variable ${role.value} = ${roleValue}');
+        }
+
         // Add custom properties if available
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
@@ -457,7 +464,11 @@ override public function saveHostsFile() {
      * @return String The content with replaced variables
      */
     private function _replaceVariable(content:String, name:String, value:String):String {
-        return StringTools.replace(content, "::" + name + "::", value);
+        var result = StringTools.replace(content, "::" + name + "::", value);
+        if (result == content) {
+            Logger.warning('${this}: Variable ${name} not found in template');
+        }
+        return result;
     }
     
     /**
