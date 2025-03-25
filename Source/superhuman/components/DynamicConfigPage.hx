@@ -28,6 +28,8 @@
  *  it in the license file.
  */
 
+// Note to AI, NEVER EVER EVER US PREFIXES when constructing variable names for custom provisioner variables and roles
+
 package superhuman.components;
 
 import champaign.core.logging.Logger;
@@ -534,14 +536,13 @@ class DynamicConfigPage extends Page {
                     var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
                     
-                    // Initialize in server's customProperties
+                    // Initialize in server's customProperties if needed
                     if (_server.customProperties == null) {
                         _server.customProperties = {};
                     }
                     
-                    // Save both regular and uppercase versions for template access
+                    // Save in original case
                     Reflect.setField(_server.customProperties, fieldName, defaultValue);
-                    Reflect.setField(_server.customProperties, fieldName.toUpperCase(), defaultValue);
                     
                 case "number":
                     // Create a numeric property
@@ -1164,24 +1165,13 @@ class DynamicConfigPage extends Page {
                         // Get reference to dynamicCustomProperties
                         var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
                         
-                        // Save values consistently for template access
-                        // 1. Save in dynamicCustomProperties with both cases
+                        // Save in dynamicCustomProperties
                         Reflect.setField(customPropsObj, fieldName, value);
-                        Reflect.setField(customPropsObj, fieldName.toUpperCase(), value);
                         
-                        // 2. Save in root customProperties with both cases
+                        // Also save in root customProperties for backwards compatibility
                         Reflect.setField(_server.customProperties, fieldName, value);
-                        Reflect.setField(_server.customProperties, fieldName.toUpperCase(), value);
                         
-                        // 3. Save in dynamicAdvancedCustomProperties for advanced fields
-                        if (!Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
-                            Reflect.setField(_server.customProperties, "dynamicAdvancedCustomProperties", {});
-                        }
-                        var advancedProps = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
-                        Reflect.setField(advancedProps, fieldName.toUpperCase(), value);
-                        
-                        Logger.info('${this}: Saved custom property ${fieldName} with value ${value} in all locations');
-                        Logger.info('${this}: Set dynamicAdvancedCustomProperties field ${fieldName.toUpperCase()} = ${value}');
+                        Logger.info('${this}: Saved custom property ${fieldName} with value ${value}');
                         
                         // Force an immediate save to persist changes
                         _server.saveData();
@@ -1280,10 +1270,20 @@ class DynamicConfigPage extends Page {
         Logger.warning('${this}: No provisioner selected in dropdown, cannot update version');
     }
 
+        // Save the server data one final time to ensure everything is persisted
+        _server.saveData();
+        
+        // Force an update of the UI to show the saved values
+        updateContent(true);
+        
+        // Update the last used safe ID
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
-        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION);
-        evt.server = _server;
-        this.dispatchEvent(evt);
+        // Small delay to ensure all saves are complete before navigating away
+        haxe.Timer.delay(function() {
+            var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION);
+            evt.server = _server;
+            this.dispatchEvent(evt);
+        }, 100);
     }
 }
