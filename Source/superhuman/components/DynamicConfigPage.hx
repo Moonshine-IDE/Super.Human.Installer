@@ -36,6 +36,9 @@ import champaign.core.logging.Logger;
 import feathers.controls.Check;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
+import feathers.controls.ScrollContainer;
+import feathers.layout.VerticalLayout;
+import feathers.layout.VerticalLayoutData;
 import feathers.events.TriggerEvent;
 import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
@@ -104,6 +107,13 @@ class DynamicConfigPage extends Page {
         // Add event listener for when the component is added to stage
         this.addEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
 
+        // Create a vertical layout for the page
+        var pageLayout = new VerticalLayout();
+        pageLayout.horizontalAlign = HorizontalAlign.CENTER;
+        pageLayout.gap = GenesisApplicationTheme.GRID;
+        this.layout = pageLayout;
+
+        // Create the title group at the top (outside scroll container)
         _titleGroup = new LayoutGroup();
         var _titleGroupLayout = new HorizontalLayout();
         _titleGroupLayout.horizontalAlign = HorizontalAlign.LEFT;
@@ -126,8 +136,22 @@ class DynamicConfigPage extends Page {
         line.width = _w;
         this.addChild(line);
 
+        // Create a scroll container for the form content
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.layoutData = new VerticalLayoutData(100, 100);
+        
+        // Set up vertical layout for the scroll container
+        var scrollLayout = new VerticalLayout();
+        scrollLayout.horizontalAlign = HorizontalAlign.CENTER;
+        scrollLayout.gap = GenesisApplicationTheme.GRID;
+        scrollContainer.layout = scrollLayout;
+        
+        // Add the scroll container to the page
+        this.addChild(scrollContainer);
+
+        // Create the form and add it to the scroll container
         _form = new GenesisForm();
-        this.addChild(_form);
+        scrollContainer.addChild(_form);
 
         // Core component version dropdown
         var rowCoreComponentVersion = new GenesisFormRow();
@@ -151,10 +175,12 @@ class DynamicConfigPage extends Page {
         rowRoles.content.addChild(_buttonRoles);
         _form.addChild(rowRoles);
 
-        var line = new HLine();
-        line.width = _w;
-        this.addChild(line);
+        // Add a line after the scroll container
+        var bottomLine = new HLine();
+        bottomLine.width = _w;
+        this.addChild(bottomLine);
 
+        // Create button group at the bottom (outside scroll container)
         _buttonGroup = new LayoutGroup();
         _buttonGroupLayout = new HorizontalLayout();
         _buttonGroupLayout.gap = GenesisApplicationTheme.GRID * 2;
