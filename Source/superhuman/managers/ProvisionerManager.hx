@@ -653,16 +653,47 @@ class ProvisionerManager {
     }
 
     static public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):ProvisionerDefinition {
-
+        // Handle case where type is a custom provisioner (not one of the standard types)
+        if (type != ProvisionerType.StandaloneProvisioner && 
+            type != ProvisionerType.AdditionalProvisioner &&
+            type != ProvisionerType.Default) {
+            
+            Logger.info('Looking for custom provisioner type: ${type}, version: ${version}');
+            
+            // Get all provisioners of this type
+            var allProvisioners = getBundledProvisioners();
+            var typeProvisioners = allProvisioners.filter(p -> p.data.type == type);
+            
+            if (typeProvisioners.length > 0) {
+                // If version is null or 0.0.0, return the newest version
+                if (version == null || version.toString() == "0.0.0") {
+                    Logger.info('No specific version requested, returning newest version of ${type}');
+                    return typeProvisioners[0]; // Already sorted newest first
+                }
+                
+                // Otherwise, try to find the requested version
+                for (provisioner in typeProvisioners) {
+                    if (provisioner.data.version == version) {
+                        Logger.info('Found matching custom provisioner: ${provisioner.name}');
+                        return provisioner;
+                    }
+                }
+                
+                // If requested version not found, return the newest version
+                Logger.info('Requested version ${version} not found, returning newest version of ${type}');
+                return typeProvisioners[0];
+            }
+        }
+        
+        // Handle standard provisioner types as before
         var bundledProvisionerCollection = getBundledProvisionerCollection(type);
-        for ( provisioner in bundledProvisionerCollection ) {
+        for (provisioner in bundledProvisionerCollection) {
+            if (provisioner.data.type == type && provisioner.data.version == version) {
+                return provisioner;
+            }
+        }
 
-			if ( provisioner.data.type == type && provisioner.data.version == version ) return provisioner;
-
-		}
-
-		return null;
-
+        return null;
     }
     
     /**

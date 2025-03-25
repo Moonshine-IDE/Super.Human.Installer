@@ -145,6 +145,41 @@ class RolePage extends Page {
                 var provisionerDefinition = ProvisionerManager.getProvisionerDefinition(_server.provisioner.type, _server.provisioner.version);
                 Logger.info('RolePage: Provisioner definition found: ${provisionerDefinition != null}');
                 
+                // If definition not found, try to find it in Assets/provisioners directory
+                if (provisionerDefinition == null) {
+                    Logger.info('RolePage: Trying to find provisioner definition in Assets/provisioners directory');
+                    
+                    // Check standard locations for provisioner.yml
+                    var provisionerPaths = [
+                        'Assets/provisioners/${_server.provisioner.type}/provisioner.yml',
+                        'Assets/provisioners/${_server.provisioner.type}/${_server.provisioner.version}/provisioner.yml'
+                    ];
+                    
+                    for (path in provisionerPaths) {
+                        if (sys.FileSystem.exists(path)) {
+                            Logger.info('RolePage: Found provisioner.yml at ${path}');
+                            var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(path));
+                            
+                            if (metadata != null && metadata.roles != null && metadata.roles.length > 0) {
+                                Logger.info('RolePage: Found ${metadata.roles.length} roles in provisioner.yml');
+                                
+                                // Create a provisioner definition with this metadata
+                                provisionerDefinition = {
+                                    name: metadata.name,
+                                    data: { 
+                                        type: metadata.type, 
+                                        version: champaign.core.primitives.VersionInfo.fromString(_server.provisioner.version != null ? _server.provisioner.version.toString() : "0.0.0") 
+                                    },
+                                    root: Path.directory(path),
+                                    metadata: metadata
+                                };
+                                
+                                break;
+                            }
+                        }
+                    }
+                }
+                
                 if (provisionerDefinition != null && 
                     provisionerDefinition.metadata != null && 
                     provisionerDefinition.metadata.roles != null && 
