@@ -958,10 +958,23 @@ class DynamicConfigPage extends Page {
         // Pass the provisioner type and the current provisioner definition
         evt.provisionerType = _server.provisioner.type;
         
-        // Include the provisioner definition name in the event data if available
+        // Include the provisioner definition in the event data
         if (_provisionerDefinition != null) {
-            evt.data = _provisionerDefinition.name;
-            Logger.info('${this}: Passing provisioner definition name to roles page: ${_provisionerDefinition.name}');
+            // Instead of just passing the name, store the actual definition object
+            evt.data = haxe.Json.stringify({
+                name: _provisionerDefinition.name,
+                definitionAvailable: true
+            });
+            
+            // Store the provisioner definition in the SuperHumanInstaller instance for retrieval
+            SuperHumanInstaller.getInstance().cachedProvisionerDefinition = _provisionerDefinition;
+            
+            Logger.info('${this}: Passing provisioner definition to roles page: ${_provisionerDefinition.name}');
+        } else {
+            Logger.warning('${this}: No provisioner definition available to pass to roles page');
+            evt.data = haxe.Json.stringify({
+                definitionAvailable: false
+            });
         }
         
         this.dispatchEvent(evt);
@@ -1139,8 +1152,7 @@ class DynamicConfigPage extends Page {
                 }
             }
             
-            // Update the server's provisioner data
-            _server.provisioner.data = updatedData;
+            // Update the server's provisioner data using the appropriate method
             _server.updateProvisioner(updatedData);
             
             // Make sure to save data after updating provisioner

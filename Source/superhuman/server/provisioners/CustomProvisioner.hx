@@ -211,11 +211,67 @@ class CustomProvisioner extends StandaloneProvisioner {
         return r;
     }
 
-    /**
-     * Generate the Hosts.yml file content
-     * @return The generated Hosts.yml content
-     */
-    override public function generateHostsFileContent():String {
+/**
+ * Ensure data includes the correct string version
+ * This is needed for proper version persistence, especially after restarting the application
+ * @return ProvisionerData with the correct version
+ */
+override public function get_data():ProvisionerData {
+    // Create a baseline data object
+    var baseData = super.get_data();
+    
+    // If we're running with a specific version that was set, preserve it
+    if (_server != null && _server.customProperties != null) {
+        // Check if we have service type data with a provisioner
+        if (Reflect.hasField(_server.customProperties, "serviceTypeData")) {
+            var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
+            if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
+                var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
+                if (stProvisioner != null && Reflect.hasField(stProvisioner, "data")) {
+                    var provData = Reflect.field(stProvisioner, "data");
+                    if (Reflect.hasField(provData, "version")) {
+                        // Use the stored version string instead of the VersionInfo object
+                        var storedVersion = Reflect.field(provData, "version");
+                        if (storedVersion != null) {
+                            Logger.info('CustomProvisioner: Using stored version string: ${storedVersion}');
+                            return { 
+                                type: baseData.type,
+                                version: champaign.core.primitives.VersionInfo.fromString(Std.string(storedVersion))
+                            };
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If we have a specific provisioner definition stored
+        if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+            if (provDef != null && Reflect.hasField(provDef, "data")) {
+                var provData = Reflect.field(provDef, "data");
+                if (Reflect.hasField(provData, "version")) {
+                    // Use the stored version string instead of the VersionInfo object
+                    var storedVersion = Reflect.field(provData, "version");
+                    if (storedVersion != null) {
+                        Logger.info('CustomProvisioner: Using stored version string from provisionerDefinition: ${storedVersion}');
+                        return { 
+                            type: baseData.type,
+                            version: champaign.core.primitives.VersionInfo.fromString(Std.string(storedVersion))
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
+    return baseData;
+}
+
+/**
+ * Generate the Hosts.yml file content
+ * @return The generated Hosts.yml content
+ */
+override public function generateHostsFileContent():String {
         _hostsTemplate = getFileContentFromSourceTemplateDirectory(StandaloneProvisioner.HOSTS_TEMPLATE_FILE);
         
         // Create a simple hosts file generator for custom provisioners

@@ -682,50 +682,69 @@ class Server {
     }
 
     public function updateProvisioner( data:ProvisionerData ):Bool {
-        Logger.info('${this}: Updating provisioner from version ${this._provisioner.version} to ${data.version}');
+        // Capture the original version string for preservation
+        var versionStr = null;
+        if (data != null && data.version != null) {
+            versionStr = data.version.toString();
+            Logger.info('${this}: Updating provisioner from version ${this._provisioner.version} to ${versionStr}');
+        } else {
+            Logger.warning('${this}: Updating provisioner with null or invalid version');
+            return false;
+        }
 
         // Force provisioner update even if the version appears the same
-        // This is needed because string versions like "0.1.20" get converted to integers internally
-        var vcd = ProvisionerManager.getProvisionerDefinition( data.type, data.version );
+        var vcd = ProvisionerManager.getProvisionerDefinition(data.type, data.version);
         
         if (vcd != null) {
             Logger.info('${this}: Found matching provisioner definition: ${vcd.name}');
             var newRoot:String = vcd.root;
-            this._provisioner.reinitialize( newRoot );
+            this._provisioner.reinitialize(newRoot);
             
-            // Preserve the string version - this is crucial for custom provisioners
-            if (this._provisioner != null && this._provisioner.data != null) {
-                this._provisioner.data.version = data.version;
+            // Store the version string directly in customProperties for better persistence
+            if (this._customProperties == null) {
+                this._customProperties = {};
             }
             
-            _propertyChanged( this._provisioner );
+            // Store exact string version in serviceTypeData
+            if (!Reflect.hasField(this._customProperties, "serviceTypeData")) {
+                Reflect.setField(this._customProperties, "serviceTypeData", {});
+            }
+            var serviceTypeData = Reflect.field(this._customProperties, "serviceTypeData");
             
-            // Update the version in customProperties if it exists
-            if (this._customProperties != null) {
-                if (Reflect.hasField(this._customProperties, "provisionerDefinition")) {
-                    var provDef = Reflect.field(this._customProperties, "provisionerDefinition");
-                    if (provDef != null && Reflect.hasField(provDef, "data")) {
-                        Reflect.setField(provDef.data, "version", data.version);
-                    }
-                }
-                
-                if (Reflect.hasField(this._customProperties, "serviceTypeData")) {
-                    var serviceTypeData = Reflect.field(this._customProperties, "serviceTypeData");
-                    if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
-                        var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
-                        if (stProvisioner != null && Reflect.hasField(stProvisioner, "data")) {
-                            Reflect.setField(stProvisioner.data, "version", data.version);
-                        }
-                    }
+            if (!Reflect.hasField(serviceTypeData, "provisioner")) {
+                Reflect.setField(serviceTypeData, "provisioner", {});
+            }
+            var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
+            
+            if (!Reflect.hasField(stProvisioner, "data")) {
+                Reflect.setField(stProvisioner, "data", {});
+            }
+            var provData = Reflect.field(stProvisioner, "data");
+            
+            // Store both string version and original VersionInfo
+            Reflect.setField(provData, "version", versionStr);
+            Reflect.setField(provData, "versionInfo", data.version);
+            
+            // Also update any stored provisionerDefinition if present
+            if (Reflect.hasField(this._customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(this._customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "data")) {
+                    // Store both string version and original VersionInfo
+                    Reflect.setField(provDef.data, "version", versionStr);
+                    Reflect.setField(provDef.data, "versionInfo", data.version);
                 }
             }
             
-            // Save the updated data
+            // Trigger update notification
+            _propertyChanged(this._provisioner);
+            
+            // Save the updated data immediately
             this.saveData();
             
+            Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
             return true;
         } else {
-            Logger.warning('${this}: Could not find provisioner definition for type ${data.type}, version ${data.version}');
+            Logger.warning('${this}: Could not find provisioner definition for type ${data.type}, version ${versionStr}');
             return false;
         }
     }
