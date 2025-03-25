@@ -1442,11 +1442,18 @@ class Server {
         
         try {
             // First check if the plugin is already installed
+            var pluginOutput = "";
             var checkExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "list"]);
+            
+            // Collect the output as it comes
+            checkExecutor.onStdOut.add((executor:AbstractExecutor, data:String) -> {
+                pluginOutput += data;
+                Logger.info('${this}: Plugin list: ${data}');
+                if (console != null) console.appendText(data);
+            });
+            
             checkExecutor.onStop.add((executor:AbstractExecutor) -> {
-                var outputText = executor.stdOut.toString();
-                
-                if (outputText.indexOf("vagrant-scp-sync") >= 0) {
+                if (pluginOutput.indexOf("vagrant-scp-sync") >= 0) {
                     // Plugin is already installed, proceed directly to vagrant up
                     Logger.info('${this}: vagrant-scp-sync plugin already installed');
                     if (console != null) console.appendText("vagrant-scp-sync plugin already installed");
@@ -1456,6 +1463,7 @@ class Server {
                     _safeInstallVagrantPlugin();
                 }
             });
+            
             checkExecutor.execute();
         } catch (e:Dynamic) {
             // If anything goes wrong with the check, log it and continue with vagrant up
