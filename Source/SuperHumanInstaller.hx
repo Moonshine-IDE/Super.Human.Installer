@@ -1049,15 +1049,38 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Set the server for the role page
 		_rolePage.setServer( e.server );
 		
-		// Check if the event contains a provisioner definition in data field
-		if (e.data != null && Std.isOfType(e.data, ProvisionerDefinition)) {
-			// Store the provisioner definition in the RolePage as an instance variable
-			var provisionerDefinition:ProvisionerDefinition = cast e.data;
-			Logger.info('${this}: Setting provisioner definition on RolePage: ${provisionerDefinition.name}');
-			Reflect.setField(_rolePage, "_provisionerDefinition", provisionerDefinition);
+		// Check if the event contains a provisioner definition name in data field
+		if (e.data != null && Std.isOfType(e.data, String)) {
+			var provisionerName:String = cast e.data;
+			Logger.info('${this}: Got provisioner name from event: ${provisionerName}');
+			
+			// Look up the provisioner definition by name
+			var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+			var foundProvisioner = null;
+			
+			// Find the provisioner that matches the name
+			for (provisioner in allProvisioners) {
+				if (provisioner.name == provisionerName) {
+					foundProvisioner = provisioner;
+					Logger.info('${this}: Found matching provisioner definition: ${provisioner.name}');
+					break;
+				}
+			}
+			
+			// If we found a provisioner, set it on the role page
+			if (foundProvisioner != null) {
+				Reflect.setField(_rolePage, "_provisionerDefinition", foundProvisioner);
+				Logger.info('${this}: Setting provisioner definition on RolePage: ${foundProvisioner.name}');
+			} else {
+				// Clear any existing provisioner definition if we couldn't find a match
+				Reflect.setField(_rolePage, "_provisionerDefinition", null);
+				Logger.warning('${this}: Could not find provisioner definition with name: ${provisionerName}');
+			}
 		} else {
 			// Clear any existing provisioner definition
 			Reflect.setField(_rolePage, "_provisionerDefinition", null);
+			Logger.info('${this}: No provisioner name in event data');
 		}
 		
 		// Update the role page content and navigate to it

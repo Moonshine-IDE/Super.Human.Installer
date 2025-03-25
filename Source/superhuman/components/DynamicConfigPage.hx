@@ -951,10 +951,10 @@ class DynamicConfigPage extends Page {
         // Pass the provisioner type and the current provisioner definition
         evt.provisionerType = _server.provisioner.type;
         
-        // Include the provisioner definition in the event data if available
+        // Include the provisioner definition name in the event data if available
         if (_provisionerDefinition != null) {
-            evt.data = _provisionerDefinition;
-            Logger.info('${this}: Passing provisioner definition to roles page: ${_provisionerDefinition.name}');
+            evt.data = _provisionerDefinition.name;
+            Logger.info('${this}: Passing provisioner definition name to roles page: ${_provisionerDefinition.name}');
         }
         
         this.dispatchEvent(evt);
