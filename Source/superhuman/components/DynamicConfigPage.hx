@@ -846,7 +846,29 @@ class DynamicConfigPage extends Page {
     else if (Reflect.hasField(_server.customProperties, fieldName)) {
         valueField = Reflect.field(_server.customProperties, fieldName);
         Logger.info('${this}: Using value from direct customProperties for ${fieldName}: ${valueField}, type: ${Type.typeof(valueField)}');
-        valueSource = "directCustomProperty";
+        
+        // If the value is empty, try other sources
+        if (valueField == null || valueField == "") {
+            Logger.info('${this}: Value from direct customProperties is empty, trying other sources');
+            
+            // Try customPropValues (from dynamicCustomProperties)
+            if (customPropValues.exists(fieldName)) {
+                valueField = customPropValues.get(fieldName);
+                valueSource = "customProperties";
+                Logger.info('${this}: Using value from customPropValues for ${fieldName}: ${valueField}');
+            }
+            // Try _customProperties
+            else if (_customProperties.exists(fieldName)) {
+                value = _customProperties.get(fieldName);
+                if (value != null && Reflect.hasField(value, "value")) {
+                    valueField = Reflect.field(value, "value");
+                }
+                Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
+                valueSource = "customPropertiesMap";
+            }
+        } else {
+            valueSource = "directCustomProperty";
+        }
     }
                     // Then check if it's in the customPropValues map (from dynamicCustomProperties)
                     else if (customPropValues.exists(fieldName)) {
