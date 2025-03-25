@@ -565,45 +565,91 @@ class ServerItem extends LayoutGroupItemRenderer {
                                  _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
                                  _server.provisioner.type != ProvisionerType.Default);
         
+        // Log role data for debugging
+        Logger.info('${this}: Getting role names for server ${_server.id} - Custom provisioner: ${isCustomProvisioner}');
+        for (i in 0..._server.roles.value.length) {
+            var role = _server.roles.value[i];
+            Logger.info('  - Role ${i}: ${role.value}, enabled: ${role.enabled}');
+        }
+        
+        // Create a map of valid role names for custom provisioners based on metadata
+        var validCustomRoles = new Map<String, Bool>();
+        if (isCustomProvisioner && _server.customProperties != null) {
+            if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                    Reflect.field(provDef, "metadata") != null) {
+                    
+                    var metadata = Reflect.field(provDef, "metadata");
+                    if (Reflect.hasField(metadata, "roles")) {
+                        var rolesObj = Reflect.field(metadata, "roles");
+                        // Cast Dynamic to Array<Dynamic> to make it iterable
+                        var metadataRoles:Array<Dynamic> = cast rolesObj;
+                        
+                        if (metadataRoles != null) {
+                            Logger.info('  Found ${metadataRoles.length} roles in metadata:');
+                            for (metaRole in metadataRoles) {
+                                if (metaRole != null && Reflect.hasField(metaRole, "name")) {
+                                    var roleName = Reflect.field(metaRole, "name");
+                                    validCustomRoles.set(roleName, true);
+                                    Logger.info('    - Valid custom role: ${roleName}');
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
         if (isCustomProvisioner) {
             // For custom provisioners, directly use the server's enabled roles
+            // But only if they're found in the metadata for custom provisioners
             for (role in _server.roles.value) {
                 if (role.enabled) {
-                    // For custom roles, we can directly use the role value as the name
-                    // Look for a more human-readable name in customProperties if available
-                    var displayName = role.value;
+                    // Only include roles that are valid for this custom provisioner
+                    // or if we couldn't determine the valid roles (fall back to showing all)
+                    var isValidRole = validCustomRoles.exists(role.value) || validCustomRoles.keys().hasNext() == false;
                     
-                    // Try to find a better display name in the provisioner metadata
-                    if (_server.customProperties != null) {
-                        if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
-                            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
-                            if (provDef != null && Reflect.hasField(provDef, "metadata") && 
-                                Reflect.field(provDef, "metadata") != null) {
-                                
-                                var metadata = Reflect.field(provDef, "metadata");
-                                if (Reflect.hasField(metadata, "roles")) {
-                                    var rolesObj = Reflect.field(metadata, "roles");
-                                    // Cast Dynamic to Array<Dynamic> to make it iterable
-                                    var roles:Array<Dynamic> = cast rolesObj;
+                    if (isValidRole) {
+                        // For custom roles, we can directly use the role value as the name
+                        // Look for a more human-readable name in customProperties if available
+                        var displayName = role.value;
+                        
+                        // Try to find a better display name in the provisioner metadata
+                        if (_server.customProperties != null) {
+                            if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                                if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                                    Reflect.field(provDef, "metadata") != null) {
                                     
-                                    if (roles != null) {
-                                        for (metaRole in roles) {
-                                            if (metaRole != null && 
-                                                Reflect.hasField(metaRole, "name") && 
-                                                Reflect.field(metaRole, "name") == role.value &&
-                                                Reflect.hasField(metaRole, "label")) {
-                                                
-                                                displayName = Reflect.field(metaRole, "label");
-                                                break;
+                                    var metadata = Reflect.field(provDef, "metadata");
+                                    if (Reflect.hasField(metadata, "roles")) {
+                                        var rolesObj = Reflect.field(metadata, "roles");
+                                        // Cast Dynamic to Array<Dynamic> to make it iterable
+                                        var roles:Array<Dynamic> = cast rolesObj;
+                                        
+                                        if (roles != null) {
+                                            for (metaRole in roles) {
+                                                if (metaRole != null && 
+                                                    Reflect.hasField(metaRole, "name") && 
+                                                    Reflect.field(metaRole, "name") == role.value &&
+                                                    Reflect.hasField(metaRole, "label")) {
+                                                    
+                                                    displayName = Reflect.field(metaRole, "label");
+                                                    break;
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                        
+                        a.push(displayName);
+                        Logger.info('  Adding role to display: ${displayName}');
+                    } else {
+                        Logger.info('  Skipping role ${role.value} - not in metadata for this custom provisioner');
                     }
-                    
-                    a.push(displayName);
                 }
             }
         } else {
@@ -616,6 +662,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         }
 
         s = (a.length > 0) ? a.join(", ") : "None";
+        Logger.info('${this}: Final role display string: "${s}"');
         return s;
     }
 
