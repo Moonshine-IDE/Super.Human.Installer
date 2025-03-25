@@ -74,7 +74,6 @@ class DynamicConfigPage extends Page {
     var _buttonGroup:LayoutGroup;
     var _buttonGroupLayout:HorizontalLayout;
     var _buttonRoles:GenesisFormButton;
-    var _buttonSafeId:GenesisFormButton;
     var _buttonSave:GenesisFormButton;
     public var _dropdownCoreComponentVersion:GenesisFormPupUpListView;
     var _form:GenesisForm;
@@ -139,15 +138,6 @@ class DynamicConfigPage extends Page {
         };
         rowCoreComponentVersion.content.addChild(_dropdownCoreComponentVersion);
         _form.addChild(rowCoreComponentVersion);
-
-        // SafeID button
-        var rowSafeId = new GenesisFormRow();
-        rowSafeId.text = LanguageManager.getInstance().getString('serverconfigpage.form.safeid.text');
-        _buttonSafeId = new GenesisFormButton();
-        _buttonSafeId.toolTip = LanguageManager.getInstance().getString('serverconfigpage.form.safeid.tooltip');
-        _buttonSafeId.addEventListener(TriggerEvent.TRIGGER, _buttonSafeIdTriggered);
-        rowSafeId.content.addChild(_buttonSafeId);
-        _form.addChild(rowSafeId);
 
         // Roles button
         var rowRoles = new GenesisFormRow();
@@ -740,11 +730,6 @@ class DynamicConfigPage extends Page {
         if (_form != null && _server != null) {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
             
-            // Update SafeID button
-            _buttonSafeId.icon = (_server.safeIdExists()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
-            _buttonSafeId.text = (_server.safeIdExists()) ? LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocateagain') : LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocate');
-            _buttonSafeId.enabled = !_server.userSafeId.locked;
-            
             // Update Roles button
             _buttonRoles.icon = (_server.areRolesValid()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
             _buttonRoles.enabled = !_server.roles.locked;
@@ -959,16 +944,6 @@ class DynamicConfigPage extends Page {
         this.dispatchEvent(evt);
     }
 
-    function _buttonSafeIdTriggered(e:TriggerEvent) {
-        _server.locateNotesSafeId(_safeIdLocated);
-    }
-
-    function _safeIdLocated() {
-        _buttonSafeId.setValidity(true);
-        _buttonSafeId.icon = (_buttonSafeId.isValid()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
-        _buttonSafeId.text = (_buttonSafeId.isValid()) ? LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocateagain') : LanguageManager.getInstance().getString('serverconfigpage.form.safeid.buttonlocate');
-    }
-
     function _buttonRolesTriggered(e:TriggerEvent) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_ROLES);
         evt.server = this._server;
@@ -986,10 +961,9 @@ class DynamicConfigPage extends Page {
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
-        _buttonSafeId.setValidity(_server.safeIdExists());
         _buttonRoles.setValidity(_server.areRolesValid());
 
-        if (!_form.isValid() || !_server.safeIdExists() || !_server.areRolesValid()) {
+        if (!_form.isValid() || !_server.areRolesValid()) {
             return;
         }
 
