@@ -11,7 +11,7 @@ import haxe.io.Path;
 import champaign.core.logging.Logger;
 
 @:allow( superhuman.server.hostsFileGenerator.AdditionalProvisionerHostsFileGenerator )
-class AdditionalProvisioner extends DemoTasks {
+class AdditionalProvisioner extends StandaloneProvisioner {
     
     static public function getDefaultServerData( id:Int ):ServerData {
         return {
@@ -35,7 +35,7 @@ class AdditionalProvisioner extends DemoTasks {
 			network_bridge: "",
 			resources_cpu: 2,
 			resources_ram: 8.0,
-			roles: [ for ( r in DemoTasks.getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
+			roles: [ for ( r in StandaloneProvisioner.getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
 			server_hostname: "",
 			server_id: id,
 			server_organization: "",
@@ -61,7 +61,7 @@ class AdditionalProvisioner extends DemoTasks {
 	}
 
     public override function generateHostsFileContent():String {
-        _hostsTemplate = getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
+        _hostsTemplate = getFileContentFromSourceTemplateDirectory( StandaloneProvisioner.HOSTS_TEMPLATE_FILE );
 
         return AdditionalProvisionerHostsFileGenerator.generateContent( _hostsTemplate, this );
     }

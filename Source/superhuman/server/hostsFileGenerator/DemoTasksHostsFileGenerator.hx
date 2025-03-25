@@ -1,15 +1,15 @@
 package superhuman.server.hostsFileGenerator;
 
 import superhuman.server.provisioners.roles.RolesUtil;
-import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.StandaloneProvisioner;
 import superhuman.server.provisioners.AbstractProvisioner;
 import haxe.Template;
 import haxe.io.Path;
 
-class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
+class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator {
     static public function generateContent( sourceTemplate:String, provisioner:AbstractProvisioner ):String {
 
-        var internalProvisioner:DemoTasks = cast(provisioner, DemoTasks);
+        var internalProvisioner:StandaloneProvisioner = cast(provisioner, StandaloneProvisioner);
 
         var output:String = null;
 			
@@ -199,7 +199,7 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
 
     }
 
-    static function _getDefaultTemplateValues(internalProvisioner:DemoTasks, defaultProvisionerFieldValue:String = null, defaultRoleFieldValue:Dynamic = ""):Dynamic {
+    static function _getDefaultTemplateValues(internalProvisioner:StandaloneProvisioner, defaultProvisionerFieldValue:String = null, defaultRoleFieldValue:Dynamic = ""):Dynamic {
         return {
             USER_EMAIL: internalProvisioner.server.userEmail.value,
             
@@ -238,7 +238,7 @@ class DemoTasksHostsFileGenerator extends AbstractHostsFileGenerator {
            
             //vars
             SERVER_ORGANIZATION: internalProvisioner.server.organization.value,
-            USER_SAFE_ID: DemoTasks._SAFE_ID_FILE,
+            USER_SAFE_ID: StandaloneProvisioner._SAFE_ID_FILE,
             DOMINO_ADMIN_PASSWORD: "password",
             DOMINO_SERVER_CLUSTERMATES: 0,
             CERT_SELFSIGNED: ( internalProvisioner.server.url.hostname + "." + internalProvisioner.server.url.domainName ).toLowerCase() != "demo.startcloud.com",

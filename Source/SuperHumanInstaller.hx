@@ -188,7 +188,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		ServerManager.getInstance().serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
-		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
+		_defaultRoles = superhuman.server.provisioners.StandaloneProvisioner.getDefaultProvisionerRoles();
 
 		var dominoHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino");
 		var dominoHotFixHashes:Array<String> = SuperHumanHashes.getHotFixesHashes("domino");
@@ -628,7 +628,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Check if this is a custom provisioner
 		// We can use either the event's provisionerType or the server's provisioner type
 		var provisionerType = e.provisionerType != null ? e.provisionerType : server.provisioner.type;
-		var isCustomProvisioner = provisionerType != ProvisionerType.DemoTasks && 
+		var isCustomProvisioner = provisionerType != ProvisionerType.StandaloneProvisioner && 
 								  provisionerType != ProvisionerType.AdditionalProvisioner &&
 								  provisionerType != ProvisionerType.Default;
 		
@@ -708,7 +708,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
 		
 		// Check if this is a custom provisioner (not one of the built-in types)
-		var isCustomProvisioner = provisionerType != ProvisionerType.DemoTasks && 
+		var isCustomProvisioner = provisionerType != ProvisionerType.StandaloneProvisioner && 
 								  provisionerType != ProvisionerType.AdditionalProvisioner &&
 								  provisionerType != ProvisionerType.Default;
 		
@@ -848,7 +848,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			case ProvisionerType.AdditionalProvisioner:
 				// For additional provisioners, go to the additional server page
 				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
-			case ProvisionerType.DemoTasks, ProvisionerType.Default, ProvisionerType.Custom:
+			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default, ProvisionerType.Custom:
 				// For built-in provisioner types, go to the standard config page
 				this.selectedPageId = PAGE_CONFIG;
 			default:
@@ -1138,7 +1138,7 @@ class SuperHumanInstaller extends GenesisApplication {
                 // Check if this is an additional server provisioner
                 if (type.indexOf("additional") >= 0) {
                     serverType = ServerUIType.AdditionalDomino;
-                } else if (type != ProvisionerType.DemoTasks && type != ProvisionerType.AdditionalProvisioner) {
+                } else if (type != ProvisionerType.StandaloneProvisioner && type != ProvisionerType.AdditionalProvisioner) {
                     // This is a custom provisioner type
                     Logger.info('${this}: Detected custom provisioner type: ${type}');
                 }
@@ -1223,7 +1223,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			case ProvisionerType.AdditionalProvisioner:
 				_additionalServerPage.setServer(cast(e.server, AdditionalServer));
 				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
-			case ProvisionerType.DemoTasks, ProvisionerType.Default:
+			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default:
 				_configPage.setServer(e.server);
 				this.selectedPageId = PAGE_CONFIG;
 			default:
@@ -1541,7 +1541,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 		
 		// Create a new server data with the correct provisioner type
-		var newServerData = ServerManager.getInstance().getDefaultServerData(ProvisionerType.DemoTasks);
+		var newServerData = ServerManager.getInstance().getDefaultServerData(ProvisionerType.StandaloneProvisioner);
 		
 		// Override the provisioner type and version with the custom provisioner
 		if (provisionerDefinition != null) {

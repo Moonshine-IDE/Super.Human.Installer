@@ -62,11 +62,11 @@ class AdditionalServer extends Server {
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
-        var latestDemoTasks = ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ];
+        var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ];
 
         if ( data.provisioner == null ) {
 
-            sc._provisioner = new AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, latestDemoTasks.root, sc._serverDir, sc );
+            sc._provisioner = new AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc );
 
         } else {
 

@@ -173,7 +173,7 @@ class ServiceTypePage extends Page {
      */
     private function _isCustomProvisioner(provisionerType:String):Bool {
         // Check if the provisioner type is not one of the built-in types
-        return provisionerType != ProvisionerType.DemoTasks && 
+        return provisionerType != ProvisionerType.StandaloneProvisioner && 
                provisionerType != ProvisionerType.AdditionalProvisioner &&
                provisionerType != ProvisionerType.Default;
     }

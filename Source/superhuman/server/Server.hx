@@ -59,7 +59,7 @@ import superhuman.server.CombinedVirtualMachine.CombinedVirtualMachineState;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
-import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.StandaloneProvisioner;
 import superhuman.server.provisioners.CustomProvisioner;
 import sys.FileSystem;
 import sys.io.File;
@@ -95,25 +95,25 @@ class Server {
         sc._id = data.server_id;
         
         // Determine the server directory based on provisioner type
-        var provisionerTypeForPath = data.provisioner != null ? data.provisioner.type : ProvisionerType.DemoTasks;
+        var provisionerTypeForPath = data.provisioner != null ? data.provisioner.type : ProvisionerType.StandaloneProvisioner;
         sc._serverDir = Path.normalize( rootDir + "/" + provisionerTypeForPath + "/" + sc._id );
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
-        var latestDemoTasks = ProvisionerManager.getBundledProvisioners()[ 0 ];
+        var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
         if ( data.provisioner == null ) {
-            // Default to DemoTasks for null provisioner
-            sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, latestDemoTasks.root, sc._serverDir, sc );
+            // Default to StandaloneProvisioner for null provisioner
+            sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc );
         } else {
             var provisioner = ProvisionerManager.getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
 
             if ( provisioner != null ) {
                 // Create the appropriate provisioner based on type
-                if (data.provisioner.type == ProvisionerType.DemoTasks || 
+                if (data.provisioner.type == ProvisionerType.StandaloneProvisioner || 
                     data.provisioner.type == ProvisionerType.AdditionalProvisioner) {
-                    // Use DemoTasks for built-in provisioner types
-                    sc._provisioner = new DemoTasks(data.provisioner.type, provisioner.root, sc._serverDir, sc );
+                    // Use StandaloneProvisioner for built-in provisioner types
+                    sc._provisioner = new StandaloneProvisioner(data.provisioner.type, provisioner.root, sc._serverDir, sc );
                 } else {
                     // For custom provisioner types, use CustomProvisioner
                     sc._provisioner = new CustomProvisioner(data.provisioner.type, provisioner.root, sc._serverDir, sc );
@@ -122,10 +122,10 @@ class Server {
             } else {
                 // The server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                if (data.provisioner.type == ProvisionerType.DemoTasks || 
+                if (data.provisioner.type == ProvisionerType.StandaloneProvisioner || 
                     data.provisioner.type == ProvisionerType.AdditionalProvisioner) {
-                    // Use DemoTasks for built-in provisioner types
-                    sc._provisioner = new DemoTasks(data.provisioner.type, null, sc._serverDir, sc );
+                    // Use StandaloneProvisioner for built-in provisioner types
+                    sc._provisioner = new StandaloneProvisioner(data.provisioner.type, null, sc._serverDir, sc );
                 } else {
                     // For custom provisioner types, use CustomProvisioner
                     sc._provisioner = new CustomProvisioner(data.provisioner.type, null, sc._serverDir, sc );
@@ -230,7 +230,7 @@ class Server {
     var _organization:ValidatingProperty;
     var _path:Property<String>;
     var _provisionedBeforeStart:Bool;
-    var _provisioner:DemoTasks;
+    var _provisioner:StandaloneProvisioner;
     var _refreshingVirtualBoxVMInfo:Bool = false;
     var _roles:Property<Array<RoleData>>;
     var _serverDir:String;
@@ -616,7 +616,7 @@ class Server {
 			}
 		}
     			
-    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + superhuman.server.provisioners.DemoTasks.HOSTS_FILE);
+    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + superhuman.server.provisioners.StandaloneProvisioner.HOSTS_FILE);
     		var hosts:TObjectMap<String, Dynamic> = hostsFileMap.get('hosts')[0];
     		var settings:TObjectMap<String, Dynamic> = hosts.get('settings');
     		var userName = settings.get('vagrant_user');
@@ -760,7 +760,7 @@ class Server {
         if ( !_provisioner.hostFileExists ) _provisioner.saveHostsFile();
 
         if ( console != null ) {
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( superhuman.server.provisioners.DemoTasks.HOSTS_FILE ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( superhuman.server.provisioners.StandaloneProvisioner.HOSTS_FILE ) ) );
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( this._combinedVirtualMachine.value.virtualBoxMachine ) ) );
         }
 
@@ -778,7 +778,7 @@ class Server {
 
         if ( isValid() ) 
         {
-            cast(this.provisioner, DemoTasks).saveHostsFile();
+            cast(this.provisioner, StandaloneProvisioner).saveHostsFile();
         }
     }
 
@@ -1143,7 +1143,7 @@ class Server {
         _provisionedBeforeStart = this._provisioner.provisioned;
         this.status.value = ServerStatus.Start( this._provisioner.provisioned );
         //_provisioner.deleteWebAddressFile();
-        _provisioner.onProvisioningFileChanged.add( _onDemoTasksProvisioningFileChanged );
+        _provisioner.onProvisioningFileChanged.add( _onStandaloneProvisionerProvisioningFileChanged );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
@@ -1492,7 +1492,7 @@ class Server {
 
     }
 
-    function _onDemoTasksProvisioningFileChanged() {
+    function _onStandaloneProvisionerProvisioningFileChanged() {
 
         if ( _vagrantUpExecutorStopTimer != null ) {
 

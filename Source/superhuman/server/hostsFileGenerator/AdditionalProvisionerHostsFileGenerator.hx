@@ -8,7 +8,7 @@ import haxe.io.Path;
 import superhuman.server.AdditionalServer;
 import superhuman.server.ServerURL;
 
-class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerator {
+class AdditionalProvisionerHostsFileGenerator extends StandaloneProvisionerHostsFileGenerator {
     static public function generateContent( sourceTemplate:String, provisioner:AbstractProvisioner ):String {
 
         var output:String = null;
@@ -33,7 +33,7 @@ class AdditionalProvisionerHostsFileGenerator extends DemoTasksHostsFileGenerato
                                           
         //additional server
 
-        var replace = DemoTasksHostsFileGenerator._getDefaultTemplateValues(internalProvisioner, defaultProvisionerFieldValue, defaultRoleFieldValue);
+        var replace = StandaloneProvisionerHostsFileGenerator._getDefaultTemplateValues(internalProvisioner, defaultProvisionerFieldValue, defaultRoleFieldValue);
             replace.DOMINO_IS_ADDITIONAL_INSTANCE = true;
             replace.DOMINO_ORIGIN_HOSTNAME = existingDominoOriginHostname;
             replace.DOMINO_ORIGIN_DOMAIN = existingDominoOriginDomain;

@@ -31,7 +31,7 @@
 package superhuman.components;
 
 import superhuman.server.provisioners.AdditionalProvisioner;
-import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.StandaloneProvisioner;
 import feathers.controls.BitmapImage;
 import openfl.Assets;
 import champaign.core.logging.Logger;
@@ -653,7 +653,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 {
                     case AdditionalProvisioner:
                         {
-                            ipAddress = cast(_server.provisioner, DemoTasks).ipAddress;
+                            ipAddress = cast(_server.provisioner, StandaloneProvisioner).ipAddress;
 
                         }
                         default:
@@ -726,8 +726,8 @@ class ServerItem extends LayoutGroupItemRenderer {
             {
                 case AdditionalProvisioner:
                     {
-                        numberOfStartedTasks = cast(_server.provisioner, DemoTasks).numberOfStartedTasks;
-                        numberOfTasks = cast(_server.provisioner, DemoTasks).numberOfTasks;
+                        numberOfStartedTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfStartedTasks;
+                        numberOfTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfTasks;
                     }
                     default:
                     {

@@ -42,15 +42,15 @@ import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
-import superhuman.server.hostsFileGenerator.DemoTasksHostsFileGenerator;
+import superhuman.server.hostsFileGenerator.StandaloneProvisionerHostsFileGenerator;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 
 using champaign.core.tools.ObjectTools;
 
-@:allow( superhuman.server.hostsFileGenerator.DemoTasksHostsFileGenerator )
-class DemoTasks extends AbstractProvisioner {
+@:allow( superhuman.server.hostsFileGenerator.StandaloneProvisionerHostsFileGenerator )
+class StandaloneProvisioner extends AbstractProvisioner {
 
     static final _CURRENT_TASK_IDENTIFIER_PATTERN:EReg = ~/(?:TASK \x{5b})(\S+)(?:.+)(?:\x{3a})(?:.*)/m;
     static final _IP_ADDRESS_PATTERN:EReg = ~/(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)/;
@@ -136,7 +136,7 @@ class DemoTasks extends AbstractProvisioner {
 		// Range: 1025 - 9999
 		var r = Math.floor( Math.random() * 8974 ) + 1025;
 
-		if ( FileSystem.exists( '${serverDirectory}${ProvisionerType.DemoTasks}/${r}' ) ) return getRandomServerId( serverDirectory );
+		if ( FileSystem.exists( '${serverDirectory}${ProvisionerType.StandaloneProvisioner}/${r}' ) ) return getRandomServerId( serverDirectory );
 
 		return r;
 
@@ -285,7 +285,7 @@ class DemoTasks extends AbstractProvisioner {
         _hostsTemplate = getFileContentFromSourceTemplateDirectory( HOSTS_TEMPLATE_FILE );
 
         //if ( _version >= "0.1.18" ) return HostsFileGenerator.generateContentForV18( _hostsTemplate, this );
-        return DemoTasksHostsFileGenerator.generateContent( _hostsTemplate, this );
+        return StandaloneProvisionerHostsFileGenerator.generateContent( _hostsTemplate, this );
 
     }
 
@@ -346,7 +346,7 @@ class DemoTasks extends AbstractProvisioner {
 
     public override function toString():String {
 
-        return '[DemoTasks(v${this.version})]';
+        return '[StandaloneProvisioner(v${this.version})]';
 
     }
 

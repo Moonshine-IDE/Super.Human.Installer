@@ -81,12 +81,12 @@ class ServerManager {
 
     }
 
-    public function createServer( serverData:ServerData, type:ProvisionerType = ProvisionerType.DemoTasks ):Server {
+    public function createServer( serverData:ServerData, type:ProvisionerType = ProvisionerType.StandaloneProvisioner ):Server {
 
         var server:Server;
         
         // Handle different provisioner types
-        if (type == ProvisionerType.DemoTasks || type == ProvisionerType.Default || type == ProvisionerType.Custom) {
+        if (type == ProvisionerType.StandaloneProvisioner || type == ProvisionerType.Default || type == ProvisionerType.Custom) {
             // Use the standard Server class for standalone provisioners and custom types
             server = Server.create(serverData, serverRootDirectory);
         } else if (type == ProvisionerType.AdditionalProvisioner) {
@@ -110,9 +110,9 @@ class ServerManager {
 
     public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
-        if ( type == ProvisionerType.DemoTasks ) 
+        if ( type == ProvisionerType.StandaloneProvisioner ) 
         {
-            return superhuman.server.provisioners.DemoTasks.getDefaultServerData( superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory ) );
+            return superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( superhuman.server.provisioners.StandaloneProvisioner.getRandomServerId( _serverRootDirectory ) );
         }
         else if ( type == ProvisionerType.AdditionalProvisioner ) 
         {
@@ -120,10 +120,10 @@ class ServerManager {
         }
         else 
         {
-            // For custom provisioner types, use the DemoTasks as a base
+            // For custom provisioner types, use the StandaloneProvisioner as a base
             // This ensures we have a valid ServerData object for any provisioner type
-            var serverId = superhuman.server.provisioners.DemoTasks.getRandomServerId( _serverRootDirectory );
-            var data = superhuman.server.provisioners.DemoTasks.getDefaultServerData( serverId );
+            var serverId = superhuman.server.provisioners.StandaloneProvisioner.getRandomServerId( _serverRootDirectory );
+            var data = superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( serverId );
             
             // Update the provisioner type to the custom type
             if (data != null && data.provisioner != null) {

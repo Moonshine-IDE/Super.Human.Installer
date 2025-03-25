@@ -268,7 +268,7 @@ class ServerPage extends Page {
     function _createServerButtonTriggered( e:TriggerEvent ) {
 		
         /*var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
-        		event.provisionerType = ProvisionerType.DemoTasks;
+        		event.provisionerType = ProvisionerType.StandaloneProvisioner;
         this.dispatchEvent( event );*/
 		
         this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.START_CONFIGURE_SERVER));

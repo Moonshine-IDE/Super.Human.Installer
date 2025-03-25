@@ -31,7 +31,7 @@
 package superhuman.managers;
 
 import superhuman.config.SuperHumanGlobals;
-import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.StandaloneProvisioner;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import feathers.data.ArrayCollection;
@@ -574,7 +574,7 @@ class ProvisionerManager {
      * @return ProvisionerMetadata Default metadata
      */
     static public function createDefaultMetadata(type:String, version:String):ProvisionerMetadata {
-        if (type == ProvisionerType.DemoTasks) {
+        if (type == ProvisionerType.StandaloneProvisioner) {
             return {
                 name: "HCL Standalone Provisioner",
                 type: type,

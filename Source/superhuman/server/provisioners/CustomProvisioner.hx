@@ -44,9 +44,9 @@ import StringTools;
 
 /**
  * CustomProvisioner is a provisioner implementation for custom provisioner types.
- * It extends DemoTasks and overrides specific methods to handle custom provisioner functionality.
+ * It extends StandaloneProvisioner and overrides specific methods to handle custom provisioner functionality.
  */
-class CustomProvisioner extends DemoTasks {
+class CustomProvisioner extends StandaloneProvisioner {
     
     /**
      * Get default server data for a custom provisioner
@@ -54,31 +54,108 @@ class CustomProvisioner extends DemoTasks {
      * @return The default server data
      */
     static public function getDefaultServerData(id:Int):ServerData {
-        return {
-            env_open_browser: true,
-            env_setup_wait: 300,
+        // Get the available provisioners of type Custom
+        var customProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom);
+        
+        // Default roles array
+        var roles:Array<RoleData> = [];
+        
+        // Check if we have any custom provisioners available
+        if (customProvisioners != null && customProvisioners.length > 0) {
+            var firstProvisioner = customProvisioners[0];
+            
+            // Get roles from the provisioner metadata if available
+            if (firstProvisioner.metadata != null && 
+                firstProvisioner.metadata.roles != null && 
+                firstProvisioner.metadata.roles.length > 0) {
+                
+                Logger.info('${CustomProvisioner}: Using roles from custom provisioner metadata');
+                
+                // Create role data from custom provisioner roles
+                for (roleInfo in firstProvisioner.metadata.roles) {
+                    // Get default enabled state or default to false
+                    var defaultEnabled = roleInfo.defaultEnabled == true;
+                    
+                    // Create role data
+                    var roleData:RoleData = {
+                        value: roleInfo.name,
+                        enabled: defaultEnabled,
+                        files: {
+                            installer: null,
+                            installerFileName: null,
+                            installerHash: null,
+                            installerVersion: null,
+                            hotfixes: [],
+                            installerHotFixHash: null,
+                            installerHotFixVersion: null,
+                            fixpacks: [],
+                            installerFixpackHash: null,
+                            installerFixpackVersion: null
+                        }
+                    };
+                    
+                    roles.push(roleData);
+                }
+            } else {
+                // Fall back to default StandaloneProvisioner roles if no custom roles defined
+                Logger.warning('${CustomProvisioner}: No custom roles found, falling back to default roles');
+                roles = [for (r in StandaloneProvisioner.getDefaultProvisionerRoles().keyValueIterator()) r.value];
+            }
+            
+            return {
+                env_open_browser: true,
+                env_setup_wait: 300,
 
-            dhcp4: true,
-            network_address: "",
-            network_dns_nameserver_1: "1.1.1.1",
-            network_dns_nameserver_2: "1.0.0.1",
-            network_gateway: "",
-            network_netmask: "",
+                dhcp4: true,
+                network_address: "",
+                network_dns_nameserver_1: "1.1.1.1",
+                network_dns_nameserver_2: "1.0.0.1",
+                network_gateway: "",
+                network_netmask: "",
 
-            network_bridge: "",
-            resources_cpu: 2,
-            resources_ram: 8.0,
-            roles: [for (r in DemoTasks.getDefaultProvisionerRoles().keyValueIterator()) r.value],
-            server_hostname: "",
-            server_id: id,
-            server_organization: "",
-            type: ServerType.Domino,
-            user_email: "",
-            provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom)[0].data,
-            syncMethod: SyncMethod.Rsync,
-            existingServerName: "",
-            existingServerIpAddress: ""
-        };
+                network_bridge: "",
+                resources_cpu: 2,
+                resources_ram: 8.0,
+                roles: roles,
+                server_hostname: "",
+                server_id: id,
+                server_organization: "",
+                type: ServerType.Domino,
+                user_email: "",
+                provisioner: firstProvisioner.data,
+                syncMethod: SyncMethod.Rsync,
+                existingServerName: "",
+                existingServerIpAddress: ""
+            };
+        } else {
+            // Fall back to default behavior if no custom provisioners are available
+            Logger.warning('${CustomProvisioner}: No custom provisioners found, using default provisioner');
+            return {
+                env_open_browser: true,
+                env_setup_wait: 300,
+
+                dhcp4: true,
+                network_address: "",
+                network_dns_nameserver_1: "1.1.1.1",
+                network_dns_nameserver_2: "1.0.0.1",
+                network_gateway: "",
+                network_netmask: "",
+
+                network_bridge: "",
+                resources_cpu: 2,
+                resources_ram: 8.0,
+                roles: [for (r in StandaloneProvisioner.getDefaultProvisionerRoles().keyValueIterator()) r.value],
+                server_hostname: "",
+                server_id: id,
+                server_organization: "",
+                type: ServerType.Domino,
+                user_email: "",
+                provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom)[0].data,
+                syncMethod: SyncMethod.Rsync,
+                existingServerName: "",
+                existingServerIpAddress: ""
+            };
+        }
     }
 
     /**
@@ -100,7 +177,7 @@ class CustomProvisioner extends DemoTasks {
      * @return The generated Hosts.yml content
      */
     override public function generateHostsFileContent():String {
-        _hostsTemplate = getFileContentFromSourceTemplateDirectory(DemoTasks.HOSTS_TEMPLATE_FILE);
+        _hostsTemplate = getFileContentFromSourceTemplateDirectory(StandaloneProvisioner.HOSTS_TEMPLATE_FILE);
         
         // Create a simple hosts file generator for custom provisioners
         // This is a simplified version that just does basic variable substitution
