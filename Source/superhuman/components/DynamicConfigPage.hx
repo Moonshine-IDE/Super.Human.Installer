@@ -1171,17 +1171,13 @@ class DynamicConfigPage extends Page {
                         // 2. In root customProperties for direct access
                         Reflect.setField(_server.customProperties, fieldName, value);
                         
-                        // 3. As uppercase for template variables
-                        var upperFieldName = fieldName.toUpperCase();
-                        Reflect.setField(_server.customProperties, upperFieldName, value);
-                        
-                        // 4. At the root level of the server object
-                        try {
-                            Reflect.setField(_server, fieldName, value);
-                            Logger.info('${this}: Set server field ${fieldName} = ${value}');
-                        } catch (e) {
-                            Logger.warning('${this}: Could not set server field ${fieldName}: ${e}');
+                        // 3. In dynamicAdvancedCustomProperties like other template variables
+                        if (!Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+                            Reflect.setField(_server.customProperties, "dynamicAdvancedCustomProperties", {});
                         }
+                        var advancedProps = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+                        Reflect.setField(advancedProps, fieldName.toUpperCase(), value);
+                        Logger.info('${this}: Set dynamicAdvancedCustomProperties field ${fieldName.toUpperCase()} = ${value}');
                         
                         // Force an immediate save to persist changes
                         _server.saveData();
