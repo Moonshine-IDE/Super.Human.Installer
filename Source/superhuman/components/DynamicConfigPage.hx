@@ -1135,59 +1135,72 @@ class DynamicConfigPage extends Page {
     // Update the provisioner with the selected version
     var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
     if (dvv != null) {
-        Logger.info('${this}: Updating provisioner to version ${dvv.data.version}');
+        var versionStr = dvv.data.version.toString();
+        Logger.info('${this}: Updating provisioner to version ${versionStr}');
         
-        // Create a copy of the provisioner data with the right VersionInfo object
+        // Create a copy of the provisioner data for update
         var updatedData = {
             type: dvv.data.type,
-            version: dvv.data.version,
-            basedon: dvv.data.basedon,
-            roles: dvv.data.roles
+            version: dvv.data.version
         };
         
-        // Store the entire provisioner definition in customProperties
+        // Ensure customProperties is initialized
         if (_server.customProperties == null) {
             _server.customProperties = {};
         }
         
-        // Store the complete provisioner definition
+        // 1. Store the complete provisioner definition for future use
         Reflect.setField(_server.customProperties, "provisionerDefinition", dvv);
         
-        // Also make sure we have proper serviceTypeData structure
+        // 2. Store version info in serviceTypeData structure - this ensures it persists across app restarts
         if (!Reflect.hasField(_server.customProperties, "serviceTypeData")) {
-            Reflect.setField(_server.customProperties, "serviceTypeData", {});
+            Reflect.setField(_server.customProperties, "serviceTypeData", {
+                provisionerType: dvv.data.type,
+                value: dvv.name,
+                serverType: "domino",
+                isEnabled: true
+            });
         }
         var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
         
+        // Update the provisioner in service type data
         if (!Reflect.hasField(serviceTypeData, "provisioner")) {
             Reflect.setField(serviceTypeData, "provisioner", {});
         }
         var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
         
+        // Make sure we have a data field
         if (!Reflect.hasField(stProvisioner, "data")) {
             Reflect.setField(stProvisioner, "data", {});
         }
         var provData = Reflect.field(stProvisioner, "data");
         
-        // Store the version in the correct place - using both formats
-        Reflect.setField(provData, "version", dvv.data.version.toString());
+        // Store the version in both string and VersionInfo formats for maximum compatibility
+        Reflect.setField(provData, "version", versionStr);
         Reflect.setField(provData, "versionInfo", dvv.data.version);
         
-        // Also store it directly in the provisioner ID which is checked in some places
+        // 3. Store it directly in the serverProvisionerId (accessed during getData() serialization)
         if (_server.serverProvisionerId != null) {
-            _server.serverProvisionerId.value = dvv.data.version.toString();
+            _server.serverProvisionerId.value = versionStr;
+            Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
         }
         
-        // Update the server's provisioner data using the appropriate method
-        _server.updateProvisioner(updatedData);
+        // 4. Update the server's provisioner with the server.updateProvisioner method
+        // This method will also update the internal fields accessed during serialization
+        var success = _server.updateProvisioner(updatedData);
+        if (success) {
+            Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
+        } else {
+            Logger.warning('${this}: Failed to update provisioner to version ${versionStr}');
+        }
         
-        // Make sure to save data after updating provisioner
+        // 5. Force an immediate save of the server data to ensure it's persisted
         _server.saveData();
         
-        Logger.info('${this}: Updated provisioner data with version ${dvv.data.version} saved');
-        } else {
-            Logger.warning('${this}: No provisioner selected in dropdown');
-        }
+        Logger.info('${this}: All provisioner version data saved to disk');
+    } else {
+        Logger.warning('${this}: No provisioner selected in dropdown, cannot update version');
+    }
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         

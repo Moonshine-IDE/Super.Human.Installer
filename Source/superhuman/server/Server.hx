@@ -700,6 +700,13 @@ class Server {
             var newRoot:String = vcd.root;
             this._provisioner.reinitialize(newRoot);
             
+            // Important: Update the provisioner data that will be serialized directly to server.shi
+            // This fixes the version shown in the server overview list
+            if (this._provisioner.data != null) {
+                this._provisioner.data.version = data.version;
+                Logger.info('${this}: Updated provisioner.data.version to ${data.version}');
+            }
+            
             // Store the version string directly in customProperties for better persistence
             if (this._customProperties == null) {
                 this._customProperties = {};
@@ -733,6 +740,12 @@ class Server {
                     Reflect.setField(provDef.data, "version", versionStr);
                     Reflect.setField(provDef.data, "versionInfo", data.version);
                 }
+            }
+            
+            // Make sure serverProvisionerId is updated as well (appears in the getData method)
+            if (this._serverProvisionerId != null) {
+                this._serverProvisionerId.value = versionStr;
+                Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
             }
             
             // Directly set the version in the provisioner object to ensure it's displayed correctly
