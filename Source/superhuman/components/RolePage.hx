@@ -146,13 +146,48 @@ class RolePage extends Page {
                 // First try to get the provisioner definition from the event data
                 var provisionerDefinition = null;
                 
-                // Check event.data for the provisioner definition (passed from DynamicConfigPage)
+                // Check event.data for the provisioner definition name (passed from DynamicConfigPage)
                 try {
-                    // Check if we have the provisioner definition stored as an instance variable from the event
+                    var definitionName = null;
+                    
+                    // First check if we have the provisioner definition stored as an instance variable
                     if (Reflect.hasField(this, "_provisionerDefinition") && 
                         Reflect.field(this, "_provisionerDefinition") != null) {
                         provisionerDefinition = Reflect.field(this, "_provisionerDefinition");
                         Logger.info('RolePage: Using provisioner definition from instance variable: ${provisionerDefinition.name}');
+                    }
+                    // Otherwise, check if event.data is a name string
+                    else if (e.data != null && Std.isOfType(e.data, String)) {
+                        definitionName = e.data;
+                        Logger.info('RolePage: Received provisioner definition name: ${definitionName}');
+                        
+                        // Look up the provisioner by name
+                        var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+                        for (p in allProvisioners) {
+                            if (p.name == definitionName) {
+                                provisionerDefinition = p;
+                                Logger.info('RolePage: Found matching provisioner definition: ${p.name}');
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Also check if the server has a currentProvisionerDefinitionName in customProperties
+                    if (provisionerDefinition == null && _server.customProperties != null) {
+                        if (Reflect.hasField(_server.customProperties, "currentProvisionerDefinitionName")) {
+                            definitionName = Reflect.field(_server.customProperties, "currentProvisionerDefinitionName");
+                            Logger.info('RolePage: Found provisioner name in server.customProperties: ${definitionName}');
+                            
+                            // Look up the provisioner by name
+                            var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+                            for (p in allProvisioners) {
+                                if (p.name == definitionName) {
+                                    provisionerDefinition = p;
+                                    Logger.info('RolePage: Found matching provisioner definition: ${p.name}');
+                                    break;
+                                }
+                            }
+                        }
                     }
                 } catch (e) {
                     Logger.warning('RolePage: Error accessing provisioner definition from event: ${e}');

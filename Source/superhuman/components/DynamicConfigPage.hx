@@ -960,14 +960,14 @@ class DynamicConfigPage extends Page {
         
         // Include the provisioner definition in the event data
         if (_provisionerDefinition != null) {
-            // Instead of just passing the name, store the actual definition object
-            evt.data = haxe.Json.stringify({
-                name: _provisionerDefinition.name,
-                definitionAvailable: true
-            });
+            // Pass the provisioner definition name directly
+            evt.data = _provisionerDefinition.name;
             
-            // Store the provisioner definition in the SuperHumanInstaller instance for retrieval
-            SuperHumanInstaller.getInstance().cachedProvisionerDefinition = _provisionerDefinition;
+            // Also include the definition in the server's customProperties for later retrieval
+            if (_server.customProperties == null) {
+                _server.customProperties = {};
+            }
+            Reflect.setField(_server.customProperties, "currentProvisionerDefinitionName", _provisionerDefinition.name);
             
             Logger.info('${this}: Passing provisioner definition to roles page: ${_provisionerDefinition.name}');
         } else {
