@@ -160,14 +160,19 @@ class RolePage extends Page {
             var provisionerClassName = Type.getClassName(Type.getClass(_server.provisioner));
             Logger.info('RolePage: Provisioner class name: ${provisionerClassName}');
             
-            // Check if it's a CustomProvisioner by class name
-            var isCustomProvisioner = provisionerClassName.indexOf("CustomProvisioner") >= 0;
+            // Check if it's EXACTLY CustomProvisioner by class name (not a subclass)
+            var isCustomProvisioner = provisionerClassName == "superhuman.server.provisioners.CustomProvisioner";
             
-            // Also check the type as a fallback
+            // Also check the type as a fallback, but only if it's not a StandaloneProvisioner or AdditionalProvisioner
             if (!isCustomProvisioner) {
-                isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
-                                     _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
-                                     _server.provisioner.type != ProvisionerType.Default;
+                var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
+                                           provisionerClassName == "superhuman.server.provisioners.AdditionalProvisioner");
+                                           
+                if (!isStandardProvisioner) {
+                    isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                         _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                         _server.provisioner.type != ProvisionerType.Default;
+                }
             }
             
             Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
