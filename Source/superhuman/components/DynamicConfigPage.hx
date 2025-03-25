@@ -452,8 +452,6 @@ class DynamicConfigPage extends Page {
         
         _provisionerDefinition = definition;
         
-        // Log the provisioner definition to help with debugging
-        
         // Initialize server properties for all fields in the provisioner definition
         if (_server != null && definition.metadata != null && 
             definition.metadata.configuration != null && 
@@ -472,6 +470,8 @@ class DynamicConfigPage extends Page {
                     definition.metadata.configuration.basicFields.length : 0;
                 var advancedFieldCount = definition.metadata.configuration.advancedFields != null ? 
                     definition.metadata.configuration.advancedFields.length : 0;
+                
+                Logger.info('${this}: Provisioner has ${basicFieldCount} basic fields and ${advancedFieldCount} advanced fields');
             } else {
                 Logger.warning('No configuration found in provisioner metadata');
             }
@@ -479,7 +479,15 @@ class DynamicConfigPage extends Page {
             Logger.warning('No metadata found in provisioner definition');
         }
         
-        // Clear existing dynamic fields
+        // Remove existing dynamic form rows from the form
+        for (fieldName => row in _dynamicRows) {
+            if (row != null && row.parent == _form) {
+                Logger.info('${this}: Removing existing form row for field ${fieldName}');
+                _form.removeChild(row);
+            }
+        }
+        
+        // Clear existing dynamic fields maps
         _dynamicFields = new Map();
         _dynamicRows = new Map();
         
@@ -490,6 +498,8 @@ class DynamicConfigPage extends Page {
             
             // Add each field from the configuration
             var basicFields:Array<Dynamic> = cast _provisionerDefinition.metadata.configuration.basicFields;
+            Logger.info('${this}: Adding ${basicFields.length} dynamic fields to form');
+            
             for (field in basicFields) {
                 _addDynamicField(field);
             }
