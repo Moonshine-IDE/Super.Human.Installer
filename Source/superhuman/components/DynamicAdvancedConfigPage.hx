@@ -468,10 +468,21 @@ class DynamicAdvancedConfigPage extends Page {
                     
                     var stepper = new GenesisFormNumericStepper(defaultValue, minValue, maxValue);
                     
-                    // For integer fields, override the step behavior
+                    // For integer fields, check if we can configure the step behavior
                     if (isIntegerField) {
-                        // Set step size to 1.0 for integer fields
-                        Reflect.setField(stepper, "step", 1.0);
+                        // Only try to set if the stepper has this property
+                        try {
+                            // Try using public API if available
+                            if (Reflect.hasField(stepper, "setStep")) {
+                                Reflect.callMethod(stepper, Reflect.field(stepper, "setStep"), [1.0]);
+                                Logger.info('${this}: Set step size to 1.0 for integer field ${field.name}');
+                            } else {
+                                Logger.info('${this}: No setStep method available on stepper for ${field.name}');
+                            }
+                        } catch (e) {
+                            // Failed to set step - don't crash the app
+                            Logger.warning('${this}: Could not set step size for ${field.name}: ${e}');
+                        }
                     }
                     
                     stepper.toolTip = field.tooltip != null ? field.tooltip : "";
