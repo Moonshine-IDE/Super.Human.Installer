@@ -378,22 +378,10 @@ override public function generateHostsFileContent():String {
                     var value = Reflect.field(dynamicProps, field);
                     var strValue = Std.string(value);
                     
-                    // Try original field name first
-                    var originalContent = content;
-                    content = _replaceVariable(content, field, strValue);
-                    if (content != originalContent) {
-                        Logger.info('${this}: Matched custom property using original name: ${field} = ${strValue}');
-                    }
-                    
-                    // Then try uppercase version if different
+                    // Convert field name to uppercase for template variables
                     var upperField = field.toUpperCase();
-                    if (upperField != field) {
-                        originalContent = content;
-                        content = _replaceVariable(content, upperField, strValue);
-                        if (content != originalContent) {
-                            Logger.info('${this}: Matched custom property using uppercase name: ${upperField} = ${strValue}');
-                        }
-                    }
+                    content = _replaceVariable(content, upperField, strValue);
+                    Logger.info('${this}: Processing custom property ${upperField} = ${strValue}');
                 }
             }
             
@@ -407,22 +395,10 @@ override public function generateHostsFileContent():String {
                     var value = Reflect.field(advancedProps, field);
                     var strValue = Std.string(value);
                     
-                    // Try original field name first
-                    var originalContent = content;
-                    content = _replaceVariable(content, field, strValue);
-                    if (content != originalContent) {
-                        Logger.info('${this}: Matched advanced property using original name: ${field} = ${strValue}');
-                    }
-                    
-                    // Then try uppercase version if different
+                    // Convert field name to uppercase for template variables
                     var upperField = field.toUpperCase();
-                    if (upperField != field) {
-                        originalContent = content;
-                        content = _replaceVariable(content, upperField, strValue);
-                        if (content != originalContent) {
-                            Logger.info('${this}: Matched advanced property using uppercase name: ${upperField} = ${strValue}');
-                        }
-                    }
+                    content = _replaceVariable(content, upperField, strValue);
+                    Logger.info('${this}: Processing advanced property ${upperField} = ${strValue}');
                 }
             }
         }
