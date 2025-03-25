@@ -1048,13 +1048,6 @@ class DynamicConfigPage extends Page {
     function _saveButtonTriggered(e:TriggerEvent) {
         _buttonRoles.setValidity(_server.areRolesValid());
 
-        if (!_form.isValid() || !_server.areRolesValid()) {
-            if (console != null) {
-                console.appendText("Configuration form is invalid. Please correct the errors before saving.", true);
-            }
-            return;
-        }
-
         // Making sure the event is fired
         var a = _server.roles.value.copy();
         _server.roles.value = a;
