@@ -517,50 +517,54 @@ class RolePickerItem extends LayoutGroup {
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var hashes:Array<String> = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
-            var v = FileTools.checkMD5( path, hashes);
-
-            if ( v != null) 
-            	{
-
+            // Check if this is a custom role - if yes, skip hash checking
+            var isCustomRole = false;
+            try {
+                // If the role doesn't exist in SuperHumanHashes, this will be null
+                var hashes:Array<String> = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
+                isCustomRole = (hashes == null || hashes.length == 0);
+            } catch (e) {
+                isCustomRole = true;
+            }
+            
+            if (isCustomRole) {
+                // For custom roles, just add the file without hash checking
                 _roleImpl.role.files.installer = path;
                 _roleImpl.role.files.installerFileName = fullFileName;
-                _roleImpl.role.files.installerHash = v;
-                _roleImpl.role.files.installerVersion = SuperHumanHashes.getInstallerVersion(_roleImpl.role.value, v);
-                
                 updateData();
-                
-            } 
-            	else 
-            	{
+            } else {
+                // For standard roles, use the normal hash checking
+                var hashes:Array<String> = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
+                var v = FileTools.checkMD5( path, hashes);
 
-                Alert.show(
-                    LanguageManager.getInstance().getString( 'alert.installerhash.text', _roleImpl.name ),
-                    LanguageManager.getInstance().getString( 'alert.installerhash.title' ),
-                    [ LanguageManager.getInstance().getString( 'alert.installerhash.buttonyes' ), LanguageManager.getInstance().getString( 'alert.installerhash.buttonno' ) ],
-                    ( state ) -> {
-
-                    switch state.index {
-
-                        case 0:
-                            _roleImpl.role.files.installer = path;
-                            _roleImpl.role.files.installerFileName = fullFileName;
-                            
-                            updateData();
-
-                        default:
-
-                    }
-
-                } );
-
+                if ( v != null) {
+                    _roleImpl.role.files.installer = path;
+                    _roleImpl.role.files.installerFileName = fullFileName;
+                    _roleImpl.role.files.installerHash = v;
+                    _roleImpl.role.files.installerVersion = SuperHumanHashes.getInstallerVersion(_roleImpl.role.value, v);
+                    
+                    updateData();
+                } else {
+                    Alert.show(
+                        LanguageManager.getInstance().getString( 'alert.installerhash.text', _roleImpl.name ),
+                        LanguageManager.getInstance().getString( 'alert.installerhash.title' ),
+                        [ LanguageManager.getInstance().getString( 'alert.installerhash.buttonyes' ), LanguageManager.getInstance().getString( 'alert.installerhash.buttonno' ) ],
+                        ( state ) -> {
+                            switch state.index {
+                                case 0:
+                                    _roleImpl.role.files.installer = path;
+                                    _roleImpl.role.files.installerFileName = fullFileName;
+                                    
+                                    updateData();
+                                default:
+                            }
+                        }
+                    );
+                }
             }
-
-
-        } );
+        });
 
         fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locateinstaller', _roleImpl.name ) );
-
     }
 
     function _hotfixButtonTriggered( e:TriggerEvent ) {
@@ -570,59 +574,63 @@ class RolePickerItem extends LayoutGroup {
         var currentDir:String;
 
         fd.onSelect.add( path -> {
-
-        		var currentPath = new Path(path);
+            var currentPath = new Path(path);
             var fullFileName = currentPath.file + "." + currentPath.ext;
             
             currentDir = Path.directory( path );
             
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
-            var v = FileTools.checkMD5( path, hashes);
-
-            if ( v != null ) 
-            	{
-
-                if ( !_roleImpl.role.files.hotfixes.contains( path ) ) 
-                {	
-                		//Only latest added hotfix will be taken into account 
-    		            _roleImpl.role.files.installerHotFixVersion = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, v);
-                		_roleImpl.role.files.installerHotFixHash = v;
-                		_roleImpl.role.files.hotfixes.push( path );
-        			}
-    
-                updateData();
-
-            } else {
-
-                Alert.show(
-                    LanguageManager.getInstance().getString( 'alert.hotfixhash.text', _roleImpl.name ),
-                    LanguageManager.getInstance().getString( 'alert.hotfixhash.title' ),
-                    [ LanguageManager.getInstance().getString( 'alert.hotfixhash.buttonyes' ), LanguageManager.getInstance().getString( 'alert.hotfixhash.buttonno' ) ],
-                    ( state ) -> {
-
-                    switch state.index {
-
-                        case 0:
-                            if ( !_roleImpl.role.files.hotfixes.contains( path ) ) 
-                            {
-                            		_roleImpl.role.files.hotfixes.push( path );
-                        		}
-                            updateData();
-
-                        default:
-
-                    }
-
-                } );
-
+            // Check if this is a custom role - if yes, skip hash checking
+            var isCustomRole = false;
+            try {
+                // If the role doesn't exist in SuperHumanHashes, this will be null
+                var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
+                isCustomRole = (hashes == null || hashes.length == 0);
+            } catch (e) {
+                isCustomRole = true;
             }
+            
+            if (isCustomRole) {
+                // For custom roles, just add the file without hash checking
+                if (!_roleImpl.role.files.hotfixes.contains(path)) {
+                    _roleImpl.role.files.hotfixes.push(path);
+                }
+                updateData();
+            } else {
+                // For standard roles, use the normal hash checking
+                var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
+                var v = FileTools.checkMD5(path, hashes);
 
-        } );
+                if (v != null) {
+                    if (!_roleImpl.role.files.hotfixes.contains(path)) {	
+                        //Only latest added hotfix will be taken into account 
+                        _roleImpl.role.files.installerHotFixVersion = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, v);
+                        _roleImpl.role.files.installerHotFixHash = v;
+                        _roleImpl.role.files.hotfixes.push(path);
+                    }
+                    updateData();
+                } else {
+                    Alert.show(
+                        LanguageManager.getInstance().getString('alert.hotfixhash.text', _roleImpl.name),
+                        LanguageManager.getInstance().getString('alert.hotfixhash.title'),
+                        [LanguageManager.getInstance().getString('alert.hotfixhash.buttonyes'), LanguageManager.getInstance().getString('alert.hotfixhash.buttonno')],
+                        (state) -> {
+                            switch state.index {
+                                case 0:
+                                    if (!_roleImpl.role.files.hotfixes.contains(path)) {
+                                        _roleImpl.role.files.hotfixes.push(path);
+                                    }
+                                    updateData();
+                                default:
+                            }
+                        }
+                    );
+                }
+            }
+        });
 
-        fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locatehotfix', _roleImpl.name ) );
-
+        fd.browse(FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString('rolepage.role.locatehotfix', _roleImpl.name));
     }
 
     function _fixpackButtonTriggered( e:TriggerEvent ) {
@@ -632,48 +640,61 @@ class RolePickerItem extends LayoutGroup {
         var currentDir:String;
 
         fd.onSelect.add( path -> {
-
+            var currentPath = new Path(path);
+            var fullFileName = currentPath.file + "." + currentPath.ext;
+            
             currentDir = Path.directory( path );
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
 
-            var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
-            var v = FileTools.checkMD5( path, hashes);
-
-            if ( v != null ) {
-
-                if ( !_roleImpl.role.files.fixpacks.contains( path ) ) 
-                {
-                		_roleImpl.role.files.installerFixpackVersion = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, v);
-                        _roleImpl.role.files.installerFixpackHash = v;
-                		_roleImpl.role.files.fixpacks.push( path );
-            		}
-                updateData();
-
-            } else {
-
-                Alert.show(
-                    LanguageManager.getInstance().getString( 'alert.fixpackhash.text', _roleImpl.name ),
-                    LanguageManager.getInstance().getString( 'alert.fixpackhash.title' ),
-                    [ LanguageManager.getInstance().getString( 'alert.fixpackhash.buttonyes' ), LanguageManager.getInstance().getString( 'alert.fixpackhash.buttonno' ) ], ( state ) -> {
-
-                    switch state.index {
-
-                        case 0:
-                            if ( !_roleImpl.role.files.fixpacks.contains( path ) ) _roleImpl.role.files.fixpacks.push( path );
-                            updateData();
-
-                        default:
-
-                    }
-
-                } );
-
+            // Check if this is a custom role - if yes, skip hash checking
+            var isCustomRole = false;
+            try {
+                // If the role doesn't exist in SuperHumanHashes, this will be null
+                var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
+                isCustomRole = (hashes == null || hashes.length == 0);
+            } catch (e) {
+                isCustomRole = true;
             }
+            
+            if (isCustomRole) {
+                // For custom roles, just add the file without hash checking
+                if (!_roleImpl.role.files.fixpacks.contains(path)) {
+                    _roleImpl.role.files.fixpacks.push(path);
+                }
+                updateData();
+            } else {
+                // For standard roles, use the normal hash checking
+                var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
+                var v = FileTools.checkMD5(path, hashes);
 
-        } );
+                if (v != null) {
+                    if (!_roleImpl.role.files.fixpacks.contains(path)) {
+                        _roleImpl.role.files.installerFixpackVersion = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, v);
+                        _roleImpl.role.files.installerFixpackHash = v;
+                        _roleImpl.role.files.fixpacks.push(path);
+                    }
+                    updateData();
+                } else {
+                    Alert.show(
+                        LanguageManager.getInstance().getString('alert.fixpackhash.text', _roleImpl.name),
+                        LanguageManager.getInstance().getString('alert.fixpackhash.title'),
+                        [LanguageManager.getInstance().getString('alert.fixpackhash.buttonyes'), LanguageManager.getInstance().getString('alert.fixpackhash.buttonno')],
+                        (state) -> {
+                            switch state.index {
+                                case 0:
+                                    if (!_roleImpl.role.files.fixpacks.contains(path)) {
+                                        _roleImpl.role.files.fixpacks.push(path);
+                                    }
+                                    updateData();
+                                default:
+                            }
+                        }
+                    );
+                }
+            }
+        });
 
-        fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locatefixpack', _roleImpl.name ) );
-
+        fd.browse(FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString('rolepage.role.locatefixpack', _roleImpl.name));
     }
 
 }
