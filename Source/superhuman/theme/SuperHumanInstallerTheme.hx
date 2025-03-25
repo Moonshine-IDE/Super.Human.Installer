@@ -230,9 +230,9 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         container.autoHideScrollBars = false;
         container.fixedScrollBars = true;
         
-        // Use the same background color as the main app background
+        // Use a dark background color for the scroll container
         var backgroundSkin = new RectangleSkin();
-        backgroundSkin.fill = SolidColor(_themeColors.Background);
+        backgroundSkin.fill = SolidColor(0x222222);
         container.backgroundSkin = backgroundSkin;
     }
 
