@@ -1175,6 +1175,14 @@ class DynamicConfigPage extends Page {
                         var upperFieldName = fieldName.toUpperCase();
                         Reflect.setField(_server.customProperties, upperFieldName, value);
                         
+                        // 4. At the root level of the server object
+                        try {
+                            Reflect.setField(_server, fieldName, value);
+                            Logger.info('${this}: Set server field ${fieldName} = ${value}');
+                        } catch (e) {
+                            Logger.warning('${this}: Could not set server field ${fieldName}: ${e}');
+                        }
+                        
                         // Force an immediate save to persist changes
                         _server.saveData();
                     }
