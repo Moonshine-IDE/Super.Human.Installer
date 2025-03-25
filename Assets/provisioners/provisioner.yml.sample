@@ -13,6 +13,14 @@ configuration:
       required: true
       restrict: "a-zA-Z0-9.-"
       
+    - name: "DOMAIN"
+      type: "text"
+      label: "Domain"
+      placeholder: "example.com"
+      tooltip: "The domain name for your server"
+      required: true
+      restrict: "a-zA-Z0-9.-"
+      
     - name: "SERVER_ORGANIZATION"
       type: "text"
       label: "Organization"
@@ -28,11 +36,39 @@ configuration:
       tooltip: "Email address for the server administrator"
       required: true
       
+    - name: "BOX"
+      type: "text"
+      label: "Vagrant Box"
+      defaultValue: "STARTcloud/debian12-server"
+      tooltip: "The Vagrant box to use for this server"
+      required: false
+      
     - name: "BOX_URL"
       type: "text"
       label: "Box URL"
       defaultValue: "https://boxvault.startcloud.com"
       tooltip: "URL for the Vagrant box repository"
+      required: false
+      
+    - name: "BOX_VERSION"
+      type: "text"
+      label: "Box Version"
+      defaultValue: "2025.2.9"
+      tooltip: "Version of the Vagrant box to use"
+      required: false
+      
+    - name: "OS_TYPE"
+      type: "text"
+      label: "OS Type"
+      defaultValue: "Debian_64"
+      tooltip: "The operating system type for VirtualBox"
+      required: false
+      
+    - name: "FIRMWARE_TYPE"
+      type: "text"
+      label: "Firmware Type"
+      defaultValue: "UEFI"
+      tooltip: "The firmware type for the virtual machine"
       required: false
       
     - name: "POST_PROVISION"
@@ -77,6 +113,21 @@ configuration:
       defaultValue: 2
       min: 1
       max: 8
+      
+    - name: "CONSOLE_PORT"
+      type: "number"
+      label: "Console Port"
+      tooltip: "Port number for the console"
+      defaultValue: 0
+      min: 0
+      max: 65535
+      
+    - name: "CONSOLE_HOST"
+      type: "text"
+      label: "Console Host"
+      defaultValue: "0.0.0.0"
+      tooltip: "Host address for the console"
+      required: false
       
     - name: "memory"
       type: "number"
@@ -216,6 +267,55 @@ configuration:
       label: "Origin Domino Hostname"
       tooltip: "Hostname of the origin Domino server"
       required: false
+      
+    - name: "VAGRANT_SSH_INSERT_KEY"
+      type: "checkbox"
+      label: "Vagrant SSH Insert Key"
+      defaultValue: true
+      tooltip: "Insert Vagrant's insecure key"
+      required: false
+      
+    - name: "VAGRANT_SSH_FORWARD_AGENT"
+      type: "checkbox"
+      label: "Vagrant SSH Forward Agent"
+      defaultValue: true
+      tooltip: "Forward SSH agent"
+      required: false
+      
+    - name: "VAGRANT_SSH_KEEP_ALIVE"
+      type: "checkbox"
+      label: "Vagrant SSH Keep Alive"
+      defaultValue: true
+      tooltip: "Keep SSH connection alive"
+      required: false
+      
+    - name: "HAPROXY_SSL_REDIRECT"
+      type: "checkbox"
+      label: "HAProxy SSL Redirect"
+      defaultValue: true
+      tooltip: "Redirect HTTP to HTTPS in HAProxy"
+      required: false
+      
+    - name: "LETSENCRYPT_ENABLED"
+      type: "checkbox"
+      label: "Let's Encrypt Enabled"
+      defaultValue: false
+      tooltip: "Enable Let's Encrypt for SSL certificates"
+      required: false
+      
+    - name: "LETSENCRYPT_STAGING_ENABLED"
+      type: "checkbox"
+      label: "Let's Encrypt Staging"
+      defaultValue: false
+      tooltip: "Use Let's Encrypt staging environment"
+      required: false
+      
+    - name: "EXTRA_PACKAGES"
+      type: "text"
+      label: "Extra Packages"
+      defaultValue: "htop"
+      tooltip: "Additional packages to install (comma-separated)"
+      required: false
 
 roles:
   - name: "ROLE_DOMINO_RESET"
@@ -341,6 +441,246 @@ roles:
   - name: "ROLE_STARTCLOUD_VAGRANT_README"
     label: "Vagrant README"
     description: "Generate Vagrant README"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_LOCKDOWN"
+    label: "Lockdown"
+    description: "Secure the server with lockdown settings"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_NETWORKING"
+    label: "Networking"
+    description: "Configure networking settings"
+    defaultEnabled: true
+    required: true
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_DISKS"
+    label: "Disks"
+    description: "Configure disk settings"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_HOSTNAME"
+    label: "Hostname"
+    description: "Configure hostname settings"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_DEPENDENCIES"
+    label: "Dependencies"
+    description: "Install system dependencies"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_MDNS"
+    label: "mDNS"
+    description: "Configure multicast DNS"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_SERVICE_USER"
+    label: "Service User"
+    description: "Configure service user accounts"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_SSL"
+    label: "SSL"
+    description: "Configure SSL certificates"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_SDKMAN_INSTALL"
+    label: "SDKMAN Install"
+    description: "Install SDKMAN"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_SDKMAN_JAVA"
+    label: "SDKMAN Java"
+    description: "Install Java via SDKMAN"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_SDKMAN_MAVEN"
+    label: "SDKMAN Maven"
+    description: "Install Maven via SDKMAN"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_STARTCLOUD_SDKMAN_GRADLE"
+    label: "SDKMAN Gradle"
+    description: "Install Gradle via SDKMAN"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_JAVA_CONFIG"
+    label: "Domino Java Config"
+    description: "Configure Java for Domino"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_JAVA_TOOLS"
+    label: "Domino Java Tools"
+    description: "Install Java tools for Domino"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_JAVA_APP_EXAMPLE"
+    label: "Domino Java App Example"
+    description: "Install Java application examples"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_INSTALL"
+    label: "Domino Install"
+    description: "Install Domino server"
+    defaultEnabled: true
+    required: true
+    installers:
+      installer: true
+      fixpack: true
+      hotfix: true
+      
+  - name: "ROLE_DOMINO_VAGRANT_REST_API"
+    label: "Domino Vagrant REST API"
+    description: "Configure Domino REST API for Vagrant"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_SERVICE_NASH"
+    label: "Domino Service Nash"
+    description: "Configure Domino service with Nash"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_UPDATESITE"
+    label: "Domino Update Site"
+    description: "Configure Domino update site"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_CONFIG"
+    label: "Domino Config"
+    description: "Configure Domino server"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_GENESIS"
+    label: "Domino Genesis"
+    description: "Configure Domino Genesis"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_GENESIS_APPLICATIONS"
+    label: "Domino Genesis Applications"
+    description: "Configure Domino Genesis Applications"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_CROSS_CERTIFY"
+    label: "Domino Cross Certify"
+    description: "Configure Domino cross certification"
+    defaultEnabled: true
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+      
+  - name: "ROLE_DOMINO_VAGRANT_README"
+    label: "Domino Vagrant README"
+    description: "Generate Domino Vagrant README"
     defaultEnabled: true
     required: false
     installers:

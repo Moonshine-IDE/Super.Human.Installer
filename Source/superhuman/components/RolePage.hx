@@ -162,9 +162,18 @@ class RolePage extends Page {
                                      _server.provisioner.type != ProvisionerType.Default;
             
             Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
+            Logger.info('RolePage: Provisioner type: ${_server.provisioner.type}');
+            Logger.info('RolePage: Provisioner type class: ${Type.getClassName(Type.getClass(_server.provisioner))}');
+            
+            // Explicitly check against known standard types to be extra safe
+            var isStandardType = (_server.provisioner.type == ProvisionerType.StandaloneProvisioner || 
+                                 _server.provisioner.type == ProvisionerType.AdditionalProvisioner ||
+                                 _server.provisioner.type == ProvisionerType.Default);
+            
+            Logger.info('RolePage: Is standard type: ${isStandardType}');
             
             // Use custom roles only for custom provisioners
-            if (isCustomProvisioner) {
+            if (isCustomProvisioner && !isStandardType && _server.provisioner.type != null) {
                 // First try to get the provisioner definition from the event data
                 var provisionerDefinition = null;
                 
