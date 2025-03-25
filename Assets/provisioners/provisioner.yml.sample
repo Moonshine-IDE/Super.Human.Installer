@@ -11,29 +11,8 @@ configuration:
       placeholder: "Enter server hostname"
       tooltip: "The hostname for your Domino server"
       required: true
-      validationKey: "^[a-zA-Z0-9.-]+$"
       restrict: "a-zA-Z0-9.-"
       
-    - name: "organization"
-      type: "text"
-      label: "Organization"
-      placeholder: "Enter organization name"
-      tooltip: "The organization name for your Domino server"
-      required: true
-      restrict: "a-zA-Z0-9-"
-      
-    - name: "userEmail"
-      type: "text"
-      label: "Email Address"
-      placeholder: "Enter your email address"
-      tooltip: "Your email address for notifications"
-      validationKey: "^(([^<>()\[\]\\.,;:\s@\"]+(\.[^<>()\[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$"
-      
-    - name: "openBrowser"
-      type: "checkbox"
-      label: "Open Browser on Start"
-      tooltip: "Open a browser window when the server starts"
-      defaultValue: true
       
   advancedFields:
     - name: "numCPUs"
@@ -57,45 +36,46 @@ configuration:
       label: "Network Address"
       placeholder: "192.168.1.100"
       tooltip: "The IP address for this server"
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
       restrict: "0-9."
+      required: false
       
     - name: "networkNetmask"
       type: "text"
       label: "Network Netmask"
       placeholder: "255.255.255.0"
       tooltip: "The netmask for this server"
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
       restrict: "0-9."
+      required: false
       
     - name: "networkGateway"
       type: "text"
       label: "Network Gateway"
       placeholder: "192.168.1.1"
       tooltip: "The gateway for this server"
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
       restrict: "0-9."
+      required: false
       
     - name: "nameServer1"
       type: "text"
       label: "DNS Server 1"
       placeholder: "8.8.8.8"
       tooltip: "The primary DNS server for this server"
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
       restrict: "0-9."
+      required: false
       
     - name: "nameServer2"
       type: "text"
       label: "DNS Server 2"
       placeholder: "8.8.4.4"
       tooltip: "The secondary DNS server for this server"
-      validationKey: "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$"
       restrict: "0-9."
+      required: false
       
     - name: "networkBridge"
       type: "text"
       label: "Network Bridge"
       tooltip: "The network bridge to use"
+      required: false
       
     - name: "dhcp4"
       type: "checkbox"
@@ -118,32 +98,32 @@ configuration:
       max: 600
 
 roles:
-  - name: "domino"
-    label: "Domino Server"
-    description: "Basic Domino server role"
+  - name: "Custom Role"
+    label: "Custom Role for Custom Task"
+    description: "Custom Role for Custom Task"
     defaultEnabled: true
-    
-  - name: "nomadweb"
-    label: "Nomad Web"
-    description: "HCL Nomad Web server"
-    defaultEnabled: false
-    
-  - name: "leap"
-    label: "Leap"
-    description: "HCL Leap application server"
-    defaultEnabled: false
-    
-  - name: "traveler"
-    label: "Traveler"
-    description: "HCL Traveler server for mobile devices"
-    defaultEnabled: false
-    
-  - name: "verse"
-    label: "Verse"
-    description: "HCL Verse web mail client"
-    defaultEnabled: false
-    
-  - name: "domino-rest-api"
-    label: "Domino REST API"
-    description: "Domino REST API for application access"
-    defaultEnabled: false
+    required: false
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+
+  - name: "Custom Role 2"
+    label: "Custom Role 2 for Custom Task"
+    description: "Custom Role for Custom Task"
+    defaultEnabled: true
+    required: true
+    installers:
+      installer: true
+      fixpack: false
+      hotfix: false
+
+  - name: "Custom Role 3"
+    label: "Custom Role 3 for Custom Task"
+    description: "Custom Role for Custom Task"
+    defaultEnabled: true
+    required: true
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false

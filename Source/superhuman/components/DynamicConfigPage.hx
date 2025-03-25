@@ -947,6 +947,16 @@ class DynamicConfigPage extends Page {
     function _buttonRolesTriggered(e:TriggerEvent) {
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_ROLES);
         evt.server = this._server;
+        
+        // Pass the provisioner type and the current provisioner definition
+        evt.provisionerType = _server.provisioner.type;
+        
+        // Include the provisioner definition in the event data if available
+        if (_provisionerDefinition != null) {
+            evt.data = _provisionerDefinition;
+            Logger.info('${this}: Passing provisioner definition to roles page: ${_provisionerDefinition.name}');
+        }
+        
         this.dispatchEvent(evt);
     }
 

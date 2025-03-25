@@ -140,10 +140,27 @@ class RolePage extends Page {
             
             // Use custom roles only for custom provisioners
             if (isCustomProvisioner) {
-                // Get the provisioner definition for the server
-                Logger.info('RolePage: Getting provisioner definition for type: ${_server.provisioner.type}, version: ${_server.provisioner.version}');
-                var provisionerDefinition = ProvisionerManager.getProvisionerDefinition(_server.provisioner.type, _server.provisioner.version);
-                Logger.info('RolePage: Provisioner definition found: ${provisionerDefinition != null}');
+                // First try to get the provisioner definition from the event data
+                var provisionerDefinition = null;
+                
+                // Check event.data for the provisioner definition (passed from DynamicConfigPage)
+                try {
+                    // Check if we have the provisioner definition stored as an instance variable from the event
+                    if (Reflect.hasField(this, "_provisionerDefinition") && 
+                        Reflect.field(this, "_provisionerDefinition") != null) {
+                        provisionerDefinition = Reflect.field(this, "_provisionerDefinition");
+                        Logger.info('RolePage: Using provisioner definition from instance variable: ${provisionerDefinition.name}');
+                    }
+                } catch (e) {
+                    Logger.warning('RolePage: Error accessing provisioner definition from event: ${e}');
+                }
+                
+                // If not found in event data, get it from the ProvisionerManager
+                if (provisionerDefinition == null) {
+                    Logger.info('RolePage: Getting provisioner definition for type: ${_server.provisioner.type}, version: ${_server.provisioner.version}');
+                    provisionerDefinition = ProvisionerManager.getProvisionerDefinition(_server.provisioner.type, _server.provisioner.version);
+                    Logger.info('RolePage: Provisioner definition found: ${provisionerDefinition != null}');
+                }
                 
                 // If definition not found, try to find it in Assets/provisioners directory
                 if (provisionerDefinition == null) {

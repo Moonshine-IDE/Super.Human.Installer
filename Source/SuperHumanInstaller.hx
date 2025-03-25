@@ -1046,11 +1046,23 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _configureRoles( e:SuperHumanApplicationEvent ) {
-
+		// Set the server for the role page
 		_rolePage.setServer( e.server );
+		
+		// Check if the event contains a provisioner definition in data field
+		if (e.data != null && Std.isOfType(e.data, ProvisionerDefinition)) {
+			// Store the provisioner definition in the RolePage as an instance variable
+			var provisionerDefinition:ProvisionerDefinition = cast e.data;
+			Logger.info('${this}: Setting provisioner definition on RolePage: ${provisionerDefinition.name}');
+			Reflect.setField(_rolePage, "_provisionerDefinition", provisionerDefinition);
+		} else {
+			// Clear any existing provisioner definition
+			Reflect.setField(_rolePage, "_provisionerDefinition", null);
+		}
+		
+		// Update the role page content and navigate to it
 		_rolePage.updateContent();
 		this.selectedPageId = PAGE_ROLES;
-
 	}
 
 	function _closeRolePage( e:SuperHumanApplicationEvent ) {
