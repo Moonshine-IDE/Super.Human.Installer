@@ -1205,7 +1205,8 @@ class DynamicConfigPage extends Page {
             // Get reference to dynamicCustomProperties
             var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
             
-            // Save all custom properties
+            // Save all custom properties - only save to dynamicCustomProperties
+            // to avoid duplication in the server's customProperties
             for (fieldName => field in _dynamicFields) {
                 var value:String = null;
                 
@@ -1225,10 +1226,9 @@ class DynamicConfigPage extends Page {
                 }
                 
                 if (value != null) {
-                    // Save in both locations
+                    // Only save to dynamicCustomProperties to avoid duplication
                     Reflect.setField(customPropsObj, fieldName, value);
-                    Reflect.setField(_server.customProperties, fieldName, value);
-                    Logger.info('${this}: Saved field ${fieldName} with value ${value} in both locations');
+                    Logger.info('${this}: Saved field ${fieldName} with value ${value} in dynamicCustomProperties');
                 }
             }
             
