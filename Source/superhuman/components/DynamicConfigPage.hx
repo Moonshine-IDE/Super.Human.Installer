@@ -472,14 +472,9 @@ class DynamicConfigPage extends Page {
                     definition.metadata.configuration.basicFields.length : 0;
                 var advancedFieldCount = definition.metadata.configuration.advancedFields != null ? 
                     definition.metadata.configuration.advancedFields.length : 0;
-                } else {
-                    // Store the value directly in customProperties to preserve exact case
-                    if (_server.customProperties == null) {
-                        _server.customProperties = {};
-                    }
-                    Reflect.setField(_server.customProperties, fieldName, value);
-                    Logger.info('${this}: Stored custom property ${fieldName} with exact case: ${value}');
-                }
+            } else {
+                Logger.warning('No configuration found in provisioner metadata');
+            }
         _dynamicFields = new Map();
         _dynamicRows = new Map();
         
