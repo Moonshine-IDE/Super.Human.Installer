@@ -317,6 +317,16 @@ override public function generateHostsFileContent():String {
         
         return content;
     }
+    
+    /**
+     * Override the saveHostsFile method to ensure it gets called for custom provisioners
+     * Force save the hosts file regardless of validation
+     */
+    override public function saveHostsFile() {
+        // Save the hosts file without validation to ensure it's created
+        _saveHostsFile();
+        Logger.info('${this}: Forced creation of Hosts.yml file for custom provisioner');
+    }
 
     /**
      * Get the string representation of the provisioner
