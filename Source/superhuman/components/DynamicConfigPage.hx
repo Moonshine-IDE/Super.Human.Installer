@@ -296,7 +296,6 @@ class DynamicConfigPage extends Page {
             return;
         }
         
-
         // Check if we already have a provisioner definition from the service type data
         var serviceTypeProvisioner = null;
         if (_server.customProperties != null) {
@@ -318,11 +317,9 @@ class DynamicConfigPage extends Page {
         // Create a collection for the dropdown
         var provisionerCollection = new feathers.data.ArrayCollection<ProvisionerDefinition>();
         
-        // Log detailed information about each provisioner
+        // Add each provisioner to the collection
         for (i in 0...allProvisioners.length) {
             var p = allProvisioners[i];
-            
-            // Add to collection
             provisionerCollection.add(p);
         }
         
@@ -342,41 +339,73 @@ class DynamicConfigPage extends Page {
         // Set the dropdown data provider
         _dropdownCoreComponentVersion.dataProvider = provisionerCollection;
         
-        // First try to select the provisioner from service type data if available
+        // Try to find the right provisioner to select in this priority order:
+        // 1. First check serverProvisionerId (single source of truth)
+        // 2. Then check service type data
+        // 3. Then check server.provisioner.version
         var selectedIndex = -1;
-        if (serviceTypeProvisioner != null) {
+        
+        // PRIORITY 1: Check serverProvisionerId first as the authoritative source
+        if (_server.serverProvisionerId != null && 
+            _server.serverProvisionerId.value != null && 
+            _server.serverProvisionerId.value != "" &&
+            _server.serverProvisionerId.value != "0.0.0") {
+            
+            var serverProvisionerIdStr = _server.serverProvisionerId.value;
+            var serverProvisionerId = champaign.core.primitives.VersionInfo.fromString(serverProvisionerIdStr);
+            
+            Logger.info('${this}: Looking for provisioner matching serverProvisionerId: ${serverProvisionerIdStr}');
+            
+            for (i in 0...provisionerCollection.length) {
+                var d:ProvisionerDefinition = provisionerCollection.get(i);
+                if (d.data.version == serverProvisionerId) {
+                    selectedIndex = i;
+                    Logger.info('${this}: Found provisioner matching serverProvisionerId: ${d.name}');
+                    break;
+                }
+            }
+        }
+        
+        // PRIORITY 2: If no match by serverProvisionerId, try service type data
+        if (selectedIndex < 0 && serviceTypeProvisioner != null) {
+            Logger.info('${this}: Looking for provisioner matching service type data');
+            
             for (i in 0...provisionerCollection.length) {
                 var d:ProvisionerDefinition = provisionerCollection.get(i);
                 if (d.name == serviceTypeProvisioner.name && d.data.version == serviceTypeProvisioner.data.version) {
                     selectedIndex = i;
+                    Logger.info('${this}: Found provisioner matching service type data: ${d.name}');
                     break;
                 }
             }
         }
         
-        // If no match from service type data, try to match by server's provisioner version
+        // PRIORITY 3: If still no match, try by server's provisioner version
         if (selectedIndex < 0) {
+            Logger.info('${this}: Looking for provisioner matching server provisioner version: ${_server.provisioner.version}');
+            
             for (i in 0...provisionerCollection.length) {
                 var d:ProvisionerDefinition = provisionerCollection.get(i);
-                
                 if (d.data.version == _server.provisioner.version) {
                     selectedIndex = i;
+                    Logger.info('${this}: Found provisioner matching server version: ${d.name}');
                     break;
                 }
             }
         }
         
-        // If we found a match, select it
+        // Set the selected index based on what we found
         if (selectedIndex >= 0) {
             _dropdownCoreComponentVersion.selectedIndex = selectedIndex;
         } else if (provisionerCollection.length > 0) {
-            // Otherwise select the first one
+            // Default to first (newest) provisioner if no match found
             _dropdownCoreComponentVersion.selectedIndex = 0;
+            Logger.info('${this}: No matching provisioner found, defaulting to newest: ${provisionerCollection.get(0).name}');
         } else {
             Logger.warning('${this}: No provisioners in collection, cannot set selected index');
         }
         
-        // Get the provisioner definition for the current version
+        // Get the provisioner definition for the selected version
         var provisionerDefinition = null;
         if (selectedIndex >= 0) {
             provisionerDefinition = provisionerCollection.get(selectedIndex);
