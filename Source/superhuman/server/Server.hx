@@ -700,66 +700,39 @@ class Server {
             var newRoot:String = vcd.root;
             this._provisioner.reinitialize(newRoot);
             
-            // Important: Update the provisioner data that will be serialized directly to server.shi
-            // This fixes the version shown in the server overview list
-            if (this._provisioner.data != null) {
-                this._provisioner.data.version = data.version;
-                Logger.info('${this}: Updated provisioner.data.version to ${data.version}');
-            }
-            
-            // Store the version string directly in customProperties for better persistence
-            if (this._customProperties == null) {
-                this._customProperties = {};
-            }
-            
-            // Store exact string version in serviceTypeData
-            if (!Reflect.hasField(this._customProperties, "serviceTypeData")) {
-                Reflect.setField(this._customProperties, "serviceTypeData", {});
-            }
-            var serviceTypeData = Reflect.field(this._customProperties, "serviceTypeData");
-            
-            if (!Reflect.hasField(serviceTypeData, "provisioner")) {
-                Reflect.setField(serviceTypeData, "provisioner", {});
-            }
-            var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
-            
-            if (!Reflect.hasField(stProvisioner, "data")) {
-                Reflect.setField(stProvisioner, "data", {});
-            }
-            var provData = Reflect.field(stProvisioner, "data");
-            
-            // Store both string version and original VersionInfo
-            Reflect.setField(provData, "version", versionStr);
-            Reflect.setField(provData, "versionInfo", data.version);
-            
-            // Also update any stored provisionerDefinition if present
-            if (Reflect.hasField(this._customProperties, "provisionerDefinition")) {
-                var provDef = Reflect.field(this._customProperties, "provisionerDefinition");
-                if (provDef != null && Reflect.hasField(provDef, "data")) {
-                    // Store both string version and original VersionInfo
-                    Reflect.setField(provDef.data, "version", versionStr);
-                    Reflect.setField(provDef.data, "versionInfo", data.version);
-                }
-            }
-            
-            // Make sure serverProvisionerId is updated as well (appears in the getData method)
+            // STEP 1: Update serverProvisionerId - this is the single source of truth for version
             if (this._serverProvisionerId != null) {
                 this._serverProvisionerId.value = versionStr;
                 Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
             }
             
-            // Directly set the version in the provisioner object to ensure it's displayed correctly
-            // This is necessary because ServerList directly accesses _server.provisioner.version
-            // for display in the server overview
+            // STEP 2: Create a fresh provisioner data object to avoid any reference issues
+            var updatedProvisionerData = {
+                type: data.type,
+                version: data.version
+            };
+            
+            // STEP 3: Force replace the provisioner data
+            Reflect.setField(this._provisioner, "data", updatedProvisionerData);
+            Logger.info('${this}: Directly replaced provisioner.data with version ${data.version}');
+            
+            // STEP 4: Update the _version field directly in the provisioner
             if (Reflect.hasField(this._provisioner, "_version")) {
                 try {
-                    // Use reflection to directly update the _version field in the provisioner
                     Reflect.setField(this._provisioner, "_version", data.version);
                     Logger.info('${this}: Directly updated provisioner._version to ${data.version}');
                 } catch (e) {
                     Logger.warning('${this}: Could not update provisioner._version directly: ${e}');
                 }
             }
+            
+            // STEP 5: Minimal custom properties to avoid confusion
+            if (this._customProperties == null) {
+                this._customProperties = {};
+            }
+            
+            // Store the provisioner definition
+            Reflect.setField(this._customProperties, "provisionerDefinition", vcd);
             
             // Trigger update notification
             _propertyChanged(this._provisioner);
