@@ -56,9 +56,6 @@ class CustomProvisioner extends StandaloneProvisioner {
      * @return A map of role keys to RoleData objects
      */
     static public function getDefaultProvisionerRoles():Map<String, RoleData> {
-        Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Getting custom provisioner roles');
-        
-        // Find all provisioner definitions
         var allProvisioners = ProvisionerManager.getBundledProvisioners();
         
         // Filter to only include custom provisioners (not standard ones)
@@ -67,8 +64,6 @@ class CustomProvisioner extends StandaloneProvisioner {
             p.data.type != ProvisionerType.AdditionalProvisioner &&
             p.data.type != ProvisionerType.Default
         );
-        
-        Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Found ${customProvisioners.length} custom provisioners across all types');
         
         // Check if we found any custom provisioners
         if (customProvisioners == null || customProvisioners.length == 0) {
@@ -127,16 +122,13 @@ class CustomProvisioner extends StandaloneProvisioner {
      * @return The default server data
      */
     static public function getDefaultServerData(id:Int):ServerData {
-        Logger.info('CustomProvisioner.getDefaultServerData: Starting with id ${id}');
         
         // Get the available provisioners of type Custom
         var customProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom);
-        Logger.info('CustomProvisioner.getDefaultServerData: Found ${customProvisioners != null ? customProvisioners.length : 0} custom provisioners');
         
         // Get roles from custom provisioner
         var roleMap = getDefaultProvisionerRoles();
         var roles:Array<RoleData> = [for (r in roleMap.keyValueIterator()) r.value];
-        Logger.info('CustomProvisioner.getDefaultServerData: Using ${roles.length} roles from getDefaultProvisionerRoles()');
         
         // Check if we have any custom provisioners available
         if (customProvisioners != null && customProvisioners.length > 0) {
@@ -228,8 +220,7 @@ override public function get_data():ProvisionerData {
         _server.serverProvisionerId.value != "0.0.0") {
         
         var versionStr = _server.serverProvisionerId.value;
-        Logger.info('CustomProvisioner: Using version from serverProvisionerId: ${versionStr}');
-        
+
         return { 
             type: baseData.type,
             version: champaign.core.primitives.VersionInfo.fromString(versionStr)
@@ -244,8 +235,6 @@ override public function get_data():ProvisionerData {
                 Reflect.hasField(provDef.data, "version")) {
                 
                 var versionInfo = Reflect.field(provDef.data, "version");
-                Logger.info('CustomProvisioner: Using version from provisionerDefinition: ${versionInfo}');
-                
                 return {
                     type: baseData.type,
                     version: versionInfo
