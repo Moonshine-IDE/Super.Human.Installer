@@ -566,10 +566,8 @@ class ServerItem extends LayoutGroupItemRenderer {
                                  _server.provisioner.type != ProvisionerType.Default);
         
         // Log role data for debugging
-        Logger.info('${this}: Getting role names for server ${_server.id} - Custom provisioner: ${isCustomProvisioner}');
         for (i in 0..._server.roles.value.length) {
             var role = _server.roles.value[i];
-            Logger.info('  - Role ${i}: ${role.value}, enabled: ${role.enabled}');
         }
         
         // Create a map of valid role names for custom provisioners based on metadata
@@ -587,12 +585,10 @@ class ServerItem extends LayoutGroupItemRenderer {
                         var metadataRoles:Array<Dynamic> = cast rolesObj;
                         
                         if (metadataRoles != null) {
-                            Logger.info('  Found ${metadataRoles.length} roles in metadata:');
                             for (metaRole in metadataRoles) {
                                 if (metaRole != null && Reflect.hasField(metaRole, "name")) {
                                     var roleName = Reflect.field(metaRole, "name");
                                     validCustomRoles.set(roleName, true);
-                                    Logger.info('    - Valid custom role: ${roleName}');
                                 }
                             }
                         }
@@ -646,9 +642,6 @@ class ServerItem extends LayoutGroupItemRenderer {
                         }
                         
                         a.push(displayName);
-                        Logger.info('  Adding role to display: ${displayName}');
-                    } else {
-                        Logger.info('  Skipping role ${role.value} - not in metadata for this custom provisioner');
                     }
                 }
             }
@@ -662,7 +655,6 @@ class ServerItem extends LayoutGroupItemRenderer {
         }
 
         s = (a.length > 0) ? a.join(", ") : "None";
-        Logger.info('${this}: Final role display string: "${s}"');
         return s;
     }
 
@@ -714,8 +706,6 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         if ( !Vagrant.getInstance().exists || !VirtualBox.getInstance().exists ) return;
 
-        Logger.info('${this}: _updateServer Server status: ${_server.status.value}');
-        Logger.info('${this}: _updateServer Server provisioned: ${_server.provisioned}');
         switch ( _server.status.value ) {
 
             case ServerStatus.Stopped( hasError ):

@@ -836,18 +836,66 @@ class Server {
     }
 
     public function saveHostsFile() {
-
-        if ( isValid() ) 
-        {
-            // Check if this is a custom provisioner
-            var isCustomProvisioner = (this.provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
-                                      this.provisioner.data.type != ProvisionerType.AdditionalProvisioner);
+        // Perform validation with detailed feedback
+        var isValid = this.isValid();
+        
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  this.provisioner.type != ProvisionerType.AdditionalProvisioner);
+                                  
+        // Log validation issues if failing
+        if (!isValid) {
+            Logger.warning('${this}: Server validation failed, cannot save Hosts.yml file');
             
-            if (isCustomProvisioner) {
-                cast(this.provisioner, CustomProvisioner).saveHostsFile();
-            } else {
-                cast(this.provisioner, StandaloneProvisioner).saveHostsFile();
+            if (console != null) {
+                console.appendText("Server validation failed. Please check the following:", true);
+                
+                // Log specific validation issues
+                if (!Vagrant.getInstance().exists)
+                    console.appendText("- Vagrant is not installed", true);
+                    
+                if (!VirtualBox.getInstance().exists)
+                    console.appendText("- VirtualBox is not installed", true);
+                    
+                if (!this.hostname.isValid())
+                    console.appendText("- Invalid hostname", true);
+                    
+                if (!this.organization.isValid())
+                    console.appendText("- Invalid organization", true);
+                    
+                if (this.memory.value < 4)
+                    console.appendText("- Memory allocation less than 4GB", true);
+                    
+                if (this.numCPUs.value < 1)
+                    console.appendText("- CPU count insufficient", true);
+                    
+                var isNetworkValid = this.dhcp4.value || (
+                    this.networkBridge.isValid() &&
+                    this.networkAddress.isValid() &&
+                    this.networkGateway.isValid() &&
+                    this.networkNetmask.isValid() &&
+                    this.nameServer1.isValid() &&
+                    this.nameServer2.isValid()
+                );
+                
+                if (!isNetworkValid)
+                    console.appendText("- Network configuration invalid", true);
+                    
+                if (!this.safeIdExists())
+                    console.appendText("- SafeID file not found", true);
+                    
+                if (!this.areRolesValid())
+                    console.appendText("- Role configuration invalid", true);
             }
+            
+            return;
+        }
+        
+        // If valid, save the hosts file
+        if (isCustomProvisioner) {
+            cast(this.provisioner, CustomProvisioner).saveHostsFile();
+        } else {
+            cast(this.provisioner, StandaloneProvisioner).saveHostsFile();
         }
     }
 

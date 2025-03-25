@@ -382,52 +382,7 @@ override public function get_hostFileExists():Bool {
 override public function saveHostsFile() {
     Logger.info('${this}: Saving Hosts.yml file for custom provisioner');
     
-    // Check if the server is valid, but log details even if it's not
-    var isValid = _server.isValid();
-    Logger.info('${this}: Server validation result: ${isValid}');
-    
-    // Log detailed validation info for debugging
-    var hasVagrant = Vagrant.getInstance().exists;
-    var hasVirtualBox = VirtualBox.getInstance().exists;
-    var isHostnameValid = _server.hostname.isValid();
-    var isOrganizationValid = _server.organization.isValid();
-    var isMemorySufficient = _server.memory.value >= 4;
-    var isCPUCountSufficient = _server.numCPUs.value >= 1;
-    
-    var isNetworkValid = _server.dhcp4.value || (
-        _server.networkBridge.isValid() &&
-        _server.networkAddress.isValid() &&
-        _server.networkGateway.isValid() &&
-        _server.networkNetmask.isValid() &&
-        _server.nameServer1.isValid() &&
-        _server.nameServer2.isValid()
-    );
-    
-    var hasSafeId = _server.safeIdExists();
-    var areRolesOK = _server.areRolesValid();
-    
-    Logger.info('${this}: Validation details: hasVagrant=${hasVagrant}, hasVirtualBox=${hasVirtualBox}, ' +
-                'isHostnameValid=${isHostnameValid}, isOrganizationValid=${isOrganizationValid}, ' +
-                'isMemorySufficient=${isMemorySufficient}, isCPUCountSufficient=${isCPUCountSufficient}, ' +
-                'isNetworkValid=${isNetworkValid}, hasSafeId=${hasSafeId}, areRolesOK=${areRolesOK}');
-    
-    // Report validation issues to console if server isn't valid but proceed anyway
-    if (!isValid && console != null) {
-        console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.warning', 
-            'Server validation detected issues that might cause problems:'), true);
-        
-        if (!hasVagrant) console.appendText("  - Vagrant not installed", true);
-        if (!hasVirtualBox) console.appendText("  - VirtualBox not installed", true);
-        if (!isHostnameValid) console.appendText("  - Invalid hostname", true);
-        if (!isOrganizationValid) console.appendText("  - Invalid organization", true);
-        if (!isMemorySufficient) console.appendText("  - Memory allocation less than 4GB", true);
-        if (!isCPUCountSufficient) console.appendText("  - CPU count insufficient", true);
-        if (!isNetworkValid) console.appendText("  - Network configuration invalid", true);
-        if (!hasSafeId) console.appendText("  - SafeID file not found", true);
-        if (!areRolesOK) console.appendText("  - Role configuration invalid", true);
-    }
-    
-    // Create target directory and ensure it exists
+    // Create target directory and ensure it exists regardless of validation
     createTargetDirectory();
 
     // Generate the content for Hosts.yml file
@@ -445,7 +400,6 @@ override public function saveHostsFile() {
         
         // Update server status after saving hosts file
         if (_server != null) {
-            Logger.info('${this}: Updating server status after saving Hosts.yml');
             _server.setServerStatus();
         }
     } catch (e:Exception) {

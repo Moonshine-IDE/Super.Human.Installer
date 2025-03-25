@@ -1035,15 +1035,39 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
-	function _saveServerConfiguration( e:SuperHumanApplicationEvent ) {
-
-		e.server.saveHostsFile();
-		_saveConfig();
-		
-		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverconfigsaved' ) );
-		this.selectedPageId = PAGE_SERVER;
-
-	}
+    function _saveServerConfiguration( e:SuperHumanApplicationEvent ) {
+        // Check if this is a custom provisioner 
+        var isCustomProvisioner = (e.server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  e.server.provisioner.type != ProvisionerType.AdditionalProvisioner);
+        
+        Logger.info('${this}: Saving server configuration for server ${e.server.id}, custom provisioner: ${isCustomProvisioner}');
+        
+        // Try to save hosts file first, with detailed logging
+        try {
+            // Force update of any fields before saving
+            e.server.saveData();
+            
+            // Explicitly save hosts file to ensure it's created
+            e.server.saveHostsFile();
+            
+            // Set server status after saving hosts file to ensure it's in the correct state
+            e.server.setServerStatus();
+            
+            Logger.info('${this}: Successfully saved hosts file for server ${e.server.id}');
+        } catch(ex) {
+            Logger.error('${this}: Error saving hosts file: ${ex}');
+            
+            if (e.server.console != null) {
+                e.server.console.appendText('Error saving hosts file: ${ex}', true);
+            }
+        }
+        
+        // Save the global config
+        _saveConfig();
+        
+        ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverconfigsaved' ) );
+        this.selectedPageId = PAGE_SERVER;
+    }
 
 	function _configureRoles( e:SuperHumanApplicationEvent ) {
 		// Set the server for the role page

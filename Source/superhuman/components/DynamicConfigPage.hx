@@ -1049,6 +1049,9 @@ class DynamicConfigPage extends Page {
         _buttonRoles.setValidity(_server.areRolesValid());
 
         if (!_form.isValid() || !_server.areRolesValid()) {
+            if (console != null) {
+                console.appendText("Configuration form is invalid. Please correct the errors before saving.", true);
+            }
             return;
         }
 
@@ -1056,10 +1059,6 @@ class DynamicConfigPage extends Page {
         var a = _server.roles.value.copy();
         _server.roles.value = a;
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
-        
-        // Explicitly save hosts file to ensure it's created for custom provisioners
-        _server.saveHostsFile();
-        Logger.info('${this}: Explicitly saving hosts file after configuration');
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {
