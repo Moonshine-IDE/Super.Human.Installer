@@ -839,7 +839,15 @@ class Server {
 
         if ( isValid() ) 
         {
-            cast(this.provisioner, StandaloneProvisioner).saveHostsFile();
+            // Check if this is a custom provisioner
+            var isCustomProvisioner = (this.provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
+                                      this.provisioner.data.type != ProvisionerType.AdditionalProvisioner);
+            
+            if (isCustomProvisioner) {
+                cast(this.provisioner, CustomProvisioner).saveHostsFile();
+            } else {
+                cast(this.provisioner, StandaloneProvisioner).saveHostsFile();
+            }
         }
     }
 

@@ -1211,7 +1211,9 @@ class DynamicAdvancedConfigPage extends Page {
             Logger.info('${this}: Saved all custom properties to server data');
         }
 
+        // Explicitly save hosts file to ensure it's created for custom provisioners
         _server.saveHostsFile();
+        Logger.info('${this}: Explicitly saving hosts file for custom provisioner after advanced configuration');
         
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION);
         evt.server = _server;
