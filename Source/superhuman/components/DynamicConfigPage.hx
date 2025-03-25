@@ -700,7 +700,7 @@ class DynamicConfigPage extends Page {
             _buttonSave.enabled = !_server.hostname.locked;
             
             // Load custom properties from server.customProperties if they haven't been loaded yet
-            if (_server.customProperties != null && !Lambda.count(_customProperties) > 0) {
+            if (_server.customProperties != null && Lambda.count(_customProperties) == 0) {
                 Logger.info('${this}: Loading custom properties from server customProperties');
                 
                 // Check for dynamicCustomProperties
