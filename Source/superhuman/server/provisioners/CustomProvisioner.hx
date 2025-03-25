@@ -307,25 +307,25 @@ override public function generateHostsFileContent():String {
         return content;
     }
     
-    /**
-     * Override the saveHostsFile method to ensure it gets called for custom provisioners
-     * Force save the hosts file regardless of validation
-     */
-    override public function saveHostsFile() {
-        // Save the hosts file without validation to ensure it's created
-        _saveHostsFile();
-        Logger.info('${this}: Forced creation of Hosts.yml file for custom provisioner');
-    }
-    
-    /**
-     * Override hostFileExists to ensure the initial check for host file existence works properly
-     * This method is called in Server._batchCopyComplete() to determine if the file needs to be created
-     */
-    override public function get_hostFileExists():Bool {
-        var exists = super.get_hostFileExists();
-        Logger.info('${this}: Checking if Hosts.yml exists: ${exists}');
-        return exists;
-    }
+/**
+ * Override hostFileExists to ensure the initial check for host file existence works properly
+ * This method is called in Server._batchCopyComplete() to determine if the file needs to be created
+ */
+override public function get_hostFileExists():Bool {
+    var exists = super.get_hostFileExists();
+    Logger.info('${this}: Checking if Hosts.yml exists: ${exists}');
+    return exists;
+}
+
+/**
+ * Override the saveHostsFile method to ensure it gets called for custom provisioners
+ * Force save the hosts file regardless of validation
+ */
+override public function saveHostsFile() {
+    Logger.info('${this}: Saving Hosts.yml file for custom provisioner');
+    // Save the hosts file without validation to ensure it's created
+    _saveHostsFile();
+}
 
     /**
      * Get the string representation of the provisioner
