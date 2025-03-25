@@ -138,6 +138,7 @@ class DynamicConfigPage extends Page {
 
         // Create a scroll container for the form content
         var scrollContainer = new ScrollContainer();
+        scrollContainer.variant = SuperHumanInstallerTheme.SCROLL_CONTAINER_DARK;
         scrollContainer.layoutData = new VerticalLayoutData(100, 100);
         
         // Set up vertical layout for the scroll container
