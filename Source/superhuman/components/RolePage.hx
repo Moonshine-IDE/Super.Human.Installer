@@ -156,24 +156,25 @@ class RolePage extends Page {
                 Logger.info('  - Role: ${role.value}, enabled: ${role.enabled}');
             }
             
-            // Check if it's not one of the standard provisioner types
-            var isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+            // Get the actual class name of the provisioner to determine its type
+            var provisionerClassName = Type.getClassName(Type.getClass(_server.provisioner));
+            Logger.info('RolePage: Provisioner class name: ${provisionerClassName}');
+            
+            // Check if it's a CustomProvisioner by class name
+            var isCustomProvisioner = provisionerClassName.indexOf("CustomProvisioner") >= 0;
+            
+            // Also check the type as a fallback
+            if (!isCustomProvisioner) {
+                isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
                                      _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
                                      _server.provisioner.type != ProvisionerType.Default;
+            }
             
             Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
             Logger.info('RolePage: Provisioner type: ${_server.provisioner.type}');
-            Logger.info('RolePage: Provisioner type class: ${Type.getClassName(Type.getClass(_server.provisioner))}');
-            
-            // Explicitly check against known standard types to be extra safe
-            var isStandardType = (_server.provisioner.type == ProvisionerType.StandaloneProvisioner || 
-                                 _server.provisioner.type == ProvisionerType.AdditionalProvisioner ||
-                                 _server.provisioner.type == ProvisionerType.Default);
-            
-            Logger.info('RolePage: Is standard type: ${isStandardType}');
             
             // Use custom roles only for custom provisioners
-            if (isCustomProvisioner && !isStandardType && _server.provisioner.type != null) {
+            if (isCustomProvisioner) {
                 // First try to get the provisioner definition from the event data
                 var provisionerDefinition = null;
                 
