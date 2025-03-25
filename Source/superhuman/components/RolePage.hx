@@ -123,19 +123,23 @@ class RolePage extends Page {
             _listGroup.removeChildren();
             
             // Check if this is a custom provisioner (not StandaloneProvisioner or AdditionalProvisioner)
-            var isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
-                                     _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
-                                     _server.provisioner.type != ProvisionerType.Default;
+            Logger.info('RolePage: Server provisioner type: ${_server.provisioner.type}');
+            var isCustomProvisioner = _server.provisioner.type == ProvisionerType.Custom;
+            Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
             
             // Use custom roles only for custom provisioners
             if (isCustomProvisioner) {
                 // Get the provisioner definition for the server
+                Logger.info('RolePage: Getting provisioner definition for type: ${_server.provisioner.type}, version: ${_server.provisioner.version}');
                 var provisionerDefinition = ProvisionerManager.getProvisionerDefinition(_server.provisioner.type, _server.provisioner.version);
+                Logger.info('RolePage: Provisioner definition found: ${provisionerDefinition != null}');
                 
                 if (provisionerDefinition != null && 
                     provisionerDefinition.metadata != null && 
                     provisionerDefinition.metadata.roles != null && 
                     provisionerDefinition.metadata.roles.length > 0) {
+                    
+                    Logger.info('RolePage: Found ${provisionerDefinition.metadata.roles.length} roles in provisioner metadata');
                     
                     var customRoles:Array<ServerRoleImpl> = [];
                     
