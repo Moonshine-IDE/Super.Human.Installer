@@ -1429,29 +1429,67 @@ class Server {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
-        // If this is the first time starting the server, install the vagrant-scp-sync plugin first
-        if (!_provisionedBeforeStart) {
-            _installVagrantPlugin();
-        } else {
+        // Check for the plugin first, then proceed to vagrant up
+        _checkAndInstallVagrantPlugin();
+    }
+    
+    /**
+     * Check if the vagrant-scp-sync plugin is installed, and install it if needed
+     */
+    function _checkAndInstallVagrantPlugin() {
+        if (console != null) console.appendText("Checking for vagrant-scp-sync plugin...");
+        Logger.info('${this}: Checking for vagrant-scp-sync plugin');
+        
+        try {
+            // First check if the plugin is already installed
+            var checkExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "list"]);
+            checkExecutor.onStop.add((executor:AbstractExecutor) -> {
+                var outputText = executor.stdOut.toString();
+                
+                if (outputText.indexOf("vagrant-scp-sync") >= 0) {
+                    // Plugin is already installed, proceed directly to vagrant up
+                    Logger.info('${this}: vagrant-scp-sync plugin already installed');
+                    if (console != null) console.appendText("vagrant-scp-sync plugin already installed");
+                    _executeVagrantUp();
+                } else {
+                    // Plugin not found, install it
+                    _safeInstallVagrantPlugin();
+                }
+            });
+            checkExecutor.execute();
+        } catch (e:Dynamic) {
+            // If anything goes wrong with the check, log it and continue with vagrant up
+            Logger.error('${this}: Error checking vagrant plugin: ${e}');
+            if (console != null) console.appendText('Error checking vagrant plugin: ${e}', true);
+            // Continue with vagrant up anyway
             _executeVagrantUp();
         }
     }
     
     /**
-     * Install the vagrant-scp-sync plugin before running vagrant up for the first time
+     * Install the vagrant-scp-sync plugin before running vagrant up for the first time,
+     * with additional error handling and fallback
      */
-    function _installVagrantPlugin() {
+    function _safeInstallVagrantPlugin() {
         if (console != null) console.appendText("Installing vagrant-scp-sync plugin...");
         Logger.info('${this}: Installing vagrant-scp-sync plugin');
         
-        // Create a custom executor for the plugin installation command
-        var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", "vagrant-scp-sync"]);
-        pluginExecutor.onStart.add(_pluginInstallStarted);
-        pluginExecutor.onStop.add(_pluginInstallStopped);
-        pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
-        pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
-        
-        pluginExecutor.execute(_serverDir);
+        try {
+            // Create a custom executor for the plugin installation command
+            var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", "vagrant-scp-sync"]);
+            pluginExecutor.onStart.add(_pluginInstallStarted);
+            pluginExecutor.onStop.add(_pluginInstallStopped);
+            pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
+            pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
+            
+            pluginExecutor.execute();
+        } catch (e:Dynamic) {
+            // If there's any exception, log it and continue with vagrant up
+            Logger.error('${this}: Exception during plugin installation: ${e}');
+            if (console != null) console.appendText('Exception during plugin installation: ${e}', true);
+            // Continue with vagrant up even if plugin installation fails
+            _executeVagrantUp();
+        }
     }
     
     function _pluginInstallStarted(executor:AbstractExecutor) {
@@ -1466,6 +1504,7 @@ class Server {
                 console.appendText("Vagrant plugin installation completed successfully");
             } else {
                 console.appendText("Vagrant plugin installation failed with exit code: ${executor.exitCode}", true);
+                console.appendText("Continuing without the plugin - some features may be limited", true);
             }
         }
         
