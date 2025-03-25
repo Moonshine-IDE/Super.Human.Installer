@@ -1740,6 +1740,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	/**
+	 * Get the RolePage instance
+	 * This allows other components to interact with the RolePage directly
+	 * @return The RolePage instance
+	 */
+	public function getRolesPage():RolePage {
+		return _rolePage;
+	}
+
 	public override function toString():String {
 
 		return '[Super.Human.Installer]';

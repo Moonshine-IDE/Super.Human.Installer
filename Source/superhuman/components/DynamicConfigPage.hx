@@ -969,12 +969,22 @@ class DynamicConfigPage extends Page {
             }
             Reflect.setField(_server.customProperties, "currentProvisionerDefinitionName", _provisionerDefinition.name);
             
+            // Store the definition name in RolePage.lastDefinitionName if it exists
+            try {
+                // Get a reference to the RolePage instance - we need to check if it exists first
+                var rolesPage = SuperHumanInstaller.getInstance().getRolesPage();
+                if (rolesPage != null) {
+                    Logger.info('${this}: Setting lastDefinitionName on RolePage: ${_provisionerDefinition.name}');
+                    Reflect.setField(rolesPage, "_lastDefinitionName", _provisionerDefinition.name);
+                }
+            } catch (e) {
+                Logger.warning('${this}: Could not set lastDefinitionName on RolePage: ${e}');
+            }
+            
             Logger.info('${this}: Passing provisioner definition to roles page: ${_provisionerDefinition.name}');
         } else {
             Logger.warning('${this}: No provisioner definition available to pass to roles page');
-            evt.data = haxe.Json.stringify({
-                definitionAvailable: false
-            });
+            evt.data = null;
         }
         
         this.dispatchEvent(evt);
