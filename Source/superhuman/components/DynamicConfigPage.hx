@@ -727,6 +727,7 @@ class DynamicConfigPage extends Page {
             return;
         }
         
+        Logger.info('${this}: Updating content (forced=${forced})');
         
         if (_form != null && _server != null) {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
@@ -769,9 +770,45 @@ class DynamicConfigPage extends Page {
                 var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
                 if (customPropsObj != null) {
                     var fields = Reflect.fields(customPropsObj);
+                    Logger.info('${this}: Found ${fields.length} fields in dynamicCustomProperties');
+                    
                     for (field in fields) {
                         var value = Reflect.field(customPropsObj, field);
                         customPropValues.set(field, value);
+                        Logger.info('${this}: Found field in customProperties: ${field} = ${value}');
+                        
+                        // Also update our local custom properties map to ensure consistency
+                        if (!_customProperties.exists(field)) {
+                            var prop = null;
+                            if (Std.isOfType(value, String)) {
+                                prop = new champaign.core.primitives.Property<String>(value);
+                            } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                                prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            } else if (Std.isOfType(value, Bool)) {
+                                var boolValue:Bool = cast value;
+                                var boolStr = boolValue ? "true" : "false";
+                                prop = new champaign.core.primitives.Property<String>(boolStr);
+                            } else {
+                                prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            }
+                            
+                            if (prop != null) {
+                                _customProperties.set(field, prop);
+                                
+                                // Add property change listener
+                                var onChange = Reflect.field(prop, "onChange");
+                                if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                    var self = this;
+                                    Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                                }
+                            }
+                        } else {
+                            // Update existing property
+                            var prop = _customProperties.get(field);
+                            if (prop != null && Reflect.hasField(prop, "value")) {
+                                Reflect.setField(prop, "value", value);
+                            }
+                        }
                     }
                 }
             }
@@ -782,9 +819,12 @@ class DynamicConfigPage extends Page {
                 var valueField = null;
                 var valueSource = "none";
                 
+                Logger.info('${this}: Processing field ${fieldName}');
+                
                 // First check if it's in the customPropValues map (direct from customProperties)
                 if (customPropValues.exists(fieldName)) {
                     valueField = customPropValues.get(fieldName);
+                    Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
                     valueSource = "customProperties";
                 }
                 // Then check if it's a custom property in our local map
@@ -793,6 +833,7 @@ class DynamicConfigPage extends Page {
                     if (value != null && Reflect.hasField(value, "value")) {
                         valueField = Reflect.field(value, "value");
                     }
+                    Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
                     valueSource = "customPropertiesMap";
                 } 
                 // If not, try to get it from the server
@@ -804,6 +845,8 @@ class DynamicConfigPage extends Page {
                         } else {
                             valueField = value;
                         }
+                }
+                        Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
                         valueSource = "serverProperty";
                     } catch (e) {
                         // Try with underscore prefix
@@ -814,6 +857,7 @@ class DynamicConfigPage extends Page {
                             } else {
                                 valueField = value;
                             }
+                            Logger.info('${this}: Using value from server property with underscore for ${fieldName}: ${valueField}');
                             valueSource = "serverPropertyUnderscore";
                         } catch (e2) {
                             // Property doesn't exist on server
@@ -841,6 +885,7 @@ class DynamicConfigPage extends Page {
                         }
                         
                         input.text = displayValue;
+                        Logger.info('${this}: Set text input ${fieldName} to "${displayValue}" (source: ${valueSource})');
                         
                     } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                         var stepper:GenesisFormNumericStepper = cast field;
@@ -853,6 +898,7 @@ class DynamicConfigPage extends Page {
                         }
                         
                         stepper.value = numValue;
+                        Logger.info('${this}: Set numeric stepper ${fieldName} to ${numValue} (source: ${valueSource})');
                         
                     } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                         var checkbox:GenesisFormCheckBox = cast field;
@@ -877,6 +923,7 @@ class DynamicConfigPage extends Page {
                         }
                         
                         checkbox.selected = boolValue;
+                        Logger.info('${this}: Set checkbox ${fieldName} to ${boolValue} (source: ${valueSource})');
                         
                     } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                         var dropdown:GenesisFormPupUpListView = cast field;
@@ -884,12 +931,17 @@ class DynamicConfigPage extends Page {
                             var selectedValue = valueField != null ? valueField : value;
                             var foundMatch = false;
                             
+                            Logger.info('${this}: Looking for dropdown match for ${fieldName} with value ${selectedValue}');
+                            
                             for (i in 0...dropdown.dataProvider.length) {
                                 var option = dropdown.dataProvider.get(i);
                                 if (option != null && option.length > 0) {
+                                    Logger.info('${this}: Checking dropdown option ${i}: ${option[0]} == ${selectedValue}');
+                                    
                                     if (option[0] == selectedValue) {
                                         dropdown.selectedIndex = i;
                                         foundMatch = true;
+                                        Logger.info('${this}: Set dropdown ${fieldName} to index ${i} (${option[1]}) (source: ${valueSource})');
                                         break;
                                     }
                                 }
@@ -900,6 +952,8 @@ class DynamicConfigPage extends Page {
                             }
                         }
                     }
+                } else {
+                    Logger.info('${this}: No value found for field ${fieldName}');
                 }
             }
         }

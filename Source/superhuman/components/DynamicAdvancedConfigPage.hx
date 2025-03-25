@@ -679,16 +679,113 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Look for dynamic custom properties in server.customProperties if they exist
             var customPropValues = new Map<String, Dynamic>();
-            if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
-                var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
-                if (customPropsObj != null) {
-                    var fields = Reflect.fields(customPropsObj);
-                    for (field in fields) {
-                        var value = Reflect.field(customPropsObj, field);
-                        customPropValues.set(field, value);
-                        Logger.info('${this}: Found field in customProperties: ${field} = ${value}');
+            if (_server.customProperties != null) {
+                Logger.info('${this}: Server has customProperties object');
+                
+                // Check for dynamicAdvancedCustomProperties
+                if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+                    var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+                    if (customPropsObj != null) {
+                        var fields = Reflect.fields(customPropsObj);
+                        Logger.info('${this}: Found ${fields.length} fields in dynamicAdvancedCustomProperties');
+                        
+                        for (field in fields) {
+                            var value = Reflect.field(customPropsObj, field);
+                            customPropValues.set(field, value);
+                            Logger.info('${this}: Found custom property in dynamicAdvancedCustomProperties: ${field} = ${value}');
+                            
+                            // Also update our local custom properties map to ensure consistency
+                            if (!_customProperties.exists(field)) {
+                                var prop = null;
+                                if (Std.isOfType(value, String)) {
+                                    prop = new champaign.core.primitives.Property<String>(value);
+                                } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                                    prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                                } else if (Std.isOfType(value, Bool)) {
+                                    var boolValue:Bool = cast value;
+                                    var boolStr = boolValue ? "true" : "false";
+                                    prop = new champaign.core.primitives.Property<String>(boolStr);
+                                } else {
+                                    prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                                }
+                                
+                                if (prop != null) {
+                                    _customProperties.set(field, prop);
+                                    
+                                    // Add property change listener
+                                    var onChange = Reflect.field(prop, "onChange");
+                                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                        var self = this;
+                                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                                    }
+                                }
+                            } else {
+                                // Update existing property
+                                var prop = _customProperties.get(field);
+                                if (prop != null && Reflect.hasField(prop, "value")) {
+                                    Reflect.setField(prop, "value", value);
+                                }
+                            }
+                        }
+                    } else {
+                        Logger.warning('${this}: dynamicAdvancedCustomProperties object is null');
+                    }
+                } else {
+                    Logger.info('${this}: No dynamicAdvancedCustomProperties found in server.customProperties');
+                    
+                    // As a fallback, check if there are any properties in dynamicCustomProperties that match our field names
+                    if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                        var basicPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                        if (basicPropsObj != null) {
+                            var fields = Reflect.fields(basicPropsObj);
+                            Logger.info('${this}: Checking ${fields.length} fields in dynamicCustomProperties as fallback');
+                            
+                            // Only check for fields that we have in our dynamic fields
+                            for (fieldName in _dynamicFields.keys()) {
+                                if (Reflect.hasField(basicPropsObj, fieldName)) {
+                                    var value = Reflect.field(basicPropsObj, fieldName);
+                                    customPropValues.set(fieldName, value);
+                                    Logger.info('${this}: Found matching field in dynamicCustomProperties as fallback: ${fieldName} = ${value}');
+                                    
+                                    // Also update our local custom properties map
+                                    if (!_customProperties.exists(fieldName)) {
+                                        var prop = null;
+                                        if (Std.isOfType(value, String)) {
+                                            prop = new champaign.core.primitives.Property<String>(value);
+                                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                                        } else if (Std.isOfType(value, Bool)) {
+                                            var boolValue:Bool = cast value;
+                                            var boolStr = boolValue ? "true" : "false";
+                                            prop = new champaign.core.primitives.Property<String>(boolStr);
+                                        } else {
+                                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                                        }
+                                        
+                                        if (prop != null) {
+                                            _customProperties.set(fieldName, prop);
+                                            
+                                            // Add property change listener
+                                            var onChange = Reflect.field(prop, "onChange");
+                                            if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                                var self = this;
+                                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                                            }
+                                        }
+                                    } else {
+                                        // Update existing property
+                                        var prop = _customProperties.get(fieldName);
+                                        if (prop != null && Reflect.hasField(prop, "value")) {
+                                            Reflect.setField(prop, "value", value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+            } else {
+                Logger.info('${this}: Server customProperties is null');
             }
             
             // Update dynamic fields with server or custom property values
@@ -696,6 +793,8 @@ class DynamicAdvancedConfigPage extends Page {
                 var value = null;
                 var valueField = null;
                 var valueSource = "none";
+                
+                Logger.info('${this}: Processing field ${fieldName}');
                 
                 // First check if it's in the customPropValues map (direct from customProperties)
                 if (customPropValues.exists(fieldName)) {
@@ -724,8 +823,20 @@ class DynamicAdvancedConfigPage extends Page {
                         Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
                         valueSource = "serverProperty";
                     } catch (e) {
-                        // Property doesn't exist on server
-                        Logger.warning('${this}: Could not get property value for ${fieldName}: ${e}');
+                        // Try with underscore prefix
+                        try {
+                            value = Reflect.getProperty(_server, "_" + fieldName);
+                            if (value != null && Reflect.hasField(value, "value")) {
+                                valueField = Reflect.field(value, "value");
+                            } else {
+                                valueField = value;
+                            }
+                            Logger.info('${this}: Using value from server property with underscore for ${fieldName}: ${valueField}');
+                            valueSource = "serverPropertyUnderscore";
+                        } catch (e2) {
+                            // Property doesn't exist on server
+                            Logger.warning('${this}: Could not get property value for ${fieldName}: ${e2}');
+                        }
                     }
                 }
                 
@@ -851,7 +962,9 @@ class DynamicAdvancedConfigPage extends Page {
         }
 
         // Update standard fields
-        _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
+        if (_dropdownNetworkInterface.selectedItem != null) {
+            _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
+        }
         
         // Update server properties from dynamic fields
         for (fieldName => field in _dynamicFields) {
