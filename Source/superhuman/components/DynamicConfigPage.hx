@@ -845,7 +845,6 @@ class DynamicConfigPage extends Page {
                         } else {
                             valueField = value;
                         }
-                }
                         Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
                         valueSource = "serverProperty";
                     } catch (e) {
