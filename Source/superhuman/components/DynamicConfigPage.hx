@@ -1144,49 +1144,21 @@ class DynamicConfigPage extends Page {
             version: dvv.data.version
         };
         
-        // Ensure customProperties is initialized
-        if (_server.customProperties == null) {
-            _server.customProperties = {};
-        }
-        
-        // 1. Store the complete provisioner definition for future use
-        Reflect.setField(_server.customProperties, "provisionerDefinition", dvv);
-        
-        // 2. Store version info in serviceTypeData structure - this ensures it persists across app restarts
-        if (!Reflect.hasField(_server.customProperties, "serviceTypeData")) {
-            Reflect.setField(_server.customProperties, "serviceTypeData", {
-                provisionerType: dvv.data.type,
-                value: dvv.name,
-                serverType: "domino",
-                isEnabled: true
-            });
-        }
-        var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
-        
-        // Update the provisioner in service type data
-        if (!Reflect.hasField(serviceTypeData, "provisioner")) {
-            Reflect.setField(serviceTypeData, "provisioner", {});
-        }
-        var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
-        
-        // Make sure we have a data field
-        if (!Reflect.hasField(stProvisioner, "data")) {
-            Reflect.setField(stProvisioner, "data", {});
-        }
-        var provData = Reflect.field(stProvisioner, "data");
-        
-        // Store the version in both string and VersionInfo formats for maximum compatibility
-        Reflect.setField(provData, "version", versionStr);
-        Reflect.setField(provData, "versionInfo", dvv.data.version);
-        
-        // 3. Store it directly in the serverProvisionerId (accessed during getData() serialization)
+        // Set the serverProvisionerId as the single source of truth for version
         if (_server.serverProvisionerId != null) {
             _server.serverProvisionerId.value = versionStr;
             Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
         }
         
-        // 4. Update the server's provisioner with the server.updateProvisioner method
-        // This method will also update the internal fields accessed during serialization
+        // For backwards compatibility, store minimal version info in customProperties
+        if (_server.customProperties == null) {
+            _server.customProperties = {};
+        }
+        
+        // Store the basic provisioner definition reference
+        Reflect.setField(_server.customProperties, "provisionerDefinition", dvv);
+        
+        // Update the server's provisioner with the server.updateProvisioner method
         var success = _server.updateProvisioner(updatedData);
         if (success) {
             Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
@@ -1194,10 +1166,10 @@ class DynamicConfigPage extends Page {
             Logger.warning('${this}: Failed to update provisioner to version ${versionStr}');
         }
         
-        // 5. Force an immediate save of the server data to ensure it's persisted
+        // Force an immediate save of the server data
         _server.saveData();
         
-        Logger.info('${this}: All provisioner version data saved to disk');
+        Logger.info('${this}: Provisioner version updated and saved');
     } else {
         Logger.warning('${this}: No provisioner selected in dropdown, cannot update version');
     }
