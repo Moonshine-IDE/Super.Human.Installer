@@ -375,32 +375,38 @@ override public function generateHostsFileContent():String {
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
             
-        // Process custom properties from both root and dynamic locations
+        // Process all custom properties in a consistent way
+        var allCustomProps = new Map<String, String>();
+        
+        // First collect all properties with their values
         var fields = Reflect.fields(customProps);
         for (field in fields) {
             var value = Reflect.field(customProps, field);
             if (value != null) {
-                var strValue = Std.string(value);
-                // Try both original case and uppercase
-                content = _replaceVariable(content, field, strValue);
-                content = _replaceVariable(content, field.toUpperCase(), strValue);
+                // Store both original case and uppercase
+                allCustomProps.set(field, Std.string(value));
+                allCustomProps.set(field.toUpperCase(), Std.string(value));
             }
         }
-            
-            // Process dynamic custom properties
-            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
-                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-                var dynamicFields = Reflect.fields(dynamicProps);
-                for (field in dynamicFields) {
-                    var value = Reflect.field(dynamicProps, field);
-                    if (value != null) {
-                        var strValue = Std.string(value);
-                        // Try both original case and uppercase, no prefixes
-                        content = _replaceVariable(content, field, strValue);
-                        content = _replaceVariable(content, field.toUpperCase(), strValue);
-                    }
+        
+        // Then process dynamic custom properties
+        if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
+            var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
+            var dynamicFields = Reflect.fields(dynamicProps);
+            for (field in dynamicFields) {
+                var value = Reflect.field(dynamicProps, field);
+                if (value != null) {
+                    // Store both original case and uppercase
+                    allCustomProps.set(field, Std.string(value));
+                    allCustomProps.set(field.toUpperCase(), Std.string(value));
                 }
             }
+        }
+        
+        // Finally replace all variables in the template
+        for (field => value in allCustomProps) {
+            content = _replaceVariable(content, field, value);
+        }
             
             // Process advanced custom properties
             if (Reflect.hasField(customProps, "dynamicAdvancedCustomProperties")) {

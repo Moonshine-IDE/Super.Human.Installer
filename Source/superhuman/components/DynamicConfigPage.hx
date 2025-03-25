@@ -1164,19 +1164,23 @@ class DynamicConfigPage extends Page {
                         // Get reference to dynamicCustomProperties
                         var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
                         
-                        // Save the value in multiple places to ensure template access
-                        // 1. In dynamicCustomProperties for persistence
+                        // Save values consistently for template access
+                        // 1. Save in dynamicCustomProperties with both cases
                         Reflect.setField(customPropsObj, fieldName, value);
+                        Reflect.setField(customPropsObj, fieldName.toUpperCase(), value);
                         
-                        // 2. In root customProperties for direct access
+                        // 2. Save in root customProperties with both cases
                         Reflect.setField(_server.customProperties, fieldName, value);
+                        Reflect.setField(_server.customProperties, fieldName.toUpperCase(), value);
                         
-                        // 3. In dynamicAdvancedCustomProperties like other template variables
+                        // 3. Save in dynamicAdvancedCustomProperties for advanced fields
                         if (!Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
                             Reflect.setField(_server.customProperties, "dynamicAdvancedCustomProperties", {});
                         }
                         var advancedProps = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
                         Reflect.setField(advancedProps, fieldName.toUpperCase(), value);
+                        
+                        Logger.info('${this}: Saved custom property ${fieldName} with value ${value} in all locations');
                         Logger.info('${this}: Set dynamicAdvancedCustomProperties field ${fieldName.toUpperCase()} = ${value}');
                         
                         // Force an immediate save to persist changes
