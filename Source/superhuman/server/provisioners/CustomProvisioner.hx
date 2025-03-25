@@ -551,49 +551,76 @@ override public function generateHostsFileContent():String {
             // Process all custom properties in a consistent way
             var allCustomProps = new Map<String, String>();
             
-            // First collect all properties with their values
+            // First collect all properties with their values (common variables)
+            // Skip special properties like provisionerDefinition
             var fields = Reflect.fields(customProps);
             for (field in fields) {
                 var value = Reflect.field(customProps, field);
-                if (value != null && field != "provisionerDefinition") {
-                    // Store with original case only
+                if (value != null && 
+                    field != "provisionerDefinition" && 
+                    field != "dynamicCustomProperties" && 
+                    field != "dynamicAdvancedCustomProperties") {
+                    
+                    // Store with original case only for common variables
                     allCustomProps.set(field, Std.string(value));
+                    Logger.info('${this}: Added common property ${field} = ${value}');
                 }
             }
             
-            // Then process dynamic custom properties
+            // Then process dynamic custom properties (basic fields)
             if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
                 var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-                var dynamicFields = Reflect.fields(dynamicProps);
-                for (field in dynamicFields) {
-                    var value = Reflect.field(dynamicProps, field);
-                    if (value != null) {
-                        // Store with original case only
-                        allCustomProps.set(field, Std.string(value));
+                if (dynamicProps != null) {
+                    var dynamicFields = Reflect.fields(dynamicProps);
+                    Logger.info('${this}: Processing ${dynamicFields.length} basic field properties');
+                    
+                    for (field in dynamicFields) {
+                        var value = Reflect.field(dynamicProps, field);
+                        if (value != null) {
+                            // Store with original case only
+                            allCustomProps.set(field, Std.string(value));
+                            Logger.info('${this}: Added basic field property ${field} = ${value}');
+                        }
                     }
+                } else {
+                    Logger.warning('${this}: dynamicCustomProperties exists but is null');
                 }
+            } else {
+                Logger.info('${this}: No dynamicCustomProperties found');
             }
             
             // Process advanced custom properties
             if (Reflect.hasField(customProps, "dynamicAdvancedCustomProperties")) {
                 var advancedProps = Reflect.field(customProps, "dynamicAdvancedCustomProperties");
-                var fields = Reflect.fields(advancedProps);
-                Logger.info('${this}: Processing ${fields.length} dynamic advanced custom properties');
-                
-                for (field in fields) {
-                    var value = Reflect.field(advancedProps, field);
-                    if (value != null) {
-                        // Store with original case only
-                        allCustomProps.set(field, Std.string(value));
+                if (advancedProps != null) {
+                    var fields = Reflect.fields(advancedProps);
+                    Logger.info('${this}: Processing ${fields.length} advanced field properties');
+                    
+                    for (field in fields) {
+                        var value = Reflect.field(advancedProps, field);
+                        if (value != null) {
+                            // Store with original case only
+                            allCustomProps.set(field, Std.string(value));
+                            Logger.info('${this}: Added advanced field property ${field} = ${value}');
+                        }
                     }
+                } else {
+                    Logger.warning('${this}: dynamicAdvancedCustomProperties exists but is null');
                 }
+            } else {
+                Logger.info('${this}: No dynamicAdvancedCustomProperties found');
             }
             
             // Finally replace all variables in the template with exact case preservation
+            Logger.info('${this}: Replacing ${Lambda.count(allCustomProps)} custom properties in template');
             for (field => value in allCustomProps) {
+                var before = content;
                 content = _replaceVariable(content, field, value);
-                Logger.info('${this}: Processing property ${field} = ${value}');
+                var replaced = (before != content);
+                Logger.info('${this}: Replaced property ${field} = ${value}, success=${replaced}');
             }
+        } else {
+            Logger.warning('${this}: No customProperties available on server');
         }
         
         return content;
@@ -619,6 +646,35 @@ override public function saveHostsFile() {
     // Create target directory and ensure it exists regardless of validation
     createTargetDirectory();
 
+    // Log the custom properties state to help with debugging
+    if (_server != null && _server.customProperties != null) {
+        Logger.info('${this}: Server has customProperties with fields: ${Reflect.fields(_server.customProperties).join(", ")}');
+        
+        if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            var basicFields = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            if (basicFields != null) {
+                Logger.info('${this}: dynamicCustomProperties has fields: ${Reflect.fields(basicFields).join(", ")}');
+            } else {
+                Logger.warning('${this}: dynamicCustomProperties is null');
+            }
+        } else {
+            Logger.info('${this}: No dynamicCustomProperties found');
+        }
+        
+        if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+            var advancedFields = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+            if (advancedFields != null) {
+                Logger.info('${this}: dynamicAdvancedCustomProperties has fields: ${Reflect.fields(advancedFields).join(", ")}');
+            } else {
+                Logger.warning('${this}: dynamicAdvancedCustomProperties is null');
+            }
+        } else {
+            Logger.info('${this}: No dynamicAdvancedCustomProperties found');
+        }
+    } else {
+        Logger.warning('${this}: Server has no customProperties');
+    }
+
     // Generate the content for Hosts.yml file
     var content = generateHostsFileContent();
 
@@ -635,6 +691,10 @@ override public function saveHostsFile() {
         // Update server status after saving hosts file
         if (_server != null) {
             _server.setServerStatus();
+            
+            // Make sure to save the server data to persist any changes to customProperties
+            _server.saveData();
+            Logger.info('${this}: Saved server data to persist customProperties');
         }
     } catch (e:Exception) {
         Logger.error('${this}: Custom provisioner could not create Hosts.yml file. Details: ${e.details()} Message: ${e.message}');
@@ -644,16 +704,42 @@ override public function saveHostsFile() {
 
     /**
      * Helper method to replace variables in the template using the ::VARIABLENAME:: format
+     * Also attempts common variations of the variable name for better compatibility
      * @param content The template content
      * @param name The variable name
      * @param value The replacement value
      * @return String The content with replaced variables
      */
     private function _replaceVariable(content:String, name:String, value:String):String {
-        var result = StringTools.replace(content, "::" + name + "::", value);
-        if (result == content) {
-            Logger.warning('${this}: Variable ${name} not found in template');
+        var originalName = name;
+        var result = content;
+        
+        // Try with exact case first
+        var exactCase = StringTools.replace(result, "::" + name + "::", value);
+        if (exactCase != result) {
+            // Found and replaced with exact case
+            result = exactCase;
+        } else {
+            // Try uppercase
+            var upperCase = StringTools.replace(result, "::" + name.toUpperCase() + "::", value);
+            if (upperCase != result) {
+                // Found and replaced with uppercase
+                result = upperCase;
+                Logger.info('${this}: Variable ${name} found as uppercase ${name.toUpperCase()}');
+            } else {
+                // Try lowercase
+                var lowerCase = StringTools.replace(result, "::" + name.toLowerCase() + "::", value);
+                if (lowerCase != result) {
+                    // Found and replaced with lowercase
+                    result = lowerCase;
+                    Logger.info('${this}: Variable ${name} found as lowercase ${name.toLowerCase()}');
+                } else {
+                    // Not found with any case
+                    Logger.verbose('${this}: Variable ${name} not found in template with any case variation');
+                }
+            }
         }
+        
         return result;
     }
     
