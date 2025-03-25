@@ -122,9 +122,18 @@ class RolePage extends Page {
 
             _listGroup.removeChildren();
             
-            // Check if this is a custom provisioner (not StandaloneProvisioner or AdditionalProvisioner)
+            // Check if this is a custom provisioner
             Logger.info('RolePage: Server provisioner type: ${_server.provisioner.type}');
+            
+            // Dump the server's roles for debugging
+            Logger.info('RolePage: Current server roles:');
+            for (role in _server.roles.value) {
+                Logger.info('  - Role: ${role.value}, enabled: ${role.enabled}');
+            }
+            
+            // Check by direct comparison to the Custom enum value
             var isCustomProvisioner = _server.provisioner.type == ProvisionerType.Custom;
+            
             Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
             
             // Use custom roles only for custom provisioners

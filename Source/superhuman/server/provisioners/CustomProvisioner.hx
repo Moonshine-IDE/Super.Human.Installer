@@ -37,6 +37,7 @@ import haxe.io.Path;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
+import superhuman.server.definitions.ProvisionerDefinition;
 import sys.FileSystem;
 import sys.io.File;
 import yaml.Yaml;
@@ -48,6 +49,67 @@ import StringTools;
  * It extends StandaloneProvisioner and overrides specific methods to handle custom provisioner functionality.
  */
 class CustomProvisioner extends StandaloneProvisioner {
+
+    /**
+     * Get default roles for a custom provisioner from its metadata
+     * @return A map of role keys to RoleData objects
+     */
+    static public function getDefaultProvisionerRoles():Map<String, RoleData> {
+        Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Getting custom provisioner roles');
+        
+        // Find a custom provisioner definition
+        var customProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom);
+        
+        // Check if we found any custom provisioners
+        if (customProvisioners == null || customProvisioners.length == 0) {
+            Logger.warning('CustomProvisioner.getDefaultProvisionerRoles: No custom provisioners found, using default roles');
+            // Fall back to default roles
+            return StandaloneProvisioner.getDefaultProvisionerRoles();
+        }
+        
+        // Get the first (newest) custom provisioner
+        var provisionerDefinition:ProvisionerDefinition = customProvisioners[0];
+        
+        // Check if it has metadata with roles
+        if (provisionerDefinition.metadata == null || 
+            provisionerDefinition.metadata.roles == null ||
+            provisionerDefinition.metadata.roles.length == 0) {
+            Logger.warning('CustomProvisioner.getDefaultProvisionerRoles: Custom provisioner has no roles in metadata, using default roles');
+            // Fall back to default roles
+            return StandaloneProvisioner.getDefaultProvisionerRoles();
+        }
+        
+        // Create a map of roles from the metadata
+        var roles = new Map<String, RoleData>();
+        Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Found ${provisionerDefinition.metadata.roles.length} roles in metadata');
+        
+        for (roleInfo in provisionerDefinition.metadata.roles) {
+            var defaultEnabled = roleInfo.defaultEnabled == true;
+            
+            // Create role data
+            var roleData:RoleData = {
+                value: roleInfo.name,
+                enabled: defaultEnabled,
+                files: {
+                    installer: null,
+                    installerFileName: null,
+                    installerHash: null,
+                    installerVersion: null,
+                    hotfixes: [],
+                    installerHotFixHash: null,
+                    installerHotFixVersion: null,
+                    fixpacks: [],
+                    installerFixpackHash: null,
+                    installerFixpackVersion: null
+                }
+            };
+            
+            roles.set(roleInfo.name, roleData);
+            Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Added role ${roleInfo.name}, enabled=${defaultEnabled}');
+        }
+        
+        return roles;
+    }
     
     /**
      * Get default server data for a custom provisioner
@@ -55,53 +117,20 @@ class CustomProvisioner extends StandaloneProvisioner {
      * @return The default server data
      */
     static public function getDefaultServerData(id:Int):ServerData {
+        Logger.info('CustomProvisioner.getDefaultServerData: Starting with id ${id}');
+        
         // Get the available provisioners of type Custom
         var customProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom);
+        Logger.info('CustomProvisioner.getDefaultServerData: Found ${customProvisioners != null ? customProvisioners.length : 0} custom provisioners');
         
-        // Default roles array
-        var roles:Array<RoleData> = [];
+        // Get roles from custom provisioner
+        var roleMap = getDefaultProvisionerRoles();
+        var roles:Array<RoleData> = [for (r in roleMap.keyValueIterator()) r.value];
+        Logger.info('CustomProvisioner.getDefaultServerData: Using ${roles.length} roles from getDefaultProvisionerRoles()');
         
         // Check if we have any custom provisioners available
         if (customProvisioners != null && customProvisioners.length > 0) {
             var firstProvisioner = customProvisioners[0];
-            
-            // Get roles from the provisioner metadata if available
-            if (firstProvisioner.metadata != null && 
-                firstProvisioner.metadata.roles != null && 
-                firstProvisioner.metadata.roles.length > 0) {
-                
-                Logger.info('${CustomProvisioner}: Using roles from custom provisioner metadata');
-                
-                // Create role data from custom provisioner roles
-                for (roleInfo in firstProvisioner.metadata.roles) {
-                    // Get default enabled state or default to false
-                    var defaultEnabled = roleInfo.defaultEnabled == true;
-                    
-                    // Create role data
-                    var roleData:RoleData = {
-                        value: roleInfo.name,
-                        enabled: defaultEnabled,
-                        files: {
-                            installer: null,
-                            installerFileName: null,
-                            installerHash: null,
-                            installerVersion: null,
-                            hotfixes: [],
-                            installerHotFixHash: null,
-                            installerHotFixVersion: null,
-                            fixpacks: [],
-                            installerFixpackHash: null,
-                            installerFixpackVersion: null
-                        }
-                    };
-                    
-                    roles.push(roleData);
-                }
-            } else {
-                // Fall back to default StandaloneProvisioner roles if no custom roles defined
-                Logger.warning('${CustomProvisioner}: No custom roles found, falling back to default roles');
-                roles = [for (r in StandaloneProvisioner.getDefaultProvisionerRoles().keyValueIterator()) r.value];
-            }
             
             return {
                 env_open_browser: true,
@@ -130,7 +159,7 @@ class CustomProvisioner extends StandaloneProvisioner {
             };
         } else {
             // Fall back to default behavior if no custom provisioners are available
-            Logger.warning('${CustomProvisioner}: No custom provisioners found, using default provisioner');
+            Logger.warning('CustomProvisioner.getDefaultServerData: No custom provisioners found, using default provisioner');
             return {
                 env_open_browser: true,
                 env_setup_wait: 300,
