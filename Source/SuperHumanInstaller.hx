@@ -1107,8 +1107,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		Logger.info('${this}: Configure roles with isStandard: ${isStandardProvisioner}, isCustom: ${isCustomProvisioner}');
 		
-		// Store the provisioner type information in the RolePage
-		Reflect.setField(_rolePage, "_isStandardProvisioner", isStandardProvisioner);
+		// Log the provisioner type information
+		Logger.info('${this}: Configure roles - isStandardProvisioner: ${isStandardProvisioner}');
 		
 		// Check if the event contains a provisioner definition name in data field
 		if (isCustomProvisioner && e.data != null && Std.isOfType(e.data, String)) {
