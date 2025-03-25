@@ -705,12 +705,25 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Get the provisioner type from the event or the server
 		var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
 		
-		// Check if this is a custom provisioner (not one of the built-in types)
-		var isCustomProvisioner = provisionerType != ProvisionerType.StandaloneProvisioner && 
-								  provisionerType != ProvisionerType.AdditionalProvisioner &&
-								  provisionerType != ProvisionerType.Default;
+		// Get the actual class name of the provisioner to determine its type
+		var provisionerClassName = Type.getClassName(Type.getClass(e.server.provisioner));
+		Logger.info('${this}: Configure server with provisioner class: ${provisionerClassName}, type: ${provisionerType}');
 		
-		Logger.info('${this}: Configure server with provisioner type: ${provisionerType}, isCustom: ${isCustomProvisioner}');
+		// Check if this is a standard provisioner by class name first (most reliable)
+		var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
+								   provisionerClassName == "superhuman.server.provisioners.AdditionalProvisioner");
+		
+		// Also check by type as a fallback
+		if (!isStandardProvisioner) {
+			isStandardProvisioner = (provisionerType == ProvisionerType.StandaloneProvisioner || 
+								   provisionerType == ProvisionerType.AdditionalProvisioner ||
+								   provisionerType == ProvisionerType.Default);
+		}
+		
+		// If it's a standard provisioner, it should NEVER use the custom config page
+		var isCustomProvisioner = !isStandardProvisioner;
+		
+		Logger.info('${this}: Configure server with provisioner type: ${provisionerType}, isStandard: ${isStandardProvisioner}, isCustom: ${isCustomProvisioner}');
 		
 		if (isCustomProvisioner) {
 			// For custom provisioners, use the dynamic config page
@@ -1073,8 +1086,32 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Set the server for the role page
 		_rolePage.setServer( e.server );
 		
+		// Get the actual class name of the provisioner to determine its type
+		var provisionerClassName = Type.getClassName(Type.getClass(e.server.provisioner));
+		Logger.info('${this}: Configure roles with provisioner class: ${provisionerClassName}');
+		
+		// Check if this is a standard provisioner by class name first (most reliable)
+		var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
+								   provisionerClassName == "superhuman.server.provisioners.AdditionalProvisioner");
+		
+		// Also check by type as a fallback
+		if (!isStandardProvisioner) {
+			var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+			isStandardProvisioner = (provisionerType == ProvisionerType.StandaloneProvisioner || 
+								   provisionerType == ProvisionerType.AdditionalProvisioner ||
+								   provisionerType == ProvisionerType.Default);
+		}
+		
+		// If it's a standard provisioner, it should NEVER use custom roles
+		var isCustomProvisioner = !isStandardProvisioner;
+		
+		Logger.info('${this}: Configure roles with isStandard: ${isStandardProvisioner}, isCustom: ${isCustomProvisioner}');
+		
+		// Store the provisioner type information in the RolePage
+		Reflect.setField(_rolePage, "_isStandardProvisioner", isStandardProvisioner);
+		
 		// Check if the event contains a provisioner definition name in data field
-		if (e.data != null && Std.isOfType(e.data, String)) {
+		if (isCustomProvisioner && e.data != null && Std.isOfType(e.data, String)) {
 			var provisionerName:String = cast e.data;
 			Logger.info('${this}: Got provisioner name from event: ${provisionerName}');
 			
@@ -1101,10 +1138,38 @@ class SuperHumanInstaller extends GenesisApplication {
 				Reflect.setField(_rolePage, "_provisionerDefinition", null);
 				Logger.warning('${this}: Could not find provisioner definition with name: ${provisionerName}');
 			}
+		} else if (isCustomProvisioner) {
+			// For custom provisioners without a definition name, try to find by type and version
+			var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+			
+			if (allProvisioners.length > 0) {
+				// Find the exact provisioner version that matches the server's provisioner
+				var foundProvisioner = null;
+				for (provisioner in allProvisioners) {
+					if (provisioner.data.version == e.server.provisioner.version) {
+						foundProvisioner = provisioner;
+						Logger.info('${this}: Found provisioner definition by version: ${provisioner.data.version}');
+						break;
+					}
+				}
+				
+				// If no exact match, use the first one
+				if (foundProvisioner == null) {
+					foundProvisioner = allProvisioners[0];
+					Logger.info('${this}: Using first available provisioner definition: ${foundProvisioner.name}');
+				}
+				
+				Reflect.setField(_rolePage, "_provisionerDefinition", foundProvisioner);
+			} else {
+				// Clear any existing provisioner definition
+				Reflect.setField(_rolePage, "_provisionerDefinition", null);
+				Logger.info('${this}: No provisioner definitions found for type: ${provisionerType}');
+			}
 		} else {
-			// Clear any existing provisioner definition
+			// For standard provisioners, clear any existing provisioner definition
 			Reflect.setField(_rolePage, "_provisionerDefinition", null);
-			Logger.info('${this}: No provisioner name in event data');
+			Logger.info('${this}: Standard provisioner, clearing provisioner definition');
 		}
 		
 		// Update the role page content and navigate to it

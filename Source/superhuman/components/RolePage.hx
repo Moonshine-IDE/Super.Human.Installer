@@ -156,24 +156,23 @@ class RolePage extends Page {
                 Logger.info('  - Role: ${role.value}, enabled: ${role.enabled}');
             }
             
-            // Get the actual class name of the provisioner to determine its type
-            var provisionerClassName = Type.getClassName(Type.getClass(_server.provisioner));
-            Logger.info('RolePage: Provisioner class name: ${provisionerClassName}');
-            
-            // Check if it's EXACTLY CustomProvisioner by class name (not a subclass)
-            var isCustomProvisioner = provisionerClassName == "superhuman.server.provisioners.CustomProvisioner";
-            
-            // Also check the type as a fallback, but only if it's not a StandaloneProvisioner or AdditionalProvisioner
-            if (!isCustomProvisioner) {
-                var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
-                                           provisionerClassName == "superhuman.server.provisioners.AdditionalProvisioner");
-                                           
-                if (!isStandardProvisioner) {
-                    isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
-                                         _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
-                                         _server.provisioner.type != ProvisionerType.Default;
-                }
+            // Check if we have the _isStandardProvisioner flag set by SuperHumanInstaller._configureRoles
+            var isStandardProvisioner = false;
+            if (Reflect.hasField(this, "_isStandardProvisioner")) {
+                isStandardProvisioner = Reflect.field(this, "_isStandardProvisioner");
+                Logger.info('RolePage: Using _isStandardProvisioner flag: ${isStandardProvisioner}');
+            } else {
+                // Fallback to checking the provisioner type
+                isStandardProvisioner = (_server.provisioner.type == ProvisionerType.StandaloneProvisioner || 
+                                       _server.provisioner.type == ProvisionerType.AdditionalProvisioner ||
+                                       _server.provisioner.type == ProvisionerType.Default);
+                Logger.info('RolePage: Fallback to checking provisioner type: ${_server.provisioner.type}, isStandard: ${isStandardProvisioner}');
             }
+            
+            // If it's a standard provisioner, it should NEVER use custom roles
+            var isCustomProvisioner = !isStandardProvisioner;
+            
+            Logger.info('RolePage: Final determination - Standard provisioner: ${isStandardProvisioner}, Custom provisioner: ${isCustomProvisioner}');
             
             Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
             Logger.info('RolePage: Provisioner type: ${_server.provisioner.type}');
