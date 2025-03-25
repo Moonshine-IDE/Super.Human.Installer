@@ -532,11 +532,15 @@ class Server {
     }
 
     public function isValid():Bool {
-
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                   this.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                   this.provisioner.type != ProvisionerType.Default);
+        
+        // Always required checks for any provisioner type
         var hasVagrant:Bool = Vagrant.getInstance().exists;
         var hasVirtualBox:Bool = VirtualBox.getInstance().exists;
         var isHostnameValid:Bool = _hostname.isValid();
-        var isOrganizationValid:Bool = _organization.isValid();
         var isMemorySufficient:Bool = _memory.value >= 4;
         var isCPUCountSufficient:Bool = _numCPUs.value >= 1;
         
@@ -549,9 +553,19 @@ class Server {
             _nameServer2.isValid()
         );
         
-        var hasSafeId:Bool = safeIdExists();
+        // Conditionally required checks based on provisioner type
+        var isOrganizationValid:Bool = isCustomProvisioner ? true : _organization.isValid();
+        var hasSafeId:Bool = isCustomProvisioner ? true : safeIdExists();
+        
+        // Roles are validated differently based on provisioner type, but always checked
         var areRolesOK:Bool = areRolesValid();
 
+        Logger.info('${this}: Validation results - isCustomProvisioner=${isCustomProvisioner}, ' +
+                   'hasVagrant=${hasVagrant}, hasVirtualBox=${hasVirtualBox}, ' +
+                   'isHostnameValid=${isHostnameValid}, isOrganizationValid=${isOrganizationValid}, ' +
+                   'isMemorySufficient=${isMemorySufficient}, isCPUCountSufficient=${isCPUCountSufficient}, ' +
+                   'isNetworkValid=${isNetworkValid}, hasSafeId=${hasSafeId}, areRolesOK=${areRolesOK}');
+        
         var isValid:Bool = 
             hasVagrant &&
             hasVirtualBox &&
@@ -564,7 +578,6 @@ class Server {
             areRolesOK;
             
         return isValid;
-
     }
 
     public function locateNotesSafeId( ?callback:()->Void ) {
@@ -836,14 +849,12 @@ class Server {
     }
 
     public function saveHostsFile() {
-        // Perform validation with detailed feedback
-        var isValid = this.isValid();
-        
         // Check if this is a custom provisioner
-        var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
-                                  this.provisioner.type != ProvisionerType.AdditionalProvisioner);
+        var isCustomProvisioner = (this.provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
+                                  this.provisioner.data.type != ProvisionerType.AdditionalProvisioner);
                                   
-        // Log validation issues if failing
+        // Perform validation
+        var isValid = this.isValid();
         if (!isValid) {
             Logger.warning('${this}: Server validation failed, cannot save Hosts.yml file');
             
@@ -860,7 +871,8 @@ class Server {
                 if (!this.hostname.isValid())
                     console.appendText("- Invalid hostname", true);
                     
-                if (!this.organization.isValid())
+                // Only show organization validation for standard provisioners
+                if (!isCustomProvisioner && !this.organization.isValid())
                     console.appendText("- Invalid organization", true);
                     
                 if (this.memory.value < 4)
@@ -881,7 +893,8 @@ class Server {
                 if (!isNetworkValid)
                     console.appendText("- Network configuration invalid", true);
                     
-                if (!this.safeIdExists())
+                // Only show SafeID validation for standard provisioners
+                if (!isCustomProvisioner && !this.safeIdExists())
                     console.appendText("- SafeID file not found", true);
                     
                 if (!this.areRolesValid())
