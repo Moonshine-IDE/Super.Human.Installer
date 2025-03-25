@@ -1165,16 +1165,19 @@ class DynamicConfigPage extends Page {
                         // Get reference to dynamicCustomProperties
                         var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
                         
-                        // Save in dynamicCustomProperties
+                        // Save in both locations to ensure persistence
                         Reflect.setField(customPropsObj, fieldName, value);
-                        
-                        // Also save in root customProperties for backwards compatibility
                         Reflect.setField(_server.customProperties, fieldName, value);
                         
-                        Logger.info('${this}: Saved custom property ${fieldName} with value ${value}');
+                        // Log the save operation
+                        Logger.info('${this}: Saved custom property ${fieldName} with value ${value} in both locations');
                         
                         // Force an immediate save to persist changes
                         _server.saveData();
+                        
+                        // Double check the save
+                        var savedValue = Reflect.field(customPropsObj, fieldName);
+                        Logger.info('${this}: Verified saved value for ${fieldName}: ${savedValue}');
                     }
                 } else {
                     // Try to update server property
@@ -1197,23 +1200,38 @@ class DynamicConfigPage extends Page {
                 _server.customProperties = {};
             }
             
-            // Create or update the dynamicCustomProperties field to hold our custom properties
-            var customProperties:Dynamic = _server.customProperties;
-            if (!Reflect.hasField(customProperties, "dynamicCustomProperties")) {
-                Reflect.setField(customProperties, "dynamicCustomProperties", {});
+            // Initialize or update dynamicCustomProperties
+            if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
             }
             
-            var customPropsObj = Reflect.field(customProperties, "dynamicCustomProperties");
-            for (key => prop in _customProperties) {
-                if (Reflect.hasField(prop, "value")) {
-                    var propValue = Reflect.field(prop, "value");
-                    // Save to dynamicCustomProperties
-                    Reflect.setField(customPropsObj, key, propValue);
-                    
-                    // Also save to root customProperties for backwards compatibility
-                    if (key != "provisionerVersion") { // Don't save version to root
-                        Reflect.setField(_server.customProperties, key, propValue);
-                    }
+            // Get reference to dynamicCustomProperties
+            var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            
+            // Save all custom properties
+            for (fieldName => field in _dynamicFields) {
+                var value:String = null;
+                
+                if (Std.isOfType(field, GenesisFormTextInput)) {
+                    var input:GenesisFormTextInput = cast field;
+                    value = StringTools.trim(input.text);
+                } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                    var stepper:GenesisFormNumericStepper = cast field;
+                    value = Std.string(stepper.value);
+                } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                    var checkbox:GenesisFormCheckBox = cast field;
+                    value = checkbox.selected ? "true" : "false";
+                } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
+                    var dropdown:GenesisFormPupUpListView = cast field;
+                    var selectedItem = dropdown.selectedItem;
+                    value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
+                }
+                
+                if (value != null) {
+                    // Save in both locations
+                    Reflect.setField(customPropsObj, fieldName, value);
+                    Reflect.setField(_server.customProperties, fieldName, value);
+                    Logger.info('${this}: Saved field ${fieldName} with value ${value} in both locations');
                 }
             }
             
