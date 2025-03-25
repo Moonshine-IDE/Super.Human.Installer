@@ -316,6 +316,16 @@ override public function generateHostsFileContent():String {
         _saveHostsFile();
         Logger.info('${this}: Forced creation of Hosts.yml file for custom provisioner');
     }
+    
+    /**
+     * Override hostFileExists to ensure the initial check for host file existence works properly
+     * This method is called in Server._batchCopyComplete() to determine if the file needs to be created
+     */
+    override public function get_hostFileExists():Bool {
+        var exists = super.get_hostFileExists();
+        Logger.info('${this}: Checking if Hosts.yml exists: ${exists}');
+        return exists;
+    }
 
     /**
      * Get the string representation of the provisioner
