@@ -557,17 +557,8 @@ override public function generateHostsFileContent():String {
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
             
-            // Log the hostname values from different locations
-            Logger.info('${this}: Direct hostname value: ${Reflect.hasField(customProps, "hostname") ? Reflect.field(customProps, "hostname") : "not found"}');
-            
-            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
-                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-                if (dynamicProps != null && Reflect.hasField(dynamicProps, "hostname")) {
-                    Logger.info('${this}: dynamicCustomProperties hostname value: ${Reflect.field(dynamicProps, "hostname")}');
-                } else {
-                    Logger.info('${this}: hostname not found in dynamicCustomProperties');
-                }
-            }
+            // Log the current state of customProperties for debugging
+            Logger.info('${this}: Processing customProperties with fields: ${Reflect.fields(customProps).join(", ")}');
             
             // Process all custom properties in a consistent way
             var allCustomProps = new Map<String, String>();
@@ -601,8 +592,11 @@ override public function generateHostsFileContent():String {
                 Logger.info('${this}: Processing ${fields.length} properties from ${source}');
                 
                 for (field in fields) {
+                    // Skip internal fields and null values
+                    if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+                    
                     var value = Reflect.field(obj, field);
-                    if (value != null && field != "provisionerDefinition") {
+                    if (value != null) {
                         var strValue = safeToString(value);
                         if (strValue != "") {
                             allCustomProps.set(field, strValue);
@@ -614,17 +608,45 @@ override public function generateHostsFileContent():String {
                 }
             }
             
-            // Process properties in order of precedence:
-            // 1. Advanced custom properties (highest priority)
-            var advancedProps = getFieldValue(customProps, "dynamicAdvancedCustomProperties");
-            processProperties(advancedProps, "advanced");
+            // Process properties in order of precedence (lowest to highest):
             
-            // 2. Basic custom properties
+            // 1. Common properties (lowest priority) - these are direct fields in customProperties
+            var commonFields = Reflect.fields(customProps).filter(field -> 
+                field != "dynamicCustomProperties" && 
+                field != "dynamicAdvancedCustomProperties" && 
+                field != "provisionerDefinition" &&
+                field != "serviceTypeData"
+            );
+            
+            Logger.info('${this}: Found ${commonFields.length} common properties');
+            for (field in commonFields) {
+                var value = Reflect.field(customProps, field);
+                if (value != null) {
+                    var strValue = safeToString(value);
+                    if (strValue != "") {
+                        allCustomProps.set(field, strValue);
+                        Logger.info('${this}: Added common property ${field} = ${strValue}');
+                    }
+                }
+            }
+            
+            // 2. Basic custom properties (medium priority)
             var basicProps = getFieldValue(customProps, "dynamicCustomProperties");
-            processProperties(basicProps, "basic");
+            if (basicProps != null) {
+                Logger.info('${this}: Processing dynamicCustomProperties with fields: ${Reflect.fields(basicProps).join(", ")}');
+                processProperties(basicProps, "basic");
+            } else {
+                Logger.info('${this}: No dynamicCustomProperties found');
+            }
             
-            // 3. Common properties (lowest priority)
-            processProperties(customProps, "common");
+            // 3. Advanced custom properties (highest priority)
+            var advancedProps = getFieldValue(customProps, "dynamicAdvancedCustomProperties");
+            if (advancedProps != null) {
+                Logger.info('${this}: Processing dynamicAdvancedCustomProperties with fields: ${Reflect.fields(advancedProps).join(", ")}');
+                processProperties(advancedProps, "advanced");
+            } else {
+                Logger.info('${this}: No dynamicAdvancedCustomProperties found');
+            }
             
             // Finally replace all variables in the template with exact case preservation
             Logger.info('${this}: Replacing ${Lambda.count(allCustomProps)} custom properties in template');
