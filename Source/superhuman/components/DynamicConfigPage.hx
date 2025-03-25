@@ -237,44 +237,21 @@ class DynamicConfigPage extends Page {
                     var value = Reflect.field(customPropsObj, field);
                     Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
                     
-                    // Create a property based on the value type if it doesn't already exist
-                    if (!_customProperties.exists(field)) {
-                        var prop = null;
+                    // Create or update property
+                    var prop = _customProperties.exists(field) ? _customProperties.get(field) : null;
+                    
+                    if (prop == null) {
+                        prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                        _customProperties.set(field, prop);
                         
-                        if (Std.isOfType(value, String)) {
-                            prop = new champaign.core.primitives.Property<String>(value);
-                            Logger.info('${this}: Created String property for ${field} with value ${value}');
-                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
-                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                            Logger.info('${this}: Created numeric property for ${field} with value ${value}');
-                        } else if (Std.isOfType(value, Bool)) {
-                            // Convert Boolean to String for consistency
-                            var boolValue:Bool = cast value;
-                            var boolStr = boolValue ? "true" : "false";
-                            prop = new champaign.core.primitives.Property<String>(boolStr);
-                            Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
-                        } else {
-                            // Handle other types by converting to string
-                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                            Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
+                        // Add property change listener
+                        var onChange = Reflect.field(prop, "onChange");
+                        if (onChange != null && Reflect.hasField(onChange, "add")) {
+                            var self = this;
+                            Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
                         }
-                        
-                        if (prop != null) {
-                            _customProperties.set(field, prop);
-                            
-                            // Add property change listener
-                            var onChange = Reflect.field(prop, "onChange");
-                            if (onChange != null && Reflect.hasField(onChange, "add")) {
-                                var self = this;
-                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                            }
-                        }
-                    } else {
-                        // Update existing property
-                        var prop = _customProperties.get(field);
-                        if (prop != null && Reflect.hasField(prop, "value")) {
-                            Reflect.setField(prop, "value", value);
-                        }
+                    } else if (Reflect.hasField(prop, "value")) {
+                        Reflect.setField(prop, "value", Std.string(value));
                     }
                 }
                 
