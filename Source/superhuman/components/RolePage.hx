@@ -131,8 +131,10 @@ class RolePage extends Page {
                 Logger.info('  - Role: ${role.value}, enabled: ${role.enabled}');
             }
             
-            // Check by direct comparison to the Custom enum value
-            var isCustomProvisioner = _server.provisioner.type == ProvisionerType.Custom;
+            // Check if it's not one of the standard provisioner types
+            var isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                     _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                     _server.provisioner.type != ProvisionerType.Default;
             
             Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
             

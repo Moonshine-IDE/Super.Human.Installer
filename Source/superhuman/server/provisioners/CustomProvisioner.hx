@@ -57,8 +57,17 @@ class CustomProvisioner extends StandaloneProvisioner {
     static public function getDefaultProvisionerRoles():Map<String, RoleData> {
         Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Getting custom provisioner roles');
         
-        // Find a custom provisioner definition
-        var customProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.Custom);
+        // Find all provisioner definitions
+        var allProvisioners = ProvisionerManager.getBundledProvisioners();
+        
+        // Filter to only include custom provisioners (not standard ones)
+        var customProvisioners = allProvisioners.filter(p -> 
+            p.data.type != ProvisionerType.StandaloneProvisioner &&
+            p.data.type != ProvisionerType.AdditionalProvisioner &&
+            p.data.type != ProvisionerType.Default
+        );
+        
+        Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Found ${customProvisioners.length} custom provisioners across all types');
         
         // Check if we found any custom provisioners
         if (customProvisioners == null || customProvisioners.length == 0) {
