@@ -375,20 +375,26 @@ override public function generateHostsFileContent():String {
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
             
-            // Process basic custom properties
+            // Process custom properties from both root and dynamic locations
+            var fields = Reflect.fields(customProps);
+            for (field in fields) {
+                var value = Reflect.field(customProps, field);
+                if (value != null) {
+                    var strValue = Std.string(value);
+                    content = _replaceVariable(content, field, strValue);
+                }
+            }
+            
+            // Process dynamic custom properties
             if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
                 var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-                var fields = Reflect.fields(dynamicProps);
-                Logger.info('${this}: Processing ${fields.length} dynamic custom properties');
-                
-                for (field in fields) {
+                var dynamicFields = Reflect.fields(dynamicProps);
+                for (field in dynamicFields) {
                     var value = Reflect.field(dynamicProps, field);
-                    var strValue = Std.string(value);
-                    
-                    // Convert field name to uppercase for template variables
-                    var upperField = field.toUpperCase();
-                    content = _replaceVariable(content, upperField, strValue);
-                    Logger.info('${this}: Processing custom property ${upperField} = ${strValue}');
+                    if (value != null) {
+                        var strValue = Std.string(value);
+                        content = _replaceVariable(content, field, strValue);
+                    }
                 }
             }
             

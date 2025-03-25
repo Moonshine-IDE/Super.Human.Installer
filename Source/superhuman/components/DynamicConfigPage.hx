@@ -1060,6 +1060,7 @@ class DynamicConfigPage extends Page {
             if (Std.isOfType(field, GenesisFormTextInput)) {
                 var input:GenesisFormTextInput = cast field;
                 value = StringTools.trim(input.text);
+                Logger.info('${this}: Getting value from text input ${fieldName}: ${value}');
             } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                 var stepper:GenesisFormNumericStepper = cast field;
                 value = Std.string(stepper.value);
@@ -1165,7 +1166,10 @@ class DynamicConfigPage extends Page {
             var customPropsObj = Reflect.field(customProperties, "dynamicCustomProperties");
             for (key => prop in _customProperties) {
                 if (Reflect.hasField(prop, "value")) {
-                    Reflect.setField(customPropsObj, key, Reflect.field(prop, "value"));
+                    var propValue = Reflect.field(prop, "value");
+                    // Save to both dynamicCustomProperties and root customProperties
+                    Reflect.setField(customPropsObj, key, propValue);
+                    Reflect.setField(_server.customProperties, key, propValue);
                 }
             }
             
