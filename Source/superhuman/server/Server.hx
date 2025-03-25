@@ -716,23 +716,30 @@ class Server {
                 }
             }
             
-            // STEP 4: Update the _version field directly in the provisioner
-            if (Reflect.hasField(this._provisioner, "_version")) {
-                try {
-                    Reflect.setField(this._provisioner, "_version", data.version);
-                    Logger.info('${this}: Directly updated provisioner._version to ${data.version}');
-                } catch (e) {
-                    Logger.warning('${this}: Could not update provisioner._version directly: ${e}');
-                }
-            }
-            
-            // STEP 5: Minimal custom properties to avoid confusion
+            // STEP 3: Initialize custom properties if needed
             if (this._customProperties == null) {
                 this._customProperties = {};
             }
             
-            // Store the provisioner definition
+            // STEP 4: Store the provisioner definition in customProperties
             Reflect.setField(this._customProperties, "provisionerDefinition", vcd);
+            Logger.info('${this}: Stored provisioner definition in customProperties');
+            
+            // STEP 5: For custom provisioners, ensure we update any related custom properties
+            var isCustomProvisioner = (data.type != ProvisionerType.StandaloneProvisioner && 
+                                      data.type != ProvisionerType.AdditionalProvisioner);
+            
+            if (isCustomProvisioner) {
+                // Initialize dynamicCustomProperties if it doesn't exist
+                if (!Reflect.hasField(this._customProperties, "dynamicCustomProperties")) {
+                    Reflect.setField(this._customProperties, "dynamicCustomProperties", {});
+                }
+                
+                // Store version information in dynamicCustomProperties for UI components to access
+                var dynamicProps = Reflect.field(this._customProperties, "dynamicCustomProperties");
+                Reflect.setField(dynamicProps, "provisionerVersion", versionStr);
+                Logger.info('${this}: Stored provisionerVersion in dynamicCustomProperties: ${versionStr}');
+            }
             
             // Trigger update notification
             _propertyChanged(this._provisioner);

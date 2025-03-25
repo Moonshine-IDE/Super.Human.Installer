@@ -221,7 +221,7 @@ override public function get_data():ProvisionerData {
     // Create a baseline data object
     var baseData = super.get_data();
     
-    // Use serverProvisionerId as the authoritative source for version information
+    // First priority: Use serverProvisionerId as the authoritative source
     if (_server != null && _server.serverProvisionerId != null && 
         _server.serverProvisionerId.value != null && 
         _server.serverProvisionerId.value != "" && 
@@ -234,6 +234,24 @@ override public function get_data():ProvisionerData {
             type: baseData.type,
             version: champaign.core.primitives.VersionInfo.fromString(versionStr)
         };
+    }
+    
+    // Second priority: Check customProperties for stored provisionerDefinition
+    if (_server != null && _server.customProperties != null) {
+        if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+            if (provDef != null && Reflect.hasField(provDef, "data") && 
+                Reflect.hasField(provDef.data, "version")) {
+                
+                var versionInfo = Reflect.field(provDef.data, "version");
+                Logger.info('CustomProvisioner: Using version from provisionerDefinition: ${versionInfo}');
+                
+                return {
+                    type: baseData.type,
+                    version: versionInfo
+                };
+            }
+        }
     }
     
     // Fallback to the base version
