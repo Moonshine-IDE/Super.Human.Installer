@@ -275,31 +275,40 @@ class ConfigPage extends Page {
         
         // Check if server has customProperties
         if (_server != null && _server.customProperties != null) {
-            // Get common variables from customProperties
+            // Check if this is a custom provisioner
+            var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                     _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                     _server.provisioner.type != ProvisionerType.Default);
+                                     
+            // Get common variables from appropriate source
             var commonVars = new Map<String, String>();
             
-            // First check dynamicCustomProperties
-            if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-                var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-                if (dynamicProps != null) {
-                    for (field in Reflect.fields(dynamicProps)) {
-                        var value = Reflect.field(dynamicProps, field);
-                        commonVars.set(field, value);
+            if (isCustomProvisioner) {
+                // For custom provisioners, primarily check dynamicCustomProperties
+                if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                    var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                    if (dynamicProps != null) {
+                        for (field in Reflect.fields(dynamicProps)) {
+                            var value = Reflect.field(dynamicProps, field);
+                            if (value != null && Std.isOfType(value, String)) {
+                                commonVars.set(field, value);
+                            }
+                        }
                     }
                 }
-            }
-            
-            // Then check root customProperties (these take precedence)
-            for (field in Reflect.fields(_server.customProperties)) {
-                // Skip dynamicCustomProperties and dynamicAdvancedCustomProperties
-                if (field != "dynamicCustomProperties" && 
-                    field != "dynamicAdvancedCustomProperties" &&
-                    field != "provisionerDefinition" &&
-                    field != "serviceTypeData") {
-                    
-                    var value = Reflect.field(_server.customProperties, field);
-                    if (value != null && Std.isOfType(value, String)) {
-                        commonVars.set(field, value);
+            } else {
+                // For standard provisioners, look at root customProperties
+                for (field in Reflect.fields(_server.customProperties)) {
+                    // Skip dynamicCustomProperties and dynamicAdvancedCustomProperties
+                    if (field != "dynamicCustomProperties" && 
+                        field != "dynamicAdvancedCustomProperties" &&
+                        field != "provisionerDefinition" &&
+                        field != "serviceTypeData") {
+                        
+                        var value = Reflect.field(_server.customProperties, field);
+                        if (value != null && Std.isOfType(value, String)) {
+                            commonVars.set(field, value);
+                        }
                     }
                 }
             }
@@ -503,26 +512,42 @@ class ConfigPage extends Page {
             return;
         }
         
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                  _server.provisioner.type != ProvisionerType.Default);
+        
         // Initialize customProperties if needed
         if (_server.customProperties == null) {
             _server.customProperties = {};
         }
         
-        // Initialize dynamicCustomProperties if needed
-        if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-            Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
-        }
-        
-        // Get reference to dynamicCustomProperties
-        var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-        
-        // Save each common variable
-        for (name => input in _commonVariables) {
-            var value = StringTools.trim(input.text);
+        if (isCustomProvisioner) {
+            // For custom provisioners, use the dynamicCustomProperties field
             
-            // Save to both locations for compatibility
-            Reflect.setField(_server.customProperties, name, value);
-            Reflect.setField(dynamicProps, name, value);
+            // Initialize dynamicCustomProperties if needed
+            if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+            }
+            
+            // Get reference to dynamicCustomProperties
+            var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            
+            // Save each common variable to dynamicCustomProperties
+            for (name => input in _commonVariables) {
+                var value = StringTools.trim(input.text);
+                // Save to dynamicCustomProperties
+                Reflect.setField(dynamicProps, name, value);
+            }
+        } else {
+            // For standard provisioners, save directly to customProperties root
+            
+            // Save each common variable
+            for (name => input in _commonVariables) {
+                var value = StringTools.trim(input.text);
+                // Save to root customProperties
+                Reflect.setField(_server.customProperties, name, value);
+            }
         }
         
         // Force an immediate save to persist changes
