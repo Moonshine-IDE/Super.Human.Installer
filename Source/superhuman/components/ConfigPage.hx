@@ -85,6 +85,10 @@ class ConfigPage extends Page {
     var _rowPreviousSafeId:GenesisFormRow;
     var _rowSafeId:GenesisFormRow;
     var _rowRoles:GenesisFormRow;
+    
+    // Common variables fields
+    var _commonVariables:Map<String, GenesisFormTextInput> = new Map();
+    var _commonVariableRows:Map<String, GenesisFormRow> = new Map();
 
     var _server:Server;
     var _titleGroup:LayoutGroup;
@@ -246,9 +250,94 @@ class ConfigPage extends Page {
     }
 
     public function setServer( server:Server ) {
-
         _server = server;
-
+        
+        // Initialize common variables from server's customProperties
+        _initializeCommonVariables();
+    }
+    
+    /**
+     * Initialize common variables from the server's customProperties
+     */
+    private function _initializeCommonVariables() {
+        // Clear existing common variables
+        _commonVariables = new Map();
+        _commonVariableRows = new Map();
+        
+        // Remove existing common variable rows from the form
+        if (_form != null) {
+            for (row in _commonVariableRows) {
+                if (row != null && row.parent == _form) {
+                    _form.removeChild(row);
+                }
+            }
+        }
+        
+        // Check if server has customProperties
+        if (_server != null && _server.customProperties != null) {
+            // Get common variables from customProperties
+            var commonVars = new Map<String, String>();
+            
+            // First check dynamicCustomProperties
+            if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                if (dynamicProps != null) {
+                    for (field in Reflect.fields(dynamicProps)) {
+                        var value = Reflect.field(dynamicProps, field);
+                        commonVars.set(field, value);
+                    }
+                }
+            }
+            
+            // Then check root customProperties (these take precedence)
+            for (field in Reflect.fields(_server.customProperties)) {
+                // Skip dynamicCustomProperties and dynamicAdvancedCustomProperties
+                if (field != "dynamicCustomProperties" && 
+                    field != "dynamicAdvancedCustomProperties" &&
+                    field != "provisionerDefinition" &&
+                    field != "serviceTypeData") {
+                    
+                    var value = Reflect.field(_server.customProperties, field);
+                    if (value != null && Std.isOfType(value, String)) {
+                        commonVars.set(field, value);
+                    }
+                }
+            }
+            
+            // Add common variable fields to the form
+            if (_form != null) {
+                for (field => value in commonVars) {
+                    _addCommonVariableField(field, value);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Add a common variable field to the form
+     * @param name The variable name
+     * @param value The variable value
+     */
+    private function _addCommonVariableField(name:String, value:String) {
+        if (_form == null) return;
+        
+        // Create a new row for the field
+        var row = new GenesisFormRow();
+        row.text = name; // Use the variable name as the label
+        
+        // Create a text input for the value
+        var input = new GenesisFormTextInput(value);
+        
+        // Add the input to the row
+        row.content.addChild(input);
+        
+        // Add the row to the form after the roles row
+        var roleIndex = _form.getChildIndex(_rowRoles);
+        _form.addChildAt(row, roleIndex + 1);
+        
+        // Store the input and row in the maps
+        _commonVariables.set(name, input);
+        _commonVariableRows.set(name, row);
     }
 
     override function updateContent( forced:Bool = false ) {
@@ -306,7 +395,11 @@ class ConfigPage extends Page {
             }
 
             _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
-
+            
+            // If forced update, reinitialize common variables
+            if (forced) {
+                _initializeCommonVariables();
+            }
         }
 
     }
@@ -378,6 +471,9 @@ class ConfigPage extends Page {
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
         _server.updateProvisioner( dvv.data );
 
+        // Save common variables to server's customProperties
+        _saveCommonVariables();
+
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
@@ -397,5 +493,39 @@ class ConfigPage extends Page {
         _server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
         _safeIdLocated();
 
+    }
+    
+    /**
+     * Save common variables to the server's customProperties
+     */
+    private function _saveCommonVariables() {
+        if (_server == null || _commonVariables.keys().hasNext() == false) {
+            return;
+        }
+        
+        // Initialize customProperties if needed
+        if (_server.customProperties == null) {
+            _server.customProperties = {};
+        }
+        
+        // Initialize dynamicCustomProperties if needed
+        if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+        }
+        
+        // Get reference to dynamicCustomProperties
+        var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+        
+        // Save each common variable
+        for (name => input in _commonVariables) {
+            var value = StringTools.trim(input.text);
+            
+            // Save to both locations for compatibility
+            Reflect.setField(_server.customProperties, name, value);
+            Reflect.setField(dynamicProps, name, value);
+        }
+        
+        // Force an immediate save to persist changes
+        _server.saveData();
     }
 }
