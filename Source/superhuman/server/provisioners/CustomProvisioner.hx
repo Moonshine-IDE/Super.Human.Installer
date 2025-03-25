@@ -315,9 +315,7 @@ override public function generateHostsFileContent():String {
         // Create a simple hosts file generator for custom provisioners
         // This is a simplified version that just does basic variable substitution
         var content = _hostsTemplate;
-        
-        // Try both "::" and "{{" style variable formats since templates might use either format
-        
+     
         // Replace variables with server values
         content = _replaceVariable(content, "SERVER_HOSTNAME", _server.hostname.value);
         content = _replaceVariable(content, "SERVER_DOMAIN", _server.url.domainName);
@@ -369,23 +367,62 @@ override public function generateHostsFileContent():String {
         // Add custom properties if available
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
+            
+            // Process basic custom properties
             if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
                 var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
                 var fields = Reflect.fields(dynamicProps);
                 Logger.info('${this}: Processing ${fields.length} dynamic custom properties');
+                
                 for (field in fields) {
                     var value = Reflect.field(dynamicProps, field);
-                    content = _replaceVariable(content, field.toUpperCase(), Std.string(value));
+                    var strValue = Std.string(value);
+                    
+                    // Try original field name first
+                    var originalContent = content;
+                    content = _replaceVariable(content, field, strValue);
+                    if (content != originalContent) {
+                        Logger.info('${this}: Matched custom property using original name: ${field} = ${strValue}');
+                    }
+                    
+                    // Then try uppercase version if different
+                    var upperField = field.toUpperCase();
+                    if (upperField != field) {
+                        originalContent = content;
+                        content = _replaceVariable(content, upperField, strValue);
+                        if (content != originalContent) {
+                            Logger.info('${this}: Matched custom property using uppercase name: ${upperField} = ${strValue}');
+                        }
+                    }
                 }
             }
             
+            // Process advanced custom properties
             if (Reflect.hasField(customProps, "dynamicAdvancedCustomProperties")) {
                 var advancedProps = Reflect.field(customProps, "dynamicAdvancedCustomProperties");
                 var fields = Reflect.fields(advancedProps);
                 Logger.info('${this}: Processing ${fields.length} dynamic advanced custom properties');
+                
                 for (field in fields) {
                     var value = Reflect.field(advancedProps, field);
-                    content = _replaceVariable(content, field.toUpperCase(), Std.string(value));
+                    var strValue = Std.string(value);
+                    
+                    // Try original field name first
+                    var originalContent = content;
+                    content = _replaceVariable(content, field, strValue);
+                    if (content != originalContent) {
+                        Logger.info('${this}: Matched advanced property using original name: ${field} = ${strValue}');
+                    }
+                    
+                    // Then try uppercase version if different
+                    var upperField = field.toUpperCase();
+                    if (upperField != field) {
+                        originalContent = content;
+                        content = _replaceVariable(content, upperField, strValue);
+                        if (content != originalContent) {
+                            Logger.info('${this}: Matched advanced property using uppercase name: ${upperField} = ${strValue}');
+                        }
+                    }
                 }
             }
         }
