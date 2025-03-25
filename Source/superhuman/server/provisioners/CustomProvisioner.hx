@@ -490,8 +490,17 @@ override public function generateHostsFileContent():String {
         // This is a simplified version that just does basic variable substitution
         var content = _hostsTemplate;
      
+        // Extract just the hostname part (before the first dot)
+        var fullHostname = _server.hostname.value;
+        var hostnameOnly = fullHostname;
+        var dotIndex = fullHostname.indexOf(".");
+        if (dotIndex > 0) {
+            hostnameOnly = fullHostname.substring(0, dotIndex);
+            Logger.info('${this}: Extracted hostname "${hostnameOnly}" from full hostname "${fullHostname}"');
+        }
+        
         // Replace variables with server values
-        content = _replaceVariable(content, "SERVER_HOSTNAME", _server.hostname.value);
+        content = _replaceVariable(content, "SERVER_HOSTNAME", hostnameOnly);
         content = _replaceVariable(content, "SERVER_DOMAIN", _server.url.domainName);
         content = _replaceVariable(content, "SERVER_ORGANIZATION", _server.organization.value);
         content = _replaceVariable(content, "SERVER_ID", Std.string(_server.id));
@@ -557,18 +566,6 @@ override public function generateHostsFileContent():String {
                     Logger.info('${this}: dynamicCustomProperties hostname value: ${Reflect.field(dynamicProps, "hostname")}');
                 } else {
                     Logger.info('${this}: hostname not found in dynamicCustomProperties');
-                }
-            }
-            
-            // Log the DOMINO_ORIGIN_HOSTNAME values from different locations
-            Logger.info('${this}: Direct DOMINO_ORIGIN_HOSTNAME value: ${Reflect.hasField(customProps, "DOMINO_ORIGIN_HOSTNAME") ? Reflect.field(customProps, "DOMINO_ORIGIN_HOSTNAME") : "not found"}');
-            
-            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
-                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-                if (dynamicProps != null && Reflect.hasField(dynamicProps, "DOMINO_ORIGIN_HOSTNAME")) {
-                    Logger.info('${this}: dynamicCustomProperties DOMINO_ORIGIN_HOSTNAME value: ${Reflect.field(dynamicProps, "DOMINO_ORIGIN_HOSTNAME")}');
-                } else {
-                    Logger.info('${this}: DOMINO_ORIGIN_HOSTNAME not found in dynamicCustomProperties');
                 }
             }
             
@@ -743,31 +740,33 @@ override public function saveHostsFile() {
     private function _replaceVariable(content:String, name:String, value:String):String {
         var originalName = name;
         var result = content;
+        var replaced = false;
         
-        // Try with exact case first
-        var exactCase = StringTools.replace(result, "::" + name + "::", value);
-        if (exactCase != result) {
-            // Found and replaced with exact case
-            result = exactCase;
-        } else {
-            // Try uppercase
-            var upperCase = StringTools.replace(result, "::" + name.toUpperCase() + "::", value);
-            if (upperCase != result) {
-                // Found and replaced with uppercase
-                result = upperCase;
-                Logger.info('${this}: Variable ${name} found as uppercase ${name.toUpperCase()}');
-            } else {
-                // Try lowercase
-                var lowerCase = StringTools.replace(result, "::" + name.toLowerCase() + "::", value);
-                if (lowerCase != result) {
-                    // Found and replaced with lowercase
-                    result = lowerCase;
-                    Logger.info('${this}: Variable ${name} found as lowercase ${name.toLowerCase()}');
-                } else {
-                    // Not found with any case
-                    Logger.verbose('${this}: Variable ${name} not found in template with any case variation');
-                }
+        // Create an array of case variations to try
+        var variations = [
+            name,               // Original case
+            name.toUpperCase(), // Uppercase
+            name.toLowerCase()  // Lowercase
+        ];
+        
+        // Try each variation
+        for (variation in variations) {
+            var pattern = "::" + variation + "::";
+            var before = result;
+            
+            // Use StringTools.replace to replace all occurrences
+            result = StringTools.replace(result, pattern, value);
+            
+            // Check if any replacements were made
+            if (before != result) {
+                replaced = true;
+                Logger.info('${this}: Replaced variable ${variation} with value "${value}"');
             }
+        }
+        
+        // Log if no replacements were made
+        if (!replaced) {
+            Logger.verbose('${this}: Variable ${name} not found in template with any case variation');
         }
         
         return result;
