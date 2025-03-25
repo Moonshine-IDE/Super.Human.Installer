@@ -136,6 +136,8 @@ class DynamicConfigPage extends Page {
         _dropdownCoreComponentVersion.itemToText = (item:ProvisionerDefinition) -> {
             return item.name;
         };
+        // Add change event listener to update roles button when selection changes
+        _dropdownCoreComponentVersion.addEventListener(Event.CHANGE, _versionDropdownChanged);
         rowCoreComponentVersion.content.addChild(_dropdownCoreComponentVersion);
         _form.addChild(rowCoreComponentVersion);
 
@@ -1029,6 +1031,20 @@ class DynamicConfigPage extends Page {
         }
     }
     
+    /**
+     * Update the roles button icon when the version dropdown selection changes
+     * @param e The change event
+     */
+    function _versionDropdownChanged(e:Event) {
+        // Only update if we have a valid server
+        if (_server != null) {
+            // Update the button icon based on the current validation state
+            _buttonRoles.icon = (_server.areRolesValid()) ? 
+                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
+                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
+        }
+    }
+    
     function _saveButtonTriggered(e:TriggerEvent) {
         _buttonRoles.setValidity(_server.areRolesValid());
 
@@ -1191,6 +1207,10 @@ class DynamicConfigPage extends Page {
         var success = _server.updateProvisioner(updatedData);
         if (success) {
             Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
+            // Update the roles button icon after changing provisioner
+            _buttonRoles.icon = (_server.areRolesValid()) ? 
+                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
+                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
         } else {
             Logger.warning('${this}: Failed to update provisioner to version ${versionStr}');
         }
