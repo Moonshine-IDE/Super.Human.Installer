@@ -803,23 +803,52 @@ class Server {
     }
 
     public function areRolesValid():Bool {
-
-        var valid:Bool = true;
-
-        for ( r in this._roles.value ) {
-
-            if ( r.enabled ) {
-
-                if ( r.files.installer == null || r.files.installer == "null" || !FileSystem.exists( r.files.installer ) ) 
-                {
-                    valid = false;
-                    break;
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (_provisioner != null && 
+                                  _provisioner.data != null && 
+                                  _provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
+                                  _provisioner.data.type != ProvisionerType.AdditionalProvisioner &&
+                                  _provisioner.data.type != ProvisionerType.Default);
+                                  
+        // For custom provisioners, just make sure at least one role is enabled
+        if (isCustomProvisioner) {
+            var hasEnabledRole = false;
+            
+            for (r in this._roles.value) {
+                if (r.enabled) {
+                    // Check if this role has a showInstaller property set to false
+                    var skipInstallerCheck = false;
+                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
+                        skipInstallerCheck = true;
+                    }
+                    
+                    hasEnabledRole = true;
+                    
+                    // Still check installer file if it's required for this role
+                    if (!skipInstallerCheck && 
+                        (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer))) {
+                        Logger.info('Role ${r.value} is missing required installer file');
+                        return false;
+                    }
+                }
+            }
+            
+            return hasEnabledRole;
+        }
+        
+        // Original logic for built-in provisioners
+        var valid:Bool = false;
+        
+        for (r in this._roles.value) {
+            if (r.enabled) {
+                valid = true;
+                if (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer)) {
+                    return false;
                 }
             }
         }
-
+        
         return valid;
-
     }
 
     function _getVagrantName():String {
