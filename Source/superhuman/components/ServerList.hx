@@ -581,7 +581,24 @@ class ServerItem extends LayoutGroupItemRenderer {
         _labelTitle.text = '#${_server.id}: ${_server.fqdn}';
         _labelRoles.text = LanguageManager.getInstance().getString( 'serverpage.server.roles', _getServerRoleNames() );
         var cpu:String = ( _server.numCPUs.value == 1 ) ? "CPU" : "CPUs";
-        var prov:String = '${_server.provisioner.type} v${_server.provisioner.version}';
+        
+        // Determine the provisioner version to display
+        var provVersion = _server.provisioner.version;
+        
+        // For custom provisioners, use serverProvisionerId as source of truth for version
+        if (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+            _server.provisioner.type != ProvisionerType.AdditionalProvisioner) {
+            
+            if (_server.serverProvisionerId != null && 
+                _server.serverProvisionerId.value != null && 
+                _server.serverProvisionerId.value != "" && 
+                _server.serverProvisionerId.value != "0.0.0") {
+                
+                provVersion = _server.serverProvisionerId.value;
+            }
+        }
+        
+        var prov:String = '${_server.provisioner.type} v${provVersion}';
         _labelInfo.text = LanguageManager.getInstance().getString( 'serverpage.server.sysinfo', prov, Std.string( _server.numCPUs.value ), cpu, Std.string( _server.memory.value ) );
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
