@@ -1131,20 +1131,16 @@ class DynamicAdvancedConfigPage extends Page {
                             // Just continue if the field doesn't exist
                         }
                     }
-                } else if (Reflect.hasField(_server, fieldName)) {
-                    // Update server property
-                    var prop = Reflect.getProperty(_server, fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
-                        // It's a property with a value field
-                        Reflect.setField(prop, "value", value);
-                    } else {
-                        // It's a direct property
-                        Reflect.setProperty(_server, fieldName, value);
-                    }
                 } else {
-                    // Create a custom property if it doesn't exist in any form
-                    var prop = new champaign.core.primitives.Property<String>(value);
+                    // Store the value directly in customProperties to preserve exact case
+                    if (_server.customProperties == null) {
+                        _server.customProperties = {};
+                    }
+                    Reflect.setField(_server.customProperties, fieldName, value);
+                    Logger.info('${this}: Stored custom property ${fieldName} with exact case: ${value}');
                     
+                    // Also create a custom property for change tracking
+                    var prop = new champaign.core.primitives.Property<String>(value);
                     if (prop != null) {
                         _customProperties.set(fieldName, prop);
                         

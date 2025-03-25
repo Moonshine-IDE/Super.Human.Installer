@@ -472,24 +472,14 @@ class DynamicConfigPage extends Page {
                     definition.metadata.configuration.basicFields.length : 0;
                 var advancedFieldCount = definition.metadata.configuration.advancedFields != null ? 
                     definition.metadata.configuration.advancedFields.length : 0;
-            } else {
-                Logger.warning('No configuration found in provisioner metadata');
-            }
-            
-            if (definition.metadata.roles != null) {
-            } else {
-                Logger.warning('No roles found in provisioner metadata');
-            }
-        } else {
-            Logger.warning('No metadata found in provisioner definition');
-        }
-        
-        // Clear existing dynamic fields
-        for (row in _dynamicRows) {
-            if (_form != null && _form.contains(row)) {
-                _form.removeChild(row);
-            }
-        }
+                } else {
+                    // Store the value directly in customProperties to preserve exact case
+                    if (_server.customProperties == null) {
+                        _server.customProperties = {};
+                    }
+                    Reflect.setField(_server.customProperties, fieldName, value);
+                    Logger.info('${this}: Stored custom property ${fieldName} with exact case: ${value}');
+                }
         _dynamicFields = new Map();
         _dynamicRows = new Map();
         
@@ -1180,15 +1170,12 @@ class DynamicConfigPage extends Page {
                         Logger.info('${this}: Verified saved value for ${fieldName}: ${savedValue}');
                     }
                 } else {
-                    // Try to update server property
-                    try {
-                        var prop = Reflect.getProperty(_server, fieldName);
-                        if (prop != null && Reflect.hasField(prop, "value")) {
-                            Reflect.setField(prop, "value", value);
-                        }
-                    } catch (e) {
-                        Logger.warning('${this}: Could not update property ${fieldName}: ${e}');
+                    // Store the value directly in customProperties to preserve exact case
+                    if (_server.customProperties == null) {
+                        _server.customProperties = {};
                     }
+                    Reflect.setField(_server.customProperties, fieldName, value);
+                    Logger.info('${this}: Stored custom property ${fieldName} with exact case: ${value}');
                 }
             }
         }

@@ -375,38 +375,31 @@ override public function generateHostsFileContent():String {
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
             
-        // Process all custom properties in a consistent way
-        var allCustomProps = new Map<String, String>();
-        
-        // First collect all properties with their values
-        var fields = Reflect.fields(customProps);
-        for (field in fields) {
-            var value = Reflect.field(customProps, field);
-            if (value != null) {
-                // Store both original case and uppercase
-                allCustomProps.set(field, Std.string(value));
-                allCustomProps.set(field.toUpperCase(), Std.string(value));
-            }
-        }
-        
-        // Then process dynamic custom properties
-        if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
-            var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-            var dynamicFields = Reflect.fields(dynamicProps);
-            for (field in dynamicFields) {
-                var value = Reflect.field(dynamicProps, field);
-                if (value != null) {
-                    // Store both original case and uppercase
+            // Process all custom properties in a consistent way
+            var allCustomProps = new Map<String, String>();
+            
+            // First collect all properties with their values
+            var fields = Reflect.fields(customProps);
+            for (field in fields) {
+                var value = Reflect.field(customProps, field);
+                if (value != null && field != "provisionerDefinition") {
+                    // Store with original case only
                     allCustomProps.set(field, Std.string(value));
-                    allCustomProps.set(field.toUpperCase(), Std.string(value));
                 }
             }
-        }
-        
-        // Finally replace all variables in the template
-        for (field => value in allCustomProps) {
-            content = _replaceVariable(content, field, value);
-        }
+            
+            // Then process dynamic custom properties
+            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
+                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
+                var dynamicFields = Reflect.fields(dynamicProps);
+                for (field in dynamicFields) {
+                    var value = Reflect.field(dynamicProps, field);
+                    if (value != null) {
+                        // Store with original case only
+                        allCustomProps.set(field, Std.string(value));
+                    }
+                }
+            }
             
             // Process advanced custom properties
             if (Reflect.hasField(customProps, "dynamicAdvancedCustomProperties")) {
@@ -416,13 +409,17 @@ override public function generateHostsFileContent():String {
                 
                 for (field in fields) {
                     var value = Reflect.field(advancedProps, field);
-                    var strValue = Std.string(value);
-                    
-                    // Convert field name to uppercase for template variables
-                    var upperField = field.toUpperCase();
-                    content = _replaceVariable(content, upperField, strValue);
-                    Logger.info('${this}: Processing advanced property ${upperField} = ${strValue}');
+                    if (value != null) {
+                        // Store with original case only
+                        allCustomProps.set(field, Std.string(value));
+                    }
                 }
+            }
+            
+            // Finally replace all variables in the template with exact case preservation
+            for (field => value in allCustomProps) {
+                content = _replaceVariable(content, field, value);
+                Logger.info('${this}: Processing property ${field} = ${value}');
             }
         }
         
