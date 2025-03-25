@@ -168,7 +168,9 @@ class RolePage extends Page {
                                     name: metadata.name,
                                     data: { 
                                         type: metadata.type, 
-                                        version: champaign.core.primitives.VersionInfo.fromString(_server.provisioner.version != null ? _server.provisioner.version.toString() : "0.0.0") 
+                                        version: _server.provisioner.version != null ? 
+                                            _server.provisioner.version : 
+                                            champaign.core.primitives.VersionInfo.fromString("0.0.0") 
                                     },
                                     root: Path.directory(path),
                                     metadata: metadata

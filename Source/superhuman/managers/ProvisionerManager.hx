@@ -665,8 +665,8 @@ class ProvisionerManager {
             var typeProvisioners = allProvisioners.filter(p -> p.data.type == type);
             
             if (typeProvisioners.length > 0) {
-                // If version is null or 0.0.0, return the newest version
-                if (version == null || version.toString() == "0.0.0") {
+                // If version is 0.0.0 or empty, return the newest version
+                if (version == null || version.toString() == "0.0.0" || version.toString() == "") {
                     Logger.info('No specific version requested, returning newest version of ${type}');
                     return typeProvisioners[0]; // Already sorted newest first
                 }
