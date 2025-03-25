@@ -223,7 +223,24 @@ class DynamicConfigPage extends Page {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
         }
         
-        // Load any custom properties from server.customProperties
+        // First get the provisioner definition to know what fields we need
+        var provisionerDefinition = null;
+        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+            provisionerDefinition = Reflect.field(_server.customProperties, "provisionerDefinition");
+        }
+        
+        // Initialize all fields from the provisioner definition
+        if (provisionerDefinition != null && provisionerDefinition.metadata != null && 
+            provisionerDefinition.metadata.configuration != null && 
+            provisionerDefinition.metadata.configuration.basicFields != null) {
+            
+            // Create properties for each field in the basic configuration
+            for (field in provisionerDefinition.metadata.configuration.basicFields) {
+                _initializeServerProperty(field);
+            }
+        }
+        
+        // Then load any saved values from dynamicCustomProperties
         if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
             var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
             if (customPropsObj != null) {
@@ -237,28 +254,37 @@ class DynamicConfigPage extends Page {
                     var value = Reflect.field(customPropsObj, field);
                     Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
                     
-                    // Always create a new property to ensure proper initialization
-                    var prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                    _customProperties.set(field, prop);
+                    // Update existing property or create new one
+                    var prop = _customProperties.exists(field) ? _customProperties.get(field) : null;
                     
-                    // Add property change listener
-                    var onChange = Reflect.field(prop, "onChange");
-                    if (onChange != null && Reflect.hasField(onChange, "add")) {
-                        var self = this;
-                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                    }
-                    
-                    // Also save to root customProperties for backwards compatibility
-                    if (field != "provisionerVersion") { // Don't save version to root
-                        Reflect.setField(_server.customProperties, field, value);
+                    if (prop == null) {
+                        prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                        _customProperties.set(field, prop);
+                        
+                        // Add property change listener
+                        var onChange = Reflect.field(prop, "onChange");
+                        if (onChange != null && Reflect.hasField(onChange, "add")) {
+                            var self = this;
+                            Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                        }
+                    } else if (Reflect.hasField(prop, "value")) {
+                        Reflect.setField(prop, "value", Std.string(value));
                     }
                 }
-                
-                // Force an update of the UI once properties are loaded
-                _pendingUpdateContent = true;
             }
-        } else {
-            Logger.info('${this}: No dynamicCustomProperties found in server customProperties');
+        }
+        
+        // Also check root customProperties for any values
+        if (_server.customProperties != null) {
+            for (field in _customProperties.keys()) {
+                if (Reflect.hasField(_server.customProperties, field)) {
+                    var value = Reflect.field(_server.customProperties, field);
+                    var prop = _customProperties.get(field);
+                    if (prop != null && Reflect.hasField(prop, "value")) {
+                        Reflect.setField(prop, "value", Std.string(value));
+                    }
+                }
+            }
         }
         
         // Update provisioner dropdown and definition first
