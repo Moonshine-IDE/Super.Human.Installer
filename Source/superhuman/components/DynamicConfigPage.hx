@@ -235,58 +235,13 @@ class DynamicConfigPage extends Page {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
         }
         
-        // Load any custom properties from server.customProperties
-        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-            var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-            if (customPropsObj != null) {
-
-                // Iterate over fields in the object
-                var fields = Reflect.fields(customPropsObj);
-                
-                for (field in fields) {
-                    var value = Reflect.field(customPropsObj, field);
-                    
-                    // Create a property based on the value type if it doesn't already exist
-                    if (!_customProperties.exists(field)) {
-                        var prop = null;
-                        
-                        if (Std.isOfType(value, String)) {
-                            prop = new champaign.core.primitives.Property<String>(value);
-                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
-                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                        } else if (Std.isOfType(value, Bool)) {
-                            // Convert Boolean to String for consistency
-                            var boolValue:Bool = cast value;
-                            var boolStr = boolValue ? "true" : "false";
-                            prop = new champaign.core.primitives.Property<String>(boolStr);
-                        } else {
-                            // Handle other types by converting to string
-                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                        }
-                        
-                        if (prop != null) {
-                            _customProperties.set(field, prop);
-                            
-                            // Add property change listener
-                            var onChange = Reflect.field(prop, "onChange");
-                            if (onChange != null && Reflect.hasField(onChange, "add")) {
-                                var self = this;
-                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                            }
-                        }
-                    } else {
-                        // Update existing property
-                        var prop = _customProperties.get(field);
-                        if (prop != null && Reflect.hasField(prop, "value")) {
-                            Reflect.setField(prop, "value", value);
-                        }
-                    }
-                }
-                
-                // Force an update of the UI once properties are loaded
-                _pendingUpdateContent = true;
-            }
-        }
+        // Store the server reference first, then load custom properties later
+        // This ensures we have the server reference before trying to load properties
+        Logger.info('${this}: Set server for config page, server ID: ${_server.id}');
+        
+        // Force an update of the UI after server is set
+        // This will ensure fields are populated after they're created
+        _pendingUpdateContent = true;
     }
 
     private function _updateProvisionerDropdown() {
@@ -744,6 +699,65 @@ class DynamicConfigPage extends Page {
             // Update Save button
             _buttonSave.enabled = !_server.hostname.locked;
             
+            // Load custom properties from server.customProperties if they haven't been loaded yet
+            if (_server.customProperties != null && _customProperties.empty()) {
+                Logger.info('${this}: Loading custom properties from server customProperties');
+                
+                // Check for dynamicCustomProperties
+                if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                    var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                    if (customPropsObj != null) {
+                        var fields = Reflect.fields(customPropsObj);
+                        Logger.info('${this}: Found ${fields.length} custom properties to load from dynamicCustomProperties');
+                        
+                        for (field in fields) {
+                            var value = Reflect.field(customPropsObj, field);
+                            Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
+                            
+                            // Create a property based on the value type if it doesn't already exist
+                            if (!_customProperties.exists(field)) {
+                                var prop = null;
+                                
+                                if (Std.isOfType(value, String)) {
+                                    prop = new champaign.core.primitives.Property<String>(value);
+                                    Logger.info('${this}: Created String property for ${field} with value ${value}');
+                                } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                                    prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                                    Logger.info('${this}: Created numeric property for ${field} with value ${value}');
+                                } else if (Std.isOfType(value, Bool)) {
+                                    // Convert Boolean to String for consistency
+                                    var boolValue:Bool = cast value;
+                                    var boolStr = boolValue ? "true" : "false";
+                                    prop = new champaign.core.primitives.Property<String>(boolStr);
+                                    Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
+                                } else {
+                                    // Handle other types by converting to string
+                                    prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                                    Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
+                                }
+                                
+                                if (prop != null) {
+                                    _customProperties.set(field, prop);
+                                    
+                                    // Add property change listener
+                                    var onChange = Reflect.field(prop, "onChange");
+                                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                        var self = this;
+                                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                                    }
+                                }
+                            } else {
+                                // Update existing property
+                                var prop = _customProperties.get(field);
+                                if (prop != null && Reflect.hasField(prop, "value")) {
+                                    Reflect.setField(prop, "value", value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
             // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
             if (forced || _dropdownCoreComponentVersion.dataProvider.length == 0) {
                 // Use a small delay to ensure the UI is ready
@@ -776,39 +790,6 @@ class DynamicConfigPage extends Page {
                         var value = Reflect.field(customPropsObj, field);
                         customPropValues.set(field, value);
                         Logger.info('${this}: Found field in customProperties: ${field} = ${value}');
-                        
-                        // Also update our local custom properties map to ensure consistency
-                        if (!_customProperties.exists(field)) {
-                            var prop = null;
-                            if (Std.isOfType(value, String)) {
-                                prop = new champaign.core.primitives.Property<String>(value);
-                            } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
-                                prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                            } else if (Std.isOfType(value, Bool)) {
-                                var boolValue:Bool = cast value;
-                                var boolStr = boolValue ? "true" : "false";
-                                prop = new champaign.core.primitives.Property<String>(boolStr);
-                            } else {
-                                prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                            }
-                            
-                            if (prop != null) {
-                                _customProperties.set(field, prop);
-                                
-                                // Add property change listener
-                                var onChange = Reflect.field(prop, "onChange");
-                                if (onChange != null && Reflect.hasField(onChange, "add")) {
-                                    var self = this;
-                                    Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                                }
-                            }
-                        } else {
-                            // Update existing property
-                            var prop = _customProperties.get(field);
-                            if (prop != null && Reflect.hasField(prop, "value")) {
-                                Reflect.setField(prop, "value", value);
-                            }
-                        }
                     }
                 }
             }
