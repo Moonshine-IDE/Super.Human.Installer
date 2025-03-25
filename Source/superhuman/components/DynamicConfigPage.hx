@@ -753,12 +753,12 @@ class DynamicConfigPage extends Page {
             _buttonSave.enabled = !_server.hostname.locked;
             
             // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
-            if (forced || _dropdownCoreComponentVersion.dataProvider.length == 0) {
-                // Use a small delay to ensure the UI is ready
-                haxe.Timer.delay(function() {
-                    _updateProvisionerDropdown();
-                }, 100);
-            } else {
+//            if (forced || _dropdownCoreComponentVersion.dataProvider.length == 0) {
+//                // Use a small delay to ensure the UI is ready
+//                haxe.Timer.delay(function() {
+//                    _updateProvisionerDropdown();
+//                }, 100);
+//            } else {
                 // Just update the selected index if needed
                 if (_dropdownCoreComponentVersion.selectedIndex == -1) {
                     for (i in 0..._dropdownCoreComponentVersion.dataProvider.length) {
@@ -769,7 +769,7 @@ class DynamicConfigPage extends Page {
                         }
                     }
                 }
-            }
+//            }
             _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
             
             // Look for dynamic custom properties in server.customProperties if they exist
