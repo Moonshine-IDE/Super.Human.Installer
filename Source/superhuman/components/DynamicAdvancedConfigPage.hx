@@ -458,14 +458,32 @@ class DynamicAdvancedConfigPage extends Page {
                     var minValue = field.min != null ? field.min : 0;
                     var maxValue = field.max != null ? field.max : 100;
                     
+                    // For common integer fields, make sure we're using integer step values
+                    var isIntegerField = (field.name == "numCPUs" || field.name == "setupWait");
+                    
+                    // Force default value to be an integer for integer fields
+                    if (isIntegerField && !Math.isNaN(defaultValue)) {
+                        defaultValue = Math.round(defaultValue);
+                    }
+                    
                     var stepper = new GenesisFormNumericStepper(defaultValue, minValue, maxValue);
-                stepper.toolTip = field.tooltip != null ? field.tooltip : "";
+                    
+                    // For integer fields, override the step behavior
+                    if (isIntegerField) {
+                        // Set step size to 1.0 for integer fields
+                        Reflect.setField(stepper, "step", 1.0);
+                    }
+                    
+                    stepper.toolTip = field.tooltip != null ? field.tooltip : "";
                 
-                // Add the stepper to the row
-                row.content.addChild(stepper);
+                    // Add the stepper to the row
+                    row.content.addChild(stepper);
                 
-                // Store the stepper in the dynamic fields map
-                _dynamicFields.set(field.name, stepper);
+                    // Store the stepper in the dynamic fields map
+                    _dynamicFields.set(field.name, stepper);
+                    
+                    // Log the created field
+                    Logger.info('${this}: Created numeric field ${field.name} with default=${defaultValue}, min=${minValue}, max=${maxValue}, isInteger=${isIntegerField}');
                 
             case "checkbox":
                 // Create checkbox with default value of false
@@ -804,10 +822,71 @@ class DynamicAdvancedConfigPage extends Page {
                         var stepper:GenesisFormNumericStepper = cast field;
                         var numValue:Float = 0;
                         
+                        // Get the default value from the provisioner definition for fallback
+                        var defaultValue:Float = 0;
+                        var hasDefaultValue = false;
+                        
+                        if (_provisionerDefinition != null && 
+                            _provisionerDefinition.metadata != null && 
+                            _provisionerDefinition.metadata.configuration != null && 
+                            _provisionerDefinition.metadata.configuration.advancedFields != null) {
+                            
+                            // Find the field in the definition to get its default value
+                            for (defField in _provisionerDefinition.metadata.configuration.advancedFields) {
+                                if (defField.name == fieldName && defField.defaultValue != null) {
+                                    try {
+                                        defaultValue = Std.parseFloat(Std.string(defField.defaultValue));
+                                        if (!Math.isNaN(defaultValue)) {
+                                            hasDefaultValue = true;
+                                            Logger.info('${this}: Found default value for ${fieldName}: ${defaultValue}');
+                                        }
+                                    } catch (e) {
+                                        Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        
                         if (valueField != null) {
-                            numValue = Std.parseFloat(Std.string(valueField));
+                            try {
+                                numValue = Std.parseFloat(Std.string(valueField));
+                                if (Math.isNaN(numValue) && hasDefaultValue) {
+                                    numValue = defaultValue;
+                                    Logger.info('${this}: Using default value ${defaultValue} for ${fieldName} since value is NaN');
+                                }
+                            } catch (e) {
+                                Logger.warning('${this}: Error parsing value for ${fieldName}: ${e}, using default: ${hasDefaultValue ? defaultValue : 0}');
+                                numValue = hasDefaultValue ? defaultValue : 0;
+                            }
                         } else if (value != null) {
-                            numValue = Std.parseFloat(Std.string(value));
+                            try {
+                                numValue = Std.parseFloat(Std.string(value));
+                                if (Math.isNaN(numValue) && hasDefaultValue) {
+                                    numValue = defaultValue;
+                                    Logger.info('${this}: Using default value ${defaultValue} for ${fieldName} since value is NaN');
+                                }
+                            } catch (e) {
+                                Logger.warning('${this}: Error parsing value for ${fieldName}: ${e}, using default: ${hasDefaultValue ? defaultValue : 0}');
+                                numValue = hasDefaultValue ? defaultValue : 0;
+                            }
+                        } else if (hasDefaultValue) {
+                            // No value found, use the default from provisioner definition
+                            numValue = defaultValue;
+                            Logger.info('${this}: No value found for ${fieldName}, using default: ${defaultValue}');
+                        }
+                        
+                        // Special handling for integer fields to ensure they're whole numbers
+                        if (fieldName == "numCPUs" || fieldName == "setupWait") {
+                            numValue = Math.round(numValue);
+                        }
+                        
+                        // Ensure the value is within bounds
+                        if (stepper.minimum != null && numValue < stepper.minimum) {
+                            numValue = stepper.minimum;
+                        }
+                        if (stepper.maximum != null && numValue > stepper.maximum) {
+                            numValue = stepper.maximum;
                         }
                         
                         stepper.value = numValue;
