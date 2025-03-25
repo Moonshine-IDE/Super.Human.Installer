@@ -246,11 +246,11 @@ class DynamicConfigPage extends Page {
             if (customPropsObj != null) {
                 Logger.info('${this}: Loading custom properties from server customProperties');
                 
-                // Iterate over fields in the object
-                var fields = Reflect.fields(customPropsObj);
-                Logger.info('${this}: Found ${fields.length} custom properties to load');
+                // Get fields as an array we can iterate over
+                var fieldNames = Reflect.fields(customPropsObj);
+                Logger.info('${this}: Found ${fieldNames.length} custom properties to load');
                 
-                for (field in fields) {
+                for (field in fieldNames) {
                     var value = Reflect.field(customPropsObj, field);
                     Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
                     
@@ -933,7 +933,7 @@ class DynamicConfigPage extends Page {
                                 boolValue = valueField != null; // Convert to boolean
                             }
                         } else if (value != null) {
-                            if (Std.isOfType(value, Bool)) {
+                        
                                 boolValue = cast value;
                             } else if (Std.isOfType(value, String)) {
                                 boolValue = Std.string(value).toLowerCase() == "true";

@@ -375,15 +375,17 @@ override public function generateHostsFileContent():String {
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
             
-            // Process custom properties from both root and dynamic locations
-            var fields = Reflect.fields(customProps);
-            for (field in fields) {
-                var value = Reflect.field(customProps, field);
-                if (value != null) {
-                    var strValue = Std.string(value);
-                    content = _replaceVariable(content, field, strValue);
-                }
+        // Process custom properties from both root and dynamic locations
+        var fields = Reflect.fields(customProps);
+        for (field in fields) {
+            var value = Reflect.field(customProps, field);
+            if (value != null) {
+                var strValue = Std.string(value);
+                // Try both original case and uppercase
+                content = _replaceVariable(content, field, strValue);
+                content = _replaceVariable(content, field.toUpperCase(), strValue);
             }
+        }
             
             // Process dynamic custom properties
             if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
@@ -393,7 +395,9 @@ override public function generateHostsFileContent():String {
                     var value = Reflect.field(dynamicProps, field);
                     if (value != null) {
                         var strValue = Std.string(value);
+                        // Try both original case and uppercase, no prefixes
                         content = _replaceVariable(content, field, strValue);
+                        content = _replaceVariable(content, field.toUpperCase(), strValue);
                     }
                 }
             }
