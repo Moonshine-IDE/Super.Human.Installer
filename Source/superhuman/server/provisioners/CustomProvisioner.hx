@@ -252,7 +252,63 @@ override public function get_data():ProvisionerData {
  * @return The generated Hosts.yml content
  */
 override public function generateHostsFileContent():String {
+        // Try to get the template content from several potential locations
+        var templatePath = Path.addTrailingSlash(_sourcePath) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
+        Logger.info('${this}: Looking for hosts template at: ${templatePath}');
+        
+        // First try to get the template from the normal source template directory method
         _hostsTemplate = getFileContentFromSourceTemplateDirectory(StandaloneProvisioner.HOSTS_TEMPLATE_FILE);
+        
+        // Log template status
+        if (_hostsTemplate == null || _hostsTemplate.length == 0) {
+            Logger.warning('${this}: Template not found using standard method, will try alternative locations');
+            
+            // Try to look in the scripts directory
+            var scriptsTemplatePath = Path.addTrailingSlash(_sourcePath) + "scripts/templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
+            Logger.info('${this}: Trying to find template at: ${scriptsTemplatePath}');
+            
+            if (FileSystem.exists(scriptsTemplatePath)) {
+                try {
+                    _hostsTemplate = File.getContent(scriptsTemplatePath);
+                    Logger.info('${this}: Found template at: ${scriptsTemplatePath}');
+                } catch (e) {
+                    Logger.error('${this}: Error reading template at ${scriptsTemplatePath}: ${e}');
+                }
+            }
+            
+            // If still no template, try to fall back to the standalone provisioner template
+            if (_hostsTemplate == null || _hostsTemplate.length == 0) {
+                // Get the latest standalone provisioner definition
+                var standaloneProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.StandaloneProvisioner);
+                if (standaloneProvisioners != null && standaloneProvisioners.length > 0) {
+                    var latestStandaloneProvisioner = standaloneProvisioners[0];
+                    var standalonePath = Path.addTrailingSlash(latestStandaloneProvisioner.root) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
+                    Logger.info('${this}: Trying to use fallback template from standalone provisioner: ${standalonePath}');
+                    
+                    if (FileSystem.exists(standalonePath)) {
+                        try {
+                            _hostsTemplate = File.getContent(standalonePath);
+                            Logger.info('${this}: Using fallback template from: ${standalonePath}');
+                        } catch (e) {
+                            Logger.error('${this}: Error reading fallback template at ${standalonePath}: ${e}');
+                        }
+                    }
+                }
+            }
+        } else {
+            Logger.info('${this}: Successfully loaded template with standard method');
+        }
+        
+        // Log the final template state
+        if (_hostsTemplate == null || _hostsTemplate.length == 0) {
+            Logger.error('${this}: Could not find any valid template for Hosts.yml');
+            if (console != null) {
+                console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.error', 'Could not find template for Hosts.yml'), true);
+            }
+            
+            // Return a basic template as last resort
+            return "hosts:\n  - name: \"{{SERVER_HOSTNAME}}.{{SERVER_ORGANIZATION}}.com\"\n    settings:\n      description: \"Custom provisioner host\"\n      ram: {{SERVER_MEMORY}}\n      cpus: {{SERVER_CPUS}}\n      dhcp4: {{SERVER_DHCP}}\n";
+        }
         
         // Create a simple hosts file generator for custom provisioners
         // This is a simplified version that just does basic variable substitution
@@ -312,17 +368,62 @@ override public function generateHostsFileContent():String {
  * This method is called in Server._batchCopyComplete() to determine if the file needs to be created
  */
 override public function get_hostFileExists():Bool {
-    var exists = super.get_hostFileExists();
-    Logger.info('${this}: Checking if Hosts.yml exists: ${exists}');
+    var exists = this.fileExists(StandaloneProvisioner.HOSTS_FILE);
+    Logger.info('${this}: Checking if Hosts.yml exists: ${exists} at path ${Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE}');
     return exists;
 }
 
 /**
  * Override the saveHostsFile method to ensure it gets called for custom provisioners
- * Force save the hosts file regardless of validation
+ * This method validates the server before saving and logs detailed validation results
  */
 override public function saveHostsFile() {
     Logger.info('${this}: Saving Hosts.yml file for custom provisioner');
+    
+    // Check if the server is valid, but log details even if it's not
+    var isValid = _server.isValid();
+    Logger.info('${this}: Server validation result: ${isValid}');
+    
+    // Log detailed validation info for debugging
+    var hasVagrant = Vagrant.getInstance().exists;
+    var hasVirtualBox = VirtualBox.getInstance().exists;
+    var isHostnameValid = _server.hostname.isValid();
+    var isOrganizationValid = _server.organization.isValid();
+    var isMemorySufficient = _server.memory.value >= 4;
+    var isCPUCountSufficient = _server.numCPUs.value >= 1;
+    
+    var isNetworkValid = _server.dhcp4.value || (
+        _server.networkBridge.isValid() &&
+        _server.networkAddress.isValid() &&
+        _server.networkGateway.isValid() &&
+        _server.networkNetmask.isValid() &&
+        _server.nameServer1.isValid() &&
+        _server.nameServer2.isValid()
+    );
+    
+    var hasSafeId = _server.safeIdExists();
+    var areRolesOK = _server.areRolesValid();
+    
+    Logger.info('${this}: Validation details: hasVagrant=${hasVagrant}, hasVirtualBox=${hasVirtualBox}, ' +
+                'isHostnameValid=${isHostnameValid}, isOrganizationValid=${isOrganizationValid}, ' +
+                'isMemorySufficient=${isMemorySufficient}, isCPUCountSufficient=${isCPUCountSufficient}, ' +
+                'isNetworkValid=${isNetworkValid}, hasSafeId=${hasSafeId}, areRolesOK=${areRolesOK}');
+    
+    // Report validation issues to console if server isn't valid but proceed anyway
+    if (!isValid && console != null) {
+        console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.warning', 
+            'Server validation detected issues that might cause problems:'), true);
+        
+        if (!hasVagrant) console.appendText("  - Vagrant not installed", true);
+        if (!hasVirtualBox) console.appendText("  - VirtualBox not installed", true);
+        if (!isHostnameValid) console.appendText("  - Invalid hostname", true);
+        if (!isOrganizationValid) console.appendText("  - Invalid organization", true);
+        if (!isMemorySufficient) console.appendText("  - Memory allocation less than 4GB", true);
+        if (!isCPUCountSufficient) console.appendText("  - CPU count insufficient", true);
+        if (!isNetworkValid) console.appendText("  - Network configuration invalid", true);
+        if (!hasSafeId) console.appendText("  - SafeID file not found", true);
+        if (!areRolesOK) console.appendText("  - Role configuration invalid", true);
+    }
     
     // Create target directory and ensure it exists
     createTargetDirectory();
@@ -339,6 +440,12 @@ override public function saveHostsFile() {
         
         Logger.info('${this}: Custom provisioner created Hosts.yml at ${hostsFilePath}');
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfile', hostsFilePath));
+        
+        // Update server status after saving hosts file
+        if (_server != null) {
+            Logger.info('${this}: Updating server status after saving Hosts.yml');
+            _server.setServerStatus();
+        }
     } catch (e:Exception) {
         Logger.error('${this}: Custom provisioner could not create Hosts.yml file. Details: ${e.details()} Message: ${e.message}');
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfileerror', Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE, '${e.details()} Message: ${e.message}'), true);

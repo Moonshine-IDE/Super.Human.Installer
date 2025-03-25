@@ -878,6 +878,8 @@ class Server {
                                   _provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
                                   _provisioner.data.type != ProvisionerType.AdditionalProvisioner &&
                                   _provisioner.data.type != ProvisionerType.Default);
+        
+        Logger.info('${this}: Validating roles for server. Custom provisioner: ${isCustomProvisioner}');
                                   
         // For custom provisioners, check roles against metadata when possible
         if (isCustomProvisioner) {
@@ -897,6 +899,7 @@ class Server {
                             var rolesArray:Array<Dynamic> = cast roles;
                             
                             // Build a map of role names to installer requirements
+                            Logger.info('${this}: Found ${rolesArray.length} roles in provisioner metadata');
                             for (role in rolesArray) {
                                 if (role != null && Reflect.hasField(role, "name")) {
                                     var requiresInstaller = false;
@@ -910,6 +913,7 @@ class Server {
                                     }
                                     
                                     customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
+                                    Logger.info('${this}: Role ${Reflect.field(role, "name")} from metadata, requiresInstaller=${requiresInstaller}');
                                 }
                             }
                         }
@@ -917,13 +921,30 @@ class Server {
                 }
             }
             
+            // If we have no metadata roles but this is a custom provisioner, 
+            // assume all roles are valid with no installer requirements
+            var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
+            if (noValidMetadataRoles) {
+                Logger.info('${this}: No metadata roles found for custom provisioner, will validate all roles without installer requirements');
+            }
+            
             // For custom provisioners with no enabled roles, we need at least one
             for (r in this._roles.value) {
                 if (r.enabled) {
                     hasEnabledRole = true;
+                    Logger.info('${this}: Found enabled role: ${r.value}');
                     
-                    // Check if this is a custom role from the metadata
-                    var requiresInstaller = customRoleMap.exists(r.value) ? customRoleMap.get(r.value) : false;
+                    // If we have no metadata or the role is in the metadata, it's valid
+                    var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
+                    
+                    if (!isValidRole) {
+                        Logger.warning('${this}: Role ${r.value} is not defined in provisioner metadata, skipping installer check');
+                        continue;
+                    }
+                    
+                    // Check if this is a custom role from the metadata that requires an installer
+                    var requiresInstaller = !noValidMetadataRoles && customRoleMap.exists(r.value) ? 
+                                           customRoleMap.get(r.value) : false;
                     
                     // If this role has showInstaller=false, don't check installer regardless
                     if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
@@ -931,12 +952,20 @@ class Server {
                     }
                     
                     // Only check installer file if it's required for this role
-                    if (requiresInstaller && 
-                        (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer))) {
-                        Logger.info('Role ${r.value} is missing required installer file');
-                        return false;
+                    if (requiresInstaller) {
+                        if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
+                            !FileSystem.exists(r.files.installer)) {
+                            Logger.warning('${this}: Role ${r.value} is missing required installer file');
+                            return false;
+                        } else {
+                            Logger.info('${this}: Role ${r.value} has valid installer: ${r.files.installer}');
+                        }
                     }
                 }
+            }
+            
+            if (!hasEnabledRole) {
+                Logger.warning('${this}: Custom provisioner requires at least one enabled role');
             }
             
             return hasEnabledRole;
@@ -949,9 +978,14 @@ class Server {
             if (r.enabled) {
                 valid = true;
                 if (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer)) {
+                    Logger.warning('${this}: Standard role ${r.value} is missing required installer file');
                     return false;
                 }
             }
+        }
+        
+        if (!valid) {
+            Logger.warning('${this}: No enabled roles found for standard provisioner');
         }
         
         return valid;
