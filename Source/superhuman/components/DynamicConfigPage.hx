@@ -285,8 +285,12 @@ class DynamicConfigPage extends Page {
             Logger.info('${this}: No dynamicCustomProperties found in server customProperties');
         }
         
-        // Force an update of the UI after server is set
-        _pendingUpdateContent = true;
+        // Force an immediate update of the UI after server is set
+        if (_formInitialized && _form != null) {
+            updateContent(true);
+        } else {
+            _pendingUpdateContent = true;
+        }
     }
 
     private function _updateProvisionerDropdown() {
@@ -816,13 +820,16 @@ class DynamicConfigPage extends Page {
                     if (fieldName == "hostname") {
                         // Get hostname directly from server.hostname.value
                         valueField = _server.hostname.value;
-                        Logger.info('${this}: Using standard server hostname: ${valueField}');
                         valueSource = "standardServerProperty";
                     }
-                    // Then check if it's in the customPropValues map (direct from customProperties)
+                    // First check if it's in customProperties directly
+                    else if (Reflect.hasField(_server.customProperties, fieldName)) {
+                        valueField = Reflect.field(_server.customProperties, fieldName);
+                        valueSource = "directCustomProperty";
+                    }
+                    // Then check if it's in the customPropValues map (from dynamicCustomProperties)
                     else if (customPropValues.exists(fieldName)) {
                         valueField = customPropValues.get(fieldName);
-                        Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
                         valueSource = "customProperties";
                     }
                     // Then check if it's a custom property in our local map
@@ -1175,6 +1182,9 @@ class DynamicConfigPage extends Page {
             
             // Force an immediate save of server data to avoid race conditions
             _server.saveData();
+            
+            // Force an update of the UI to show the new values
+            updateContent(true);
         }
         
     // Update the provisioner with the selected version
