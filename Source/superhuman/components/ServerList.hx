@@ -582,15 +582,20 @@ class ServerItem extends LayoutGroupItemRenderer {
                                 
                                 var metadata = Reflect.field(provDef, "metadata");
                                 if (Reflect.hasField(metadata, "roles")) {
-                                    var roles = Reflect.field(metadata, "roles");
-                                    for (metaRole in roles) {
-                                        if (metaRole != null && 
-                                            Reflect.hasField(metaRole, "name") && 
-                                            Reflect.field(metaRole, "name") == role.value &&
-                                            Reflect.hasField(metaRole, "label")) {
-                                            
-                                            displayName = Reflect.field(metaRole, "label");
-                                            break;
+                                    var rolesObj = Reflect.field(metadata, "roles");
+                                    // Cast Dynamic to Array<Dynamic> to make it iterable
+                                    var roles:Array<Dynamic> = cast rolesObj;
+                                    
+                                    if (roles != null) {
+                                        for (metaRole in roles) {
+                                            if (metaRole != null && 
+                                                Reflect.hasField(metaRole, "name") && 
+                                                Reflect.field(metaRole, "name") == role.value &&
+                                                Reflect.hasField(metaRole, "label")) {
+                                                
+                                                displayName = Reflect.field(metaRole, "label");
+                                                break;
+                                            }
                                         }
                                     }
                                 }
