@@ -548,14 +548,42 @@ override public function generateHostsFileContent():String {
         if (_server.customProperties != null) {
             var customProps = _server.customProperties;
             
+            // Log the hostname values from different locations
+            Logger.info('${this}: Direct hostname value: ${Reflect.hasField(customProps, "hostname") ? Reflect.field(customProps, "hostname") : "not found"}');
+            
+            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
+                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
+                if (dynamicProps != null && Reflect.hasField(dynamicProps, "hostname")) {
+                    Logger.info('${this}: dynamicCustomProperties hostname value: ${Reflect.field(dynamicProps, "hostname")}');
+                } else {
+                    Logger.info('${this}: hostname not found in dynamicCustomProperties');
+                }
+            }
+            
+            // Log the DOMINO_ORIGIN_HOSTNAME values from different locations
+            Logger.info('${this}: Direct DOMINO_ORIGIN_HOSTNAME value: ${Reflect.hasField(customProps, "DOMINO_ORIGIN_HOSTNAME") ? Reflect.field(customProps, "DOMINO_ORIGIN_HOSTNAME") : "not found"}');
+            
+            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
+                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
+                if (dynamicProps != null && Reflect.hasField(dynamicProps, "DOMINO_ORIGIN_HOSTNAME")) {
+                    Logger.info('${this}: dynamicCustomProperties DOMINO_ORIGIN_HOSTNAME value: ${Reflect.field(dynamicProps, "DOMINO_ORIGIN_HOSTNAME")}');
+                } else {
+                    Logger.info('${this}: DOMINO_ORIGIN_HOSTNAME not found in dynamicCustomProperties');
+                }
+            }
+            
             // Process all custom properties in a consistent way
             var allCustomProps = new Map<String, String>();
             
             // First collect all properties with their values (common variables)
             // Skip special properties like provisionerDefinition
             var fields = Reflect.fields(customProps);
+            Logger.info('${this}: Found ${fields.length} fields in customProperties: ${fields.join(", ")}');
+            
             for (field in fields) {
                 var value = Reflect.field(customProps, field);
+                Logger.info('${this}: Checking field ${field} with value ${value}, type: ${Type.typeof(value)}');
+                
                 if (value != null && 
                     field != "provisionerDefinition" && 
                     field != "dynamicCustomProperties" && 
@@ -564,6 +592,8 @@ override public function generateHostsFileContent():String {
                     // Store with original case only for common variables
                     allCustomProps.set(field, Std.string(value));
                     Logger.info('${this}: Added common property ${field} = ${value}');
+                } else {
+                    Logger.info('${this}: Skipped field ${field} (null or special property)');
                 }
             }
             

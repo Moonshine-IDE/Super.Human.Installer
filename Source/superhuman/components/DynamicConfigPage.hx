@@ -842,11 +842,12 @@ class DynamicConfigPage extends Page {
                         valueField = _server.hostname.value;
                         valueSource = "standardServerProperty";
                     }
-                    // First check if it's in customProperties directly
-                    else if (Reflect.hasField(_server.customProperties, fieldName)) {
-                        valueField = Reflect.field(_server.customProperties, fieldName);
-                        valueSource = "directCustomProperty";
-                    }
+    // First check if it's in customProperties directly
+    else if (Reflect.hasField(_server.customProperties, fieldName)) {
+        valueField = Reflect.field(_server.customProperties, fieldName);
+        Logger.info('${this}: Using value from direct customProperties for ${fieldName}: ${valueField}, type: ${Type.typeof(valueField)}');
+        valueSource = "directCustomProperty";
+    }
                     // Then check if it's in the customPropValues map (from dynamicCustomProperties)
                     else if (customPropValues.exists(fieldName)) {
                         valueField = customPropValues.get(fieldName);
