@@ -63,6 +63,7 @@ import superhuman.managers.ProvisionerManager;
 import superhuman.managers.ProvisionerManager.ProvisionerField;
 import superhuman.server.Server;
 import superhuman.server.definitions.ProvisionerDefinition;
+import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
 
 /**

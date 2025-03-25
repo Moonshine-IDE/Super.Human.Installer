@@ -61,6 +61,7 @@ import superhuman.managers.ProvisionerManager;
 import superhuman.managers.ProvisionerManager.ProvisionerField;
 import superhuman.server.Server;
 import superhuman.server.definitions.ProvisionerDefinition;
+import superhuman.theme.SuperHumanInstallerTheme;
 
 /**
  * A dynamic advanced configuration page for custom provisioners
