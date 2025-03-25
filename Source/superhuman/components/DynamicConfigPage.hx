@@ -773,57 +773,64 @@ class DynamicConfigPage extends Page {
                 }
             }
             
-            // Update dynamic fields with server or custom property values
-            for (fieldName => field in _dynamicFields) {
-                var value = null;
-                var valueField = null;
-                var valueSource = "none";
-                
-                Logger.info('${this}: Processing field ${fieldName}');
-                
-                // First check if it's in the customPropValues map (direct from customProperties)
-                if (customPropValues.exists(fieldName)) {
-                    valueField = customPropValues.get(fieldName);
-                    Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
-                    valueSource = "customProperties";
-                }
-                // Then check if it's a custom property in our local map
-                else if (_customProperties.exists(fieldName)) {
-                    value = _customProperties.get(fieldName);
-                    if (value != null && Reflect.hasField(value, "value")) {
-                        valueField = Reflect.field(value, "value");
+                // Update dynamic fields with server or custom property values
+                for (fieldName => field in _dynamicFields) {
+                    var value = null;
+                    var valueField = null;
+                    var valueSource = "none";
+                    
+                    Logger.info('${this}: Processing field ${fieldName}');
+                    
+                    // Special handling for standard fields like hostname
+                    if (fieldName == "hostname") {
+                        // Get hostname directly from server.hostname.value
+                        valueField = _server.hostname.value;
+                        Logger.info('${this}: Using standard server hostname: ${valueField}');
+                        valueSource = "standardServerProperty";
                     }
-                    Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
-                    valueSource = "customPropertiesMap";
-                } 
-                // If not, try to get it from the server
-                else {
-                    try {
-                        value = Reflect.getProperty(_server, fieldName);
+                    // Then check if it's in the customPropValues map (direct from customProperties)
+                    else if (customPropValues.exists(fieldName)) {
+                        valueField = customPropValues.get(fieldName);
+                        Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
+                        valueSource = "customProperties";
+                    }
+                    // Then check if it's a custom property in our local map
+                    else if (_customProperties.exists(fieldName)) {
+                        value = _customProperties.get(fieldName);
                         if (value != null && Reflect.hasField(value, "value")) {
                             valueField = Reflect.field(value, "value");
-                        } else {
-                            valueField = value;
                         }
-                        Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
-                        valueSource = "serverProperty";
-                    } catch (e) {
-                        // Try with underscore prefix
+                        Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
+                        valueSource = "customPropertiesMap";
+                    } 
+                    // If not, try to get it from the server
+                    else {
                         try {
-                            value = Reflect.getProperty(_server, "_" + fieldName);
+                            value = Reflect.getProperty(_server, fieldName);
                             if (value != null && Reflect.hasField(value, "value")) {
                                 valueField = Reflect.field(value, "value");
                             } else {
                                 valueField = value;
                             }
-                            Logger.info('${this}: Using value from server property with underscore for ${fieldName}: ${valueField}');
-                            valueSource = "serverPropertyUnderscore";
-                        } catch (e2) {
-                            // Property doesn't exist on server
-                            Logger.warning('${this}: Could not get property value for ${fieldName}: ${e2}');
+                            Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
+                            valueSource = "serverProperty";
+                        } catch (e) {
+                            // Try with underscore prefix
+                            try {
+                                value = Reflect.getProperty(_server, "_" + fieldName);
+                                if (value != null && Reflect.hasField(value, "value")) {
+                                    valueField = Reflect.field(value, "value");
+                                } else {
+                                    valueField = value;
+                                }
+                                Logger.info('${this}: Using value from server property with underscore for ${fieldName}: ${valueField}');
+                                valueSource = "serverPropertyUnderscore";
+                            } catch (e2) {
+                                // Property doesn't exist on server
+                                Logger.warning('${this}: Could not get property value for ${fieldName}: ${e2}');
+                            }
                         }
                     }
-                }
                 
                 // If we still don't have a value, check if there's a direct property in customProperties
                 if ((valueField == null && value == null) && _server.customProperties != null) {

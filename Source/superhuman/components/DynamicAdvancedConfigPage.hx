@@ -123,7 +123,8 @@ class DynamicAdvancedConfigPage extends Page {
         _form = new GenesisForm();
         this.addChild(_form);
 
-        // Network interface dropdown (standard field)
+        // Initialize network interface dropdown but don't add to form yet
+        // We'll only add it if the provisioner.yml has a corresponding field
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkinterface.text');
         _dropdownNetworkInterface = new GenesisFormPupUpListView(VirtualBox.getInstance().bridgedInterfacesCollection);
@@ -134,7 +135,7 @@ class DynamicAdvancedConfigPage extends Page {
         // Don't set selectedIndex here, wait until we have data
         _dropdownNetworkInterface.prompt = LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkinterface.prompt');
         _rowNetworkInterface.content.addChild(_dropdownNetworkInterface);
-        _form.addChild(_rowNetworkInterface);
+        // We'll add this to the form only if needed based on provisioner
 
         var line = new HLine();
         line.width = _w;
@@ -297,6 +298,36 @@ class DynamicAdvancedConfigPage extends Page {
         _dynamicFields = new Map();
         _dynamicRows = new Map();
         
+        // Also remove the network interface row if it was previously added
+        if (_form != null && _form.contains(_rowNetworkInterface)) {
+            _form.removeChild(_rowNetworkInterface);
+        }
+        
+        // Check if we need to add the network interface field
+        var needsNetworkInterface = false;
+        
+        // First check if there's a networkBridge or networkInterface field in the advanced config
+        if (_provisionerDefinition != null && _provisionerDefinition.metadata != null && 
+            _provisionerDefinition.metadata.configuration != null && 
+            _provisionerDefinition.metadata.configuration.advancedFields != null) {
+            
+            for (field in _provisionerDefinition.metadata.configuration.advancedFields) {
+                if (field.name == "networkBridge" || field.name == "networkInterface") {
+                    needsNetworkInterface = true;
+                    Logger.info('${this}: Found network interface field in provisioner: ${field.name}');
+                    break;
+                }
+            }
+        }
+        
+        // Add the network interface field if needed
+        if (needsNetworkInterface && _form != null && _rowNetworkInterface != null) {
+            _form.addChild(_rowNetworkInterface);
+            Logger.info('${this}: Added network interface dropdown to form');
+        } else {
+            Logger.info('${this}: Network interface field not needed for this provisioner');
+        }
+        
         // Create dynamic fields based on the provisioner configuration
         if (_provisionerDefinition != null && _provisionerDefinition.metadata != null && 
             _provisionerDefinition.metadata.configuration != null && 
@@ -304,6 +335,11 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Add each field from the configuration
             for (field in _provisionerDefinition.metadata.configuration.advancedFields) {
+                // Skip networkBridge/networkInterface since we handle it separately
+                if (field.name == "networkBridge" || field.name == "networkInterface") {
+                    continue;
+                }
+                
                 Logger.info('Adding advanced field to form: ${field.name}, type: ${field.type}, label: ${field.label}');
                 _addDynamicField(field);
             }
