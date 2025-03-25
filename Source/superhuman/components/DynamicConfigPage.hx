@@ -475,6 +475,11 @@ class DynamicConfigPage extends Page {
             } else {
                 Logger.warning('No configuration found in provisioner metadata');
             }
+        } else {
+            Logger.warning('No metadata found in provisioner definition');
+        }
+        
+        // Clear existing dynamic fields
         _dynamicFields = new Map();
         _dynamicRows = new Map();
         
