@@ -89,12 +89,9 @@ class CustomProvisioner extends StandaloneProvisioner {
             FileSystem.createDirectory(_targetPath);
         }
 
-        // Get the scripts directory path
-        var scriptsPath = Path.addTrailingSlash(sourcePath) + _SCRIPTS_ROOT;
-        
         try {
             // First zip the scripts directory
-            var zipBytes = _zipDirectory(scriptsPath);
+            var zipBytes = _zipDirectory(Path.addTrailingSlash(sourcePath) + "scripts/");
             
             // Then unzip to the target directory
             _unzipToDirectory(zipBytes, _targetPath);
