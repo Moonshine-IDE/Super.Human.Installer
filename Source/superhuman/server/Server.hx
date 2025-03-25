@@ -885,8 +885,11 @@ class Server {
                     if (metadata != null && Reflect.hasField(metadata, "roles")) {
                         var roles = Reflect.field(metadata, "roles");
                         if (roles != null) {
+                            // Cast roles to Array<Dynamic> to avoid "can't iterate on Dynamic" error
+                            var rolesArray:Array<Dynamic> = cast roles;
+                            
                             // Build a map of role names to installer requirements
-                            for (role in roles) {
+                            for (role in rolesArray) {
                                 if (role != null && Reflect.hasField(role, "name")) {
                                     var requiresInstaller = false;
                                     
