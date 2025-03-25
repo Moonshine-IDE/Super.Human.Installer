@@ -1113,12 +1113,40 @@ class DynamicConfigPage extends Page {
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
         if (dvv != null) {
             Logger.info('${this}: Updating provisioner to version ${dvv.data.version}');
-            // Force saving the provisioner data even if versions match
-            _server.provisioner.data.version = dvv.data.version;
-            _server.updateProvisioner(dvv.data);
+            
+            // Create a copy of the provisioner data to ensure we don't lose the version
+            var updatedData = {
+                type: dvv.data.type,
+                version: dvv.data.version,
+                basedon: dvv.data.basedon,
+                roles: dvv.data.roles
+            };
+            
+            // Explicitly set the string version in the server's userData/customProperties
+            if (_server.customProperties == null) {
+                _server.customProperties = {};
+            }
+            if (!Reflect.hasField(_server.customProperties, "serviceTypeData")) {
+                Reflect.setField(_server.customProperties, "serviceTypeData", {});
+            }
+            var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
+            
+            // Update the provisioner version in serviceTypeData
+            if (Reflect.hasField(serviceTypeData, "provisioner")) {
+                var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
+                if (Reflect.hasField(stProvisioner, "data")) {
+                    Reflect.setField(stProvisioner.data, "version", dvv.data.version);
+                }
+            }
+            
+            // Update the server's provisioner data
+            _server.provisioner.data = updatedData;
+            _server.updateProvisioner(updatedData);
+            
             // Make sure to save data after updating provisioner
             _server.saveData();
-            Logger.info('${this}: Updated provisioner data saved');
+            
+            Logger.info('${this}: Updated provisioner data with version ${dvv.data.version} saved');
         } else {
             Logger.warning('${this}: No provisioner selected in dropdown');
         }

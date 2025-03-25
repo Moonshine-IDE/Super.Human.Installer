@@ -682,16 +682,52 @@ class Server {
     }
 
     public function updateProvisioner( data:ProvisionerData ):Bool {
+        Logger.info('${this}: Updating provisioner from version ${this._provisioner.version} to ${data.version}');
 
-        if ( this._provisioner.version == data.version ) return false;
-
+        // Force provisioner update even if the version appears the same
+        // This is needed because string versions like "0.1.20" get converted to integers internally
         var vcd = ProvisionerManager.getProvisionerDefinition( data.type, data.version );
-        var newRoot:String = vcd.root;
-        this._provisioner.reinitialize( newRoot );
-        _propertyChanged( this._provisioner );
-
-        return true;
-
+        
+        if (vcd != null) {
+            Logger.info('${this}: Found matching provisioner definition: ${vcd.name}');
+            var newRoot:String = vcd.root;
+            this._provisioner.reinitialize( newRoot );
+            
+            // Preserve the string version - this is crucial for custom provisioners
+            if (this._provisioner != null && this._provisioner.data != null) {
+                this._provisioner.data.version = data.version;
+            }
+            
+            _propertyChanged( this._provisioner );
+            
+            // Update the version in customProperties if it exists
+            if (this._customProperties != null) {
+                if (Reflect.hasField(this._customProperties, "provisionerDefinition")) {
+                    var provDef = Reflect.field(this._customProperties, "provisionerDefinition");
+                    if (provDef != null && Reflect.hasField(provDef, "data")) {
+                        Reflect.setField(provDef.data, "version", data.version);
+                    }
+                }
+                
+                if (Reflect.hasField(this._customProperties, "serviceTypeData")) {
+                    var serviceTypeData = Reflect.field(this._customProperties, "serviceTypeData");
+                    if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
+                        var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
+                        if (stProvisioner != null && Reflect.hasField(stProvisioner, "data")) {
+                            Reflect.setField(stProvisioner.data, "version", data.version);
+                        }
+                    }
+                }
+            }
+            
+            // Save the updated data
+            this.saveData();
+            
+            return true;
+        } else {
+            Logger.warning('${this}: Could not find provisioner definition for type ${data.type}, version ${data.version}');
+            return false;
+        }
     }
 
     function _prepareFiles() {
