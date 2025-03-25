@@ -309,36 +309,62 @@ override public function generateHostsFileContent():String {
             }
             
             // Return a basic template as last resort
-            return "hosts:\n  - name: \"{{SERVER_HOSTNAME}}.{{SERVER_ORGANIZATION}}.com\"\n    settings:\n      description: \"Custom provisioner host\"\n      ram: {{SERVER_MEMORY}}\n      cpus: {{SERVER_CPUS}}\n      dhcp4: {{SERVER_DHCP}}\n";
+            return "hosts:\n  - name: \"::SERVER_HOSTNAME::.::SERVER_ORGANIZATION::.com\"\n    settings:\n      description: \"Custom provisioner host\"\n      ram: ::SERVER_MEMORY::\n      cpus: ::SERVER_CPUS::\n      dhcp4: ::SERVER_DHCP::\n";
         }
         
         // Create a simple hosts file generator for custom provisioners
         // This is a simplified version that just does basic variable substitution
         var content = _hostsTemplate;
         
+        // Try both "::" and "{{" style variable formats since templates might use either format
+        
         // Replace variables with server values
-        content = StringTools.replace(content, "{{SERVER_HOSTNAME}}", _server.hostname.value);
-        content = StringTools.replace(content, "{{SERVER_ORGANIZATION}}", _server.organization.value);
-        content = StringTools.replace(content, "{{SERVER_ID}}", Std.string(_server.id));
-        content = StringTools.replace(content, "{{SERVER_MEMORY}}", Std.string(_server.memory.value));
-        content = StringTools.replace(content, "{{SERVER_CPUS}}", Std.string(_server.numCPUs.value));
-        content = StringTools.replace(content, "{{SERVER_DHCP}}", _server.dhcp4.value ? "true" : "false");
+        content = _replaceVariable(content, "SERVER_HOSTNAME", _server.hostname.value);
+        content = _replaceVariable(content, "SERVER_DOMAIN", _server.url.domainName);
+        content = _replaceVariable(content, "SERVER_ORGANIZATION", _server.organization.value);
+        content = _replaceVariable(content, "SERVER_ID", Std.string(_server.id));
+        content = _replaceVariable(content, "RESOURCES_RAM", Std.string(_server.memory.value) + "G");
+        content = _replaceVariable(content, "SERVER_MEMORY", Std.string(_server.memory.value));
+        content = _replaceVariable(content, "RESOURCES_CPU", Std.string(_server.numCPUs.value));
+        content = _replaceVariable(content, "SERVER_CPUS", Std.string(_server.numCPUs.value));
+        content = _replaceVariable(content, "NETWORK_DHCP4", _server.dhcp4.value ? "true" : "false");
+        content = _replaceVariable(content, "SERVER_DHCP", _server.dhcp4.value ? "true" : "false");
         
         // Network settings
         if (!_server.dhcp4.value) {
-            content = StringTools.replace(content, "{{NETWORK_ADDRESS}}", _server.networkAddress.value);
-            content = StringTools.replace(content, "{{NETWORK_NETMASK}}", _server.networkNetmask.value);
-            content = StringTools.replace(content, "{{NETWORK_GATEWAY}}", _server.networkGateway.value);
-            content = StringTools.replace(content, "{{NETWORK_DNS1}}", _server.nameServer1.value);
-            content = StringTools.replace(content, "{{NETWORK_DNS2}}", _server.nameServer2.value);
+            content = _replaceVariable(content, "NETWORK_ADDRESS", _server.networkAddress.value);
+            content = _replaceVariable(content, "NETWORK_NETMASK", _server.networkNetmask.value);
+            content = _replaceVariable(content, "NETWORK_GATEWAY", _server.networkGateway.value);
+            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_1", _server.nameServer1.value);
+            content = _replaceVariable(content, "NETWORK_DNS1", _server.nameServer1.value);
+            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_2", _server.nameServer2.value);
+            content = _replaceVariable(content, "NETWORK_DNS2", _server.nameServer2.value);
+        } else {
+            // Provide default values for DHCP mode
+            content = _replaceVariable(content, "NETWORK_ADDRESS", "192.168.2.1");
+            content = _replaceVariable(content, "NETWORK_NETMASK", "255.255.255.0");
+            content = _replaceVariable(content, "NETWORK_GATEWAY", "");
+            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_1", "1.1.1.1");
+            content = _replaceVariable(content, "NETWORK_DNS1", "1.1.1.1");
+            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_2", "1.0.0.1");
+            content = _replaceVariable(content, "NETWORK_DNS2", "1.0.0.1");
         }
         
         // Bridge adapter
-        content = StringTools.replace(content, "{{NETWORK_BRIDGE}}", _server.networkBridge.value);
-        content = StringTools.replace(content, "{{DISABLE_BRIDGE_ADAPTER}}", _server.disableBridgeAdapter.value ? "true" : "false");
+        content = _replaceVariable(content, "NETWORK_BRIDGE", _server.networkBridge.value);
+        content = _replaceVariable(content, "DISABLE_BRIDGE_ADAPTER", _server.disableBridgeAdapter.value ? "true" : "false");
         
         // User settings
-        content = StringTools.replace(content, "{{USER_EMAIL}}", _server.userEmail.value);
+        content = _replaceVariable(content, "USER_EMAIL", _server.userEmail.value);
+        
+        // Server default settings
+        content = _replaceVariable(content, "SERVER_DEFAULT_USER", "startcloud");
+        content = _replaceVariable(content, "SERVER_DEFAULT_USER_PASS", "STARTcloud24@!");
+        content = _replaceVariable(content, "BOX_URL", "https://boxvault.startcloud.com");
+        content = _replaceVariable(content, "SHOW_CONSOLE", "false");
+        content = _replaceVariable(content, "POST_PROVISION", "true");
+        content = _replaceVariable(content, "ENV_SETUP_WAIT", Std.string(_server.setupWait.value));
+        content = _replaceVariable(content, "SYNC_METHOD", Std.string(_server.syncMethod));
         
         // Add custom properties if available
         if (_server.customProperties != null) {
@@ -346,18 +372,20 @@ override public function generateHostsFileContent():String {
             if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
                 var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
                 var fields = Reflect.fields(dynamicProps);
+                Logger.info('${this}: Processing ${fields.length} dynamic custom properties');
                 for (field in fields) {
                     var value = Reflect.field(dynamicProps, field);
-                    content = StringTools.replace(content, "{{" + field.toUpperCase() + "}}", Std.string(value));
+                    content = _replaceVariable(content, field.toUpperCase(), Std.string(value));
                 }
             }
             
             if (Reflect.hasField(customProps, "dynamicAdvancedCustomProperties")) {
                 var advancedProps = Reflect.field(customProps, "dynamicAdvancedCustomProperties");
                 var fields = Reflect.fields(advancedProps);
+                Logger.info('${this}: Processing ${fields.length} dynamic advanced custom properties');
                 for (field in fields) {
                     var value = Reflect.field(advancedProps, field);
-                    content = StringTools.replace(content, "{{" + field.toUpperCase() + "}}", Std.string(value));
+                    content = _replaceVariable(content, field.toUpperCase(), Std.string(value));
                 }
             }
         }
@@ -408,6 +436,17 @@ override public function saveHostsFile() {
     }
 }
 
+    /**
+     * Helper method to replace variables in the template using the ::VARIABLENAME:: format
+     * @param content The template content
+     * @param name The variable name
+     * @param value The replacement value
+     * @return String The content with replaced variables
+     */
+    private function _replaceVariable(content:String, name:String, value:String):String {
+        return StringTools.replace(content, "::" + name + "::", value);
+    }
+    
     /**
      * Get the string representation of the provisioner
      * @return The string representation
