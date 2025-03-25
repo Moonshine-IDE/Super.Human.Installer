@@ -945,9 +945,11 @@ class Server {
         // For custom provisioners, check roles against metadata when possible
         if (isCustomProvisioner) {
             var hasEnabledRole = false;
+            var validationMessages = new Array<String>();
             
             // Get custom role definitions from provisioner metadata if available
             var customRoleMap = new Map<String, Bool>();
+            var hasMetadata = false;
             
             if (_customProperties != null && Reflect.hasField(_customProperties, "provisionerDefinition")) {
                 var provDef = Reflect.field(_customProperties, "provisionerDefinition");
@@ -956,6 +958,7 @@ class Server {
                     if (metadata != null && Reflect.hasField(metadata, "roles")) {
                         var roles = Reflect.field(metadata, "roles");
                         if (roles != null) {
+                            hasMetadata = true;
                             // Cast roles to Array<Dynamic> to avoid "can't iterate on Dynamic" error
                             var rolesArray:Array<Dynamic> = cast roles;
                             
@@ -987,6 +990,12 @@ class Server {
             var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
             if (noValidMetadataRoles) {
                 Logger.info('${this}: No metadata roles found for custom provisioner, will validate all roles without installer requirements');
+                if (!hasMetadata) {
+                    Logger.warning('${this}: Warning: No metadata found for custom provisioner');
+                    if (console != null) {
+                        console.appendText("Warning: No metadata found for custom provisioner. This may affect role validation.", true);
+                    }
+                }
             }
             
             // For custom provisioners with no enabled roles, we need at least one
@@ -1000,6 +1009,7 @@ class Server {
                     
                     if (!isValidRole) {
                         Logger.warning('${this}: Role ${r.value} is not defined in provisioner metadata, skipping installer check');
+                        validationMessages.push('Role ${r.value} is not defined in provisioner metadata');
                         continue;
                     }
                     
@@ -1016,7 +1026,18 @@ class Server {
                     if (requiresInstaller) {
                         if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
                             !FileSystem.exists(r.files.installer)) {
-                            Logger.warning('${this}: Role ${r.value} is missing required installer file');
+                            
+                            var errorMsg = 'Role ${r.value} is missing required installer file';
+                            Logger.warning('${this}: ${errorMsg}');
+                            validationMessages.push(errorMsg);
+                            
+                            if (console != null && validationMessages.length > 0) {
+                                console.appendText("Role validation failed:", true);
+                                for (msg in validationMessages) {
+                                    console.appendText("- " + msg, true);
+                                }
+                            }
+                            
                             return false;
                         } else {
                             Logger.info('${this}: Role ${r.value} has valid installer: ${r.files.installer}');
@@ -1026,7 +1047,18 @@ class Server {
             }
             
             if (!hasEnabledRole) {
-                Logger.warning('${this}: Custom provisioner requires at least one enabled role');
+                var errorMsg = 'Custom provisioner requires at least one enabled role';
+                Logger.warning('${this}: ${errorMsg}');
+                validationMessages.push(errorMsg);
+                
+                if (console != null && validationMessages.length > 0) {
+                    console.appendText("Role validation failed:", true);
+                    for (msg in validationMessages) {
+                        console.appendText("- " + msg, true);
+                    }
+                }
+                
+                return false;
             }
             
             return hasEnabledRole;
@@ -1034,19 +1066,39 @@ class Server {
         
         // Original logic for built-in provisioners
         var valid:Bool = false;
+        var validationMessages = new Array<String>();
         
         for (r in this._roles.value) {
             if (r.enabled) {
                 valid = true;
                 if (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer)) {
-                    Logger.warning('${this}: Standard role ${r.value} is missing required installer file');
+                    var errorMsg = 'Standard role ${r.value} is missing required installer file';
+                    Logger.warning('${this}: ${errorMsg}');
+                    validationMessages.push(errorMsg);
+                    
+                    if (console != null && validationMessages.length > 0) {
+                        console.appendText("Role validation failed:", true);
+                        for (msg in validationMessages) {
+                            console.appendText("- " + msg, true);
+                        }
+                    }
+                    
                     return false;
                 }
             }
         }
         
         if (!valid) {
-            Logger.warning('${this}: No enabled roles found for standard provisioner');
+            var errorMsg = 'No enabled roles found for standard provisioner';
+            Logger.warning('${this}: ${errorMsg}');
+            validationMessages.push(errorMsg);
+            
+            if (console != null && validationMessages.length > 0) {
+                console.appendText("Role validation failed:", true);
+                for (msg in validationMessages) {
+                    console.appendText("- " + msg, true);
+                }
+            }
         }
         
         return valid;
