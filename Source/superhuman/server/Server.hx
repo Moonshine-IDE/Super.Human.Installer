@@ -871,22 +871,56 @@ class Server {
                                   _provisioner.data.type != ProvisionerType.AdditionalProvisioner &&
                                   _provisioner.data.type != ProvisionerType.Default);
                                   
-        // For custom provisioners, just make sure at least one role is enabled
+        // For custom provisioners, check roles against metadata when possible
         if (isCustomProvisioner) {
             var hasEnabledRole = false;
             
+            // Get custom role definitions from provisioner metadata if available
+            var customRoleMap = new Map<String, Bool>();
+            
+            if (_customProperties != null && Reflect.hasField(_customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(_customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "metadata")) {
+                    var metadata = Reflect.field(provDef, "metadata");
+                    if (metadata != null && Reflect.hasField(metadata, "roles")) {
+                        var roles = Reflect.field(metadata, "roles");
+                        if (roles != null) {
+                            // Build a map of role names to installer requirements
+                            for (role in roles) {
+                                if (role != null && Reflect.hasField(role, "name")) {
+                                    var requiresInstaller = false;
+                                    
+                                    // Check if role requires installer
+                                    if (Reflect.hasField(role, "installers")) {
+                                        var installers = Reflect.field(role, "installers");
+                                        if (installers != null && Reflect.hasField(installers, "installer")) {
+                                            requiresInstaller = Reflect.field(installers, "installer");
+                                        }
+                                    }
+                                    
+                                    customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // For custom provisioners with no enabled roles, we need at least one
             for (r in this._roles.value) {
                 if (r.enabled) {
-                    // Check if this role has a showInstaller property set to false
-                    var skipInstallerCheck = false;
-                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
-                        skipInstallerCheck = true;
-                    }
-                    
                     hasEnabledRole = true;
                     
-                    // Still check installer file if it's required for this role
-                    if (!skipInstallerCheck && 
+                    // Check if this is a custom role from the metadata
+                    var requiresInstaller = customRoleMap.exists(r.value) ? customRoleMap.get(r.value) : false;
+                    
+                    // If this role has showInstaller=false, don't check installer regardless
+                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
+                        requiresInstaller = false;
+                    }
+                    
+                    // Only check installer file if it's required for this role
+                    if (requiresInstaller && 
                         (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer))) {
                         Logger.info('Role ${r.value} is missing required installer file');
                         return false;
