@@ -706,15 +706,15 @@ class Server {
                 Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
             }
             
-            // STEP 2: Create a fresh provisioner data object to avoid any reference issues
-            var updatedProvisionerData = {
-                type: data.type,
-                version: data.version
-            };
-            
-            // STEP 3: Force replace the provisioner data
-            Reflect.setField(this._provisioner, "data", updatedProvisionerData);
-            Logger.info('${this}: Directly replaced provisioner.data with version ${data.version}');
+            // STEP 2: Update the internal _version field which is used by the data getter
+            if (Reflect.hasField(this._provisioner, "_version")) {
+                try {
+                    Reflect.setField(this._provisioner, "_version", data.version);
+                    Logger.info('${this}: Updated provisioner._version to ${data.version}');
+                } catch (e) {
+                    Logger.warning('${this}: Could not update provisioner._version directly: ${e}');
+                }
+            }
             
             // STEP 4: Update the _version field directly in the provisioner
             if (Reflect.hasField(this._provisioner, "_version")) {
