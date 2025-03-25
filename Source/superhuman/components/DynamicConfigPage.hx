@@ -237,21 +237,20 @@ class DynamicConfigPage extends Page {
                     var value = Reflect.field(customPropsObj, field);
                     Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
                     
-                    // Create or update property
-                    var prop = _customProperties.exists(field) ? _customProperties.get(field) : null;
+                    // Always create a new property to ensure proper initialization
+                    var prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                    _customProperties.set(field, prop);
                     
-                    if (prop == null) {
-                        prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                        _customProperties.set(field, prop);
-                        
-                        // Add property change listener
-                        var onChange = Reflect.field(prop, "onChange");
-                        if (onChange != null && Reflect.hasField(onChange, "add")) {
-                            var self = this;
-                            Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                        }
-                    } else if (Reflect.hasField(prop, "value")) {
-                        Reflect.setField(prop, "value", Std.string(value));
+                    // Add property change listener
+                    var onChange = Reflect.field(prop, "onChange");
+                    if (onChange != null && Reflect.hasField(onChange, "add")) {
+                        var self = this;
+                        Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                    }
+                    
+                    // Also save to root customProperties for backwards compatibility
+                    if (field != "provisionerVersion") { // Don't save version to root
+                        Reflect.setField(_server.customProperties, field, value);
                     }
                 }
                 
@@ -262,7 +261,12 @@ class DynamicConfigPage extends Page {
             Logger.info('${this}: No dynamicCustomProperties found in server customProperties');
         }
         
-        // Force an immediate update of the UI after server is set
+        // Update provisioner dropdown and definition first
+        if (_formInitialized && _form != null) {
+            _updateProvisionerDropdown();
+        }
+        
+        // Then update the UI to show the values
         if (_formInitialized && _form != null) {
             updateContent(true);
         } else {
@@ -510,11 +514,6 @@ class DynamicConfigPage extends Page {
                             if (Math.isNaN(floatVal)) defaultValue = "0.0";
                             else defaultValue = Std.string(floatVal);
                         } catch (e) {
-                            Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
-                            defaultValue = "0.0";
-                        }
-                    }
-                    var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
                     
                 case "checkbox":
@@ -1151,9 +1150,13 @@ class DynamicConfigPage extends Page {
             for (key => prop in _customProperties) {
                 if (Reflect.hasField(prop, "value")) {
                     var propValue = Reflect.field(prop, "value");
-                    // Save to both dynamicCustomProperties and root customProperties
+                    // Save to dynamicCustomProperties
                     Reflect.setField(customPropsObj, key, propValue);
-                    Reflect.setField(_server.customProperties, key, propValue);
+                    
+                    // Also save to root customProperties for backwards compatibility
+                    if (key != "provisionerVersion") { // Don't save version to root
+                        Reflect.setField(_server.customProperties, key, propValue);
+                    }
                 }
             }
             
