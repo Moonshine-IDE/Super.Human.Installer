@@ -452,6 +452,17 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         container.autoHideScrollBars = false;
         container.fixedScrollBars = true;
     }
+    
+    function _setScrollContainerDarkStyles( container:ScrollContainer ) {
+        // Apply dark theme styling to match ServerList
+        var r = new RectangleSkin( FillStyle.SolidColor( _themeColors.Box ) );
+        r.cornerRadius = GenesisApplicationTheme.GRID;
+        container.backgroundSkin = r;
+        
+        // Set scroll bar properties to match ServerList
+        container.autoHideScrollBars = false;
+        container.fixedScrollBars = true;
+    }
 
 }
 
