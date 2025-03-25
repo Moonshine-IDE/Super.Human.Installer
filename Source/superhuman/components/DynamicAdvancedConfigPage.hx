@@ -232,69 +232,12 @@ class DynamicAdvancedConfigPage extends Page {
             _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
         }
         
-        // Load any custom properties from server.customProperties
-        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
-            var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
-            if (customPropsObj != null) {
-                Logger.info('${this}: Loading custom properties from server customProperties');
-                
-                // Iterate over fields in the object
-                var fields = Reflect.fields(customPropsObj);
-                Logger.info('${this}: Found ${fields.length} custom properties to load');
-                
-                for (field in fields) {
-                    var value = Reflect.field(customPropsObj, field);
-                    Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
-                    
-                    // Create a property based on the value type if it doesn't already exist
-                    if (!_customProperties.exists(field)) {
-                        var prop = null;
-                        
-                        if (Std.isOfType(value, String)) {
-                            prop = new champaign.core.primitives.Property<String>(value);
-                            Logger.info('${this}: Created String property for ${field} with value ${value}');
-                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
-                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                            Logger.info('${this}: Created numeric property for ${field} with value ${value}');
-                        } else if (Std.isOfType(value, Bool)) {
-                            // Convert Boolean to String for consistency
-                            var boolValue:Bool = cast value;
-                            var boolStr = boolValue ? "true" : "false";
-                            prop = new champaign.core.primitives.Property<String>(boolStr);
-                            Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
-                        } else {
-                            // Handle other types by converting to string
-                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                            Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
-                        }
-                        
-                        if (prop != null) {
-                            _customProperties.set(field, prop);
-                            
-                            // Add property change listener
-                            var onChange = Reflect.field(prop, "onChange");
-                            if (onChange != null && Reflect.hasField(onChange, "add")) {
-                                var self = this;
-                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
-                            }
-                        }
-                    } else {
-                        // Update existing property
-                        var prop = _customProperties.get(field);
-                        if (prop != null && Reflect.hasField(prop, "value")) {
-                            Reflect.setField(prop, "value", value);
-                        }
-                    }
-                }
-                
-                // Force an update of the UI once properties are loaded
-                _pendingUpdateContent = true;
-            }
-        } else {
-            Logger.info('${this}: No dynamicAdvancedCustomProperties found in server customProperties');
-        }
+        // Store the server reference first, then load custom properties
+        // This ensures we have the server reference before trying to load properties
+        Logger.info('${this}: Set server for advanced config page, server ID: ${_server.id}');
         
         // Force an update of the UI after server is set
+        // This will ensure fields are populated after they're created
         _pendingUpdateContent = true;
     }
     
@@ -827,6 +770,15 @@ class DynamicAdvancedConfigPage extends Page {
                     }
                 }
                 
+                // If we still don't have a value, check if there's a direct property in customProperties
+                if ((valueField == null && value == null) && _server.customProperties != null) {
+                    if (Reflect.hasField(_server.customProperties, fieldName)) {
+                        valueField = Reflect.field(_server.customProperties, fieldName);
+                        Logger.info('${this}: Found direct property in customProperties: ${fieldName} = ${valueField}');
+                        valueSource = "directCustomProperty";
+                    }
+                }
+                
                 // Apply the value to the field
                 if (valueField != null || value != null) {
                     if (Std.isOfType(field, GenesisFormTextInput)) {
@@ -1080,7 +1032,7 @@ class DynamicAdvancedConfigPage extends Page {
         }
         
         // Store custom properties in server's customProperties if available
-        if (_server != null && _customProperties.keys().hasNext()) {
+        if (_server != null) {
             // Make sure customProperties is initialized
             if (_server.customProperties == null) {
                 _server.customProperties = {};
@@ -1093,6 +1045,33 @@ class DynamicAdvancedConfigPage extends Page {
             }
             
             var customPropsObj = Reflect.field(customProperties, "dynamicAdvancedCustomProperties");
+            
+            // Save all dynamic field values to customProperties
+            for (fieldName => field in _dynamicFields) {
+                var value:Dynamic = null;
+                
+                if (Std.isOfType(field, GenesisFormTextInput)) {
+                    var input:GenesisFormTextInput = cast field;
+                    value = StringTools.trim(input.text);
+                } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                    var stepper:GenesisFormNumericStepper = cast field;
+                    value = stepper.value;
+                } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                    var checkbox:GenesisFormCheckBox = cast field;
+                    value = checkbox.selected;
+                } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
+                    var dropdown:GenesisFormPupUpListView = cast field;
+                    var selectedItem = dropdown.selectedItem;
+                    value = selectedItem != null && selectedItem.length > 0 ? selectedItem[0] : null;
+                }
+                
+                if (value != null) {
+                    Reflect.setField(customPropsObj, fieldName, value);
+                    Logger.info('${this}: Saved field ${fieldName} with value: ${value} to customProperties');
+                }
+            }
+            
+            // Also save custom properties from our local map
             for (key => prop in _customProperties) {
                 if (Reflect.hasField(prop, "value")) {
                     Reflect.setField(customPropsObj, key, Reflect.field(prop, "value"));
@@ -1101,6 +1080,7 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Force an immediate save of server data to avoid race conditions
             _server.saveData();
+            Logger.info('${this}: Saved all custom properties to server data');
         }
 
         _server.saveHostsFile();
