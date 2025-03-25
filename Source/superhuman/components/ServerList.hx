@@ -557,23 +557,61 @@ class ServerItem extends LayoutGroupItemRenderer {
     }
 
     function _getServerRoleNames():String {
-
         var s:String = "";
         var a:Array<String> = [];
 
-        for ( role in SuperHumanInstaller.getInstance().serverRolesCollection ) {
-
-            for ( subrole in _server.roles.value ) {
-
-                if ( subrole.value == role.role.value && subrole.enabled ) a.push( role.name );
-
+        // Check if this is a custom provisioner (not one of the standard types)
+        var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                 _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                 _server.provisioner.type != ProvisionerType.Default);
+        
+        if (isCustomProvisioner) {
+            // For custom provisioners, directly use the server's enabled roles
+            for (role in _server.roles.value) {
+                if (role.enabled) {
+                    // For custom roles, we can directly use the role value as the name
+                    // Look for a more human-readable name in customProperties if available
+                    var displayName = role.value;
+                    
+                    // Try to find a better display name in the provisioner metadata
+                    if (_server.customProperties != null) {
+                        if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                            if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                                Reflect.field(provDef, "metadata") != null) {
+                                
+                                var metadata = Reflect.field(provDef, "metadata");
+                                if (Reflect.hasField(metadata, "roles")) {
+                                    var roles = Reflect.field(metadata, "roles");
+                                    for (metaRole in roles) {
+                                        if (metaRole != null && 
+                                            Reflect.hasField(metaRole, "name") && 
+                                            Reflect.field(metaRole, "name") == role.value &&
+                                            Reflect.hasField(metaRole, "label")) {
+                                            
+                                            displayName = Reflect.field(metaRole, "label");
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    a.push(displayName);
+                }
             }
-
+        } else {
+            // For standard provisioner types, use the global serverRolesCollection
+            for (role in SuperHumanInstaller.getInstance().serverRolesCollection) {
+                for (subrole in _server.roles.value) {
+                    if (subrole.value == role.role.value && subrole.enabled) a.push(role.name);
+                }
+            }
         }
 
-        s = ( a.length > 0 ) ? a.join( ", " ) : "None";
+        s = (a.length > 0) ? a.join(", ") : "None";
         return s;
-
     }
 
     function _updateServer( server:Server, requiresSave:Bool ) {
