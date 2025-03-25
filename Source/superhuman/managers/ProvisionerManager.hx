@@ -59,6 +59,12 @@ typedef ProvisionerRole = {
     var label:String;
     var description:String;
     @:optional var defaultEnabled:Bool;
+    @:optional var required:Bool;
+    @:optional var installers:{
+        @:optional var installer:Bool;
+        @:optional var fixpack:Bool;
+        @:optional var hotfix:Bool;
+    };
 }
 
 /**
@@ -336,6 +342,21 @@ class ProvisionerManager {
                     // Add optional properties if they exist
                     if (objMap.exists("defaultEnabled")) {
                         role.defaultEnabled = objMap.get("defaultEnabled");
+                    }
+                    
+                    // Add required property if it exists
+                    if (objMap.exists("required")) {
+                        role.required = objMap.get("required");
+                    }
+                    
+                    // Add installers property if it exists
+                    if (objMap.exists("installers")) {
+                        var installersObj:ObjectMap<String, Dynamic> = objMap.get("installers");
+                        role.installers = {
+                            installer: installersObj.exists("installer") ? installersObj.get("installer") : false,
+                            fixpack: installersObj.exists("fixpack") ? installersObj.get("fixpack") : false,
+                            hotfix: installersObj.exists("hotfix") ? installersObj.get("hotfix") : false
+                        };
                     }
                     
                     result.push(role);

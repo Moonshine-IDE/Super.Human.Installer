@@ -230,6 +230,25 @@ class RolePage extends Page {
                         }
                         
                         // Create a ServerRoleImpl for the role
+                        // Get required and installers settings, if available
+                        var roleRequired = Reflect.field(roleData, "required") == true;
+                        var roleInstallers = Reflect.field(roleData, "installers");
+                        
+                        // Set required flag on the role data (which will make the checkbox disabled)
+                        existingRole.isdefault = roleRequired;
+                        
+                        // Store installer settings in the role data for later use
+                        if (roleInstallers != null) {
+                            Reflect.setField(existingRole, "showInstaller", Reflect.field(roleInstallers, "installer") == true);
+                            Reflect.setField(existingRole, "showFixpack", Reflect.field(roleInstallers, "fixpack") == true);
+                            Reflect.setField(existingRole, "showHotfix", Reflect.field(roleInstallers, "hotfix") == true);
+                        } else {
+                            // Default values - don't show any installers for custom roles unless specified
+                            Reflect.setField(existingRole, "showInstaller", false);
+                            Reflect.setField(existingRole, "showFixpack", false);
+                            Reflect.setField(existingRole, "showHotfix", false);
+                        }
+                        
                         var roleImpl = new ServerRoleImpl(
                             roleLabel,
                             roleDescription,
@@ -402,59 +421,62 @@ class RolePickerItem extends LayoutGroup {
     }
 
     public function updateData() {
-
         _installerGroup.removeChildren();
         _installerGroup.visible = _installerGroup.includeInLayout = false;
-        _hotfixButton.includeInLayout = _hotfixButton.visible = false;
-        _fixpackButton.includeInLayout = _fixpackButton.visible = false;
-
+        
+        // Check if this is a custom role with installer settings
+        var showInstaller = true;
+        var showFixpack = true;
+        var showHotfix = true;
+        
+        // Check for custom installer settings
+        if (Reflect.hasField(_roleImpl.role, "showInstaller")) {
+            showInstaller = Reflect.field(_roleImpl.role, "showInstaller");
+            showFixpack = Reflect.field(_roleImpl.role, "showFixpack");
+            showHotfix = Reflect.field(_roleImpl.role, "showHotfix");
+        }
+        
+        // Hide installer buttons for custom roles unless specified
+        _installerButton.includeInLayout = _installerButton.visible = showInstaller;
+        _hotfixButton.includeInLayout = _hotfixButton.visible = showHotfix && _roleImpl.role.enabled;
+        _fixpackButton.includeInLayout = _fixpackButton.visible = showFixpack && _roleImpl.role.enabled;
+        
+        // Enable installer button only if role is enabled
         _installerButton.enabled = _roleImpl.role.enabled;
-
-        if ( _roleImpl.role.files.installer != null ) {
-
-            var item = new RolePickerFileItem( _roleImpl.role.files.installer );
-            item.addEventListener( TriggerEvent.TRIGGER, _fileItemTriggered );
-            _installerGroup.addChild( item );
+        
+        // Show installer file if one is selected
+        if (_roleImpl.role.files.installer != null) {
+            var item = new RolePickerFileItem(_roleImpl.role.files.installer);
+            item.addEventListener(TriggerEvent.TRIGGER, _fileItemTriggered);
+            _installerGroup.addChild(item);
             _installerButton.enabled = false;
             _installerGroup.visible = _installerGroup.includeInLayout = true;
             _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = false;
-
-        } else {
-
+        } else if (showInstaller) {
             _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = true;
-
+        } else {
+            _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = false;
         }
-
-        if ( _roleImpl.role.files.hotfixes != null ) {
-
-            _hotfixButton.includeInLayout = _hotfixButton.visible = true;
-
-            for ( hf in _roleImpl.role.files.hotfixes ) {
-
-                var item = new RolePickerFileItem( hf, RolePickerFileType.Hotfix );
-                item.addEventListener( TriggerEvent.TRIGGER, _fileItemTriggered );
-                _installerGroup.addChild( item );
+        
+        // Show hotfix files if any are selected
+        if (_roleImpl.role.files.hotfixes != null && _roleImpl.role.files.hotfixes.length > 0) {
+            for (hf in _roleImpl.role.files.hotfixes) {
+                var item = new RolePickerFileItem(hf, RolePickerFileType.Hotfix);
+                item.addEventListener(TriggerEvent.TRIGGER, _fileItemTriggered);
+                _installerGroup.addChild(item);
                 _installerGroup.visible = _installerGroup.includeInLayout = true;
-    
             }
-
         }
-
-        if ( _roleImpl.role.files.fixpacks != null ) {
-
-            _fixpackButton.includeInLayout = _fixpackButton.visible = true;
-
-            for ( hf in _roleImpl.role.files.fixpacks ) {
-
-                var item = new RolePickerFileItem( hf, RolePickerFileType.Fixpack );
-                item.addEventListener( TriggerEvent.TRIGGER, _fileItemTriggered );
-                _installerGroup.addChild( item );
+        
+        // Show fixpack files if any are selected
+        if (_roleImpl.role.files.fixpacks != null && _roleImpl.role.files.fixpacks.length > 0) {
+            for (hf in _roleImpl.role.files.fixpacks) {
+                var item = new RolePickerFileItem(hf, RolePickerFileType.Fixpack);
+                item.addEventListener(TriggerEvent.TRIGGER, _fileItemTriggered);
+                _installerGroup.addChild(item);
                 _installerGroup.visible = _installerGroup.includeInLayout = true;
-    
             }
-
         }
-
     }
 
     function _fileItemTriggered( e:TriggerEvent ) {
