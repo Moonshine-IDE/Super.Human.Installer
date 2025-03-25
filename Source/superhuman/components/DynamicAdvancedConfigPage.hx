@@ -140,6 +140,8 @@ class DynamicAdvancedConfigPage extends Page {
         var scrollLayout = new VerticalLayout();
         scrollLayout.horizontalAlign = HorizontalAlign.CENTER;
         scrollLayout.gap = GenesisApplicationTheme.GRID;
+        scrollLayout.paddingTop = GenesisApplicationTheme.GRID;
+        scrollLayout.paddingBottom = GenesisApplicationTheme.GRID;
         scrollContainer.layout = scrollLayout;
         
         // Add the scroll container to the page
