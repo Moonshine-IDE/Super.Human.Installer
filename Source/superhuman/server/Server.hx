@@ -735,6 +735,19 @@ class Server {
                 }
             }
             
+            // Directly set the version in the provisioner object to ensure it's displayed correctly
+            // This is necessary because ServerList directly accesses _server.provisioner.version
+            // for display in the server overview
+            if (Reflect.hasField(this._provisioner, "_version")) {
+                try {
+                    // Use reflection to directly update the _version field in the provisioner
+                    Reflect.setField(this._provisioner, "_version", data.version);
+                    Logger.info('${this}: Directly updated provisioner._version to ${data.version}');
+                } catch (e) {
+                    Logger.warning('${this}: Could not update provisioner._version directly: ${e}');
+                }
+            }
+            
             // Trigger update notification
             _propertyChanged(this._provisioner);
             
