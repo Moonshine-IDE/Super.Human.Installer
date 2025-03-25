@@ -172,9 +172,7 @@ class DynamicAdvancedConfigPage extends Page {
         if (_pendingUpdateContent) {
             Logger.info('${this}: Processing pending updateContent call');
             _pendingUpdateContent = false;
-            haxe.Timer.delay(function() {
-                updateContent(true);
-            }, 100); // Small delay to ensure UI is ready
+            updateContent(true);
         }
     }
     
@@ -188,22 +186,20 @@ class DynamicAdvancedConfigPage extends Page {
         // Remove the listener as we only need it once
         this.removeEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
         
-        // Delay the initialization slightly to ensure all UI components are ready
-        haxe.Timer.delay(function() {
-            // If we have a pending provisioner definition, apply it now
-            if (_pendingProvisionerDefinition != null) {
-                Logger.info('${this}: Applying pending provisioner definition after added to stage');
-                setProvisionerDefinition(_pendingProvisionerDefinition);
-                _pendingProvisionerDefinition = null;
-            }
-            
-            // If we have a pending updateContent call, process it now
-            if (_pendingUpdateContent) {
-                Logger.info('${this}: Processing pending updateContent call after added to stage');
-                _pendingUpdateContent = false;
-                updateContent(true);
-            }
-        }, 200); // Small delay to ensure UI is ready
+        // Process immediately when added to stage
+        // If we have a pending provisioner definition, apply it now
+        if (_pendingProvisionerDefinition != null) {
+            Logger.info('${this}: Applying pending provisioner definition after added to stage');
+            setProvisionerDefinition(_pendingProvisionerDefinition);
+            _pendingProvisionerDefinition = null;
+        }
+        
+        // If we have a pending updateContent call, process it now
+        if (_pendingUpdateContent) {
+            Logger.info('${this}: Processing pending updateContent call after added to stage');
+            _pendingUpdateContent = false;
+            updateContent(true);
+        }
     }
 
     /**
@@ -236,12 +232,69 @@ class DynamicAdvancedConfigPage extends Page {
             _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
         }
         
-        // Store the server reference first, then load custom properties
-        // This ensures we have the server reference before trying to load properties
-        Logger.info('${this}: Set server for advanced config page, server ID: ${_server.id}');
+        // Load any custom properties from server.customProperties
+        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+            var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+            if (customPropsObj != null) {
+                Logger.info('${this}: Loading custom properties from server customProperties');
+                
+                // Iterate over fields in the object
+                var fields = Reflect.fields(customPropsObj);
+                Logger.info('${this}: Found ${fields.length} custom properties to load');
+                
+                for (field in fields) {
+                    var value = Reflect.field(customPropsObj, field);
+                    Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
+                    
+                    // Create a property based on the value type if it doesn't already exist
+                    if (!_customProperties.exists(field)) {
+                        var prop = null;
+                        
+                        if (Std.isOfType(value, String)) {
+                            prop = new champaign.core.primitives.Property<String>(value);
+                            Logger.info('${this}: Created String property for ${field} with value ${value}');
+                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            Logger.info('${this}: Created numeric property for ${field} with value ${value}');
+                        } else if (Std.isOfType(value, Bool)) {
+                            // Convert Boolean to String for consistency
+                            var boolValue:Bool = cast value;
+                            var boolStr = boolValue ? "true" : "false";
+                            prop = new champaign.core.primitives.Property<String>(boolStr);
+                            Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
+                        } else {
+                            // Handle other types by converting to string
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
+                        }
+                        
+                        if (prop != null) {
+                            _customProperties.set(field, prop);
+                            
+                            // Add property change listener
+                            var onChange = Reflect.field(prop, "onChange");
+                            if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                var self = this;
+                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                            }
+                        }
+                    } else {
+                        // Update existing property
+                        var prop = _customProperties.get(field);
+                        if (prop != null && Reflect.hasField(prop, "value")) {
+                            Reflect.setField(prop, "value", value);
+                        }
+                    }
+                }
+                
+                // Force an update of the UI once properties are loaded
+                _pendingUpdateContent = true;
+            }
+        } else {
+            Logger.info('${this}: No dynamicAdvancedCustomProperties found in server customProperties');
+        }
         
         // Force an update of the UI after server is set
-        // This will ensure fields are populated after they're created
         _pendingUpdateContent = true;
     }
     

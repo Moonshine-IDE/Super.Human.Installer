@@ -192,9 +192,7 @@ class DynamicConfigPage extends Page {
         // If we have a pending updateContent call, process it now
         if (_pendingUpdateContent) {
             _pendingUpdateContent = false;
-            haxe.Timer.delay(function() {
-                updateContent(true);
-            }, 100); // Small delay to ensure UI is ready
+            updateContent(true);
         }
     }
     
@@ -207,20 +205,18 @@ class DynamicConfigPage extends Page {
         // Remove the listener as we only need it once
         this.removeEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
         
-        // Delay the initialization slightly to ensure all UI components are ready
-        haxe.Timer.delay(function() {
-            // If we have a pending provisioner definition, apply it now
-            if (_pendingProvisionerDefinition != null) {
-                setProvisionerDefinition(_pendingProvisionerDefinition);
-                _pendingProvisionerDefinition = null;
-            }
-            
-            // If we have a pending updateContent call, process it now
-            if (_pendingUpdateContent) {
-                _pendingUpdateContent = false;
-                updateContent(true);
-            }
-        }, 200); // Small delay to ensure UI is ready
+        // Process immediately when added to stage
+        // If we have a pending provisioner definition, apply it now
+        if (_pendingProvisionerDefinition != null) {
+            setProvisionerDefinition(_pendingProvisionerDefinition);
+            _pendingProvisionerDefinition = null;
+        }
+        
+        // If we have a pending updateContent call, process it now
+        if (_pendingUpdateContent) {
+            _pendingUpdateContent = false;
+            updateContent(true);
+        }
     }
 
     /**
@@ -235,12 +231,69 @@ class DynamicConfigPage extends Page {
             _label.text = LanguageManager.getInstance().getString('serverconfigpage.title', Std.string(_server.id));
         }
         
-        // Store the server reference first, then load custom properties later
-        // This ensures we have the server reference before trying to load properties
-        Logger.info('${this}: Set server for config page, server ID: ${_server.id}');
+        // Load any custom properties from server.customProperties
+        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            if (customPropsObj != null) {
+                Logger.info('${this}: Loading custom properties from server customProperties');
+                
+                // Iterate over fields in the object
+                var fields = Reflect.fields(customPropsObj);
+                Logger.info('${this}: Found ${fields.length} custom properties to load');
+                
+                for (field in fields) {
+                    var value = Reflect.field(customPropsObj, field);
+                    Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
+                    
+                    // Create a property based on the value type if it doesn't already exist
+                    if (!_customProperties.exists(field)) {
+                        var prop = null;
+                        
+                        if (Std.isOfType(value, String)) {
+                            prop = new champaign.core.primitives.Property<String>(value);
+                            Logger.info('${this}: Created String property for ${field} with value ${value}');
+                        } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            Logger.info('${this}: Created numeric property for ${field} with value ${value}');
+                        } else if (Std.isOfType(value, Bool)) {
+                            // Convert Boolean to String for consistency
+                            var boolValue:Bool = cast value;
+                            var boolStr = boolValue ? "true" : "false";
+                            prop = new champaign.core.primitives.Property<String>(boolStr);
+                            Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
+                        } else {
+                            // Handle other types by converting to string
+                            prop = new champaign.core.primitives.Property<String>(Std.string(value));
+                            Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
+                        }
+                        
+                        if (prop != null) {
+                            _customProperties.set(field, prop);
+                            
+                            // Add property change listener
+                            var onChange = Reflect.field(prop, "onChange");
+                            if (onChange != null && Reflect.hasField(onChange, "add")) {
+                                var self = this;
+                                Reflect.callMethod(onChange, Reflect.field(onChange, "add"), [function(p) { self._propertyChangedHandler(p); }]);
+                            }
+                        }
+                    } else {
+                        // Update existing property
+                        var prop = _customProperties.get(field);
+                        if (prop != null && Reflect.hasField(prop, "value")) {
+                            Reflect.setField(prop, "value", value);
+                        }
+                    }
+                }
+                
+                // Force an update of the UI once properties are loaded
+                _pendingUpdateContent = true;
+            }
+        } else {
+            Logger.info('${this}: No dynamicCustomProperties found in server customProperties');
+        }
         
         // Force an update of the UI after server is set
-        // This will ensure fields are populated after they're created
         _pendingUpdateContent = true;
     }
 
@@ -699,6 +752,26 @@ class DynamicConfigPage extends Page {
             // Update Save button
             _buttonSave.enabled = !_server.hostname.locked;
             
+            // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
+            if (forced || _dropdownCoreComponentVersion.dataProvider.length == 0) {
+                // Use a small delay to ensure the UI is ready
+                haxe.Timer.delay(function() {
+                    _updateProvisionerDropdown();
+                }, 100);
+            } else {
+                // Just update the selected index if needed
+                if (_dropdownCoreComponentVersion.selectedIndex == -1) {
+                    for (i in 0..._dropdownCoreComponentVersion.dataProvider.length) {
+                        var d:ProvisionerDefinition = _dropdownCoreComponentVersion.dataProvider.get(i);
+                        if (d.data.version == _server.provisioner.version) {
+                            _dropdownCoreComponentVersion.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
+            
             // Load custom properties from server.customProperties if they haven't been loaded yet
             if (_server.customProperties != null && Lambda.count(_customProperties) == 0) {
                 Logger.info('${this}: Loading custom properties from server customProperties');
@@ -758,74 +831,32 @@ class DynamicConfigPage extends Page {
                 }
             }
             
-            // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
-            if (forced || _dropdownCoreComponentVersion.dataProvider.length == 0) {
-                // Use a small delay to ensure the UI is ready
-                haxe.Timer.delay(function() {
-                    _updateProvisionerDropdown();
-                }, 100);
-            } else {
-                // Just update the selected index if needed
-                if (_dropdownCoreComponentVersion.selectedIndex == -1) {
-                    for (i in 0..._dropdownCoreComponentVersion.dataProvider.length) {
-                        var d:ProvisionerDefinition = _dropdownCoreComponentVersion.dataProvider.get(i);
-                        if (d.data.version == _server.provisioner.version) {
-                            _dropdownCoreComponentVersion.selectedIndex = i;
-                            break;
-                        }
-                    }
-                }
-            }
-            _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
-            
             // Look for dynamic custom properties in server.customProperties if they exist
             var customPropValues = new Map<String, Dynamic>();
-            if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-                var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-                if (customPropsObj != null) {
-                    var fields = Reflect.fields(customPropsObj);
-                    Logger.info('${this}: Found ${fields.length} fields in dynamicCustomProperties');
-                    
-                    for (field in fields) {
-                        var value = Reflect.field(customPropsObj, field);
-                        customPropValues.set(field, value);
-                        Logger.info('${this}: Found field in customProperties: ${field} = ${value}');
-                    }
-                }
-            }
-            
-            // Update dynamic fields with server or custom property values
-            for (fieldName => field in _dynamicFields) {
-                var value = null;
-                var valueField = null;
-                var valueSource = "none";
+            if (_server.customProperties != null) {
+                Logger.info('${this}: Server has customProperties object');
                 
-                Logger.info('${this}: Processing field ${fieldName}');
-                
-                // First check if it's in the customPropValues map (direct from customProperties)
-                if (customPropValues.exists(fieldName)) {
-                    valueField = customPropValues.get(fieldName);
-                    Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
-                    valueSource = "customProperties";
-                }
-                // Then check if it's a custom property in our local map
-                else if (_customProperties.exists(fieldName)) {
-                    value = _customProperties.get(fieldName);
-                    if (value != null && Reflect.hasField(value, "value")) {
-                        valueField = Reflect.field(value, "value");
-                    }
-                    Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
-                    valueSource = "customPropertiesMap";
-                } 
-                // If not, try to get it from the server
-                else {
-                    try {
-                        value = Reflect.getProperty(_server, fieldName);
-                        if (value != null && Reflect.hasField(value, "value")) {
-                            valueField = Reflect.field(value, "value");
-                        } else {
-                            valueField = value;
+                // Check for dynamicCustomProperties
+                if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                    var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                    if (customPropsObj != null) {
+                        var fields = Reflect.fields(customPropsObj);
+                        Logger.info('${this}: Found ${fields.length} fields in dynamicCustomProperties');
+                        
+                        for (field in fields) {
+                            var value = Reflect.field(customPropsObj, field);
+                            customPropValues.set(field, value);
+                            Logger.info('${this}: Found custom property in dynamicCustomProperties: ${field} = ${value}');
                         }
+                    } else {
+                        Logger.warning('${this}: dynamicCustomProperties object is null');
+                    }
+                } else {
+                    Logger.info('${this}: No dynamicCustomProperties found in server.customProperties');
+                }
+            } else {
+                Logger.info('${this}: Server customProperties is null');
+            }
                         Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
                         valueSource = "serverProperty";
                     } catch (e) {
