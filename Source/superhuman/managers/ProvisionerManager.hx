@@ -105,8 +105,8 @@ class ProvisionerManager {
     static private var _cachedProvisioners:Map<String, Array<ProvisionerDefinition>> = null;
 
     // Paths for bundled provisioners (included in the binary)
-    static final PROVISIONER_STANDALONE_LOCAL_PATH:String = "assets/provisioners/hcl_domino_standalone_provisioner/"; // Renamed from demo-tasks
-    static final PROVISIONER_ADDITIONAL_LOCAL_PATH:String = "assets/provisioners/hcl_domino_additional_provisioner/"; // Renamed from additional-prov
+    static final PROVISIONER_STANDALONE_LOCAL_PATH:String = "assets/provisioners/hcl_domino_standalone_provisioner/";
+    static final PROVISIONER_ADDITIONAL_LOCAL_PATH:String = "assets/provisioners/hcl_domino_additional_provisioner/";
     
     // Filename for provisioner metadata
     static final PROVISIONER_METADATA_FILENAME:String = "provisioner.yml";
