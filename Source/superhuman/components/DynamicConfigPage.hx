@@ -235,7 +235,8 @@ class DynamicConfigPage extends Page {
             provisionerDefinition.metadata.configuration.basicFields != null) {
             
             // Create properties for each field in the basic configuration
-            for (field in provisionerDefinition.metadata.configuration.basicFields) {
+            var basicFields:Array<Dynamic> = cast provisionerDefinition.metadata.configuration.basicFields;
+            for (field in basicFields) {
                 _initializeServerProperty(field);
             }
         }
