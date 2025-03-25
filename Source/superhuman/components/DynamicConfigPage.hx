@@ -534,6 +534,12 @@ class DynamicConfigPage extends Page {
                     var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
                     
+                    // Initialize in server's customProperties
+                    if (_server.customProperties == null) {
+                        _server.customProperties = {};
+                    }
+                    Reflect.setField(_server.customProperties, fieldName, defaultValue);
+                    
                 case "number":
                     // Create a numeric property
                     var defaultValue = "0.0";
@@ -1140,12 +1146,19 @@ class DynamicConfigPage extends Page {
                     var prop = _customProperties.get(fieldName);
                     if (prop != null && Reflect.hasField(prop, "value")) {
                         Reflect.setField(prop, "value", value);
-                        try {
-                            var propName = 'server_${fieldName}';
-                            Reflect.setField(_server, propName, value);
-                        } catch (e) {
-                            // Just continue if the field doesn't exist
+                        
+                        // Save to server's customProperties
+                        if (_server.customProperties == null) {
+                            _server.customProperties = {};
                         }
+                        Reflect.setField(_server.customProperties, fieldName, value);
+                        
+                        // Also save to dynamicCustomProperties
+                        if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                            Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+                        }
+                        var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                        Reflect.setField(customPropsObj, fieldName, value);
                     }
                 } else {
                     // Try to update server property
