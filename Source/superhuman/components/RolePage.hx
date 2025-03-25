@@ -73,6 +73,8 @@ class RolePage extends Page {
     var _listGroup:LayoutGroup;
     var _listGroupLayout:VerticalLayout;
     var _server:Server;
+    // Field to store the provisioner definition from custom provisioners
+    public var _provisionerDefinition:ProvisionerDefinition;
     
     public function new() {
 
