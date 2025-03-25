@@ -114,6 +114,13 @@ class CustomProvisioner extends StandaloneProvisioner {
         var entries:List<haxe.zip.Entry> = new List<haxe.zip.Entry>();
         _addDirectoryToZip(directory, "", entries);
         
+        // Compress all entries after they've been added
+        for (entry in entries) {
+            if (!entry.fileName.endsWith("/")) { // Don't compress directory entries
+                haxe.zip.Tools.compress(entry, 9);
+            }
+        }
+        
         var out = new haxe.io.BytesOutput();
         var writer = new haxe.zip.Writer(out);
         writer.write(entries);
@@ -157,12 +164,11 @@ class CustomProvisioner extends StandaloneProvisioner {
                         fileName: zipPath,
                         fileSize: data.length,
                         fileTime: FileSystem.stat(itemPath).mtime,
-                        compressed: true,
-                        dataSize: 0,
+                        compressed: false,
+                        dataSize: data.length,
                         data: data,
                         crc32: haxe.crypto.Crc32.make(data)
                     };
-                    haxe.zip.Tools.compress(entry, 9);
                     entries.add(entry);
                 } catch (e) {
                     Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
@@ -498,8 +504,7 @@ override public function generateHostsFileContent():String {
         
         // Network settings
         if (!_server.dhcp4.value) {
-            content = _replaceVariable(content, "NETWORK_ADDRESS", _server.networkAddress.value);
-            content = _replaceVariable(content, "NETWORK_NETMASK", _server.networkNetmask.value);
+            content = _replaceVariable(content, "NETWORK_ADDRESS", _server.networkAddrask.value);
             content = _replaceVariable(content, "NETWORK_GATEWAY", _server.networkGateway.value);
             content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_1", _server.nameServer1.value);
             content = _replaceVariable(content, "NETWORK_DNS1", _server.nameServer1.value);

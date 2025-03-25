@@ -12,8 +12,13 @@ configuration:
       tooltip: "The hostname for your Domino server"
       required: true
       restrict: "a-zA-Z0-9.-"
-      
-      
+    - name: "DOMINO_ORIGIN_HOSTNAME"
+      type: "text"
+      label: "DNS Server 1"
+      placeholder: "8.8.8.8"
+      tooltip: "Origing Domino Hostname"
+      required: false
+
   advancedFields:
     - name: "numCPUs"
       type: "number"
@@ -72,7 +77,7 @@ configuration:
       required: false
       
     - name: "networkBridge"
-      type: "text"
+      type: "dropdown"
       label: "Network Bridge"
       tooltip: "The network bridge to use"
       required: false
@@ -98,9 +103,9 @@ configuration:
       max: 600
 
 roles:
-  - name: "Custom Role"
-    label: "Custom Role for Custom Task"
-    description: "Custom Role for Custom Task"
+  - name: "apache"
+    label: "Apache"
+    description: "Installs and Configures the Apache Web Servr"
     defaultEnabled: true
     required: false
     installers:
@@ -108,9 +113,9 @@ roles:
       fixpack: false
       hotfix: false
 
-  - name: "Custom Role 2"
-    label: "Custom Role 2 for Custom Task"
-    description: "Custom Role for Custom Task"
+  - name: "guacamole"
+    label: "Guacamole"
+    description: "Installs and Configures Guacamole"
     defaultEnabled: true
     required: true
     installers:
@@ -118,9 +123,19 @@ roles:
       fixpack: false
       hotfix: false
 
-  - name: "Custom Role 3"
-    label: "Custom Role 3 for Custom Task"
-    description: "Custom Role for Custom Task"
+  - name: "haproxy"
+    label: "HAProxy"
+    description: "Installs and Configures HAProxy"
+    defaultEnabled: true
+    required: true
+    installers:
+      installer: false
+      fixpack: false
+      hotfix: false
+
+  - name: "ROLE_JEDI"
+    label: "JEDI"
+    description: "Installs and Configures Jedi"
     defaultEnabled: true
     required: true
     installers:
