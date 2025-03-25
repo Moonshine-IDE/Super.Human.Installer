@@ -30,6 +30,7 @@
 
 package superhuman.components;
 
+import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
 import feathers.controls.Alert;
