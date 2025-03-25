@@ -221,50 +221,71 @@ override public function get_data():ProvisionerData {
     // Create a baseline data object
     var baseData = super.get_data();
     
-    // If we're running with a specific version that was set, preserve it
-    if (_server != null && _server.customProperties != null) {
-        // Check if we have service type data with a provisioner
-        if (Reflect.hasField(_server.customProperties, "serviceTypeData")) {
-            var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
-            if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
-                var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
-                if (stProvisioner != null && Reflect.hasField(stProvisioner, "data")) {
-                    var provData = Reflect.field(stProvisioner, "data");
-                    if (Reflect.hasField(provData, "version")) {
-                        // Use the stored version string instead of the VersionInfo object
-                        var storedVersion = Reflect.field(provData, "version");
-                        if (storedVersion != null) {
-                            Logger.info('CustomProvisioner: Using stored version string: ${storedVersion}');
-                            return { 
-                                type: baseData.type,
-                                version: champaign.core.primitives.VersionInfo.fromString(Std.string(storedVersion))
-                            };
+    // Check for version information in various places with priority order
+    var foundVersion:String = null;
+    var versionSource = "default";
+    
+    if (_server != null) {
+        // 1. First check the server's serverProvisionerId property (highest priority)
+        if (_server.serverProvisionerId != null && _server.serverProvisionerId.value != null && 
+            _server.serverProvisionerId.value != "" && _server.serverProvisionerId.value != "0.0.0") {
+            foundVersion = _server.serverProvisionerId.value;
+            versionSource = "serverProvisionerId";
+        }
+        
+        // 2. Then check top-level provisioner object if we haven't found a version yet
+        else if (baseData.version != null && baseData.version.toString() != "0.0.0") {
+            foundVersion = baseData.version.toString();
+            versionSource = "baseData";
+        }
+        
+        // 3. Check in the server's customProperties (multiple locations)
+        else if (_server.customProperties != null) {
+            // 3a. Check in serviceTypeData.provisioner.data
+            if (Reflect.hasField(_server.customProperties, "serviceTypeData")) {
+                var serviceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
+                if (serviceTypeData != null && Reflect.hasField(serviceTypeData, "provisioner")) {
+                    var stProvisioner = Reflect.field(serviceTypeData, "provisioner");
+                    if (stProvisioner != null && Reflect.hasField(stProvisioner, "data")) {
+                        var provData = Reflect.field(stProvisioner, "data");
+                        if (Reflect.hasField(provData, "version")) {
+                            var storedVersion = Reflect.field(provData, "version");
+                            if (storedVersion != null && Std.string(storedVersion) != "0.0.0") {
+                                foundVersion = Std.string(storedVersion);
+                                versionSource = "serviceTypeData.provisioner.data";
+                            }
                         }
                     }
                 }
             }
-        }
-        
-        // If we have a specific provisioner definition stored
-        if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
-            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
-            if (provDef != null && Reflect.hasField(provDef, "data")) {
-                var provData = Reflect.field(provDef, "data");
-                if (Reflect.hasField(provData, "version")) {
-                    // Use the stored version string instead of the VersionInfo object
-                    var storedVersion = Reflect.field(provData, "version");
-                    if (storedVersion != null) {
-                        Logger.info('CustomProvisioner: Using stored version string from provisionerDefinition: ${storedVersion}');
-                        return { 
-                            type: baseData.type,
-                            version: champaign.core.primitives.VersionInfo.fromString(Std.string(storedVersion))
-                        };
+            
+            // 3b. Check in provisionerDefinition.data
+            if (foundVersion == null && Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "data")) {
+                    var provData = Reflect.field(provDef, "data");
+                    if (Reflect.hasField(provData, "version")) {
+                        var storedVersion = Reflect.field(provData, "version");
+                        if (storedVersion != null && Std.string(storedVersion) != "0.0.0") {
+                            foundVersion = Std.string(storedVersion);
+                            versionSource = "provisionerDefinition.data";
+                        }
                     }
                 }
             }
         }
     }
     
+    // If we found a version in any of the storage locations, use it
+    if (foundVersion != null) {
+        Logger.info('CustomProvisioner: Using stored version string ${foundVersion} from ${versionSource}');
+        return { 
+            type: baseData.type,
+            version: champaign.core.primitives.VersionInfo.fromString(foundVersion)
+        };
+    }
+    
+    // Fallback to the base version (likely 0.0.0)
     return baseData;
 }
 
