@@ -616,7 +616,7 @@ class DynamicAdvancedConfigPage extends Page {
             _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
             
             // Load custom properties from server.customProperties if they haven't been loaded yet
-            if (_server.customProperties != null && _customProperties.empty()) {
+            if (_server.customProperties != null && !Lambda.count(_customProperties) > 0) {
                 Logger.info('${this}: Loading custom properties from server customProperties');
                 
                 // Check for dynamicAdvancedCustomProperties
