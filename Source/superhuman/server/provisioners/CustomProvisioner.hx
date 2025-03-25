@@ -572,71 +572,59 @@ override public function generateHostsFileContent():String {
             // Process all custom properties in a consistent way
             var allCustomProps = new Map<String, String>();
             
-            // First collect all properties with their values (common variables)
-            // Skip special properties like provisionerDefinition
-            var fields = Reflect.fields(customProps);
-            Logger.info('${this}: Found ${fields.length} fields in customProperties: ${fields.join(", ")}');
+            // Helper function to safely get a field value
+            function getFieldValue(obj:Dynamic, field:String):Dynamic {
+                if (obj == null || !Reflect.hasField(obj, field)) return null;
+                return Reflect.field(obj, field);
+            }
             
-            for (field in fields) {
-                var value = Reflect.field(customProps, field);
-                Logger.info('${this}: Checking field ${field} with value ${value}, type: ${Type.typeof(value)}');
+            // Helper function to convert a value to string safely
+            function safeToString(value:Dynamic):String {
+                if (value == null) return "";
+                return switch(Type.typeof(value)) {
+                    case TBool: value ? "true" : "false";
+                    case TFloat: Std.string(value);
+                    case TInt: Std.string(value);
+                    case TClass(String): value;
+                    case _: try { Std.string(value); } catch(e) { ""; }
+                }
+            }
+            
+            // Helper function to process properties from an object
+            function processProperties(obj:Dynamic, source:String) {
+                if (obj == null) {
+                    Logger.info('${this}: No properties to process from ${source} (null object)');
+                    return;
+                }
                 
-                if (value != null && 
-                    field != "provisionerDefinition" && 
-                    field != "dynamicCustomProperties" && 
-                    field != "dynamicAdvancedCustomProperties") {
-                    
-                    // Store with original case only for common variables
-                    allCustomProps.set(field, Std.string(value));
-                    Logger.info('${this}: Added common property ${field} = ${value}');
-                } else {
-                    Logger.info('${this}: Skipped field ${field} (null or special property)');
+                var fields = Reflect.fields(obj);
+                Logger.info('${this}: Processing ${fields.length} properties from ${source}');
+                
+                for (field in fields) {
+                    var value = Reflect.field(obj, field);
+                    if (value != null && field != "provisionerDefinition") {
+                        var strValue = safeToString(value);
+                        if (strValue != "") {
+                            allCustomProps.set(field, strValue);
+                            Logger.info('${this}: Added ${source} property ${field} = ${strValue}');
+                        } else {
+                            Logger.warning('${this}: Could not convert ${source} property ${field} to string, skipping');
+                        }
+                    }
                 }
             }
             
-            // Then process dynamic custom properties (basic fields)
-            if (Reflect.hasField(customProps, "dynamicCustomProperties")) {
-                var dynamicProps = Reflect.field(customProps, "dynamicCustomProperties");
-                if (dynamicProps != null) {
-                    var dynamicFields = Reflect.fields(dynamicProps);
-                    Logger.info('${this}: Processing ${dynamicFields.length} basic field properties');
-                    
-                    for (field in dynamicFields) {
-                        var value = Reflect.field(dynamicProps, field);
-                        if (value != null) {
-                            // Store with original case only
-                            allCustomProps.set(field, Std.string(value));
-                            Logger.info('${this}: Added basic field property ${field} = ${value}');
-                        }
-                    }
-                } else {
-                    Logger.warning('${this}: dynamicCustomProperties exists but is null');
-                }
-            } else {
-                Logger.info('${this}: No dynamicCustomProperties found');
-            }
+            // Process properties in order of precedence:
+            // 1. Advanced custom properties (highest priority)
+            var advancedProps = getFieldValue(customProps, "dynamicAdvancedCustomProperties");
+            processProperties(advancedProps, "advanced");
             
-            // Process advanced custom properties
-            if (Reflect.hasField(customProps, "dynamicAdvancedCustomProperties")) {
-                var advancedProps = Reflect.field(customProps, "dynamicAdvancedCustomProperties");
-                if (advancedProps != null) {
-                    var fields = Reflect.fields(advancedProps);
-                    Logger.info('${this}: Processing ${fields.length} advanced field properties');
-                    
-                    for (field in fields) {
-                        var value = Reflect.field(advancedProps, field);
-                        if (value != null) {
-                            // Store with original case only
-                            allCustomProps.set(field, Std.string(value));
-                            Logger.info('${this}: Added advanced field property ${field} = ${value}');
-                        }
-                    }
-                } else {
-                    Logger.warning('${this}: dynamicAdvancedCustomProperties exists but is null');
-                }
-            } else {
-                Logger.info('${this}: No dynamicAdvancedCustomProperties found');
-            }
+            // 2. Basic custom properties
+            var basicProps = getFieldValue(customProps, "dynamicCustomProperties");
+            processProperties(basicProps, "basic");
+            
+            // 3. Common properties (lowest priority)
+            processProperties(customProps, "common");
             
             // Finally replace all variables in the template with exact case preservation
             Logger.info('${this}: Replacing ${Lambda.count(allCustomProps)} custom properties in template');
