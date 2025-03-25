@@ -35,6 +35,7 @@ import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.io.Path;
 import superhuman.managers.ProvisionerManager;
+import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import sys.FileSystem;
 import sys.io.File;

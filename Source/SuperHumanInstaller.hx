@@ -123,8 +123,6 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
 	
-	static public final DEMO_TASKS_PATH:String = "assets/vagrant/hcl_domino_standalone_provisioner/";
-
 	static var _instance:SuperHumanInstaller;
 
 	public static function getInstance():SuperHumanInstaller {

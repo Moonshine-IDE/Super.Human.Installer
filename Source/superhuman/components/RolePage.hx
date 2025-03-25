@@ -123,9 +123,9 @@ class RolePage extends Page {
             _listGroup.removeChildren();
             
             // Check if this is a custom provisioner (not StandaloneProvisioner or AdditionalProvisioner)
-            var isCustomProvisioner = _server.provisioner.type != "standalone-provisioner" && 
-                                     _server.provisioner.type != "additional-provisioner" &&
-                                     _server.provisioner.type != "default";
+            var isCustomProvisioner = _server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                     _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                     _server.provisioner.type != ProvisionerType.Default;
             
             // Use custom roles only for custom provisioners
             if (isCustomProvisioner) {
