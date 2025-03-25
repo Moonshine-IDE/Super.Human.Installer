@@ -156,10 +156,12 @@ class RolePage extends Page {
                         provisionerDefinition = Reflect.field(this, "_provisionerDefinition");
                         Logger.info('RolePage: Using provisioner definition from instance variable: ${provisionerDefinition.name}');
                     }
-                    // Otherwise, check if event.data is a name string
-                    else if (e.data != null && Std.isOfType(e.data, String)) {
-                        definitionName = e.data;
-                        Logger.info('RolePage: Received provisioner definition name: ${definitionName}');
+                    // We don't have direct access to event data here in updateContent
+                    // Instead, check if there's a stored definition name in class fields
+                    else if (Reflect.hasField(this, "_lastDefinitionName") && 
+                             Reflect.field(this, "_lastDefinitionName") != null) {
+                        definitionName = Reflect.field(this, "_lastDefinitionName");
+                        Logger.info('RolePage: Using stored definition name: ${definitionName}');
                         
                         // Look up the provisioner by name
                         var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
