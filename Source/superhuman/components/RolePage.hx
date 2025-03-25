@@ -64,6 +64,7 @@ import superhuman.server.Server;
 import superhuman.server.data.RoleData;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.server.roles.ServerRoleImpl;
+import superhuman.theme.SuperHumanInstallerTheme;
 
 class RolePage extends Page {
 
