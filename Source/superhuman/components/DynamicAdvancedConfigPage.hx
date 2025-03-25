@@ -1132,12 +1132,22 @@ class DynamicAdvancedConfigPage extends Page {
                         }
                     }
                 } else {
-                    // Store the value directly in customProperties to preserve exact case
+                    // Initialize customProperties if needed
                     if (_server.customProperties == null) {
                         _server.customProperties = {};
                     }
-                    Reflect.setField(_server.customProperties, fieldName, value);
-                    Logger.info('${this}: Stored custom property ${fieldName} with exact case: ${value}');
+                    
+                    // Initialize dynamicAdvancedCustomProperties if needed
+                    if (!Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+                        Reflect.setField(_server.customProperties, "dynamicAdvancedCustomProperties", {});
+                    }
+                    
+                    // Get reference to dynamicAdvancedCustomProperties
+                    var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+                    
+                    // Only store in dynamicAdvancedCustomProperties to avoid duplication
+                    Reflect.setField(customPropsObj, fieldName, value);
+                    Logger.info('${this}: Stored custom property ${fieldName} with value ${value} in dynamicAdvancedCustomProperties');
                     
                     // Also create a custom property for change tracking
                     var prop = new champaign.core.primitives.Property<String>(value);
