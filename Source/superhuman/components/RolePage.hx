@@ -90,12 +90,31 @@ class RolePage extends Page {
 
         _content.width = _w;
 
+        // Create a scroll container for the list content
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.variant = SuperHumanInstallerTheme.SCROLL_CONTAINER_DARK;
+        scrollContainer.layoutData = new VerticalLayoutData(100, 100);
+        scrollContainer.autoHideScrollBars = false;
+        scrollContainer.fixedScrollBars = true;
+        
+        // Set up vertical layout for the scroll container
+        var scrollLayout = new VerticalLayout();
+        scrollLayout.horizontalAlign = HorizontalAlign.CENTER;
+        scrollLayout.gap = GenesisApplicationTheme.GRID;
+        scrollLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        scrollContainer.layout = scrollLayout;
+        
+        // Add the scroll container to the page
+        this.addChild(scrollContainer);
+        
+        // Create the list group and add it to the scroll container
         _listGroup = new LayoutGroup();
-        _listGroup.layoutData = new VerticalLayoutData( 100 );
+        _listGroup.layoutData = new VerticalLayoutData(100);
         _listGroupLayout = new VerticalLayout();
         _listGroupLayout.gap = GenesisApplicationTheme.GRID;
         _listGroup.layout = _listGroupLayout;
-        this.addChild( _listGroup );
+        scrollContainer.addChild(_listGroup);
 
         _buttonGroup = new LayoutGroup();
         _buttonGroupLayout = new HorizontalLayout();

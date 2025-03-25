@@ -230,9 +230,9 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         container.autoHideScrollBars = false;
         container.fixedScrollBars = true;
         
-        // Use the same background color as the Box color in the theme
+        // Use the same background color as the main app background
         var backgroundSkin = new RectangleSkin();
-        backgroundSkin.fill = SolidColor(_themeColors.Box);
+        backgroundSkin.fill = SolidColor(_themeColors.Background);
         container.backgroundSkin = backgroundSkin;
     }
 
