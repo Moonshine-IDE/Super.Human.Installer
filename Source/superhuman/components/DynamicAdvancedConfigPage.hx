@@ -229,8 +229,10 @@ class DynamicAdvancedConfigPage extends Page {
                 }
             }
             
-            // Update the enabled state
-            _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
+            // Update the enabled state - always enable in custom provisioners
+            // When using custom provisioners, we need to allow changing the network bridge
+            // regardless of disableBridgeAdapter value
+            _dropdownNetworkInterface.enabled = !_server.networkBridge.locked;
         }
         
         // Store the server reference first, then load custom properties
@@ -665,7 +667,8 @@ class DynamicAdvancedConfigPage extends Page {
                     break;
                 }
             }
-            _dropdownNetworkInterface.enabled = !_server.networkBridge.locked && !_server.disableBridgeAdapter.value;
+            // Update the enabled state - always enable in custom provisioners, regardless of disableBridgeAdapter
+            _dropdownNetworkInterface.enabled = !_server.networkBridge.locked;
             
             // Load custom properties from server.customProperties if they haven't been loaded yet
             if (_server.customProperties != null && Lambda.count(_customProperties) == 0) {
