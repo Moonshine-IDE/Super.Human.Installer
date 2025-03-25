@@ -933,14 +933,15 @@ class Server {
     }
 
     public function areRolesValid():Bool {
-        // Check if this is a custom provisioner
-        var isCustomProvisioner = (_provisioner != null && 
-                                  _provisioner.data != null && 
-                                  _provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
-                                  _provisioner.data.type != ProvisionerType.AdditionalProvisioner &&
-                                  _provisioner.data.type != ProvisionerType.Default);
+        // Check if this is a custom provisioner by looking specifically at the provisioner type
+        // This is the critical check to ensure we don't mix behavior between provisioner types
+        var provisionerType = _provisioner != null && _provisioner.data != null ? _provisioner.data.type : null;
+        var isCustomProvisioner = (provisionerType != null && 
+                                  provisionerType != ProvisionerType.StandaloneProvisioner && 
+                                  provisionerType != ProvisionerType.AdditionalProvisioner &&
+                                  provisionerType != ProvisionerType.Default);
         
-        Logger.info('${this}: Validating roles for server. Custom provisioner: ${isCustomProvisioner}');
+        Logger.info('${this}: Validating roles for server. Provisioner type: ${provisionerType}, Custom provisioner: ${isCustomProvisioner}');
                                   
         // For custom provisioners, check roles against metadata when possible
         if (isCustomProvisioner) {
@@ -951,7 +952,12 @@ class Server {
             var customRoleMap = new Map<String, Bool>();
             var hasMetadata = false;
             
-            if (_customProperties != null && Reflect.hasField(_customProperties, "provisionerDefinition")) {
+            // Only check for metadata for custom provisioner types
+            if (provisionerType != ProvisionerType.StandaloneProvisioner && 
+                provisionerType != ProvisionerType.AdditionalProvisioner &&
+                _customProperties != null && 
+                Reflect.hasField(_customProperties, "provisionerDefinition")) {
+                
                 var provDef = Reflect.field(_customProperties, "provisionerDefinition");
                 if (provDef != null && Reflect.hasField(provDef, "metadata")) {
                     var metadata = Reflect.field(provDef, "metadata");
@@ -963,7 +969,7 @@ class Server {
                             var rolesArray:Array<Dynamic> = cast roles;
                             
                             // Build a map of role names to installer requirements
-                            Logger.info('${this}: Found ${rolesArray.length} roles in provisioner metadata');
+                            Logger.info('${this}: Found ${rolesArray.length} roles in provisioner metadata for custom provisioner');
                             for (role in rolesArray) {
                                 if (role != null && Reflect.hasField(role, "name")) {
                                     var requiresInstaller = false;
@@ -1485,16 +1491,36 @@ class Server {
         try {
             // Create a custom executor for the plugin installation command
             var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", "vagrant-scp-sync"]);
-            pluginExecutor.onStart.add(_pluginInstallStarted);
-            pluginExecutor.onStop.add(_pluginInstallStopped);
-            pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
-            pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
             
-            pluginExecutor.execute();
+            // Add event handlers with explicit null checks
+            if (pluginExecutor != null) {
+                if (pluginExecutor.onStart != null) 
+                    pluginExecutor.onStart.add(_pluginInstallStarted);
+                if (pluginExecutor.onStop != null) 
+                    pluginExecutor.onStop.add(_pluginInstallStopped);
+                if (pluginExecutor.onStdOut != null) 
+                    pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
+                if (pluginExecutor.onStdErr != null) 
+                    pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
+                
+                // Execute only if the executor was properly initialized
+                try {
+                    pluginExecutor.execute();
+                    Logger.info('${this}: Plugin installation executor started successfully');
+                } catch (execError:Dynamic) {
+                    Logger.error('${this}: Error executing plugin installation: ${execError}');
+                    if (console != null) console.appendText('Error executing plugin installation: ${execError}', true);
+                    _executeVagrantUp();
+                }
+            } else {
+                Logger.error('${this}: Failed to create plugin installation executor');
+                if (console != null) console.appendText('Failed to create plugin installation executor', true);
+                _executeVagrantUp();
+            }
         } catch (e:Dynamic) {
             // If there's any exception, log it and continue with vagrant up
-            Logger.error('${this}: Exception during plugin installation: ${e}');
-            if (console != null) console.appendText('Exception during plugin installation: ${e}', true);
+            Logger.error('${this}: Exception during plugin installation setup: ${e}');
+            if (console != null) console.appendText('Exception during plugin installation setup: ${e}', true);
             // Continue with vagrant up even if plugin installation fails
             _executeVagrantUp();
         }
