@@ -116,7 +116,7 @@ class CustomProvisioner extends StandaloneProvisioner {
         
         // Compress all entries after they've been added
         for (entry in entries) {
-            if (!entry.fileName.endsWith("/")) { // Don't compress directory entries
+            if (!StringTools.endsWith(entry.fileName, "/")) { // Don't compress directory entries
                 haxe.zip.Tools.compress(entry, 9);
             }
         }
@@ -504,7 +504,7 @@ override public function generateHostsFileContent():String {
         
         // Network settings
         if (!_server.dhcp4.value) {
-            content = _replaceVariable(content, "NETWORK_ADDRESS", _server.networkAddrask.value);
+            content = _replaceVariable(content, "NETWORK_ADDRESS", _server.networkAddress.value);
             content = _replaceVariable(content, "NETWORK_GATEWAY", _server.networkGateway.value);
             content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_1", _server.nameServer1.value);
             content = _replaceVariable(content, "NETWORK_DNS1", _server.nameServer1.value);
