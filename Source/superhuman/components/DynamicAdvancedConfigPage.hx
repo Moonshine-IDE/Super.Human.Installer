@@ -882,11 +882,19 @@ class DynamicAdvancedConfigPage extends Page {
                         }
                         
                         // Ensure the value is within bounds
-                        if (stepper.minimum != null && numValue < stepper.minimum) {
-                            numValue = stepper.minimum;
+                        // Use Reflect to safely check if properties exist and have values
+                        if (Reflect.hasField(stepper, "minimum")) {
+                            var min = Reflect.field(stepper, "minimum");
+                            if (min != null && Std.isOfType(min, Float) && numValue < min) {
+                                numValue = min;
+                            }
                         }
-                        if (stepper.maximum != null && numValue > stepper.maximum) {
-                            numValue = stepper.maximum;
+                        
+                        if (Reflect.hasField(stepper, "maximum")) {
+                            var max = Reflect.field(stepper, "maximum");
+                            if (max != null && Std.isOfType(max, Float) && numValue > max) {
+                                numValue = max;
+                            }
                         }
                         
                         stepper.value = numValue;
