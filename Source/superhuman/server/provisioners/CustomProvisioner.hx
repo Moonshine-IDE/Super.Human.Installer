@@ -34,6 +34,8 @@ import champaign.core.logging.Logger;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
 import haxe.io.Path;
+import prominic.sys.applications.hashicorp.Vagrant;
+import prominic.sys.applications.oracle.VirtualBox;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
