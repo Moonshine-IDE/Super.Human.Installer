@@ -1109,9 +1109,19 @@ class DynamicConfigPage extends Page {
             _server.saveData();
         }
         
-        // Update the provisioner
+        // Update the provisioner with the selected version
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-        _server.updateProvisioner(dvv.data);
+        if (dvv != null) {
+            Logger.info('${this}: Updating provisioner to version ${dvv.data.version}');
+            // Force saving the provisioner data even if versions match
+            _server.provisioner.data.version = dvv.data.version;
+            _server.updateProvisioner(dvv.data);
+            // Make sure to save data after updating provisioner
+            _server.saveData();
+            Logger.info('${this}: Updated provisioner data saved');
+        } else {
+            Logger.warning('${this}: No provisioner selected in dropdown');
+        }
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
