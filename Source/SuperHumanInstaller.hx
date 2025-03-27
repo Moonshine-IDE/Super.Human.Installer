@@ -1293,12 +1293,21 @@ class SuperHumanInstaller extends GenesisApplication {
         
         // Always update the service types collection in the page
         if (_serviceTypePage != null) {
+            // Log current page for debugging
+            Logger.info('${this}: Current page: ${this.selectedPageId}, checking if on SERVICE_TYPE page: ${this.selectedPageId == PAGE_SERVICE_TYPE}');
+            
             // Update with the latest collection
             _serviceTypePage.updateServiceTypes(_serviceTypesCollection);
             
-            // If we're currently on the service type page, explicitly force a refresh
+            // If we're currently on the service type page, dispatch an event to refresh the UI
             if (this.selectedPageId == PAGE_SERVICE_TYPE) {
-                _serviceTypePage.refreshServiceTypes();
+                Logger.info('${this}: On ServiceTypePage, dispatching refresh event');
+                
+                // Create a new event for provisioner data update
+                var refreshEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_DATA_UPDATED);
+                
+                // Dispatch to the service type page to trigger a refresh
+                _serviceTypePage.dispatchEvent(refreshEvent);
             }
         }
         
@@ -1311,6 +1320,8 @@ class SuperHumanInstaller extends GenesisApplication {
         }
         
         Logger.info('${this}: Provisioner imported successfully');
+        
+        // The ServiceTypePage already shows a toast notification, so we don't need one here
     }
 	
 	function _initializeApplicationsCollection() {

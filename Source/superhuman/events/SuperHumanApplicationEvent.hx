@@ -83,6 +83,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final TEXT_LINK:String = "textLink";
     public static final OPEN_FTP_CLIENT:String = "openFtpClient";
     public static final IMPORT_PROVISIONER:String = "importProvisioner";
+    public static final PROVISIONER_DATA_UPDATED:String = "provisionerDataUpdated";
 
     public var console:Console;
     public var data:String;

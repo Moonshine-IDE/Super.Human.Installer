@@ -81,6 +81,9 @@ class ServiceTypePage extends Page {
     override function initialize() {
 
         super.initialize();
+        
+        // Listen for provisioner data updated events
+        this.addEventListener(SuperHumanApplicationEvent.PROVISIONER_DATA_UPDATED, _onProvisionerDataUpdated);
 
         _content.width = _w;
         
@@ -276,9 +279,90 @@ class ServiceTypePage extends Page {
      * Similar to how SettingsPage.refreshBrowsers() works
      */
     public function refreshServiceTypes() {
+        champaign.core.logging.Logger.info('ServiceTypePage: Forcing refresh of service types grid');
         if (_serviceTypeGrid != null && _serviceTypeGrid.dataProvider != null) {
+            // IFlatCollection has no toArray method, so instead we'll:
+            // 1. Create a new ArrayCollection with our source data
+            // 2. Set it as the data provider
+            _serviceTypeGrid.dataProvider = new ArrayCollection(_serviceTypesCollection);
+            
+            // Call updateAll and validate
             _serviceTypeGrid.dataProvider.updateAll();
             _serviceTypeGrid.validateNow();
+            
+            // Force a layout validation on the entire page
+            this.validateNow();
+        }
+    }
+    
+    /**
+     * Handler for the PROVISIONER_DATA_UPDATED event
+     * This is triggered when provisioner data has been updated and the UI needs to refresh
+     * @param e The event
+     */
+    function _onProvisionerDataUpdated(e:SuperHumanApplicationEvent) {
+        champaign.core.logging.Logger.info('ServiceTypePage: Received PROVISIONER_DATA_UPDATED event');
+        // Use the more robust grid rebuild method
+        forceGridRefresh();
+    }
+    
+    /**
+     * Update the service types grid more effectively without complete rebuild
+     * This avoids duplication issues while still ensuring the UI updates
+     */
+    public function forceGridRefresh() {
+        champaign.core.logging.Logger.info('ServiceTypePage: Performing enhanced grid refresh with ${_serviceTypesCollection.length} items');
+        
+        // Log the current data
+        for (item in _serviceTypesCollection) {
+            champaign.core.logging.Logger.info('  - ${item.value}: ${item.provisionerType}');
+        }
+        
+        if (_serviceTypeGrid != null) {
+            // Save selected item if possible
+            var selectedItem = null;
+            var selectedIndex = -1;
+            if (_serviceTypeGrid.selectedIndex >= 0 && 
+                _serviceTypeGrid.selectedIndex < _serviceTypeGrid.dataProvider.length) {
+                selectedItem = _serviceTypeGrid.selectedItem;
+                selectedIndex = _serviceTypeGrid.selectedIndex;
+            }
+            
+            // Create a fresh ArrayCollection
+            var newCollection = new ArrayCollection(_serviceTypesCollection);
+            
+            // Apply the new data provider - this forces a complete refresh of visible items
+            _serviceTypeGrid.dataProvider = newCollection;
+            
+            // Try to restore selection
+            if (selectedItem != null) {
+                // Try to find the same item in the new collection
+                for (i in 0...newCollection.length) {
+                    var item = newCollection.get(i);
+                    if (item.value == selectedItem.value) {
+                        _serviceTypeGrid.selectedIndex = i;
+                        break;
+                    }
+                }
+            } else if (newCollection.length > 0) {
+                // Default to first item or maintain previous index if valid
+                if (selectedIndex >= 0 && selectedIndex < newCollection.length) {
+                    _serviceTypeGrid.selectedIndex = selectedIndex;
+                } else {
+                    _serviceTypeGrid.selectedIndex = 0;
+                }
+            }
+            
+            // Force a more aggressive invalidation of the grid
+            _serviceTypeGrid.dataProvider.updateAll();
+            _serviceTypeGrid.validateNow();
+            
+            // Force validation on parent components
+            this.validateNow();
+            
+            champaign.core.logging.Logger.info('ServiceTypePage: Grid refresh complete');
+        } else {
+            champaign.core.logging.Logger.warning('ServiceTypePage: Attempted to refresh null grid');
         }
     }
 }

@@ -229,9 +229,15 @@ class ProvisionerManager {
                     metadata: versionMetadata
                 };
                 
-                // Add to cache
-                _cachedProvisioners.get(metadata.type).push(provDef);
-                Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
+            // Add to cache - create the array if it doesn't exist
+            if (!_cachedProvisioners.exists(metadata.type)) {
+                Logger.info('Creating new cache entry for provisioner type: ${metadata.type}');
+                _cachedProvisioners.set(metadata.type, []);
+            }
+            
+            // Now we can safely push to the array
+            _cachedProvisioners.get(metadata.type).push(provDef);
+            Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
             }
             
             // Sort the provisioners by version, newest first
@@ -783,10 +789,13 @@ class ProvisionerManager {
     
     /**
      * Import a provisioner from a source directory to the common provisioners directory
+     * This implementation zips the entire provisioner directory to handle deeply nested folder structures
      * @param sourcePath Path to the source provisioner directory
      * @return Bool True if import was successful, false otherwise
      */
     static public function importProvisioner(sourcePath:String):Bool {
+        Logger.info('Importing provisioner from ${sourcePath}');
+        
         // Validate that the source directory contains a valid provisioner
         var metadata = readProvisionerMetadata(sourcePath);
         if (metadata == null) {
@@ -794,11 +803,42 @@ class ProvisionerManager {
             return false;
         }
         
+        Logger.info('Valid provisioner found: ${metadata.name} (${metadata.type})');
+        
         // Create the destination directory
         var destPath = Path.addTrailingSlash(getProvisionersDirectory()) + metadata.type;
         try {
-            if (!FileSystem.exists(destPath)) {
+            // Check if destination already exists
+            var destDirExists = FileSystem.exists(destPath);
+            
+            // If destination exists, check if it has valid versions
+            var hasValidVersions = false;
+            if (destDirExists) {
+                // Validate version directories in source
+                var sourceVersionDirs = _getValidVersionDirectories(sourcePath);
+                if (sourceVersionDirs.length == 0) {
+                    Logger.warning('No valid version directories found in ${sourcePath}');
+                    return false;
+                }
+                
+                // Check if all versions already exist in destination
+                var allVersionsExist = true;
+                for (versionDir in sourceVersionDirs) {
+                    var versionDestPath = Path.addTrailingSlash(destPath) + versionDir;
+                    if (!FileSystem.exists(versionDestPath)) {
+                        allVersionsExist = false;
+                        break;
+                    }
+                }
+                
+                if (allVersionsExist) {
+                    Logger.info('All versions already exist in destination, skipping import');
+                    return true;
+                }
+            } else {
+                // Create the destination directory if it doesn't exist
                 FileSystem.createDirectory(destPath);
+                Logger.info('Created destination directory: ${destPath}');
             }
             
             // Copy provisioner.yml to the destination directory
@@ -811,71 +851,103 @@ class ProvisionerManager {
             }
             
             File.copy(sourceMetadataPath, destMetadataPath);
-
-            // Look for version directories in the source directory
-            var versionDirs = FileSystem.readDirectory(sourcePath);
-            var versionsImported = 0;
-            var versionsAlreadyExist = 0;
-            var validVersionsFound = 0;
+            Logger.info('Copied provisioner.yml metadata file');
             
-            for (versionDir in versionDirs) {
-                var versionSourcePath = Path.addTrailingSlash(sourcePath) + versionDir;
-                
-                // Skip if not a directory or if it's the provisioner.yml file
-                if (!FileSystem.isDirectory(versionSourcePath) || versionDir == PROVISIONER_METADATA_FILENAME) {
-                    continue;
-                }
-                
-                // Check if this is a valid version directory (has scripts subdirectory)
-                var scriptsSourcePath = Path.addTrailingSlash(versionSourcePath) + "scripts";
-                if (!FileSystem.exists(scriptsSourcePath) || !FileSystem.isDirectory(scriptsSourcePath)) {
-                    Logger.warning('Skipping version directory ${versionDir} as it does not have a scripts subdirectory');
-                    continue;
-                }
-                
-                // Count valid version directories
-                validVersionsFound++;
-                
-                // Create the destination version directory
-                var versionDestPath = Path.addTrailingSlash(destPath) + versionDir;
-                if (FileSystem.exists(versionDestPath)) {
-                    Logger.warning('Version ${versionDir} already exists at ${versionDestPath}, skipping');
-                    versionsAlreadyExist++;
-                    continue;
-                }
-                
-                // Use zip/unzip to copy the version directory instead of direct file copying
-                try {
-                    // Create the destination directory
-                    FileSystem.createDirectory(versionDestPath);
-                    
-                    // Zip the source directory
-                    var zipBytes = _zipDirectory(versionSourcePath);
-                    
-                    // Unzip to the destination directory
-                    _unzipToDirectory(zipBytes, versionDestPath);
-                    
-                    versionsImported++;
-                } catch (e) {
-                    Logger.error('Error importing version ${versionDir}: ${e}');
-                }
-            }
-            
-            if (validVersionsFound == 0) {
+            // Process and import version directories
+            var sourceVersionDirs = _getValidVersionDirectories(sourcePath);
+            if (sourceVersionDirs.length == 0) {
                 Logger.warning('No valid version directories found in ${sourcePath}');
                 return false;
             }
             
-            if (versionsImported == 0 && versionsAlreadyExist > 0) {
-                return true; // Return success if all versions already exist
+            var importedCount = 0;
+            var skippedCount = 0;
+            
+            // Import each version directory using zip to handle deep nesting
+            for (versionDir in sourceVersionDirs) {
+                var versionSourcePath = Path.addTrailingSlash(sourcePath) + versionDir;
+                var versionDestPath = Path.addTrailingSlash(destPath) + versionDir;
+                
+                // Skip if version already exists
+                if (FileSystem.exists(versionDestPath)) {
+                    Logger.info('Version ${versionDir} already exists, skipping');
+                    skippedCount++;
+                    continue;
+                }
+                
+                try {
+                    // Create the destination version directory
+                    FileSystem.createDirectory(versionDestPath);
+                    
+                    Logger.info('Zipping version directory: ${versionDir}');
+                    // Zip the entire version directory
+                    var zipBytes = _zipDirectory(versionSourcePath);
+                    
+                    Logger.info('Unzipping to destination: ${versionDestPath}');
+                    // Unzip to the destination
+                    _unzipToDirectory(zipBytes, versionDestPath);
+                    
+                    importedCount++;
+                    Logger.info('Successfully imported version: ${versionDir}');
+                } catch (e) {
+                    Logger.error('Error importing version ${versionDir}: ${e}');
+                    // Continue with other versions even if one fails
+                }
             }
-
-            return true;
+            
+            Logger.info('Import summary: ${importedCount} versions imported, ${skippedCount} versions skipped');
+            
+            // Refresh the cache to include newly imported provisioners
+            if (importedCount > 0) {
+                _addProvisionerVersionsToCache(destPath, metadata);
+                return true;
+            } else if (skippedCount > 0) {
+                // All versions already existed
+                return true;
+            } else {
+                // No versions were imported
+                return false;
+            }
             
         } catch (e) {
             Logger.error('Error importing provisioner: ${e}');
             return false;
         }
+    }
+    
+    /**
+     * Get valid version directories from a provisioner directory
+     * Valid versions must contain a scripts subdirectory
+     * @param provisionerPath Path to the provisioner directory
+     * @return Array<String> Array of valid version directory names
+     */
+    static private function _getValidVersionDirectories(provisionerPath:String):Array<String> {
+        var validVersions = [];
+        
+        try {
+            var items = FileSystem.readDirectory(provisionerPath);
+            
+            for (item in items) {
+                // Skip if not a directory or if it's the provisioner.yml file
+                if (!FileSystem.isDirectory(Path.addTrailingSlash(provisionerPath) + item) || 
+                    item == PROVISIONER_METADATA_FILENAME) {
+                    continue;
+                }
+                
+                // Check if this is a valid version directory (has scripts subdirectory)
+                var scriptsPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + "scripts";
+                if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath)) {
+                    validVersions.push(item);
+                    Logger.info('Found valid version directory: ${item}');
+                } else {
+                    Logger.warning('Invalid version directory (no scripts folder): ${item}');
+                }
+            }
+        } catch (e) {
+            Logger.error('Error reading directory ${provisionerPath}: ${e}');
+        }
+        
+        return validVersions;
     }
     
     /**
@@ -896,6 +968,7 @@ class ProvisionerManager {
     
     /**
      * Helper function to recursively add files to a zip archive
+     * Uses no compression to avoid ZLib errors with deeply nested paths
      * @param directory The base directory
      * @param path The current path within the zip
      * @param entries The list of zip entries
@@ -923,19 +996,19 @@ class ProvisionerManager {
                 // Recursively add directory contents
                 _addDirectoryToZip(itemPath, zipPath, entries);
             } else {
-                // Add file entry
+                // Add file entry without compression
                 try {
                     var data = File.getBytes(itemPath);
                     var entry:Entry = {
                         fileName: zipPath,
                         fileSize: data.length,
                         fileTime: FileSystem.stat(itemPath).mtime,
-                        compressed: true,
-                        dataSize: 0,
+                        compressed: false, // No compression
+                        dataSize: data.length,
                         data: data,
                         crc32: haxe.crypto.Crc32.make(data)
                     };
-                    Tools.compress(entry, 9);
+                    // Skip compression completely
                     entries.add(entry);
                 } catch (e) {
                     Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
