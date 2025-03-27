@@ -123,7 +123,8 @@ class StandaloneProvisioner extends AbstractProvisioner {
 			server_organization: "",
 			type: ServerType.Domino,
 			user_email: "",
-            provisioner: ProvisionerManager.getBundledProvisioners()[ 0 ].data,
+            // Use provisioners of the correct type (StandaloneProvisioner) instead of the first of any type
+            provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.StandaloneProvisioner)[ 0 ].data,
             syncMethod: SyncMethod.Rsync,
             existingServerName: "",
             existingServerIpAddress: ""

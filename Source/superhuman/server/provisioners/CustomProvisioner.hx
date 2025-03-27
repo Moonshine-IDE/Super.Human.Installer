@@ -381,24 +381,35 @@ class CustomProvisioner extends StandaloneProvisioner {
     }
 
 /**
- * Ensure data includes the correct version
+ * Override data includes the correct version and type
  * Using serverProvisionerId as the single authoritative source for version information
+ * Ensures consistent type handling by preserving the original type
  * @return ProvisionerData with the correct version
  */
 override public function get_data():ProvisionerData {
     // Create a baseline data object
     var baseData = super.get_data();
+    Logger.info('${this}: Getting data with base type: ${baseData.type}');
     
-    // First priority: Use serverProvisionerId as the authoritative source
+    // Use consistent type comparison
+    var isStandalone = (Std.string(baseData.type) == Std.string(ProvisionerType.StandaloneProvisioner));
+    var isAdditional = (Std.string(baseData.type) == Std.string(ProvisionerType.AdditionalProvisioner));
+    var isDefault = (Std.string(baseData.type) == Std.string(ProvisionerType.Default));
+    
+    // Keep track of original type to ensure it's preserved
+    var originalType = baseData.type;
+    
+    // First priority: Use serverProvisionerId as the authoritative source for version
     if (_server != null && _server.serverProvisionerId != null && 
         _server.serverProvisionerId.value != null && 
         _server.serverProvisionerId.value != "" && 
         _server.serverProvisionerId.value != "0.0.0") {
         
         var versionStr = _server.serverProvisionerId.value;
+        Logger.info('${this}: Using serverProvisionerId for version: ${versionStr}');
 
         return { 
-            type: baseData.type,
+            type: originalType,
             version: champaign.core.primitives.VersionInfo.fromString(versionStr)
         };
     }
@@ -407,20 +418,33 @@ override public function get_data():ProvisionerData {
     if (_server != null && _server.customProperties != null) {
         if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
             var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
-            if (provDef != null && Reflect.hasField(provDef, "data") && 
-                Reflect.hasField(provDef.data, "version")) {
+            if (provDef != null && Reflect.hasField(provDef, "data")) {
+                if (Reflect.hasField(provDef.data, "version")) {
+                    var versionInfo = Reflect.field(provDef.data, "version");
+                    Logger.info('${this}: Using provisionerDefinition for version: ${versionInfo}');
+                    
+                    // Preserve the original type to ensure consistency
+                    return {
+                        type: originalType,
+                        version: versionInfo
+                    };
+                }
                 
-                var versionInfo = Reflect.field(provDef.data, "version");
-                return {
-                    type: baseData.type,
-                    version: versionInfo
-                };
+                if (Reflect.hasField(provDef.data, "type")) {
+                    // Only log the type information for debugging
+                    var typeInfo = Reflect.field(provDef.data, "type");
+                    Logger.info('${this}: Found provisionerDefinition type: ${typeInfo}, using original type: ${originalType}');
+                }
             }
         }
     }
     
-    // Fallback to the base version
-    return baseData;
+    // Fallback to the base version while preserving the original type
+    Logger.info('${this}: Using fallback with original type: ${originalType}');
+    return {
+        type: originalType,
+        version: baseData.version
+    };
 }
 
 /**

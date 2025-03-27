@@ -121,7 +121,7 @@ jobs:
           haxelib install lime 8.2.2
           haxelib install format
           haxelib install hxp
-          haxelib install yaml
+          haxelib git yaml https://github.com/Sword352/hx-yaml master
           haxelib git lime-samples https://github.com/openfl/lime-samples
           haxelib install openfl 9.4.1
           haxelib run openfl setup

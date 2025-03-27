@@ -145,37 +145,50 @@ class ServiceTypePage extends Page {
         // Log the selected service type for debugging
         champaign.core.logging.Logger.info('Selected service type: ${selectedServiceType.value}, type: ${selectedServiceType.provisionerType}, serverType: ${selectedServiceType.serverType}');
         
-        // Check if this is a custom provisioner
-        var isCustomProvisioner = _isCustomProvisioner(selectedServiceType.provisionerType);
+        // Store the original provisioner type for safe keeping
+        var originalProvisionerType = selectedServiceType.provisionerType;
         
-        if (selectedServiceType.serverType == ServerUIType.AdditionalDomino) {
-            // For additional Domino servers
+        // Validate the provisioner type based on the UI type selection
+        // This ensures consistent provisioner types for the standard provisioner types
+        if (Std.string(selectedServiceType.serverType) == Std.string(ServerUIType.AdditionalDomino)) {
+            // For additional Domino servers - ALWAYS force the standard type
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER);
-        } else if (isCustomProvisioner) {
+            selectedServiceType.provisionerType = ProvisionerType.AdditionalProvisioner;
+            champaign.core.logging.Logger.info('Forcing provisioner type to AdditionalProvisioner for additional server');
+        } else if (originalProvisionerType == ProvisionerType.StandaloneProvisioner || 
+                  selectedServiceType.value.indexOf("HCL Standalone Provisioner") >= 0) {
+            // For standard Domino servers - ALWAYS force the standard type
+            event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_SERVER);
+            selectedServiceType.provisionerType = ProvisionerType.StandaloneProvisioner;
+            champaign.core.logging.Logger.info('Forcing provisioner type to StandaloneProvisioner for standard server');
+        } else {
             // For custom provisioners
             event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER);
-        } else {
-            // For standalone Domino servers
-            event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CREATE_SERVER);
+            champaign.core.logging.Logger.info('Using custom provisioner type: ${selectedServiceType.provisionerType}');
         }
         
-        // Set the provisioner type from the selected service type
+        // Double check that the provisioner type is correct after our fixes
+        champaign.core.logging.Logger.info('Final provisioner type after validation: ${selectedServiceType.provisionerType}');
+        
+        // Set the provisioner type and service type data on the event
         event.provisionerType = selectedServiceType.provisionerType;
         event.serviceTypeData = selectedServiceType;
 
         this.dispatchEvent(event);
 	}
 	
-	/**
+    /**
      * Check if a provisioner type is a custom provisioner
+     * Use string comparison to handle both enum and string values consistently
      * @param provisionerType The provisioner type to check
      * @return Bool True if the provisioner type is a custom provisioner
      */
     private function _isCustomProvisioner(provisionerType:String):Bool {
         // Check if the provisioner type is not one of the built-in types
-        return provisionerType != ProvisionerType.StandaloneProvisioner && 
-               provisionerType != ProvisionerType.AdditionalProvisioner &&
-               provisionerType != ProvisionerType.Default;
+        // Use string comparison to handle both enum and string values
+        return Std.string(provisionerType) != Std.string(ProvisionerType.StandaloneProvisioner) && 
+               Std.string(provisionerType) != Std.string(ProvisionerType.AdditionalProvisioner) &&
+               Std.string(provisionerType) != Std.string(ProvisionerType.Default);
     }
 	
     function _buttonCloseTriggered( e:TriggerEvent ) {

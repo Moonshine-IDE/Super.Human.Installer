@@ -4,8 +4,11 @@ class SuperHumanHashes
 {
 	public static final validHashes:Map<String, Map<String, Array<{}>>> = [
 		
-		"domino" => [ "installers" => [{ hash: "89a59f845d120055859a2c638809a75c", version: {majorVersion: "14", minorVersion: "0", patchVersion: "0", fullVersion: "14.0.0"}}, 
-									   { hash: "4153dfbb571b1284ac424824aa0e25e4", version: {majorVersion: "12", minorVersion: "0", patchVersion: "2", fullVersion: "12.0.2"} },
+
+
+		"domino" => [ "installers" => [{ hash: "5aaecfc4dbbe3c610aa47833c13e8d0a", version: {majorVersion: "14", minorVersion: "5", patchVersion: "0", fullVersion: "14.5.0"}},
+									   { hash: "89a59f845d120055859a2c638809a75c", version: {majorVersion: "14", minorVersion: "0", patchVersion: "0", fullVersion: "14.0.0"}}, 
+									   { hash: "4153dfbb571b1284ac424824aa0e25e4", version: {majorVersion: "12", minorVersion: "0", patchVersion: "2", fullVersion: "12.0.2"}},
 									   { hash: "ee9dd49653d4e4352cf23d0ae59936c8", version: {majorVersion: "12", minorVersion: "0", patchVersion: "1", fullVersion: "12.0.1"}} ], 
 					  "hotfixes" => [ { hash: "4acf939b24acf16e1f4a2858f950f00b", version: { fullVersion: "HF16",}},
 									   { hash: "f051f31a41caed8b211c26d4334e58c3", version: { fullVersion: "HF8",}},],

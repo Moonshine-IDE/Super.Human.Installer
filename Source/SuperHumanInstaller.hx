@@ -1419,11 +1419,23 @@ class SuperHumanInstaller extends GenesisApplication {
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
 
 				var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
-				var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
-
-				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} ${rsyncVersion}';
-
-				if (rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9")
+				
+				// Check if running on Windows
+				var isWindows:Bool = Capabilities.os.toLowerCase().indexOf("windows") >= 0;
+				
+				// Create base system info without rsync
+				var sysInfoBase = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
+				
+				// Only add rsync info for non-Windows systems
+				if (!isWindows) {
+					var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
+					_footer.sysInfo = sysInfoBase + ' ' + rsyncVersion;
+				} else {
+					_footer.sysInfo = sysInfoBase;
+				}
+				
+				// Only show rsync warning on non-Windows systems
+				if (!isWindows && rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9")
 				{
 					_footer.warning = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
 				}
@@ -1601,17 +1613,43 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
-		Logger.info( '${this}: Creating new server...' );
+		Logger.info( '${this}: Creating new server with provisioner type: ${e.provisionerType}' );
 
-		var server:Server = _createServerAndSaveConfig( e.provisionerType );
+		// ALWAYS use the standard standalone provisioner type for this method
+		// This way we maintain consistency regardless of what was passed
+		var provisionerType = ProvisionerType.StandaloneProvisioner;
+		
+		// Log that we're forcing the type for clarity
+		if (Std.string(e.provisionerType) != Std.string(ProvisionerType.StandaloneProvisioner)) {
+			Logger.warning( '${this}: Forcing provisioner type to StandaloneProvisioner (was: ${e.provisionerType})' );
+		} else {
+			Logger.info( '${this}: Using StandaloneProvisioner type' );
+		}
+
+		var server:Server = _createServerAndSaveConfig( provisionerType );
+		
+		// Ensure the server was created with the correct type
+		Logger.info( '${this}: Verifying server provisioner type: ${server.provisioner.type}' );
+		if (Std.string(server.provisioner.type) != Std.string(ProvisionerType.StandaloneProvisioner)) {
+			Logger.warning( '${this}: Server was created with incorrect type: ${server.provisioner.type}, should be ${ProvisionerType.StandaloneProvisioner}' );
+		}
 
 		_showConfigureServer( server );
 	}
 
 	function _createAdditionalDominoServer( e:SuperHumanApplicationEvent ) {
-		Logger.info( '${this}: Creating Additional Domino server...' );
+		Logger.info( '${this}: Creating Additional Domino server with provisioner type: ${e.provisionerType}' );
 
-		var server:AdditionalServer = cast(_createServerAndSaveConfig( e.provisionerType ), AdditionalServer);
+		// Make sure we're using the correct provisioner type string from the event
+		var provisionerType = e.provisionerType;
+		
+		// Verify this is actually an additional provisioner
+		if (Std.string(provisionerType) != Std.string(ProvisionerType.AdditionalProvisioner)) {
+			Logger.warning( '${this}: Expected additional provisioner but got: ${provisionerType}, correcting to ${ProvisionerType.AdditionalProvisioner}' );
+			provisionerType = ProvisionerType.AdditionalProvisioner;
+		}
+
+		var server:AdditionalServer = cast(_createServerAndSaveConfig( provisionerType ), AdditionalServer);
 
 		_showConfigureAdditionalServer( server );
 	}

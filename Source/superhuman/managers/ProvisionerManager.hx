@@ -668,53 +668,115 @@ class ProvisionerManager {
         if ( type == null ) return new ArrayCollection( a );
 
         var c = new ArrayCollection<ProvisionerDefinition>();
-        for ( p in a ) if ( p.data.type == type ) c.add( p );
-        return c;
-
-    }
-
-    static public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):ProvisionerDefinition {
-        // Handle case where type is a custom provisioner (not one of the standard types)
-        if (type != ProvisionerType.StandaloneProvisioner && 
-            type != ProvisionerType.AdditionalProvisioner &&
-            type != ProvisionerType.Default) {
+        // Use string comparison for type checking to handle both enum and string values
+        for ( p in a ) if ( Std.string(p.data.type) == Std.string(type) ) c.add( p );
+        
+        // If no matches found using direct type comparison, try case-insensitive comparison
+        if (c.length == 0) {
+            Logger.warning('No provisioners found for type ${type} using string comparison, trying case-insensitive comparison');
             
-            Logger.info('Looking for custom provisioner type: ${type}, version: ${version}');
-            
-            // Get all provisioners of this type
-            var allProvisioners = getBundledProvisioners();
-            var typeProvisioners = allProvisioners.filter(p -> p.data.type == type);
-            
-            if (typeProvisioners.length > 0) {
-                // If version is 0.0.0 or empty, return the newest version
-                var defaultVersion = champaign.core.primitives.VersionInfo.fromString("0.0.0");
-                if (version.toString() == "0.0.0" || version.toString() == "") {
-                    Logger.info('No specific version requested, returning newest version of ${type}');
-                    return typeProvisioners[0]; // Already sorted newest first
+            var typeStr = Std.string(type).toLowerCase();
+            for ( p in a ) {
+                var pTypeStr = Std.string(p.data.type).toLowerCase();
+                if (pTypeStr == typeStr) {
+                    Logger.info('Found match using case-insensitive comparison: ${p.data.type} matches ${type}');
+                    c.add(p);
                 }
-                
-                // Otherwise, try to find the requested version
-                for (provisioner in typeProvisioners) {
-                    if (provisioner.data.version == version) {
-                        Logger.info('Found matching custom provisioner: ${provisioner.name}');
-                        return provisioner;
-                    }
-                }
-                
-                // If requested version not found, return the newest version
-                Logger.info('Requested version ${version} not found, returning newest version of ${type}');
-                return typeProvisioners[0];
             }
         }
         
-        // Handle standard provisioner types as before
-        var bundledProvisionerCollection = getBundledProvisionerCollection(type);
-        for (provisioner in bundledProvisionerCollection) {
-            if (provisioner.data.type == type && provisioner.data.version == version) {
-                return provisioner;
+        // If still no matches AND this is a custom provisioner type, get ALL custom provisioners
+        // This fixes cases where a custom provisioner type string isn't matching any available types
+        if (c.length == 0) {
+            var isStandardType = (Std.string(type) == Std.string(ProvisionerType.StandaloneProvisioner) || 
+                                  Std.string(type) == Std.string(ProvisionerType.AdditionalProvisioner) ||
+                                  Std.string(type) == Std.string(ProvisionerType.Default));
+            
+            if (!isStandardType) {
+                Logger.warning('No matches for custom provisioner type ${type}, adding all custom provisioners as fallback');
+                
+                // Get all provisioners
+                var allProvs = getBundledProvisioners();
+                
+                // Filter out standard provisioners
+                for (p in allProvs) {
+                    var pType = Std.string(p.data.type);
+                    var isStandard = (pType == Std.string(ProvisionerType.StandaloneProvisioner) || 
+                                     pType == Std.string(ProvisionerType.AdditionalProvisioner) ||
+                                     pType == Std.string(ProvisionerType.Default));
+                    
+                    if (!isStandard) {
+                        c.add(p);
+                        Logger.info('Added custom provisioner as fallback: ${p.name} (${p.data.type})');
+                    }
+                }
             }
         }
+        
+        // Log a detailed warning if still no matches found
+        if (c.length == 0) {
+            Logger.warning('No provisioners found for type ${type} after trying all matching methods');
+            // Log all available provisioner types for debugging
+            var availableTypes = [];
+            for (p in a) availableTypes.push(Std.string(p.data.type));
+            Logger.warning('Available provisioner types: ${availableTypes.join(", ")}');
+        }
+        
+        return c;
+    }
 
+    static public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):Null<ProvisionerDefinition> {
+        // First, try the most precise search - exact string match on type
+        Logger.info('Looking for provisioner type: ${type}, version: ${version}');
+        
+        // Get all provisioners
+        var allProvisioners = getBundledProvisioners();
+        
+        // First try: exact string match
+        var typeProvisioners = allProvisioners.filter(p -> Std.string(p.data.type) == Std.string(type));
+        
+        // If no exact matches, try case-insensitive match
+        if (typeProvisioners.length == 0) {
+            Logger.info('No exact matches found for type ${type}, trying case-insensitive match');
+            var typeStr = Std.string(type).toLowerCase();
+            typeProvisioners = allProvisioners.filter(p -> Std.string(p.data.type).toLowerCase() == typeStr);
+        }
+        
+        // If we found provisioners of the requested type
+        if (typeProvisioners.length > 0) {
+            Logger.info('Found ${typeProvisioners.length} provisioners matching type ${type}');
+            
+            // Check for "empty" version by string representation to avoid null checks
+            var versionStr = version.toString();
+            if (versionStr == "0.0.0" || versionStr == "") {
+                Logger.info('Empty version (${versionStr}), returning newest version of ${type}');
+                return typeProvisioners[0]; // Already sorted newest first
+            }
+            
+            // Otherwise, try to find the requested version
+            for (provisioner in typeProvisioners) {
+                if (provisioner.data.version.toString() == versionStr) {
+                    Logger.info('Found matching provisioner: ${provisioner.name} with version ${versionStr}');
+                    return provisioner;
+                }
+            }
+            
+            // If requested version not found, return the newest version
+            Logger.info('Requested version ${versionStr} not found, returning newest version of ${type}');
+            return typeProvisioners[0];
+        }
+        
+        // Log if we couldn't find any provisioners
+        Logger.warning('No provisioners found for type ${type}');
+        
+        // Log all available types for debugging
+        var availableTypes = [];
+        for (p in allProvisioners) {
+            availableTypes.push(Std.string(p.data.type));
+        }
+        Logger.warning('Available provisioner types: ${availableTypes.join(", ")}');
+        
+        // Return null with explicit Null<> return type to make it clear this can be null
         return null;
     }
     

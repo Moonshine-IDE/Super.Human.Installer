@@ -94,42 +94,76 @@ class Server {
 
         sc._id = data.server_id;
         
-        // Determine the server directory based on provisioner type
-        var provisionerTypeForPath = data.provisioner != null ? data.provisioner.type : ProvisionerType.StandaloneProvisioner;
-        sc._serverDir = Path.normalize( rootDir + "/" + provisionerTypeForPath + "/" + sc._id );
+        // Log provisioner type without normalizing it
+        if (data.provisioner != null) {
+            // Log the incoming provisioner data for debugging
+            Logger.info('Creating server with provisioner type: ${data.provisioner.type}, version: ${data.provisioner.version}');
+            
+            // We're no longer forcing normalization, as it breaks custom provisioners
+            // Instead we'll use string comparison consistently throughout the codebase
+        }
+        
+        // Get the effective provisioner type from data.provisioner
+        // This is set by ServerManager before calling create()
+        var effectiveProvisionerType = data.provisioner != null ? 
+            data.provisioner.type : ProvisionerType.StandaloneProvisioner;
+        Logger.info('Server.create: Using provisioner type for server creation: ${effectiveProvisionerType}');
+        
+        // Create server directory using the effective provisioner type for consistent paths
+        sc._serverDir = Path.normalize( rootDir + "/" + effectiveProvisionerType + "/" + sc._id );
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
-
+        
         var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
-        if ( data.provisioner == null ) {
-            // Default to StandaloneProvisioner for null provisioner
-            sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc );
-        } else {
-            var provisioner = ProvisionerManager.getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
+        // Always force data.provisioner to match the type parameter for consistency
+        if (data.provisioner != null) {
+            // Override the provisioner type in the data object to match the type parameter
+            if (Std.string(data.provisioner.type) != Std.string(effectiveProvisionerType)) {
+                Logger.warning('Correcting provisioner type in data from ${data.provisioner.type} to ${effectiveProvisionerType}');
+                data.provisioner.type = effectiveProvisionerType;
+            }
+        }
 
-            if ( provisioner != null ) {
-                // Create the appropriate provisioner based on type
-                if (data.provisioner.type == ProvisionerType.StandaloneProvisioner || 
-                    data.provisioner.type == ProvisionerType.AdditionalProvisioner) {
-                    // Use StandaloneProvisioner for built-in provisioner types
-                    sc._provisioner = new StandaloneProvisioner(data.provisioner.type, provisioner.root, sc._serverDir, sc );
+        if (data.provisioner == null) {
+            // Default to StandaloneProvisioner for null provisioner
+            sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc);
+            Logger.info('${sc}: Created StandaloneProvisioner (null provisioner case)');
+        } else {
+            // Look up the provisioner definition based on the effective type
+            var provisioner = ProvisionerManager.getProvisionerDefinition(effectiveProvisionerType, data.provisioner.version);
+            Logger.info('${sc}: Looked up provisioner definition: ${provisioner != null ? provisioner.name : "null"}');
+
+            if (provisioner != null) {
+                // Create the appropriate provisioner based on the effective type
+                if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.StandaloneProvisioner)) {
+                    // Standalone provisioner
+                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, provisioner.root, sc._serverDir, sc);
+                    Logger.info('${sc}: Created StandaloneProvisioner with root: ${provisioner.root}');
+                } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
+                    // Additional provisioner
+                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.AdditionalProvisioner, provisioner.root, sc._serverDir, sc);
+                    Logger.info('${sc}: Created AdditionalProvisioner with root: ${provisioner.root}');
                 } else {
-                    // For custom provisioner types, use CustomProvisioner
-                    sc._provisioner = new CustomProvisioner(data.provisioner.type, provisioner.root, sc._serverDir, sc );
-                    Logger.info('${sc}: Created custom provisioner of type ${data.provisioner.type}');
+                    // Custom provisioner
+                    sc._provisioner = new CustomProvisioner(effectiveProvisionerType, provisioner.root, sc._serverDir, sc);
+                    Logger.info('${sc}: Created CustomProvisioner of type ${effectiveProvisionerType} with root: ${provisioner.root}');
                 }
             } else {
-                // The server already exists BUT the provisioner version is not supported
+                // Fallback - the server already exists BUT the provisioner version is not supported
                 // so we create the provisioner with target path only
-                if (data.provisioner.type == ProvisionerType.StandaloneProvisioner || 
-                    data.provisioner.type == ProvisionerType.AdditionalProvisioner) {
-                    // Use StandaloneProvisioner for built-in provisioner types
-                    sc._provisioner = new StandaloneProvisioner(data.provisioner.type, null, sc._serverDir, sc );
+                if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.StandaloneProvisioner)) {
+                    // Standalone provisioner fallback
+                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, null, sc._serverDir, sc);
+                    Logger.info('${sc}: Created StandaloneProvisioner with null root (fallback)');
+                } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
+                    // Additional provisioner fallback
+                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.AdditionalProvisioner, null, sc._serverDir, sc);
+                    Logger.info('${sc}: Created AdditionalProvisioner with null root (fallback)');
                 } else {
-                    // For custom provisioner types, use CustomProvisioner
-                    sc._provisioner = new CustomProvisioner(data.provisioner.type, null, sc._serverDir, sc );
-                    Logger.info('${sc}: Created custom provisioner of type ${data.provisioner.type} with null root');
+                    // Custom provisioner fallback
+                    sc._provisioner = new CustomProvisioner(effectiveProvisionerType, null, sc._serverDir, sc);
+                    Logger.info('${sc}: Created CustomProvisioner of type ${effectiveProvisionerType} with null root (fallback)');
                 }
             }
         }
@@ -651,6 +685,23 @@ class Server {
         try {
             // Get the server data with customProperties included
             var data = getData();
+            
+            // Ensure type consistency between customProperties and provisioner type
+            if (data.customProperties != null && 
+                Reflect.hasField(data.customProperties, "provisionerDefinition") &&
+                Reflect.hasField(Reflect.field(data.customProperties, "provisionerDefinition"), "data")) {
+                
+                var provDef = Reflect.field(data.customProperties, "provisionerDefinition");
+                var provData = Reflect.field(provDef, "data");
+                
+                // Ensure the provisionerDefinition.data.type matches the top-level provisioner.type
+                if (data.provisioner != null && provData != null) {
+                    if (Std.string(Reflect.field(provData, "type")) != Std.string(data.provisioner.type)) {
+                        Logger.warning('${this}: Type mismatch in customProperties, fixing...');
+                        Reflect.setField(provData, "type", data.provisioner.type);
+                    }
+                }
+            }
             
             // Log what we're saving
             Logger.info('${this}: Saving server data to ${Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE}');
@@ -1818,10 +1869,39 @@ class Server {
         this._status.value = ServerManager.getInstance().getRealStatus( this );
         this._currentAction = ServerAction.None( false );
 
-        this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
-        this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
-            ( this._provisioner != null && this._provisioner.provisioned == true );
-
+        // Determine if this is a custom provisioner
+        var isCustomProvisioner = (this._provisioner != null && 
+                                   this._provisioner.type != null &&
+                                   Std.string(this._provisioner.type) != Std.string(ProvisionerType.StandaloneProvisioner) && 
+                                   Std.string(this._provisioner.type) != Std.string(ProvisionerType.AdditionalProvisioner) && 
+                                   Std.string(this._provisioner.type) != Std.string(ProvisionerType.Default));
+        
+        Logger.verbose('${this}: Setting server status: isCustomProvisioner=${isCustomProvisioner}');
+        
+        // For custom provisioners, only lock hostname and networking fields
+        // Organization and SafeID fields don't apply to custom provisioners
+        if (isCustomProvisioner) {
+            // Fields to lock for custom provisioners when provisioned
+            this._hostname.locked = this._networkBridge.locked = 
+            this._networkAddress.locked = this._networkGateway.locked = 
+            this._networkNetmask.locked = this._dhcp4.locked = 
+            this._disableBridgeAdapter.locked = (this._provisioner != null && this._provisioner.provisioned == true);
+            
+            // Organization and safeID fields should not be locked for custom provisioners
+            this._organization.locked = false;
+            this._userSafeId.locked = false;
+            this._userEmail.locked = false;
+            
+            // Lock roles only if provisioned
+            this._roles.locked = (this._provisioner != null && this._provisioner.provisioned == true);
+        } else {
+            // Standard locking behavior for built-in provisioners
+            this._hostname.locked = this._organization.locked = this._userSafeId.locked = 
+            this._roles.locked = this._networkBridge.locked = this._networkAddress.locked = 
+            this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = 
+            this._userEmail.locked = this._disableBridgeAdapter.locked = 
+                (this._provisioner != null && this._provisioner.provisioned == true);
+        }
     }
 
     function _serverStatusChanged( property:Property<ServerStatus> ) {

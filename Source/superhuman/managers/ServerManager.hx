@@ -85,13 +85,17 @@ class ServerManager {
 
         var server:Server;
         
-        // Handle different provisioner types
-        if (type == ProvisionerType.StandaloneProvisioner || type == ProvisionerType.Default || type == ProvisionerType.Custom) {
+        // Handle different provisioner types - using string comparison for consistency
+        if (Std.string(type) == Std.string(ProvisionerType.StandaloneProvisioner) || 
+            Std.string(type) == Std.string(ProvisionerType.Default) || 
+            Std.string(type) == Std.string(ProvisionerType.Custom)) {
             // Use the standard Server class for standalone provisioners and custom types
             server = Server.create(serverData, serverRootDirectory);
-        } else if (type == ProvisionerType.AdditionalProvisioner) {
+            Logger.info('${this}: Created standard server with provisioner type: ${type}');
+        } else if (Std.string(type) == Std.string(ProvisionerType.AdditionalProvisioner)) {
             // Use the AdditionalServer class for additional provisioners
             server = AdditionalServer.create(serverData, serverRootDirectory);
+            Logger.info('${this}: Created additional server with provisioner type: ${type}');
         } else {
             // For any other custom type, default to standard Server
             // This is safer than defaulting to AdditionalServer which has more specific requirements
@@ -110,15 +114,15 @@ class ServerManager {
 
     public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
-        if ( type == ProvisionerType.StandaloneProvisioner ) 
+        if (Std.string(type) == Std.string(ProvisionerType.StandaloneProvisioner)) 
         {
             return superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( superhuman.server.provisioners.StandaloneProvisioner.getRandomServerId( _serverRootDirectory ) );
         }
-        else if ( type == ProvisionerType.AdditionalProvisioner ) 
+        else if (Std.string(type) == Std.string(ProvisionerType.AdditionalProvisioner)) 
         {
             return superhuman.server.provisioners.AdditionalProvisioner.getDefaultServerData( superhuman.server.provisioners.AdditionalProvisioner.getRandomServerId( _serverRootDirectory ) );
         }
-        else 
+        else
         {
             // For custom provisioner types, use the StandaloneProvisioner as a base
             // This ensures we have a valid ServerData object for any provisioner type

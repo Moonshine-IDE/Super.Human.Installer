@@ -176,71 +176,97 @@ class RolePage extends Page {
             
             Logger.info('RolePage: Final determination - Standard provisioner: ${isStandardProvisioner}, Custom provisioner: ${isCustomProvisioner}');
             
-            Logger.info('RolePage: Is custom provisioner: ${isCustomProvisioner}');
-            Logger.info('RolePage: Provisioner type: ${_server.provisioner.type}');
-            
             // Use custom roles only for custom provisioners
             if (isCustomProvisioner) {
                 // First try to get the provisioner definition from the event data
                 var provisionerDefinition = null;
                 
-                // Check event.data for the provisioner definition name (passed from DynamicConfigPage)
-                try {
-                    var definitionName = null;
-                    
-                    // First check if we have the provisioner definition stored as an instance variable
-                    if (Reflect.hasField(this, "_provisionerDefinition") && 
-                        Reflect.field(this, "_provisionerDefinition") != null) {
-                        provisionerDefinition = Reflect.field(this, "_provisionerDefinition");
-                        Logger.info('RolePage: Using provisioner definition from instance variable: ${provisionerDefinition.name}');
-                    }
-                    // We don't have direct access to event data here in updateContent
-                    // Instead, check if there's a stored definition name in class fields
-                    else if (Reflect.hasField(this, "_lastDefinitionName") && 
-                             Reflect.field(this, "_lastDefinitionName") != null) {
-                        definitionName = Reflect.field(this, "_lastDefinitionName");
-                        Logger.info('RolePage: Using stored definition name: ${definitionName}');
-                        
-                        // Look up the provisioner by name
-                        var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
-                        for (p in allProvisioners) {
-                            if (p.name == definitionName) {
-                                provisionerDefinition = p;
-                                Logger.info('RolePage: Found matching provisioner definition: ${p.name}');
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // Also check if the server has a currentProvisionerDefinitionName in customProperties
-                    if (provisionerDefinition == null && _server.customProperties != null) {
-                        if (Reflect.hasField(_server.customProperties, "currentProvisionerDefinitionName")) {
-                            definitionName = Reflect.field(_server.customProperties, "currentProvisionerDefinitionName");
-                            Logger.info('RolePage: Found provisioner name in server.customProperties: ${definitionName}');
-                            
-                            // Look up the provisioner by name
-                            var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
-                            for (p in allProvisioners) {
-                                if (p.name == definitionName) {
-                                    provisionerDefinition = p;
-                                    Logger.info('RolePage: Found matching provisioner definition: ${p.name}');
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } catch (e) {
-                    Logger.warning('RolePage: Error accessing provisioner definition from event: ${e}');
+                // Try multiple methods to get the provisioner definition, in order of preference
+                
+                // Method 1: Check if we have the provisioner definition stored as an instance variable
+                if (Reflect.hasField(this, "_provisionerDefinition") && 
+                    Reflect.field(this, "_provisionerDefinition") != null) {
+                    provisionerDefinition = Reflect.field(this, "_provisionerDefinition");
+                    Logger.info('RolePage: Using provisioner definition from instance variable: ${provisionerDefinition.name}');
                 }
                 
-                // If not found in event data, get it from the ProvisionerManager
-                if (provisionerDefinition == null) {
+                // Method 2: Check if there's a stored definition name in class fields
+                else if (Reflect.hasField(this, "_lastDefinitionName") && 
+                         Reflect.field(this, "_lastDefinitionName") != null) {
+                    var definitionName = Reflect.field(this, "_lastDefinitionName");
+                    Logger.info('RolePage: Using stored definition name: ${definitionName}');
+                    
+                    // Look up the provisioner by name
+                    var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+                    for (p in allProvisioners) {
+                        if (p.name == definitionName) {
+                            provisionerDefinition = p;
+                            Logger.info('RolePage: Found matching provisioner definition: ${p.name}');
+                            break;
+                        }
+                    }
+                }
+                
+                // Method 3: Check if the server has a currentProvisionerDefinitionName in customProperties
+                else if (provisionerDefinition == null && _server.customProperties != null && 
+                         Reflect.hasField(_server.customProperties, "currentProvisionerDefinitionName")) {
+                    var definitionName = Reflect.field(_server.customProperties, "currentProvisionerDefinitionName");
+                    Logger.info('RolePage: Found provisioner name in server.customProperties: ${definitionName}');
+                    
+                    // Look up the provisioner by name
+                    var allProvisioners = ProvisionerManager.getBundledProvisioners(_server.provisioner.type);
+                    for (p in allProvisioners) {
+                        if (p.name == definitionName) {
+                            provisionerDefinition = p;
+                            Logger.info('RolePage: Found matching provisioner definition: ${p.name}');
+                            break;
+                        }
+                    }
+                }
+                
+                // Method 4: Check if the server has a provisionerDefinition in customProperties
+                else if (provisionerDefinition == null && _server.customProperties != null && 
+                         Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                    provisionerDefinition = Reflect.field(_server.customProperties, "provisionerDefinition");
+                    Logger.info('RolePage: Using provisioner definition from server.customProperties');
+                }
+                
+                // Method 5: Get from the ProvisionerManager by type and version
+                else if (provisionerDefinition == null) {
                     Logger.info('RolePage: Getting provisioner definition for type: ${_server.provisioner.type}, version: ${_server.provisioner.version}');
                     provisionerDefinition = ProvisionerManager.getProvisionerDefinition(_server.provisioner.type, _server.provisioner.version);
                     Logger.info('RolePage: Provisioner definition found: ${provisionerDefinition != null}');
                 }
                 
-                // If definition not found, try to find it in Assets/provisioners directory
+                // Method 6: Try to load directly from user directory
+                if (provisionerDefinition == null) {
+                    // Check in the user's application storage directory
+                    var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+                    var typePath = Path.addTrailingSlash(provisionersDir) + Std.string(_server.provisioner.type);
+                    var provisionerYmlPath = Path.addTrailingSlash(typePath) + "provisioner.yml";
+                    
+                    if (sys.FileSystem.exists(provisionerYmlPath)) {
+                        Logger.info('RolePage: Found provisioner.yml at ${provisionerYmlPath}');
+                        var metadata = ProvisionerManager.readProvisionerMetadata(typePath);
+                        
+                        if (metadata != null) {
+                            Logger.info('RolePage: Successfully loaded metadata from ${provisionerYmlPath}');
+                            
+                            // Create a provisioner definition with this metadata
+                            provisionerDefinition = {
+                                name: metadata.name,
+                                data: { 
+                                    type: metadata.type, 
+                                    version: champaign.core.primitives.VersionInfo.fromString("0.0.0")
+                                },
+                                root: typePath,
+                                metadata: metadata
+                            };
+                        }
+                    }
+                }
+                
+                // Method 7: Try to find it in Assets/provisioners directory
                 if (provisionerDefinition == null) {
                     Logger.info('RolePage: Trying to find provisioner definition in Assets/provisioners directory');
                     
@@ -255,9 +281,7 @@ class RolePage extends Page {
                             Logger.info('RolePage: Found provisioner.yml at ${path}');
                             var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(path));
                             
-                            if (metadata != null && metadata.roles != null && metadata.roles.length > 0) {
-                                Logger.info('RolePage: Found ${metadata.roles.length} roles in provisioner.yml');
-                                
+                            if (metadata != null) {
                                 // Create a provisioner definition with this metadata
                                 provisionerDefinition = {
                                     name: metadata.name,
@@ -275,90 +299,144 @@ class RolePage extends Page {
                     }
                 }
                 
+                // Use standard server roles if no custom roles found
+                var rolesList:Array<ServerRoleImpl> = [];
+                
+                // First check if we have roles in the provisioner definition
                 if (provisionerDefinition != null && 
-                    provisionerDefinition.metadata != null && 
-                    provisionerDefinition.metadata.roles != null && 
-                    provisionerDefinition.metadata.roles.length > 0) {
+                    provisionerDefinition.metadata != null) {
                     
-                    Logger.info('RolePage: Found ${provisionerDefinition.metadata.roles.length} roles in provisioner metadata');
-                    
-                    var customRoles:Array<ServerRoleImpl> = [];
-                    
-                    // Create ServerRoleImpl objects from the provisioner.yml roles
-                    var roles:Array<Dynamic> = cast provisionerDefinition.metadata.roles;
-                    for (roleData in roles) {
-                        // Check if this role already exists in the server's roles
-                        var existingRole:RoleData = null;
-                        var roleName = Reflect.field(roleData, "name");
-                        var roleLabel = Reflect.field(roleData, "label");
-                        var roleDescription = Reflect.field(roleData, "description");
-                        var roleDefaultEnabled = Reflect.field(roleData, "defaultEnabled");
-                        
-                        for (r in _server.roles.value) {
-                            if (r.value == roleName) {
-                                existingRole = r;
-                                break;
-                            }
+                    // Report provisioner metadata status
+                    Logger.info('RolePage: Provisioner metadata found: ${provisionerDefinition.metadata != null}');
+                    if (provisionerDefinition.metadata != null) {
+                        var hasRoles = provisionerDefinition.metadata.roles != null && provisionerDefinition.metadata.roles.length > 0;
+                        Logger.info('RolePage: Roles defined in metadata: ${hasRoles}');
+                        if (hasRoles) {
+                            Logger.info('RolePage: Found ${provisionerDefinition.metadata.roles.length} roles in provisioner metadata');
                         }
-                        
-                        // If the role doesn't exist in the server's roles, create a new one
-                        if (existingRole == null) {
-                            existingRole = {
-                                value: roleName,
-                                enabled: roleDefaultEnabled == true,
-                                files: {
-                                    installer: null,
-                                    installerFileName: null,
-                                    installerHash: null,
-                                    installerVersion: null,
-                                    hotfixes: [],
-                                    installerHotFixHash: null,
-                                    installerHotFixVersion: null,
-                                    fixpacks: [],
-                                    installerFixpackHash: null,
-                                    installerFixpackVersion: null
-                                }
-                            };
-                            
-                            // Add the new role to the server's roles
-                            _server.roles.value.push(existingRole);
-                        }
-                        
-                        // Create a ServerRoleImpl for the role
-                        // Get required and installers settings, if available
-                        var roleRequired = Reflect.field(roleData, "required") == true;
-                        var roleInstallers = Reflect.field(roleData, "installers");
-                        
-                        // Set required flag on the role data (which will make the checkbox disabled)
-                        existingRole.isdefault = roleRequired;
-                        
-                        // Store installer settings in the role data for later use
-                        if (roleInstallers != null) {
-                            Reflect.setField(existingRole, "showInstaller", Reflect.field(roleInstallers, "installer") == true);
-                            Reflect.setField(existingRole, "showFixpack", Reflect.field(roleInstallers, "fixpack") == true);
-                            Reflect.setField(existingRole, "showHotfix", Reflect.field(roleInstallers, "hotfix") == true);
-                        } else {
-                            // Default values - don't show any installers for custom roles unless specified
-                            Reflect.setField(existingRole, "showInstaller", false);
-                            Reflect.setField(existingRole, "showFixpack", false);
-                            Reflect.setField(existingRole, "showHotfix", false);
-                        }
-                        
-                        var roleImpl = new ServerRoleImpl(
-                            roleLabel,
-                            roleDescription,
-                            existingRole,
-                            [], // No hashes for custom roles
-                            [], // No hotfix hashes
-                            [], // No fixpack hashes
-                            "" // No file hint
-                        );
-                        
-                        customRoles.push(roleImpl);
                     }
                     
+                    // Process roles from provisioner.yml if available
+                    if (provisionerDefinition.metadata.roles != null && 
+                        provisionerDefinition.metadata.roles.length > 0) {
+                        
+                        // Create ServerRoleImpl objects from the provisioner.yml roles
+                        var roles:Array<Dynamic> = cast provisionerDefinition.metadata.roles;
+                        for (roleData in roles) {
+                            try {
+                                // Extract role properties
+                                var roleName = Reflect.field(roleData, "name");
+                                var roleLabel = Reflect.field(roleData, "label");
+                                var roleDescription = Reflect.field(roleData, "description");
+                                var roleDefaultEnabled = Reflect.field(roleData, "defaultEnabled");
+                                
+                                Logger.info('RolePage: Processing role: ${roleName} (${roleLabel})');
+                                
+                                // Check if this role already exists in the server's roles
+                                var existingRole:RoleData = null;
+                                for (r in _server.roles.value) {
+                                    if (r.value == roleName) {
+                                        existingRole = r;
+                                        Logger.info('RolePage: Found existing role in server: ${roleName}');
+                                        break;
+                                    }
+                                }
+                                
+                                // If the role doesn't exist in the server's roles, create a new one
+                                if (existingRole == null) {
+                                    Logger.info('RolePage: Creating new role for server: ${roleName}');
+                                    existingRole = {
+                                        value: roleName,
+                                        enabled: roleDefaultEnabled == true,
+                                        files: {
+                                            installer: null,
+                                            installerFileName: null,
+                                            installerHash: null,
+                                            installerVersion: null,
+                                            hotfixes: [],
+                                            installerHotFixHash: null,
+                                            installerHotFixVersion: null,
+                                            fixpacks: [],
+                                            installerFixpackHash: null,
+                                            installerFixpackVersion: null
+                                        }
+                                    };
+                                    
+                                    // Add the new role to the server's roles
+                                    _server.roles.value.push(existingRole);
+                                }
+                                
+                                // Get required and installers settings, if available
+                                var roleRequired = Reflect.field(roleData, "required") == true;
+                                var roleInstallers = Reflect.field(roleData, "installers");
+                                
+                                // Set required flag on the role data (which will make the checkbox disabled)
+                                existingRole.isdefault = roleRequired;
+                                
+                                // Store installer settings in the role data for later use
+                                if (roleInstallers != null) {
+                                    Reflect.setField(existingRole, "showInstaller", Reflect.field(roleInstallers, "installer") == true);
+                                    Reflect.setField(existingRole, "showFixpack", Reflect.field(roleInstallers, "fixpack") == true);
+                                    Reflect.setField(existingRole, "showHotfix", Reflect.field(roleInstallers, "hotfix") == true);
+                                } else {
+                                    // Default values - don't show any installers for custom roles unless specified
+                                    Reflect.setField(existingRole, "showInstaller", false);
+                                    Reflect.setField(existingRole, "showFixpack", false);
+                                    Reflect.setField(existingRole, "showHotfix", false);
+                                }
+                                
+                                // Create the ServerRoleImpl with the role description
+                                var roleImpl = new ServerRoleImpl(
+                                    roleLabel,
+                                    roleDescription,  // Use the description from provisioner.yml
+                                    existingRole,
+                                    [], // No hashes for custom roles
+                                    [], // No hotfix hashes
+                                    [], // No fixpack hashes
+                                    "" // No file hint
+                                );
+                                
+                                rolesList.push(roleImpl);
+                                Logger.info('RolePage: Added custom role: ${roleLabel} with description: ${roleDescription}');
+                            } catch (e) {
+                                Logger.error('RolePage: Error processing role: ${e}');
+                            }
+                        }
+                    } 
+                    // If no roles defined in metadata, but server has basic domino roles, create those
+                    else if (_server.roles.value.length > 0) {
+                        Logger.info('RolePage: No custom roles found in metadata, using server\'s existing roles');
+                        
+                        // Create ServerRoleImpl objects for existing server roles
+                        for (r in _server.roles.value) {
+                            // Skip empty or invalid roles
+                            if (r == null || r.value == null || r.value == "") continue;
+                            
+                            // Try to find a description for this role
+                            var roleName = r.value;
+                            var roleLabel = roleName; // Just use the role name directly
+                            var roleDescription = 'Custom role: ${roleName}';
+                            
+                            var roleImpl = new ServerRoleImpl(
+                                roleLabel,
+                                roleDescription,
+                                r,
+                                [], // No hashes for custom roles
+                                [], // No hotfix hashes 
+                                [], // No fixpack hashes
+                                "" // No file hint
+                            );
+                            
+                            rolesList.push(roleImpl);
+                            Logger.info('RolePage: Added existing server role: ${roleName}');
+                        }
+                    }
+                }
+                
+                // If we have roles, display them
+                if (rolesList.length > 0) {
                     // Add the custom roles to the list
-                    for (i in customRoles) {
+                    for (i in rolesList) {
                         var item = new RolePickerItem(i, _server);
                         _listGroup.addChild(item);
                         
@@ -369,6 +447,8 @@ class RolePage extends Page {
                     }
                     
                     return; // Skip the default roles
+                } else {
+                    Logger.warning('RolePage: No roles found for custom provisioner, falling back to default roles');
                 }
             }
             
@@ -408,6 +488,7 @@ class RolePage extends Page {
 class RolePickerItem extends LayoutGroup {
 
     var _check:AdvancedCheckBox;
+    var _descriptionLabel:Label;
     var _fixpackButton:Button;
     var _helpImage:AdvancedAssetLoader;
     var _hotfixButton:Button;
@@ -550,7 +631,18 @@ class RolePickerItem extends LayoutGroup {
         } else if (showInstaller) {
             _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = true;
         } else {
-            _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = false;
+            // For custom roles where showInstaller is false, still show the description
+            // Check if this is a custom role with a description
+            var isCustomRole = !Reflect.hasField(_roleImpl.role, "isdefault") || 
+                              (Reflect.hasField(_roleImpl.role, "showInstaller") && !Reflect.field(_roleImpl.role, "showInstaller"));
+            
+            if (isCustomRole && _roleImpl.description != null && _roleImpl.description.length > 0) {
+                // Update the label to show the description instead of installer text
+                _selectInstallerLabel.text = _roleImpl.description;
+                _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = true;
+            } else {
+                _selectInstallerLabel.visible = _selectInstallerLabel.includeInLayout = false;
+            }
         }
         
         // Show hotfix files if any are selected
