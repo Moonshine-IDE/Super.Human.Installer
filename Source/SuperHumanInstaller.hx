@@ -415,6 +415,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER, _createAdditionalDominoServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER, _createCustomServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
 		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
 		
 		_configPage = new ConfigPage();
@@ -1290,9 +1291,15 @@ class SuperHumanInstaller extends GenesisApplication {
             }
         }
         
-        // Update the service type page with the new collection
+        // Always update the service types collection in the page
         if (_serviceTypePage != null) {
+            // Update with the latest collection
             _serviceTypePage.updateServiceTypes(_serviceTypesCollection);
+            
+            // If we're currently on the service type page, explicitly force a refresh
+            if (this.selectedPageId == PAGE_SERVICE_TYPE) {
+                _serviceTypePage.refreshServiceTypes();
+            }
         }
         
         // Refresh the server page to show the new provisioner
@@ -1555,6 +1562,13 @@ class SuperHumanInstaller extends GenesisApplication {
 			_settingsPage.setApplications(_applicationsCollection);
 			
 			_settingsPage.updateData();
+		}
+		else if ( _selectedPageId == PAGE_SERVICE_TYPE )
+		{
+			// Make sure the service types list is always refreshed when navigating to this page
+			if (_serviceTypePage != null) {
+				_serviceTypePage.updateServiceTypes(_serviceTypesCollection);
+			}
 		}
 	}
 

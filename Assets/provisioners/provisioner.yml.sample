@@ -1,7 +1,7 @@
-name: "HCL Custom Provisioner"
-type: "hcl_domino_custom_provisioner"
-description: "A custom provisioner for Domino servers"
-author: "Your Name"
+name: "Test Provisioner"
+type: "hcl_domino_test_provisioner"
+description: "Test Provisioner"
+author: "MarkProminic"
 
 configuration:
   basicFields:
@@ -11,6 +11,7 @@ configuration:
       placeholder: "Enter server hostname"
       tooltip: "The hostname for your Domino server"
       required: true
+      hidden: false
       restrict: "a-zA-Z0-9.-"
       
     - name: "DOMAIN"
@@ -19,6 +20,7 @@ configuration:
       placeholder: "example.com"
       tooltip: "The domain name for your server"
       required: true
+      hidden: false
       restrict: "a-zA-Z0-9.-"
       
     - name: "SERVER_ORGANIZATION"
@@ -27,6 +29,7 @@ configuration:
       placeholder: "Enter organization name"
       tooltip: "The organization name for your Domino server"
       required: true
+      hidden: false
       restrict: "a-zA-Z0-9-"
       
     - name: "USER_EMAIL"
@@ -35,6 +38,7 @@ configuration:
       placeholder: "user@example.com"
       tooltip: "Email address for the server administrator"
       required: true
+      hidden: true
       
     - name: "BOX"
       type: "text"
@@ -602,7 +606,7 @@ roles:
     label: "Domino Install"
     description: "Install Domino server"
     defaultEnabled: true
-    required: true
+    required: false
     installers:
       installer: true
       fixpack: true

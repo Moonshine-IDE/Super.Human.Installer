@@ -30,6 +30,10 @@
 
 package superhuman.components.serviceType;
 
+import lime.ui.FileDialog;
+import lime.ui.FileDialogType;
+import superhuman.managers.ProvisionerManager;
+import genesis.application.managers.ToastManager;
 import superhuman.server.data.ServerUIType;
 import superhuman.server.ServerType;
 import superhuman.server.provisioners.ProvisionerType;
@@ -63,6 +67,7 @@ class ServiceTypePage extends Page {
     var _buttonGroupLayout:HorizontalLayout;
     var _buttonSave:GenesisFormButton;
     var _buttonClose:GenesisFormButton;
+    var _buttonImportProvisioner:GenesisFormButton;
     
     var _serviceTypesCollection:Array<ServiceTypeData>;
 	
@@ -134,6 +139,10 @@ class ServiceTypePage extends Page {
         _buttonClose = new GenesisFormButton( LanguageManager.getInstance().getString( 'settingspage.buttons.cancel' ) );
         _buttonClose.addEventListener( TriggerEvent.TRIGGER, _buttonCloseTriggered );
         _buttonGroup.addChild( _buttonClose );
+        
+        _buttonImportProvisioner = new GenesisFormButton("Import Provisioner");
+        _buttonImportProvisioner.addEventListener(TriggerEvent.TRIGGER, _importProvisioner);
+        _buttonGroup.addChild(_buttonImportProvisioner);
     }
     
     function _continueButtonTriggered(e:TriggerEvent) {
@@ -196,12 +205,54 @@ class ServiceTypePage extends Page {
     }
     
     /**
+     * Handle the import provisioner button click
+     * @param e The trigger event
+     */
+    function _importProvisioner(e:TriggerEvent) {
+        var fd = new FileDialog();
+        fd.onSelect.add(path -> {
+            // Import the provisioner
+            var success = ProvisionerManager.importProvisioner(path);
+            
+            if (success) {
+                ToastManager.getInstance().showToast("Provisioner imported successfully");
+                
+                // Dispatch event to notify the application that a provisioner was imported
+                var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
+                this.dispatchEvent(event);
+            } else {
+                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner.yml file and at least one version directory with scripts.");
+            }
+        });
+        
+        fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, "Select Provisioner Directory");
+    }
+    
+    /**
      * Update the service types collection and refresh the grid
      * @param serviceTypes The new service types collection
      */
     public function updateServiceTypes(serviceTypes:Array<ServiceTypeData>) {
         // Update the internal collection
         _serviceTypesCollection = serviceTypes;
+        
+        // Sort the provisioners by type: Standalone first, Additional second, custom types last
+        _serviceTypesCollection.sort((a, b) -> {
+            // Standalone first
+            if (a.provisionerType == ProvisionerType.StandaloneProvisioner && b.provisionerType != ProvisionerType.StandaloneProvisioner)
+                return -1;
+            if (a.provisionerType != ProvisionerType.StandaloneProvisioner && b.provisionerType == ProvisionerType.StandaloneProvisioner)
+                return 1;
+            
+            // Additional second
+            if (a.provisionerType == ProvisionerType.AdditionalProvisioner && b.provisionerType != ProvisionerType.AdditionalProvisioner)
+                return -1;
+            if (a.provisionerType != ProvisionerType.AdditionalProvisioner && b.provisionerType == ProvisionerType.AdditionalProvisioner)
+                return 1;
+            
+            // Everything else (custom provisioners) is equal priority
+            return 0;
+        });
         
         // Update the grid's data provider
         if (_serviceTypeGrid != null) {
@@ -211,6 +262,23 @@ class ServiceTypePage extends Page {
             if (_serviceTypesCollection.length > 0) {
                 _serviceTypeGrid.selectedIndex = 0;
             }
+            
+            // Force the grid to update by calling updateAll on the data provider
+            _serviceTypeGrid.dataProvider.updateAll();
+            
+            // Validate the grid to ensure UI is updated
+            _serviceTypeGrid.validateNow();
+        }
+    }
+    
+    /**
+     * Force a refresh of the service types grid
+     * Similar to how SettingsPage.refreshBrowsers() works
+     */
+    public function refreshServiceTypes() {
+        if (_serviceTypeGrid != null && _serviceTypeGrid.dataProvider != null) {
+            _serviceTypeGrid.dataProvider.updateAll();
+            _serviceTypeGrid.validateNow();
         }
     }
 }

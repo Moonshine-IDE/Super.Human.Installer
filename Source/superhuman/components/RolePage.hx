@@ -105,6 +105,8 @@ class RolePage extends Page {
         scrollLayout.gap = GenesisApplicationTheme.GRID;
         scrollLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
         scrollLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingLeft = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingRight = GenesisApplicationTheme.GRID * 3; // Extra padding on right side for scrollbar
         scrollContainer.layout = scrollLayout;
         
         // Add the scroll container to the page
@@ -529,8 +531,9 @@ class RolePickerItem extends LayoutGroup {
         _labelGroup.layoutData = new VerticalLayoutData( 100 );
         _labelGroupLayout = new HorizontalLayout();
         _labelGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
+        _labelGroupLayout.paddingRight = GenesisApplicationTheme.GRID * 2; // Add right padding for rightmost button
         _labelGroup.layout = _labelGroupLayout;
-        _labelGroupLayout.gap = 4;
+        _labelGroupLayout.gap = GenesisApplicationTheme.GRID;
         this.addChild( _labelGroup );
 
         _check = new AdvancedCheckBox( _roleImpl.name, _roleImpl.role.enabled );

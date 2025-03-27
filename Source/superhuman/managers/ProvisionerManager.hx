@@ -97,6 +97,7 @@ typedef ProvisionerField = {
     var label:String;
     @:optional var defaultValue:Dynamic;
     @:optional var required:Bool;
+    @:optional var hidden:Bool; // Whether to hide this field in the UI
     @:optional var validationKey:String; // Reference to validation key in Server class
     @:optional var options:Array<{value:String, label:String}>; // For dropdown fields
     @:optional var min:Float; // For number fields

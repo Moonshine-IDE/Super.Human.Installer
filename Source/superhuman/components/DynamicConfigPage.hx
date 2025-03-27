@@ -631,6 +631,29 @@ class DynamicConfigPage extends Page {
             return;
         }
         
+        // Skip UI creation for hidden fields but still store them in dynamicFields
+        // First check if the field has a hidden property that's true
+        var isHidden = false;
+        if (Reflect.hasField(field, "hidden")) {
+            var hiddenValue = Reflect.field(field, "hidden");
+            isHidden = (hiddenValue == true || Std.string(hiddenValue).toLowerCase() == "true");
+            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}');
+        }
+        
+        if (isHidden) {
+            // For hidden fields, store a reference to the default value directly
+            var defaultValue = null;
+            if (field.defaultValue != null) {
+                defaultValue = field.defaultValue;
+            }
+            _dynamicFields.set(field.name, {
+                hidden: true,
+                value: defaultValue
+            });
+            Logger.info('${this}: Created hidden field ${field.name} with value: ${defaultValue}');
+            return;
+        }
+        
         // Create a new row for the field
         var row = new GenesisFormRow();
         row.text = field.label != null ? field.label : "Unnamed Field";
@@ -1131,7 +1154,14 @@ class DynamicConfigPage extends Page {
         for (fieldName => field in _dynamicFields) {
             var value:String = null;
             
-            if (Std.isOfType(field, GenesisFormTextInput)) {
+            // Special handling for hidden fields stored as objects with {hidden: true, value: defaultValue}
+            if (Reflect.hasField(field, "hidden") && Reflect.field(field, "hidden") == true) {
+                // For hidden fields, use the defaultValue directly
+                if (Reflect.hasField(field, "value")) {
+                    value = Std.string(Reflect.field(field, "value"));
+                    Logger.info('${this}: Using default value for hidden field ${fieldName}: ${value}');
+                }
+            } else if (Std.isOfType(field, GenesisFormTextInput)) {
                 var input:GenesisFormTextInput = cast field;
                 value = StringTools.trim(input.text);
                 Logger.info('${this}: Getting value from text input ${fieldName}: ${value}');
