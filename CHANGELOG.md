@@ -3,6 +3,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [1.2.0]
+
+The 1.2.0 release of Super.Human.Installer adds support for additional Domino server configuration, improves server management, and updates installer components.
+
+### Added
+* Added Hotfix option for Nomad role ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Added Vagrant cache cleanup before server start to improve reliability ([#106](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/106), [#92](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/92))
+* Added new hashes for latest versions ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139)):
+  * Nomad Web 1.0.15-IF1
+  * Leap 1.0.17
+  * Domino 12.0.2 FP6
+  * HCL Verse (multiple versions)
+* Added default enabled JEDI role for improved server functionality ([#141](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/141))
+
+### Changed
+* Updated standalone provisioner to newest version for improved compatibility ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Updated hcl_domino_additional_provisioner with latest improvements ([#85](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/85))
+* Improved logging for gathering status of server ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Enhanced validation for existing server configurations ([#85](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/85))
+
+### Fixed
+* Fixed displaying full FQDN address on the list of servers for additional server ([#85](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/85))
+* Fixed existing server name validation ([#85](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/85))
+* Fixed missing SERVER_ORGANIZATION value ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Fixed missing ansible collection in Hosts.template ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Fixed issues with HCL Leap and Verse installation ([#135](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/135))
+* Fixed error when recreating server after deletion ([#92](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/92), [#106](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/106))
+
 ## Super Human Installer [1.1.0]
 
 The 1.1.0 release of Super.Human.Installer enhances Domino Server support and improves VM management capabilities.
