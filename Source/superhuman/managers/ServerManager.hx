@@ -33,6 +33,7 @@ package superhuman.managers;
 import superhuman.server.AdditionalServer;
 import feathers.data.ArrayCollection;
 import champaign.core.logging.Logger;
+import haxe.io.Path;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.io.AbstractExecutor;
@@ -207,17 +208,18 @@ class ServerManager {
 
         }
 
-        if ( result == ServerStatus.Unknown ) {
-
-            if ( server.isValid() )
-            {
+        // Check if the VM exists in VirtualBox but doesn't have a recognized state
+        if (result == ServerStatus.Unknown) {
+            // If the VM exists in VirtualBox but doesn't have a standard state,
+            // assume it's powered off and should be destroyable
+            if (server.vmExistsInVirtualBox()) {
+                Logger.info('${server}: VM exists in VirtualBox but with unknown state, assuming Stopped');
+                result = ServerStatus.Stopped(false);
+            } else if (server.isValid()) {
                 result = ServerStatus.Ready;
-            }
-            else
-            {
+            } else {
                 result = ServerStatus.Unconfigured;
             }
-
         }
 
         if ( !server.isValid() ) 
@@ -320,10 +322,44 @@ class ServerManager {
 		}
 
 		for ( s in _servers ) {
-
-			// Deleting provisioning proof file if VirtualBox machine does not exist for this server
-			if ( s.combinedVirtualMachine.value.virtualBoxMachine.name == null ) s.deleteProvisioningProof();
-
+			// Check if the VM exists in either Vagrant or VirtualBox
+			var vmExistsInVagrant = false;
+			var vmExistsInVirtualBox = false;
+			
+			// Check if there's a matching Vagrant state entry
+			for (vagrantMachine in Vagrant.getInstance().machines) {
+				if (vagrantMachine.serverId == s.id) {
+					vmExistsInVagrant = true;
+					break;
+				}
+			}
+			
+			// Check if there's a matching VirtualBox entry
+			for (vboxMachine in VirtualBox.getInstance().virtualBoxMachines) {
+				if (vboxMachine.name == s.virtualBoxId) {
+					vmExistsInVirtualBox = true;
+					break;
+				}
+			}
+			
+			// Log VM existence state for this server
+			Logger.info('${this}: Server ${s.id} - VM exists in Vagrant: ${vmExistsInVagrant}, VM exists in VirtualBox: ${vmExistsInVirtualBox}');
+			
+			// IMPORTANT: We're being very conservative about deleting the provisioning proof
+			// Only delete it if we have strong evidence that the VM truly no longer exists
+			// and there's no .vagrant/machines directory which would indicate a VM once existed
+			if (!vmExistsInVagrant && !vmExistsInVirtualBox && 
+			    s.combinedVirtualMachine.value.virtualBoxMachine.name == null &&
+			    !FileSystem.exists(Path.addTrailingSlash(s.path.value) + ".vagrant/machines")) {
+				Logger.info('${this}: No VM found for server ${s.id} and no vagrant machine directory exists, deleting provisioning proof');
+				s.deleteProvisioningProof();
+			} else if (vmExistsInVirtualBox && !s.provisioned) {
+				// If the VM exists in VirtualBox but the provisioned flag is false,
+				// we should ensure the server is considered provisioned
+				Logger.info('${this}: Server ${s.id} has a VM in VirtualBox but provisioning proof missing, server status may be incorrect');
+				// We don't need to do anything explicit here since our vmExistsInVirtualBox() method in Server.hx
+				// will now correctly report the server as provisioned
+			}
 		}
 
         for ( f in _onVMInfoRefreshed ) f();

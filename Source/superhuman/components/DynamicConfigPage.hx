@@ -1415,6 +1415,9 @@ class DynamicConfigPage extends Page {
         // Update the last used safe ID
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
+        // EXPLICIT: Force the provisioner to copy files regardless of exists check
+        _server.provisioner.copyFiles();
+        
         // Initialize server files if this is a provisional server
         if (_server.provisional) {
             Logger.info('${this}: Initializing server files for provisional server');

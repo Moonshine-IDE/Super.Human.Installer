@@ -178,16 +178,39 @@ class AdditionalServerPage extends Page
 		_server.organization.value = StringTools.trim( inputOrganizationDominoServer.text );
 		_server.existingServerIpAddress.value = StringTools.trim( inputExistingServerIp.text );
 		
+        // Ensure we don't lose the serverProvisionerId when we update the provisioner
+        var currentServerProvisionerId = _server.serverProvisionerId.value;
+        
 		var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
-			_server.updateProvisioner( dvv.data );
+		_server.updateProvisioner( dvv.data );
+        
+        // Restore the serverProvisionerId if it was lost or changed to version number
+        if (currentServerProvisionerId != null && (_server.serverProvisionerId.value == null || 
+            _server.serverProvisionerId.value == dvv.data.version || 
+            _server.serverProvisionerId.value != currentServerProvisionerId)) {
+            
+            _server.serverProvisionerId.value = currentServerProvisionerId;
+        }
 	
-		if (_server.isValid()) {		
-			SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
+		if (_server.isValid()) {	
+            // EXPLICIT: Force the provisioner to copy files regardless of exists check
+            _server.provisioner.copyFiles();
+            
+            // Initialize server files - creates directory and copies provisioner files
+            if (_server.provisional) {
+                _server.initializeServerFiles();
+            }
+	
+			// Store the selected serverProvisionerId for future use in global settings
+			SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.serverProvisionerId.value;
+            
+            // Make sure server.saveData() is called to persist server_provisioner_id
+            _server.saveData();
 			
 			var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
 				evt.server = _server;
 			this.dispatchEvent( evt );
-    		}
+    	}
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {

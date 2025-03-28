@@ -486,6 +486,9 @@ class ConfigPage extends Page {
         // Save common variables to server's customProperties
         _saveCommonVariables();
         
+        // EXPLICIT: Force the provisioner to copy files regardless of exists check
+        _server.provisioner.copyFiles();
+        
         // Initialize server files - creates directory and initial configuration
         if (_server.provisional) {
             _server.initializeServerFiles();

@@ -143,8 +143,8 @@ class Server {
                     sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, provisioner.root, sc._serverDir, sc);
                     Logger.info('${sc}: Created StandaloneProvisioner with root: ${provisioner.root}');
                 } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
-                    // Additional provisioner
-                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.AdditionalProvisioner, provisioner.root, sc._serverDir, sc);
+                    // Additional provisioner - create the proper AdditionalProvisioner instance, not StandaloneProvisioner
+                    sc._provisioner = new superhuman.server.provisioners.AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, provisioner.root, sc._serverDir, sc);
                     Logger.info('${sc}: Created AdditionalProvisioner with root: ${provisioner.root}');
                 } else {
                     // Custom provisioner
@@ -159,8 +159,8 @@ class Server {
                     sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, null, sc._serverDir, sc);
                     Logger.info('${sc}: Created StandaloneProvisioner with null root (fallback)');
                 } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
-                    // Additional provisioner fallback
-                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.AdditionalProvisioner, null, sc._serverDir, sc);
+                    // Additional provisioner fallback - create the proper AdditionalProvisioner instance, not StandaloneProvisioner
+                    sc._provisioner = new superhuman.server.provisioners.AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, null, sc._serverDir, sc);
                     Logger.info('${sc}: Created AdditionalProvisioner with null root (fallback)');
                 } else {
                     // Custom provisioner fallback
@@ -371,7 +371,25 @@ class Server {
     function get_path() return _path;
 
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _provisioner.provisioned;
+    function get_provisioned() {
+        // Return true if either the provisioner reports provisioned OR the VM exists in VirtualBox
+        return _provisioner.provisioned || vmExistsInVirtualBox();
+    }
+    
+    /**
+     * Checks if this server's VM exists in VirtualBox
+     * @return True if the VM exists, false otherwise
+     */
+    public function vmExistsInVirtualBox():Bool {
+        if (this.virtualBoxId == null) return false;
+        
+        for (vm in VirtualBox.getInstance().virtualBoxMachines) {
+            if (vm.name == this.virtualBoxId) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public var provisionedBeforeStart( get, never ):Bool;
     function get_provisionedBeforeStart() return _provisionedBeforeStart;
