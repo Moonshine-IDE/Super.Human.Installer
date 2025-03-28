@@ -86,6 +86,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
@@ -165,6 +166,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonOpenBrowser:GenesisButton;
     var _buttonSSH:GenesisButton;
     var _buttonOpenDir:GenesisButton;      
+    var _buttonOpenTerminal:GenesisButton;
     var _buttonDelete:GenesisButton;  
     var _buttonFtp:GenesisButton;    
            
@@ -323,6 +325,14 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonOpenDir.addEventListener( TriggerEvent.TRIGGER, _buttonOpenDirTriggered );
         buttonGroup.addChild( _buttonOpenDir );
 
+        _buttonOpenTerminal = new GenesisButton();
+        _buttonOpenTerminal.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CONSOLE );
+        _buttonOpenTerminal.width = CONTROL_BUTTON_WIDTH;
+        _buttonOpenTerminal.height = CONTROL_BUTTON_HEIGHT;
+        _buttonOpenTerminal.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.terminal' );
+        _buttonOpenTerminal.addEventListener( TriggerEvent.TRIGGER, _buttonOpenTerminalTriggered );
+        buttonGroup.addChild( _buttonOpenTerminal );
+
         _buttonDelete = new GenesisButton();
         _buttonDelete.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DELETE );
         _buttonDelete.width = CONTROL_BUTTON_WIDTH;
@@ -447,6 +457,15 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonOpenDirTriggered( e:TriggerEvent ) {
     	
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY );
+        event.provisionerType = _server.provisioner.type;
+        event.server = _server;
+        this.dispatchEvent( event );
+        
+    }
+    
+    function _buttonOpenTerminalTriggered( e:TriggerEvent ) {
+    	
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL );
         event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
@@ -691,6 +710,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
         _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
         _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = false;
+        _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = false;
         _buttonFtp.enabled = _buttonFtp.includeInLayout = _buttonFtp.visible = false;
         _buttonProvision.enabled = _buttonProvision.includeInLayout = _buttonProvision.visible = false;
         _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = false;
@@ -714,6 +734,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = !_server.provisioned;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+                _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
@@ -721,6 +742,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Start( provisionedBefore ):
             		_buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+            		_buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 if ( provisionedBefore ) {
 
                     _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
@@ -740,6 +762,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Running( hasError ):
             	    _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+            	    _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
             	    _buttonFtp.enabled = _buttonFtp.includeInLayout = _buttonFtp.visible = true;
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
@@ -801,11 +824,13 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+                _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unconfigured' );
 
             case ServerStatus.Ready:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+                _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );

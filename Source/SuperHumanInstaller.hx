@@ -394,6 +394,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _openBrowserServerAddress );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _openServerTerminal );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _deleteServer );
 						
 		_serverPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _configureServer );
@@ -1607,6 +1608,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info('${this}: _openServerDir path: ${e.server.path.value}');
 		Shell.getInstance().open( [ e.server.path.value ] );
+
+	}
+	
+	function _openServerTerminal( e:SuperHumanApplicationEvent ) {
+
+		Logger.info('${this}: _openServerTerminal path: ${e.server.path.value}');
 		Shell.getInstance().openTerminal( e.server.path.value, false );
 
 	}

@@ -23,13 +23,13 @@
     },
     "alert":{
         "destroyserver":{
-            "title":"Are you sure want to destroy this server?",
+            "title":"Are you sure you want to destroy this server?",
             "text":"The virtual machine will be deleted, but the server and its configuration and files will remain intact.",
             "buttonok":"OK",
             "buttoncancel":"Cancel"
         },
         "deleteserver":{
-            "title":"Are you sure want to delete this server?",
+            "title":"Are you sure you want to delete this server?",
             "text":"You're about to delete this server. You can remove the server only from the list, while keeping its files on disk, or you can delete the server and its files as well. The original installer files you might have selected during the configuration process will not be deleted.",
             "buttondelete":"Remove only",
             "buttondeletefiles":"Delete files",
@@ -348,7 +348,7 @@
             "configure": "Configure server",
             "delete": "Delete server",
             "destroy": "Destroy server",
-            "directory": "Open server directory in default file manager, and in Terminal",
+            "directory": "Open server directory in default file manager",
             "ftp": "Open server directory",
             "output": "Display console output",
             "provision": "Run provisioning on server",
@@ -360,6 +360,7 @@
             "sysinfo": "Provisioner: %1  •  System: %2 %3, %4GB RAM",
             "vagrantssh": "Open Vagrant SSH in terminal",
             "welcomepage": "Open Welcome page",
+            "terminal": "Open terminal in server directory",
             "status":{
                 "aborted": "Status: Aborted. Please destroy the server to reinitialize it",
                 "destroying": "Status: Destroying, please wait...",

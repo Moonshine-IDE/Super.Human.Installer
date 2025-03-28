@@ -68,6 +68,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_DOWNLOAD_BROWSER:String = "openDownloadBrowser";
     public static final OPEN_CONSOLE:String = "openConsole";
     public static final OPEN_SERVER_DIRECTORY:String = "openServerDirectory";
+    public static final OPEN_SERVER_TERMINAL:String = "openServerTerminal";
     public static final OPEN_VAGRANT_SSH:String = "openVagrantSSH";
     public static final OPEN_VIRTUALBOX_GUI:String = "openVirtualBoxGUI";
     public static final PROVISION_SERVER:String = "provisionServer";
