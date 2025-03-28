@@ -81,149 +81,17 @@ class CustomProvisioner extends StandaloneProvisioner {
             Logger.info('${this}: Using default source path: ${sourcePath}');
         }
 
-        Logger.info('${this}: Copying server configuration files to ${_targetPath} from ${sourcePath}');
-        if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, ""));
+        // Temporarily store the original _sourcePath
+        var originalSource = _sourcePath;
         
-        // Create target directory if it doesn't exist
-        if (!FileSystem.exists(_targetPath)) {
-            FileSystem.createDirectory(_targetPath);
-        }
-
-        try {
-            // First zip the scripts directory
-            var zipBytes = _zipDirectory(Path.addTrailingSlash(sourcePath) + "scripts/");
-            
-            // Then unzip to the target directory
-            _unzipToDirectory(zipBytes, _targetPath);
-            
-            Logger.info('${this}: Successfully copied files using zip/unzip method');
-            if (callback != null) callback();
-            
-        } catch (e) {
-            Logger.error('${this}: Error copying files: ${e}');
-            if (console != null) console.appendText('Error copying provisioner files: ${e}', true);
-        }
-    }
-
-    /**
-     * Zip a directory and return the zipped bytes
-     * @param directory The directory to zip
-     * @return Bytes The zipped content
-     */
-    private function _zipDirectory(directory:String):haxe.io.Bytes {
-        var entries:List<haxe.zip.Entry> = new List<haxe.zip.Entry>();
-        _addDirectoryToZip(directory, "", entries);
+        // Set the source path to the correct one
+        _sourcePath = sourcePath;
         
-        // Compress all entries after they've been added
-        for (entry in entries) {
-            if (!StringTools.endsWith(entry.fileName, "/")) { // Don't compress directory entries
-                haxe.zip.Tools.compress(entry, 9);
-            }
-        }
+        // Call the parent implementation which now uses zip/unzip
+        super.copyFiles(callback);
         
-        var out = new haxe.io.BytesOutput();
-        var writer = new haxe.zip.Writer(out);
-        writer.write(entries);
-        
-        return out.getBytes();
-    }
-    
-    /**
-     * Helper function to recursively add files to a zip archive
-     * @param directory The base directory
-     * @param path The current path within the zip
-     * @param entries The list of zip entries
-     */
-    private function _addDirectoryToZip(directory:String, path:String, entries:List<haxe.zip.Entry>):Void {
-        var items = FileSystem.readDirectory(directory);
-        
-        for (item in items) {
-            var itemPath = Path.addTrailingSlash(directory) + item;
-            var zipPath = path.length > 0 ? path + "/" + item : item;
-            
-            if (FileSystem.isDirectory(itemPath)) {
-                // Add directory entry
-                var entry:haxe.zip.Entry = {
-                    fileName: zipPath + "/",
-                    fileSize: 0,
-                    fileTime: Date.now(),
-                    compressed: false,
-                    dataSize: 0,
-                    data: haxe.io.Bytes.alloc(0),
-                    crc32: 0
-                };
-                entries.add(entry);
-                
-                // Recursively add directory contents
-                _addDirectoryToZip(itemPath, zipPath, entries);
-            } else {
-                // Add file entry
-                try {
-                    var data = File.getBytes(itemPath);
-                    var entry:haxe.zip.Entry = {
-                        fileName: zipPath,
-                        fileSize: data.length,
-                        fileTime: FileSystem.stat(itemPath).mtime,
-                        compressed: false,
-                        dataSize: data.length,
-                        data: data,
-                        crc32: haxe.crypto.Crc32.make(data)
-                    };
-                    entries.add(entry);
-                } catch (e) {
-                    Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
-                }
-            }
-        }
-    }
-    
-    /**
-     * Unzip bytes to a directory
-     * @param zipBytes The zipped content
-     * @param directory The directory to unzip to
-     */
-    private function _unzipToDirectory(zipBytes:haxe.io.Bytes, directory:String):Void {
-        var entries = haxe.zip.Reader.readZip(new haxe.io.BytesInput(zipBytes));
-        
-        for (entry in entries) {
-            var fileName = entry.fileName;
-            
-            // Skip directory entries
-            if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
-                var dirPath = Path.addTrailingSlash(directory) + fileName;
-                _createDirectoryRecursive(dirPath);
-                continue;
-            }
-            
-            // Create parent directories if needed
-            var filePath = Path.addTrailingSlash(directory) + fileName;
-            var parentDir = Path.directory(filePath);
-            _createDirectoryRecursive(parentDir);
-            
-            // Extract file
-            try {
-                var data = entry.data;
-                if (entry.compressed) {
-                    haxe.zip.Tools.uncompress(entry);
-                }
-                File.saveBytes(filePath, entry.data);
-            } catch (e) {
-                Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
-            }
-        }
-    }
-    
-    /**
-     * Create a directory and all parent directories if they don't exist
-     * @param directory The directory path to create
-     */
-    private function _createDirectoryRecursive(directory:String):Void {
-        if (directory == null || directory == "" || FileSystem.exists(directory)) {
-            return;
-        }
-        
-        _createDirectoryRecursive(Path.directory(directory));
-        FileSystem.createDirectory(directory);
+        // Restore the original source path
+        _sourcePath = originalSource;
     }
 
 
