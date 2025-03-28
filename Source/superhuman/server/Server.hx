@@ -589,6 +589,10 @@ class Server {
             }
         }
         
+        // Copy provisioner files to the server directory
+        initDirectory();
+        Logger.info('${this}: Copied provisioner files to server directory');
+        
         // Save the hosts file
         saveHostsFile();
         
@@ -856,9 +860,18 @@ class Server {
     }
 
     function _prepareFiles() {
-
-        _provisioner.copyFiles(_prepareFilesComplete);
-
+        // The provisioner files were already copied during server initialization when Save was clicked
+        // Skip directly to installer files preparation and continue the startup process
+        Logger.info('${this}: Using provisioner files copied during server initialization when Save was clicked');
+        
+        // Just verify essential files exist and regenerate if missing
+        if (!_provisioner.hostFileExists) {
+            Logger.info('${this}: Hosts file not found, regenerating it');
+            _provisioner.saveHostsFile();
+        }
+        
+        // Proceed directly to the installer file preparation
+        _prepareFilesComplete();
     }
 
     function _prepareFilesComplete() {
