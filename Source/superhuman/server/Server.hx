@@ -1356,9 +1356,73 @@ class Server {
     // Vagrant stop
     //
 
+    // Flag to indicate if provisioning was canceled
+    var _provisioningCanceled:Bool = false;
+    
     public function stop( forced:Bool = false ) {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
+
+        // If we're in the middle of provisioning, use a different approach
+        if (_vagrantUpExecutor != null && _vagrantUpExecutor.running) {
+            Logger.info('${this}: Stopping server during provisioning');
+            if (console != null) console.appendText("Stopping provisioning process...", true);
+            
+            // Mark that we're canceling provisioning
+            _provisioningCanceled = true;
+            
+            // Set current action and status
+            this._busy.value = true;
+            this.status.value = ServerStatus.Stopping(true); // true indicates forced
+            this._currentAction = ServerAction.Stop(false);
+            
+            // Clean up timers now
+            _stopVagrantUpElapsedTimer();
+            
+            // Try to forcefully stop the VM using VirtualBox directly
+            if (this.virtualBoxId != null) {
+                Logger.info('${this}: Using VirtualBox to power off VM: ${this.virtualBoxId}');
+                if (console != null) console.appendText("Using VirtualBox to forcefully power off the VM...", true);
+                
+                // Execute the VirtualBox poweroff command
+                try {
+                    // Register for the poweroff callback before executing
+                    if (!Lambda.has(VirtualBox.getInstance().onPowerOffVM, _onProvisioningPowerOffVM)) {
+                        VirtualBox.getInstance().onPowerOffVM.add(_onProvisioningPowerOffVM);
+                    }
+                    
+                    var powerOffExecutor = VirtualBox.getInstance().getPowerOffVM(
+                        this._combinedVirtualMachine.value.virtualBoxMachine
+                    );
+                    powerOffExecutor.execute(this._serverDir);
+                    
+                    Logger.info('${this}: VirtualBox poweroff command issued successfully');
+                    if (console != null) console.appendText("VirtualBox poweroff command issued successfully", true);
+                } catch (e:Dynamic) {
+                    Logger.error('${this}: Error executing VirtualBox poweroff: ${e}');
+                    if (console != null) console.appendText('Error executing VirtualBox poweroff: ${e}', true);
+                    
+                    // If poweroff failed, manually set to Stopped with error state
+                    this._status.value = ServerStatus.Stopped(true);
+                }
+            } else {
+                Logger.warning('${this}: Cannot power off VM - virtualBoxId is null');
+                if (console != null) console.appendText("Cannot power off VM - machine ID is not available yet", true);
+                
+                // Even if VM ID is not available, set to Stopped with error state
+                this._status.value = ServerStatus.Stopped(true);
+            }
+            
+            // Also try to stop the Vagrant process directly
+            try {
+                Logger.info('${this}: Also stopping Vagrant process');
+                _vagrantUpExecutor.stop(true);
+            } catch (e:Dynamic) {
+                Logger.error('${this}: Error stopping Vagrant process: ${e}');
+            }
+            
+            return; // Skip the regular vagrant halt process
+        }
 
         this._busy.value = true;
         this.status.value = ServerStatus.Stopping( forced );
@@ -1382,18 +1446,36 @@ class Server {
         Vagrant.getInstance().onHalt.remove( _onVagrantHalt );
 
         if ( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 ) {
-
-            Logger.error( '${this}: Server cannot be stopped' );
-
+            Logger.error( '${this}: Server cannot be stopped normally, will try VirtualBox direct method' );
+            
+            // Try to forcefully stop the VM using VirtualBox directly
+            if (this.virtualBoxId != null) {
+                Logger.info('${this}: Using VirtualBox to power off VM: ${this.virtualBoxId}');
+                if (console != null) console.appendText("Vagrant halt failed. Using VirtualBox to forcefully power off the VM...", true);
+                
+                // Execute the VirtualBox poweroff command
+                try {
+                    var powerOffExecutor = VirtualBox.getInstance().getPowerOffVM(
+                        this._combinedVirtualMachine.value.virtualBoxMachine
+                    );
+                    powerOffExecutor.execute(this._serverDir);
+                    
+                    Logger.info('${this}: VirtualBox poweroff command issued successfully');
+                    if (console != null) console.appendText("VirtualBox poweroff command issued successfully", true);
+                } catch (e:Dynamic) {
+                    Logger.error('${this}: Error executing VirtualBox poweroff: ${e}');
+                    if (console != null) console.appendText('Error executing VirtualBox poweroff: ${e}', true);
+                }
+            } else {
+                Logger.warning('${this}: Cannot power off VM - virtualBoxId is null');
+                if (console != null) console.appendText("Cannot power off VM - machine ID is not available", true);
+            }
         } else {
-
             Logger.info( '${this}: Server stopped' );
-
         }
 
         this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
         refreshVirtualBoxInfo();
-
     }
 
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
@@ -1697,9 +1779,15 @@ class Server {
     }
 
     function _vagrantUpStopped( executor:AbstractExecutor ) {
+        
+        // Record if this was stopped due to user cancellation
+        var wasExplicitlyCanceled = _provisioningCanceled;
+        
+        // Always reset the cancellation flag
+        _provisioningCanceled = false;
 
-        if ( executor.exitCode > 0 ) {
-            Logger.error( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
+        if ( executor.exitCode > 0 || wasExplicitlyCanceled ) {
+            Logger.error( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}${wasExplicitlyCanceled ? " (manually canceled by user)" : ""}' );
         } else {
             Logger.info( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
         }
@@ -1707,30 +1795,46 @@ class Server {
         var elapsed = StrTools.timeToFormattedString( _vagrantUpElapsedTime );
         Logger.info( '${this}: Vagrant up elapsed time: ${elapsed}' );
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ), elapsed ), executor.exitCode > 0 );
+        if ( console != null ) {
+            if (wasExplicitlyCanceled) {
+                console.appendText("Provisioning process was canceled by user.", true);
+                console.appendText("You can now destroy the VM if needed.", true);
+            }
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ), elapsed ), executor.exitCode > 0 );
+        }
 
-        hasExecutionErrors = executor.hasErrors || executor.exitCode > 0;
+        // If it was explicitly canceled or had errors, mark as error state
+        hasExecutionErrors = wasExplicitlyCanceled || executor.hasErrors || executor.exitCode > 0;
         this._currentAction = ServerAction.Start( hasExecutionErrors );
 
+        // Clean up timers just to be sure
+        _stopVagrantUpElapsedTimer();
+        _provisioner.stopFileWatcher();
+
         if ( hasExecutionErrors ) {
-
-            // Vagrant up finished with either exitcode > 0, or an error happened during execution
-
-            if ( keepFailedServersRunning ) {
-
+            // Special handling for user cancellation
+            if (wasExplicitlyCanceled) {
+                // Set to error state but keep the VM around
+                Logger.info('${this}: Server provisioning was canceled by user, keeping VM for potential destroy');
+                
+                // Force state to Stopped with errors to show destroy button
+                this._status.value = ServerStatus.Stopped(true);
+                this._busy.value = false;
+                
+                // Skip any auto-cleanup of the VM
+                refreshVirtualBoxInfo();
+            }
+            // Normal handling for non-cancellation errors
+            else if ( keepFailedServersRunning ) {
                 // Keeping the failed server running in its current state
                 Logger.info( '${this}: Server start was unsuccessful, keeping the server in its current status' );
 
                 // Refreshing VirtualBox info
                 this._currentAction = ServerAction.GetStatus( true );
                 refreshVirtualBoxInfo();
-
             } else {
-
                 // Stop or destroy the server
-
                 if ( _provisionedBeforeStart ) {
-
                     // The server was provisioned before, so 'vagrant halt' is needed
                     Logger.info( '${this}: Server start was unsuccessful, stopping server' );
 
@@ -1739,40 +1843,31 @@ class Server {
             
                     this._currentAction = ServerAction.Stop( true );
                     Vagrant.getInstance().getHalt( this._combinedVirtualMachine.value.vagrantMachine, false ).execute( this._serverDir );
-
                 } else {
-
                     // The server wasn't provisioned before, so 'vagrant destroy' is needed
                     Logger.info( '${this}: First start was unsuccessful, destroying server' );
-                    //_provisioner.deleteWebAddressFile();
 
                     if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
                         Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
 
                     this._currentAction = ServerAction.Destroy( true );
                     Vagrant.getInstance().getDestroy( this._combinedVirtualMachine.value.vagrantMachine, true ).execute( this._serverDir );
-
                 }
-
             }
-
         } else {
-
             // Vagrant up successfully finished without errors
             if ( this._openBrowser.value ) {
-
                 if ( _provisioner != null ) _provisioner.openWelcomePage();
-
             }
 
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );
             refreshVirtualBoxInfo();
-
         }
 
+        // Clean up the executor
+        _vagrantUpExecutor = null;
         executor.dispose();
-
     }
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
@@ -1789,6 +1884,41 @@ class Server {
         if ( console != null ) console.appendText( data, true );
         Logger.error( '${this}: Vagrant up error: ${data}' );
 
+    }
+    
+    /**
+     * Callback for when the VirtualBox poweroff command completes after canceling provisioning
+     */
+    function _onProvisioningPowerOffVM( machine:VirtualBoxMachine ) {
+        // Make sure this is for our machine
+        if (machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId) return;
+        
+        // Remove the callback
+        VirtualBox.getInstance().onPowerOffVM.remove(_onProvisioningPowerOffVM);
+        
+        Logger.info('${this}: VirtualBox poweroff completed for machine: ${machine.virtualBoxId}');
+        if (console != null) console.appendText("VM has been successfully powered off.", true);
+        
+        // Wait for 30 seconds to allow any Ruby provisioning processes to terminate
+        if (console != null) console.appendText("Waiting 30 seconds for provisioning processes to clean up...", true);
+        Logger.info('${this}: Waiting 30 seconds for provisioning processes to clean up before finalizing state');
+        
+        // Create a timer for the 30-second delay
+        var cleanupTimer = new Timer(30000); // 30 seconds in milliseconds
+        cleanupTimer.run = () -> {
+            // Stop the timer after one execution
+            cleanupTimer.stop();
+            
+            // Explicitly set state to Stopped with errors to make the destroy button appear
+            this._status.value = ServerStatus.Stopped(true);
+            this._busy.value = false;
+            
+            // Refresh VM info to update the UI
+            refreshVirtualBoxInfo();
+            
+            Logger.info('${this}: Server status updated to Stopped(true) after poweroff and cleanup delay');
+            if (console != null) console.appendText("Server state set to Stopped with errors. You can now destroy the VM if needed.", true);
+        };
     }
 
     function _onVagrantUpDestroy( machine:VagrantMachine ) {

@@ -743,6 +743,9 @@ class ServerItem extends LayoutGroupItemRenderer {
             case ServerStatus.Start( provisionedBefore ):
             		_buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
             		_buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
+                    // Show the stop button during provisioning
+                    _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
+                    
                 if ( provisionedBefore ) {
 
                     _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
