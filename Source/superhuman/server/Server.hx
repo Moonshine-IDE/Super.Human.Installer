@@ -109,10 +109,12 @@ class Server {
             data.provisioner.type : ProvisionerType.StandaloneProvisioner;
         Logger.info('Server.create: Using provisioner type for server creation: ${effectiveProvisionerType}');
         
-        // Create server directory using the effective provisioner type for consistent paths
+        // Store server directory path but don't create it yet
         sc._serverDir = Path.normalize( rootDir + "/" + effectiveProvisionerType + "/" + sc._id );
-        FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
+        
+        // Set the provisional flag to indicate this server hasn't been confirmed yet
+        sc._provisional = true;
         
         var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
@@ -264,6 +266,7 @@ class Server {
     var _organization:ValidatingProperty;
     var _path:Property<String>;
     var _provisionedBeforeStart:Bool;
+    var _provisional:Bool = false;
     var _provisioner:StandaloneProvisioner;
     var _refreshingVirtualBoxVMInfo:Bool = false;
     var _roles:Property<Array<RoleData>>;
@@ -375,6 +378,9 @@ class Server {
 
     public var provisioner( get, never ):AbstractProvisioner;
     function get_provisioner() return _provisioner;
+
+    public var provisional( get, never ):Bool;
+    function get_provisional() return _provisional;
 
     public var roles( get, never ):Property<Array<RoleData>>;
     function get_roles() return _roles;
@@ -563,6 +569,36 @@ class Server {
 
         _provisioner.copyFiles();
 
+    }
+    
+    /**
+     * Initialize server files - creates directory and initial configuration files
+     * This should be called when a user confirms server configuration
+     */
+    public function initializeServerFiles():Void {
+        Logger.info('${this}: Initializing server files in ${_serverDir}');
+        
+        // Create the server directory if it doesn't exist
+        if (!FileSystem.exists(_serverDir)) {
+            try {
+                FileSystem.createDirectory(_serverDir);
+                Logger.info('${this}: Created server directory at ${_serverDir}');
+            } catch (e) {
+                Logger.error('${this}: Failed to create server directory: ${e}');
+                return;
+            }
+        }
+        
+        // Save the hosts file
+        saveHostsFile();
+        
+        // Save the server data
+        saveData();
+        
+        // Mark the server as no longer provisional
+        _provisional = false;
+        
+        Logger.info('${this}: Server files initialized successfully');
     }
 
     public function isValid():Bool {

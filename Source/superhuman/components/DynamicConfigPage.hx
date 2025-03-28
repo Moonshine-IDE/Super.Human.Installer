@@ -1055,13 +1055,21 @@ class DynamicConfigPage extends Page {
     }
 
     function _advancedLinkTriggered(e:MouseEvent) {
+        // Check if server is still valid - it might have been removed if it was provisional
+        if (_server == null) {
+            Logger.warning('${this}: Cannot navigate to advanced config - server is null');
+            return;
+        }
+        
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
         evt.server = _server;
         
         // Explicitly set the provisioner type to ensure it's handled as a custom provisioner
         // This is important because the _advancedConfigureServer method checks server.provisioner.type
         // to determine whether to use DynamicAdvancedConfigPage or AdvancedConfigPage
-        evt.provisionerType = _server.provisioner.type;
+        if (_server.provisioner != null) {
+            evt.provisionerType = _server.provisioner.type;
+        }
         
         // Store the provisioner definition in the event if available
         if (_provisionerDefinition != null) {
@@ -1072,11 +1080,19 @@ class DynamicConfigPage extends Page {
     }
 
     function _buttonRolesTriggered(e:TriggerEvent) {
+        // Check if server is still valid - it might have been removed if it was provisional
+        if (_server == null) {
+            Logger.warning('${this}: Cannot navigate to roles config - server is null');
+            return;
+        }
+        
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_ROLES);
         evt.server = this._server;
         
         // Pass the provisioner type and the current provisioner definition
-        evt.provisionerType = _server.provisioner.type;
+        if (_server.provisioner != null) {
+            evt.provisionerType = _server.provisioner.type;
+        }
         
         // Include the provisioner definition in the event data
         if (_provisionerDefinition != null) {
@@ -1132,6 +1148,36 @@ class DynamicConfigPage extends Page {
                 GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
                 GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
         }
+    }
+    
+    override function _cancel(?e:Dynamic) {
+        // If this is a provisional server, remove it from the server manager
+        if (_server != null && _server.provisional) {
+            superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
+            Logger.info('${this}: Removed provisional server ${_server.id} from server manager');
+        }
+        
+        // Use CANCEL_PAGE to return to the server overview page
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE);
+        if (_server != null) {
+            evt.server = _server;
+            // Check that provisioner exists before accessing type to avoid null reference
+            if (_server.provisioner != null) {
+                evt.provisionerType = _server.provisioner.type;
+                Logger.info('${this}: Canceling dynamic config page with provisioner type: ${evt.provisionerType}');
+                
+                // Log the previous page ID for debugging
+                var previousPageId = SuperHumanInstaller.getInstance().previousPageId;
+                Logger.info('${this}: Previous page ID: ${previousPageId}');
+            } else {
+                Logger.warning('${this}: Server has no provisioner, cannot determine type');
+            }
+        } else {
+            Logger.warning('${this}: No server object available for cancel event');
+        }
+        
+        // The SuperHumanInstaller.hx _cancelConfigureServer method will handle navigation
+        this.dispatchEvent(evt);
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
@@ -1368,6 +1414,12 @@ class DynamicConfigPage extends Page {
         
         // Update the last used safe ID
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
+        
+        // Initialize server files if this is a provisional server
+        if (_server.provisional) {
+            Logger.info('${this}: Initializing server files for provisional server');
+            _server.initializeServerFiles();
+        }
         
         // Small delay to ensure all saves are complete before navigating away
         haxe.Timer.delay(function() {

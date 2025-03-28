@@ -366,8 +366,25 @@ class AdvancedConfigPage extends Page {
     }
 
     override function _cancel( ?e:Dynamic ) {
-     	var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE );
-        		evt.server = _server;
+        // For advanced config, we don't remove provisional servers on cancel
+        // Instead, we just return to the basic config page with no changes
+        
+        // Use CANCEL_PAGE to return to the basic config page
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE );
+        if (_server != null) {
+            evt.server = _server;
+            // Check that provisioner exists before accessing type to avoid null reference
+            if (_server.provisioner != null) {
+                evt.provisionerType = _server.provisioner.type;
+                champaign.core.logging.Logger.info('${this}: Canceling advanced config with provisioner type: ${evt.provisionerType}');
+            } else {
+                champaign.core.logging.Logger.warning('${this}: Server has no provisioner, cannot determine type');
+            }
+        } else {
+            champaign.core.logging.Logger.warning('${this}: No server object available for cancel event');
+        }
+        
+        // The SuperHumanInstaller.hx _cancelAdvancedConfigureServer method will handle navigation
         this.dispatchEvent( evt );
     }
     
@@ -387,6 +404,11 @@ class AdvancedConfigPage extends Page {
         _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
         _server.dhcp4.value = _cbDHCP.selected;
         _server.disableBridgeAdapter.value = _cbDisableBridgeAdapter.selected;
+
+        // Initialize server files if this is a provisional server
+        if (_server.provisional) {
+            _server.initializeServerFiles();
+        }
 
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION );
         evt.server = _server;

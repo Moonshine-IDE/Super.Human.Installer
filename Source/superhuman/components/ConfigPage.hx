@@ -234,7 +234,7 @@ class ConfigPage extends Page {
         _buttonSave.addEventListener( TriggerEvent.TRIGGER, _saveButtonTriggered );
         _buttonSave.width = GenesisApplicationTheme.GRID * 20;
         _buttonCancel = new GenesisFormButton( LanguageManager.getInstance().getString( 'serverconfigpage.form.buttons.cancel' ) );
-        _buttonCancel.addEventListener( TriggerEvent.TRIGGER, _cancel );
+        _buttonCancel.addEventListener( TriggerEvent.TRIGGER, _buttonCancelTriggered );
         _buttonCancel.width = GenesisApplicationTheme.GRID * 20;
         _buttonGroup.addChild( _buttonSave );
         _buttonGroup.addChild( _buttonCancel );
@@ -414,11 +414,14 @@ class ConfigPage extends Page {
     }
 
     function _advancedLinkTriggered( e:MouseEvent ) {
-
+        // Check if server is still valid - it might have been removed if it was provisional
+        if (_server == null) {
+            return;
+        }
+        
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER );
         evt.server = _server;
         this.dispatchEvent( evt );
-
     }
 
     function _buttonSafeIdTriggered( e:TriggerEvent ) {
@@ -482,6 +485,11 @@ class ConfigPage extends Page {
 
         // Save common variables to server's customProperties
         _saveCommonVariables();
+        
+        // Initialize server files - creates directory and initial configuration
+        if (_server.provisional) {
+            _server.initializeServerFiles();
+        }
 
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
@@ -502,6 +510,16 @@ class ConfigPage extends Page {
         _server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
         _safeIdLocated();
 
+    }
+    
+    function _buttonCancelTriggered( e:TriggerEvent ) {
+        // If this is a provisional server, remove it from the server manager
+        if (_server != null && _server.provisional) {
+            superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
+        }
+        
+        // Dispatch the CANCEL_PAGE event to match what SuperHumanInstaller is listening for
+        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE));
     }
     
     /**

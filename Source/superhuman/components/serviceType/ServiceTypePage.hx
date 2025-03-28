@@ -185,7 +185,9 @@ class ServiceTypePage extends Page {
         // Set the provisioner type and service type data on the event
         event.provisionerType = selectedServiceType.provisionerType;
         event.serviceTypeData = selectedServiceType;
-
+        
+        // When creating a server, don't initialize files immediately
+        // Files will be initialized when user presses save on the configuration page
         this.dispatchEvent(event);
 	}
 	

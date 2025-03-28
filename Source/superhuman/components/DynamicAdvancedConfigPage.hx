@@ -1064,12 +1064,26 @@ class DynamicAdvancedConfigPage extends Page {
     }
     
     override function _cancel(?e:Dynamic) {
+        // For advanced config, we don't remove provisional servers on cancel
+        // Instead, we just return to the basic config page with no changes
+        
+        // Use CANCEL_PAGE to return to the basic config page
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE);
         if (_server != null) {
             evt.server = _server;
-            // Also set the provisioner type to ensure proper page navigation
-            evt.provisionerType = _server.provisioner.type;
+            // Check that provisioner exists before accessing type to avoid null reference
+            if (_server.provisioner != null) {
+                evt.provisionerType = _server.provisioner.type;
+                Logger.info('${this}: Canceling dynamic advanced config with provisioner type: ${evt.provisionerType}');
+            } else {
+                Logger.warning('${this}: Server has no provisioner, cannot determine type');
+            }
+        } else {
+            Logger.warning('${this}: No server object available for cancel event');
         }
+        
+        // The SuperHumanInstaller.hx _cancelAdvancedConfigureServer method will handle navigation
+        // back to the appropriate basic configuration page
         this.dispatchEvent(evt);
     }
     
@@ -1281,6 +1295,12 @@ class DynamicAdvancedConfigPage extends Page {
         // Explicitly save hosts file to ensure it's created for custom provisioners
         _server.saveHostsFile();
         Logger.info('${this}: Explicitly saving hosts file for custom provisioner after advanced configuration');
+        
+        // Initialize server files if this is a provisional server
+        if (_server.provisional) {
+            Logger.info('${this}: Initializing server files for provisional server');
+            _server.initializeServerFiles();
+        }
         
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION);
         evt.server = _server;

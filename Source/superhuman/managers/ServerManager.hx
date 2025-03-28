@@ -82,7 +82,6 @@ class ServerManager {
     }
 
     public function createServer( serverData:ServerData, type:ProvisionerType = ProvisionerType.StandaloneProvisioner ):Server {
-
         var server:Server;
         
         // Handle different provisioner types - using string comparison for consistency
@@ -104,6 +103,13 @@ class ServerManager {
         }
         
         if (server != null) {
+            // All new servers start as provisional until saved
+            if (Reflect.hasField(server, "_provisional")) {
+                Reflect.setField(server, "_provisional", true);
+                Logger.info('${this}: Server ${server.id} marked as provisional');
+            }
+            
+            // Add to server collection
             _servers.add(server);
         } else {
             Logger.error('${this}: Failed to create server with provisioner type: ${type}');
@@ -230,6 +236,26 @@ class ServerManager {
 
         return '${_serverRootDirectory}${type}/${id}';
 
+    }
+
+    /**
+     * Removes a server from the manager, but only if it's provisional.
+     * This prevents accidental removal of configured servers.
+     * @param server The server to remove
+     * @return Bool True if the server was removed, false otherwise
+     */
+    public function removeProvisionalServer(server:Server):Bool {
+        // Only remove if the server is provisional
+        if (server != null && server.provisional) {
+            // Remove the server from the collection
+            _servers.remove(server);
+            // Dispose of the server to clean up any resources
+            server.dispose();
+            Logger.info('${this}: Removed provisional server ${server.id}');
+            return true;
+        }
+        Logger.warning('${this}: Cannot remove server ${server != null ? server.id : -1} as it is not provisional');
+        return false;
     }
 
     public function refreshVMInfo( refreshVagrant:Bool, refreshVirtualBox:Bool ) {

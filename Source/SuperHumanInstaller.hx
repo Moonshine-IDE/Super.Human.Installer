@@ -624,9 +624,27 @@ class SuperHumanInstaller extends GenesisApplication {
 		// Store the server reference to ensure we're working with the same server
 		var server = e.server;
 		
+		// First check if the server still exists
+		if (server == null) {
+			Logger.warning('${this}: Cannot configure advanced server settings - server is null');
+			// Return to server overview page
+			this.selectedPageId = PAGE_SERVER;
+			return;
+		}
+		
 		// Check if this is a custom provisioner
 		// We can use either the event's provisionerType or the server's provisioner type
-		var provisionerType = e.provisionerType != null ? e.provisionerType : server.provisioner.type;
+		var provisionerType = e.provisionerType != null ? e.provisionerType : 
+		                      (server.provisioner != null ? server.provisioner.type : null);
+		
+		// Make sure we have a valid provisioner type before proceeding
+		if (provisionerType == null) {
+			Logger.warning('${this}: Cannot determine provisioner type - provisioner is null');
+			// Return to server overview page
+			this.selectedPageId = PAGE_SERVER;
+			return;
+		}
+		
 		var isCustomProvisioner = provisionerType != ProvisionerType.StandaloneProvisioner && 
 								  provisionerType != ProvisionerType.AdditionalProvisioner &&
 								  provisionerType != ProvisionerType.Default;
@@ -840,6 +858,15 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelConfigureServer( e:SuperHumanApplicationEvent ) {
+		// If this server is provisional (has never been saved/confirmed),
+		// remove it completely from the system
+		if (e.server != null && e.server.provisional) {
+			Logger.info('${this}: Removing provisional server ${e.server.id} - configuration was cancelled before saving');
+			// Remove from server manager using the proper method
+			ServerManager.getInstance().removeProvisionalServer(e.server);
+			// Save config to ensure it's removed from the .shi-config file
+			_saveConfig();
+		}
 
 		if (this.previousPageId != PAGE_SERVICE_TYPE)
 		{
@@ -852,29 +879,81 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelAdvancedConfigureServer( e:SuperHumanApplicationEvent ) {
-		// Get the provisioner type from the event
-		var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+		// For advanced config, we don't remove provisional servers on cancel
+		// We just return to the basic config page with no changes
 		
-		// Determine which page to navigate to based on the provisioner type
+		// Safely get provisioner type, with multiple fallbacks
+		var provisionerType = null;
+		
+		// Try to get from event first (most reliable)
+		if (e.provisionerType != null) {
+			provisionerType = e.provisionerType;
+			Logger.info('${this}: Got provisioner type from event: ${provisionerType}');
+		} 
+		// If not available, try to get from server if it exists
+		else if (e.server != null && e.server.provisioner != null) {
+			provisionerType = e.server.provisioner.type;
+			Logger.info('${this}: Got provisioner type from server: ${provisionerType}');
+		}
+		
+		// If we still don't have a type or server is null, default to the server page
+		if (provisionerType == null || e.server == null) {
+			Logger.warning('${this}: Cannot determine provisioner type or server is null, returning to server list');
+			this.selectedPageId = PAGE_SERVER;
+			return;
+		}
+		
+		// Now determine which page to navigate to based on the provisioner type
+		Logger.info('${this}: Navigating back to basic config for provisioner type: ${provisionerType}');
+		
+		// Instead of navigating based only on provisioner type, also check the previousPageId
+		// This helps maintain proper navigation history
 		switch (provisionerType) {
 			case ProvisionerType.AdditionalProvisioner:
 				// For additional provisioners, go to the additional server page
-				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
-			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default, ProvisionerType.Custom:
-				// For built-in provisioner types, go to the standard config page
-				this.selectedPageId = PAGE_CONFIG;
-			default:
-				// For custom provisioner types (any other string), go to the dynamic config page
-				// Check if we're coming from the dynamic config page
-				if (this.previousPageId == "page-dynamic-config") {
-					this.selectedPageId = "page-dynamic-config";
+				if (_additionalServerPage != null && e.server != null) {
+					// First set the server to ensure the page has the correct data
+					_additionalServerPage.setServer(cast(e.server, AdditionalServer));
+					// Force content update to refresh the UI
+					_additionalServerPage.updateContent(true);
+					// Then navigate to the page
+					this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+					Logger.info('${this}: Navigating to AdditionalServerPage for server ${e.server.id}');
 				} else {
-					// Otherwise go to the standard config page as a fallback
+					this.selectedPageId = PAGE_SERVER;
+					Logger.warning('${this}: Could not navigate to AdditionalServerPage - missing page or server');
+				}
+				
+			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default:
+				// For built-in provisioner types, go to the standard config page
+				if (_configPage != null && e.server != null) {
+					// First set the server to ensure the page has the correct data
+					_configPage.setServer(e.server);
+					// Force content update to refresh the UI
+					_configPage.updateContent(true);
+					// Then navigate to the page
 					this.selectedPageId = PAGE_CONFIG;
+					Logger.info('${this}: Navigating to ConfigPage for server ${e.server.id}');
+				} else {
+					this.selectedPageId = PAGE_SERVER;
+					Logger.warning('${this}: Could not navigate to ConfigPage - missing page or server');
+				}
+				
+			default:
+				// For custom provisioner types, go to the dynamic config page
+				if (_dynamicConfigPage != null && e.server != null) {
+					// First set the server to ensure the page has the correct data
+					_dynamicConfigPage.setServer(e.server);
+					// Force content update to refresh the UI
+					_dynamicConfigPage.updateContent(true);
+					// Then navigate to the page
+					this.selectedPageId = "page-dynamic-config";
+					Logger.info('${this}: Navigating to DynamicConfigPage for server ${e.server.id}');
+				} else {
+					this.selectedPageId = PAGE_SERVER;
+					Logger.warning('${this}: Could not navigate to DynamicConfigPage - missing page or server');
 				}
 		}
-		
-		Logger.info('${this}: Canceling advanced configuration for provisioner type: ${provisionerType}, navigating to ${this.selectedPageId}');
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
@@ -1007,11 +1086,16 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		_config.servers = [];
 
+		// Only save non-provisional servers to config
 		for ( server in ServerManager.getInstance().servers ) {
+			// Skip servers that are still provisional (user hasn't saved them yet)
+			if (server.provisional) {
+				Logger.info('${this}: Skipping provisional server ${server.id} when saving config');
+				continue;
+			}
 
 			_config.servers.push( server.getData() );
 			server.saveData();
-
 		}
 
 		if (_config.browsers == null) 
@@ -1036,15 +1120,11 @@ class SuperHumanInstaller extends GenesisApplication {
 		_browsersCollection = null;
 		
 		try {
-
 			var conf = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
 			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
 			Logger.info( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
-
 		} catch ( e ) {
-
 			Logger.error( '${this}: Configuration cannot be saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
-
 		}
 
 	}
@@ -1353,27 +1433,53 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
-
+		// Save changes to the server
 		e.server.saveHostsFile();
 		_saveConfig();
 
+		// Show success message
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.advancedserverconfigsaved' ) );
 
+		// Log the navigation event
+		Logger.info('${this}: Advanced configuration saved, returning to basic config page');
+		
+		// Return to the appropriate basic configuration page based on provisioner type
 		switch ( e.server.provisioner.type ) {
 			case ProvisionerType.AdditionalProvisioner:
-				_additionalServerPage.setServer(cast(e.server, AdditionalServer));
-				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+				// For additional provisioners, go to the additional server page
+				if (_additionalServerPage != null) {
+					_additionalServerPage.setServer(cast(e.server, AdditionalServer));
+					_additionalServerPage.updateContent(true); // Force refresh the UI
+					this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+					Logger.info('${this}: Returning to AdditionalServerPage for server ${e.server.id}');
+				} else {
+					// Fallback if page isn't available
+					this.selectedPageId = PAGE_SERVER;
+				}
+				
 			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default:
-				_configPage.setServer(e.server);
-				this.selectedPageId = PAGE_CONFIG;
+				// For built-in provisioner types, go to the standard config page
+				if (_configPage != null) {
+					_configPage.setServer(e.server);
+					_configPage.updateContent(true); // Force refresh the UI
+					this.selectedPageId = PAGE_CONFIG;
+					Logger.info('${this}: Returning to ConfigPage for server ${e.server.id}');
+				} else {
+					// Fallback if page isn't available
+					this.selectedPageId = PAGE_SERVER;
+				}
+				
 			default:
 				// For custom provisioner types, go back to the dynamic config page
 				if (_dynamicConfigPage != null) {
 					_dynamicConfigPage.setServer(e.server);
+					_dynamicConfigPage.updateContent(true); // Force refresh the UI
 					this.selectedPageId = "page-dynamic-config";
+					Logger.info('${this}: Returning to DynamicConfigPage for server ${e.server.id}');
 				} else {
 					// Fallback to server page if dynamic config page is not available
 					this.selectedPageId = PAGE_SERVER;
+					Logger.info('${this}: No suitable config page found, returning to server list');
 				}
 		}
 	}
