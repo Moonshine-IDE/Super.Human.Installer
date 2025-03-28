@@ -540,6 +540,10 @@ class ProvisionerManager {
                 var restrict = getProperty(fieldData, "restrict");
                 if (restrict != null) field.restrict = restrict;
                 
+                // Process hidden property explicitly
+                var hidden = getProperty(fieldData, "hidden");
+                if (hidden != null) field.hidden = hidden;
+                
                 // Parse options for dropdown fields
                 var optionsData = getProperty(fieldData, "options");
                 if (optionsData != null && Std.isOfType(optionsData, Array)) {

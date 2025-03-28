@@ -478,11 +478,21 @@ class RolePage extends Page {
     }
 
     function _buttonCloseTriggered( e:TriggerEvent ) {
+        // Set a flag indicating the user has completed role configuration
+        // This will be used by custom provisioners to ensure role processing
+        if (_server != null) {
+            if (_server.customProperties == null) {
+                _server.customProperties = {};
+            }
+            
+            // Mark roles as processed - this flag will only be checked for custom provisioners
+            Reflect.setField(_server.customProperties, "rolesProcessed", true);
+            Logger.info('${this}: Marked roles as processed for server ID: ${_server.id}');
+        }
 
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_ROLES );
         event.provisionerType = _server.provisioner.type;
         this.dispatchEvent( event );
-
     }
 
 }

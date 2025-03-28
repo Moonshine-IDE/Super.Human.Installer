@@ -46,6 +46,7 @@ configuration:
       defaultValue: "STARTcloud/debian12-server"
       tooltip: "The Vagrant box to use for this server"
       required: false
+      hidden: true
       
     - name: "BOX_URL"
       type: "text"
@@ -106,6 +107,7 @@ configuration:
     - name: "DOMINO_ADMIN_PASSWORD"
       type: "text"
       label: "Domino Admin Password"
+      defaultValue: "password"
       tooltip: "Password for the Domino administrator"
       required: false
 
@@ -149,7 +151,7 @@ configuration:
       restrict: "0-9."
       required: false
       
-    - name: "networkNetmask"
+    - name: "NETWORK_NETMASK"
       type: "text"
       label: "Network Netmask"
       placeholder: "255.255.255.0"
@@ -207,6 +209,31 @@ configuration:
       min: 60
       max: 600
       
+    - name: "DOWNLOAD_BASE_URL"
+      type: "text"
+      label: "Resource Download Base URL"
+      tooltip: "URL to the Artifact Repository of your choice"
+      required: false
+
+    - name: "DOWNLOAD_AUTH_ENABLED"
+      type: "checkbox"
+      label: "Resource Download Base URL"
+      defaultValue: false
+      tooltip: "Enable Authentication for the URL to the Artifact Repository of your choice"
+      required: false
+
+    - name: "DOWNLOAD_AUTH_USER"
+      type: "text"
+      label: "Resource Download Base URL"
+      tooltip: "Authentication User for the URL to the Artifact Repository of your choice"
+      required: false
+
+    - name: "DOWNLOAD_AUTH_PASS"
+      type: "text"
+      label: "Resource Download Base URL"
+      tooltip: "Authentication Password for the URL to the Artifact Repository of your choice"
+      required: false
+
     - name: "SYNC_METHOD"
       type: "dropdown"
       label: "Sync Method"

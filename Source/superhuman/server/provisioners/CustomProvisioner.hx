@@ -438,9 +438,11 @@ override public function generateHostsFileContent():String {
         content = _replaceVariable(content, "ENV_SETUP_WAIT", Std.string(_server.setupWait.value));
         content = _replaceVariable(content, "SYNC_METHOD", Std.string(_server.syncMethod));
         
-        // Process all roles using exact names from provisioner.yml
+        // Process all roles with their exact names - no prefixes
         for (role in _server.roles.value) {
             var roleValue = role.enabled ? "true" : "false";
+            
+            // Only use the exact role name as defined
             content = _replaceVariable(content, role.value, roleValue);
             Logger.info('${this}: Setting role variable ${role.value} = ${roleValue}');
         }
@@ -454,11 +456,64 @@ override public function generateHostsFileContent():String {
             
             // Process all custom properties in a consistent way
             var allCustomProps = new Map<String, String>();
+            var hiddenFields = new Map<String, Bool>();
             
             // Helper function to safely get a field value
             function getFieldValue(obj:Dynamic, field:String):Dynamic {
                 if (obj == null || !Reflect.hasField(obj, field)) return null;
                 return Reflect.field(obj, field);
+            }
+            
+            // Helper function to check if a field is hidden
+            function isFieldHidden(fieldName:String, provDef:Dynamic):Bool {
+                if (provDef == null || !Reflect.hasField(provDef, "metadata") || 
+                    !Reflect.hasField(provDef.metadata, "configuration")) {
+                    return false;
+                }
+                
+                var config = provDef.metadata.configuration;
+                
+                // Check in basic fields
+                if (Reflect.hasField(config, "basicFields")) {
+                    var basicFields = Reflect.field(config, "basicFields");
+                    if (basicFields != null) {
+                        for (i in 0...basicFields.length) {
+                            var field = basicFields[i];
+                            if (field != null && 
+                                Reflect.hasField(field, "name") && 
+                                Reflect.field(field, "name") == fieldName) {
+                                // Check if it has hidden property set to true
+                                if (Reflect.hasField(field, "hidden")) {
+                                    var hidden = Reflect.field(field, "hidden");
+                                    return hidden == true || Std.string(hidden).toLowerCase() == "true";
+                                }
+                                return false;
+                            }
+                        }
+                    }
+                }
+                
+                // Check in advanced fields
+                if (Reflect.hasField(config, "advancedFields")) {
+                    var advancedFields = Reflect.field(config, "advancedFields");
+                    if (advancedFields != null) {
+                        for (i in 0...advancedFields.length) {
+                            var field = advancedFields[i];
+                            if (field != null && 
+                                Reflect.hasField(field, "name") && 
+                                Reflect.field(field, "name") == fieldName) {
+                                // Check if it has hidden property set to true
+                                if (Reflect.hasField(field, "hidden")) {
+                                    var hidden = Reflect.field(field, "hidden");
+                                    return hidden == true || Std.string(hidden).toLowerCase() == "true";
+                                }
+                                return false;
+                            }
+                        }
+                    }
+                }
+                
+                return false;
             }
             
             // Helper function to convert a value to string safely
@@ -470,6 +525,73 @@ override public function generateHostsFileContent():String {
                     case TInt: Std.string(value);
                     case TClass(String): value;
                     case _: try { Std.string(value); } catch(e) { ""; }
+                }
+            }
+            
+            // Using server.customProperties.provisionerDefinition if available
+            var provisionerDef = null;
+            if (Reflect.hasField(customProps, "provisionerDefinition")) {
+                provisionerDef = Reflect.field(customProps, "provisionerDefinition");
+                if (provisionerDef != null && Reflect.hasField(provisionerDef, "metadata")) {
+                    var metadata = Reflect.field(provisionerDef, "metadata");
+                    
+                    // Process fields from this provisioner definition
+                    if (metadata != null && Reflect.hasField(metadata, "configuration")) {
+                        var config = Reflect.field(metadata, "configuration");
+                        
+                        // Add basic fields from the provisioner definition
+                        if (config != null && Reflect.hasField(config, "basicFields")) {
+                            var basicFields = Reflect.field(config, "basicFields");
+                            if (basicFields != null) {
+                                for (i in 0...basicFields.length) {
+                                    var field = basicFields[i];
+                                    if (field != null && Reflect.hasField(field, "name")) {
+                                        var fieldName = Reflect.field(field, "name");
+                                        var defaultValue = "";
+                                        if (Reflect.hasField(field, "defaultValue") && Reflect.field(field, "defaultValue") != null) {
+                                            defaultValue = safeToString(Reflect.field(field, "defaultValue"));
+                                        }
+                                        allCustomProps.set(fieldName, defaultValue);
+                                        Logger.info('${this}: Added basic field from definition: ${fieldName} with default ${defaultValue}');
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Add advanced fields from the provisioner definition
+                        if (config != null && Reflect.hasField(config, "advancedFields")) {
+                            var advancedFields = Reflect.field(config, "advancedFields");
+                            if (advancedFields != null) {
+                                for (i in 0...advancedFields.length) {
+                                    var field = advancedFields[i];
+                                    if (field != null && Reflect.hasField(field, "name")) {
+                                        var fieldName = Reflect.field(field, "name");
+                                        var defaultValue = "";
+                                        if (Reflect.hasField(field, "defaultValue") && Reflect.field(field, "defaultValue") != null) {
+                                            defaultValue = safeToString(Reflect.field(field, "defaultValue"));
+                                        }
+                                        allCustomProps.set(fieldName, defaultValue);
+                                        Logger.info('${this}: Added advanced field from definition: ${fieldName} with default ${defaultValue}');
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Also add some known common fields that might appear in templates
+            var commonFields = [
+                "SYNCBACK_ID_FILES", "DEBUG_ALL_ANSIBLE_TASKS", "USE_HTTP_PROXY", 
+                "HTTP_PROXY_HOST", "HTTP_PROXY_PORT", "CERT_SELFSIGNED",
+                "DOMINO_IS_ADDITIONAL_INSTANCE", "DOMINO_SERVER_ID", "DOMINO_ORIGIN_HOSTNAME",
+                "DOWNLOAD_BASE_URL", "DOWNLOAD_AUTH_USER", "DOWNLOAD_AUTH_PASS", "DOWNLOAD_AUTH_ENABLED"
+            ];
+            
+            for (field in commonFields) {
+                if (!allCustomProps.exists(field)) {
+                    allCustomProps.set(field, "");
+                    Logger.info('${this}: Added common field placeholder: ${field}');
                 }
             }
             
@@ -490,10 +612,9 @@ override public function generateHostsFileContent():String {
                     var value = Reflect.field(basicProps, field);
                     if (value != null) {
                         var strValue = safeToString(value);
-                        if (strValue != "") {
-                            allCustomProps.set(field, strValue);
-                            Logger.info('${this}: Added custom property ${field} = ${strValue}');
-                        }
+                        // Override with the actual value from custom properties
+                        allCustomProps.set(field, strValue);
+                        Logger.info('${this}: Updated custom property ${field} = ${strValue}');
                     }
                 }
             } else {
@@ -515,10 +636,9 @@ override public function generateHostsFileContent():String {
                     var value = Reflect.field(advancedProps, field);
                     if (value != null) {
                         var strValue = safeToString(value);
-                        if (strValue != "") {
-                            allCustomProps.set(field, strValue);
-                            Logger.info('${this}: Added advanced custom property ${field} = ${strValue}');
-                        }
+                        // Override with the actual value from advanced custom properties (highest priority)
+                        allCustomProps.set(field, strValue);
+                        Logger.info('${this}: Updated advanced custom property ${field} = ${strValue}');
                     }
                 }
             }
@@ -538,6 +658,16 @@ override public function generateHostsFileContent():String {
         return content;
     }
     
+/**
+ * Override saveSafeId to prevent copying SafeID for custom provisioners
+ * @param safeid The path to the SafeID file
+ * @return Always returns true for custom provisioners
+ */
+override public function saveSafeId(safeid:String):Bool {
+    Logger.info('${this}: Custom provisioners do not use SafeID, skipping copy operation');
+    return true;
+}
+
 /**
  * Override hostFileExists to ensure the initial check for host file existence works properly
  * This method is called in Server._batchCopyComplete() to determine if the file needs to be created
@@ -623,6 +753,9 @@ override public function saveHostsFile() {
      * @return String The content with replaced variables
      */
     private function _replaceVariable(content:String, name:String, value:String):String {
+        // Ensure value is never null - use empty string if null
+        if (value == null) value = "";
+        
         var originalName = name;
         var result = content;
         var replaced = false;

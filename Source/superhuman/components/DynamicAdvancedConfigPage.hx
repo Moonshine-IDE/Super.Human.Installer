@@ -489,7 +489,9 @@ class DynamicAdvancedConfigPage extends Page {
         if (Reflect.hasField(field, "hidden")) {
             var hiddenValue = Reflect.field(field, "hidden");
             isHidden = (hiddenValue == true || Std.string(hiddenValue).toLowerCase() == "true");
-            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}');
+            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}, type=${Type.typeof(hiddenValue)}');
+        } else {
+            Logger.info('${this}: Field ${field.name} has no hidden property defined');
         }
         
         if (isHidden) {
@@ -1090,8 +1092,24 @@ class DynamicAdvancedConfigPage extends Page {
     function _saveButtonTriggered(e:TriggerEvent) {
         Logger.info('${this}: Save button triggered, form valid: ${_form.isValid()}, server: ${_server != null}');
         
-        if (!_form.isValid() || _server == null) {
-            Logger.warning('${this}: Form validation failed, cannot save');
+        // Verify form validation before saving
+        if (!_form.isValid()) {
+            Logger.warning('${this}: Form validation failed, cannot save configuration');
+            
+            // Log which fields might be invalid
+            for (fieldName => field in _dynamicFields) {
+                if (Std.isOfType(field, GenesisFormTextInput)) {
+                    var input:GenesisFormTextInput = cast field;
+                    // GenesisFormTextInput doesn't have an errorText property or isValid property
+                    // Just log that the field might be invalid
+                    Logger.warning('${this}: Field ${fieldName} may be invalid - please check requirements');
+                }
+            }
+            return;
+        }
+        
+        if (_server == null) {
+            Logger.warning('${this}: Server object is null, cannot save');
             return;
         }
 

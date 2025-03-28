@@ -241,6 +241,35 @@ class DynamicConfigPage extends Page {
             _pendingUpdateContent = false;
             updateContent(true);
         }
+        
+        // Listen for when this page becomes active again
+        this.addEventListener(openfl.events.Event.ACTIVATE, _onPageActivated);
+    }
+    
+    /**
+     * Handler for when the page is activated (becomes visible again)
+     * This is used to ensure validation is updated when returning from other pages
+     */
+    private function _onPageActivated(e:openfl.events.Event):Void {
+        // Check if we're returning from the roles page by looking for the rolesProcessed flag
+        if (_server != null && _server.customProperties != null && 
+            Reflect.hasField(_server.customProperties, "rolesProcessed")) {
+            
+            Logger.info('${this}: Page activated after role configuration, checking validity');
+            
+            // Update the roles button and validation state
+            var rolesValid = _server.areRolesValid();
+            _buttonRoles.icon = rolesValid ? 
+                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
+                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
+            
+            // Update save button enabled state
+            var formValid = _form != null && _form.isValid();
+            _buttonSave.enabled = formValid && rolesValid;
+            
+            // Force content update to refresh all fields
+            updateContent(true);
+        }
     }
 
     /**
@@ -637,7 +666,9 @@ class DynamicConfigPage extends Page {
         if (Reflect.hasField(field, "hidden")) {
             var hiddenValue = Reflect.field(field, "hidden");
             isHidden = (hiddenValue == true || Std.string(hiddenValue).toLowerCase() == "true");
-            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}');
+            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}, type=${Type.typeof(hiddenValue)}');
+        } else {
+            Logger.info('${this}: Field ${field.name} has no hidden property defined');
         }
         
         if (isHidden) {
@@ -842,8 +873,14 @@ class DynamicConfigPage extends Page {
             _buttonRoles.icon = (_server.areRolesValid()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
             _buttonRoles.enabled = !_server.roles.locked;
             
-            // Update Save button
-            _buttonSave.enabled = !_server.hostname.locked;
+            // Always enable the save button (soft lock approach)
+            // Validation will be performed when the button is clicked
+            _buttonSave.enabled = true;
+            
+            // Log validation status for debugging only
+            var formValid = _form != null && _form.isValid();
+            var rolesValid = _server.areRolesValid();
+            Logger.info('${this}: Save button validation status (for debugging) - form valid: ${formValid}, roles valid: ${rolesValid}');
             
             // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
             if (_dropdownCoreComponentVersion.selectedIndex == -1) {
@@ -1181,8 +1218,27 @@ class DynamicConfigPage extends Page {
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
-        _buttonRoles.setValidity(_server.areRolesValid());
+        // Validate the form - this will cause validation visuals to appear (red borders, etc.)
+        var formValid = _form.isValid();
+        if (!formValid) {
+            Logger.warning('${this}: Form validation failed, highlighting invalid fields');
+            // Don't return here - let validation visuals appear
+        }
+        
+        // Check role validity and update button appearance
+        var rolesValid = _server.areRolesValid();
+        _buttonRoles.setValidity(rolesValid);
+        
+        // Log validation status
+        Logger.info('${this}: Save button clicked - form valid: ${formValid}, roles valid: ${rolesValid}');
+        
+        // Only proceed with the save if all validations pass
+        if (!formValid || !rolesValid) {
+            Logger.warning('${this}: Save operation aborted due to validation failures');
+            return;
+        }
 
+        // If we get here, validation passed - proceed with saving
         // Making sure the event is fired
         var a = _server.roles.value.copy();
         _server.roles.value = a;

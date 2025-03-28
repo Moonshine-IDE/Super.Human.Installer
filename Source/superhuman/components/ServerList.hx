@@ -678,8 +678,22 @@ class ServerItem extends LayoutGroupItemRenderer {
     }
 
     function _updateServer( server:Server, requiresSave:Bool ) {
-
-        _labelTitle.text = '#${_server.id}: ${_server.fqdn}';
+        // Determine if this is a custom provisioner
+        var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                  _server.provisioner.type != ProvisionerType.Default);
+        
+        // For custom provisioners, check if organization is empty to avoid showing trailing slash
+        var serverTitle = "";
+        if (isCustomProvisioner && (_server.organization == null || _server.organization.value == null || _server.organization.value == "")) {
+            // Without organization, just show hostname.domain without trailing slash
+            serverTitle = '#${_server.id}: ${_server.url.hostname}.${_server.url.domainName}';
+        } else {
+            // With organization or for standard provisioners, show full FQDN
+            serverTitle = '#${_server.id}: ${_server.fqdn}';
+        }
+        
+        _labelTitle.text = serverTitle;
         _labelRoles.text = LanguageManager.getInstance().getString( 'serverpage.server.roles', _getServerRoleNames() );
         var cpu:String = ( _server.numCPUs.value == 1 ) ? "CPU" : "CPUs";
         
