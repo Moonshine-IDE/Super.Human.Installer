@@ -189,7 +189,19 @@ class ServerManager {
                 result = ServerStatus.Aborted;
 
             case "powered off":
-                result = ServerStatus.Stopped( false );
+                // Check if this is a VM that was stopped during provisioning
+                // When a VM exists in VirtualBox but isn't properly provisioned
+                // (missing provisioning.proof file or explicitly canceled), it should
+                // show as Stopped(true) - indicating an interrupted state
+                var isProperlyProvisioned = server.provisioned;
+                var isUnfinishedVM = server.vmExistsInVirtualBox() && !isProperlyProvisioned;
+                
+                if (isUnfinishedVM) {
+                    Logger.info('${server}: VM is powered off and exists but not properly provisioned - marking as interrupted');
+                    result = ServerStatus.Stopped(true); // true = error/interrupted state
+                } else {
+                    result = ServerStatus.Stopped(false); // false = normal stopped state
+                }
 
             case "running":
                 result = ServerStatus.Running( hasError );
@@ -211,10 +223,18 @@ class ServerManager {
         // Check if the VM exists in VirtualBox but doesn't have a recognized state
         if (result == ServerStatus.Unknown) {
             // If the VM exists in VirtualBox but doesn't have a standard state,
-            // assume it's powered off and should be destroyable
+            // check if it's provisioned to determine its status
             if (server.vmExistsInVirtualBox()) {
-                Logger.info('${server}: VM exists in VirtualBox but with unknown state, assuming Stopped');
-                result = ServerStatus.Stopped(false);
+                var isProperlyProvisioned = server.provisioned;
+                
+                if (!isProperlyProvisioned) {
+                    // VM exists but was never properly provisioned - show as interrupted
+                    Logger.info('${server}: VM exists in VirtualBox with unknown state and not properly provisioned, marking as interrupted');
+                    result = ServerStatus.Stopped(true); // true = error/interrupted state
+                } else {
+                    Logger.info('${server}: VM exists in VirtualBox with unknown state but is provisioned, assuming normal Stopped');
+                    result = ServerStatus.Stopped(false); // false = normal stopped state
+                }
             } else if (server.isValid()) {
                 result = ServerStatus.Ready;
             } else {

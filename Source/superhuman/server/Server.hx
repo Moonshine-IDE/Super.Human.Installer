@@ -372,8 +372,22 @@ class Server {
 
     public var provisioned( get, never ):Bool;
     function get_provisioned() {
-        // Return true if either the provisioner reports provisioned OR the VM exists in VirtualBox
-        return _provisioner.provisioned || vmExistsInVirtualBox();
+        try {
+            // Check if provisioning was explicitly canceled
+            if (_provisioningCanceled) {
+                return false;
+            }
+            
+            // For a server to be considered properly provisioned, BOTH conditions must be true:
+            // 1. The provisioner must report it as provisioned (provisioning.proof file exists)
+            // 2. The VM must exist in VirtualBox
+            //
+            // This ensures servers stopped during provisioning are not reported as provisioned
+            return _provisioner != null && _provisioner.provisioned && vmExistsInVirtualBox();
+        } catch (e) {
+            Logger.error('${this}: Error in provisioned getter: ${e}');
+            return false; // Safer default is false
+        }
     }
     
     /**
@@ -1033,13 +1047,34 @@ class Server {
     function _actionChanged( prop:Property<ServerAction> ) { }
 
     function _propertyChanged<T>( property:T ) {
-
-        if ( !_created ) return;
-
-        _setServerStatus();
-
-        for ( f in _onUpdate ) f( this, true );
-
+        try {
+            // Early exit if server isn't created yet
+            if (!_created) return;
+            
+            // Always handle status update safely
+            try {
+                _setServerStatus();
+            } catch (e) {
+                Logger.error('${this}: Error updating server status in property change: ${e}');
+            }
+            
+            // Handle update callbacks safely
+            if (_onUpdate != null) {
+                for (f in _onUpdate) {
+                    try {
+                        f(this, true);
+                    } catch (e) {
+                        Logger.error('${this}: Error in update callback: ${e}');
+                        // Continue with other callbacks despite errors
+                    }
+                }
+            } else {
+                Logger.warning('${this}: Cannot notify updates - _onUpdate is null');
+            }
+        } catch (e) {
+            // Global error handler
+            Logger.error('${this}: Unhandled exception in _propertyChanged: ${e}');
+        }
     }
 
     public function safeIdExists():Bool {
@@ -1578,22 +1613,118 @@ class Server {
     }
 
     function _onVagrantDestroy( machine:VagrantMachine ) {
+        try {
+            // Log that we're starting the destroy handler with machine info
+            var machineInfo = machine != null ? 
+                (machine.serverId != null ? 'machine with serverId=${machine.serverId}' : 'machine with null serverId') : 
+                'null machine';
+            Logger.info('${this}: _onVagrantDestroy called with ${machineInfo}');
+            
+            // Validate machine parameter first to avoid null reference
+            if (machine == null) {
+                Logger.warning('${this}: Vagrant destroy callback received null machine');
+                
+                // Handle this case by manually updating status and VM info
+                try {
+                    // Ensure the status is safe
+                    this._status.value = ServerStatus.Unknown;
+                    this._busy.value = false;
+                    
+                    // Try to refresh VirtualBox info to recover
+                    if (this._combinedVirtualMachine != null && 
+                        this._combinedVirtualMachine.value != null && 
+                        this._combinedVirtualMachine.value.virtualBoxMachine != null) {
+                        refreshVirtualBoxInfo();
+                    }
+                } catch (e) {
+                    Logger.error('${this}: Failed to recover from null machine: ${e}');
+                }
+                return;
+            }
 
-        if ( machine.serverId != this._id ) return;
+            // Validate serverId match
+            if (machine.serverId != this._id) {
+                Logger.warning('${this}: Vagrant destroy callback for wrong server: ${machine.serverId} vs ${this._id}');
+                return;
+            }
 
-        Vagrant.getInstance().onDestroy.remove( _onVagrantDestroy );
+            // First, safely remove the callback to prevent multiple triggers
+            try {
+                var vagrant = Vagrant.getInstance();
+                if (vagrant != null && vagrant.onDestroy != null) {
+                    vagrant.onDestroy.remove(_onVagrantDestroy);
+                }
+            } catch (e) {
+                Logger.warning('${this}: Error removing destroy callback: ${e}');
+            }
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
+            // Safe console access
+            if (console != null) {
+                try {
+                    console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.destroyed'));
+                } catch (e) {
+                    Logger.error('${this}: Error accessing console: ${e}');
+                }
+            }
 
-        Logger.info( '${this}: destroyed' );
+            Logger.info('${this}: destroyed');
 
-        this._provisioner.deleteProvisioningProofFile();
+            // Safely delete provisioning proof file
+            if (_provisioner != null) {
+                try {
+                    _provisioner.deleteProvisioningProofFile();
+                } catch (e) {
+                    Logger.error('${this}: Error deleting provisioning proof file: ${e}');
+                }
+            }
 
-        if ( this.status.value.match( ServerStatus.Destroying( true ) ) )
-            _unregisterVM()
-        else
-            refreshVirtualBoxInfo();
-
+            // Update server state based on current status - with safe null checks
+            try {
+                var curStatus = this.status != null ? this.status.value : null;
+                var isDestroying = curStatus != null && curStatus.match(ServerStatus.Destroying(true));
+                
+                if (isDestroying) {
+                    Logger.info('${this}: Server was being explicitly destroyed, running _unregisterVM');
+                    try {
+                        _unregisterVM();
+                    } catch (e) {
+                        Logger.error('${this}: Error unregistering VM: ${e}');
+                        try {
+                            // Force state update even if unregister fails
+                            this._status.value = ServerStatus.Unknown;
+                            this._busy.value = false;
+                            refreshVirtualBoxInfo();
+                        } catch (e2) {
+                            Logger.error('${this}: Critical error during recovery: ${e2}');
+                        }
+                    }
+                } else {
+                    Logger.info('${this}: Server was not being explicitly destroyed, refreshing VM info');
+                    refreshVirtualBoxInfo();
+                }
+            } catch (e) {
+                Logger.error('${this}: Error updating server state after destroy: ${e}');
+                
+                // Last resort recovery
+                try {
+                    this._status.value = ServerStatus.Unknown;
+                    this._busy.value = false;
+                } catch (e2) {
+                    Logger.error('${this}: Critical failure in recovery: ${e2}');
+                }
+            }
+        } catch (e) {
+            // Global try/catch for the entire method
+            Logger.error('${this}: Unhandled exception in _onVagrantDestroy: ${e}');
+            try {
+                // Force a final status update to prevent UI from hanging
+                this._status.value = ServerStatus.Unknown;
+                this._busy.value = false;
+            } catch (e2) {
+                // Nothing more we can do
+                Logger.error('${this}: Fatal error in recovery: ${e2}');
+            }
+        }
     }
 
     function _unregisterVM() {
@@ -1899,6 +2030,17 @@ class Server {
         Logger.info('${this}: VirtualBox poweroff completed for machine: ${machine.virtualBoxId}');
         if (console != null) console.appendText("VM has been successfully powered off.", true);
         
+        // Force delete the provisioning proof file to ensure it's marked as not provisioned
+        if (_provisioner != null) {
+            _provisioner.deleteProvisioningProofFile();
+            Logger.info('${this}: Deleted provisioning proof file to mark server as corrupt (not provisioned)');
+            if (console != null) console.appendText("Marking server as corrupt since provisioning was interrupted.", true);
+        }
+        
+        // Keep the server in stopping state until cleanup is complete
+        this._status.value = ServerStatus.Stopping(true); // Keep in stopping state
+        this._busy.value = true; // Keep busy flag on to prevent state changes
+        
         // Wait for 30 seconds to allow any Ruby provisioning processes to terminate
         if (console != null) console.appendText("Waiting 30 seconds for provisioning processes to clean up...", true);
         Logger.info('${this}: Waiting 30 seconds for provisioning processes to clean up before finalizing state');
@@ -1909,15 +2051,27 @@ class Server {
             // Stop the timer after one execution
             cleanupTimer.stop();
             
+            // Delete the provisioning proof file again to be absolutely sure
+            if (_provisioner != null) {
+                _provisioner.deleteProvisioningProofFile();
+            }
+            
             // Explicitly set state to Stopped with errors to make the destroy button appear
+            Logger.info('${this}: 30-second cleanup timer completed, now setting state to Stopped(true)');
+            if (console != null) console.appendText("Cleanup completed. Setting server to stopped with error state...", true);
+            
             this._status.value = ServerStatus.Stopped(true);
             this._busy.value = false;
             
-            // Refresh VM info to update the UI
-            refreshVirtualBoxInfo();
-            
-            Logger.info('${this}: Server status updated to Stopped(true) after poweroff and cleanup delay');
-            if (console != null) console.appendText("Server state set to Stopped with errors. You can now destroy the VM if needed.", true);
+            // Wait a brief moment before refreshing the VirtualBox info to ensure UI state has updated
+            Timer.delay(() -> {
+                Logger.info('${this}: Refreshing VM info after state update');
+                // Refresh VM info to update the UI
+                refreshVirtualBoxInfo();
+                
+                Logger.info('${this}: Server status updated to Stopped(true) after poweroff and cleanup delay');
+                if (console != null) console.appendText("Server is now in a stopped and corrupt state. You can destroy the VM if needed.", true);
+            }, 500); // Small additional delay to ensure UI state updates first
         };
     }
 
@@ -2102,9 +2256,23 @@ class Server {
     }
 
     function _serverStatusChanged( property:Property<ServerStatus> ) {
-
-        for ( f in _onStatusUpdate ) f( this, false );
-
+        try {
+            if (_onStatusUpdate == null) {
+                Logger.warning('${this}: Cannot update status - _onStatusUpdate is null');
+                return;
+            }
+            
+            for ( f in _onStatusUpdate ) {
+                try {
+                    f( this, false );
+                } catch (e) {
+                    Logger.error('${this}: Error in status update callback: ${e}');
+                    // Continue with other callbacks despite errors
+                }
+            }
+        } catch (e) {
+            Logger.error('${this}: Unhandled exception in _serverStatusChanged: ${e}');
+        }
     }
 
     public function setServerStatus() {

@@ -1652,11 +1652,38 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 	}
 
+	// Tracking for server deletion
+	private var _pendingDeleteServer:Server = null;
+	private var _pendingDeleteFiles:Bool = false;
+	
 	function _vagrantDestroyed( machine:VagrantMachine ) {
+		// Check if we're waiting to delete a server
+		if (_pendingDeleteServer != null) {
+			Logger.info('${this}: VM destroyed, now proceeding with server deletion');
+			
+			// Cache the server and delete flag, then clear pending state
+			var server = _pendingDeleteServer;
+			var deleteFiles = _pendingDeleteFiles;
+			
+			// Reset pending state
+			_pendingDeleteServer = null;
+			_pendingDeleteFiles = false;
+			
+			// Now complete the server deletion
+			server.dispose();
+			ServerManager.getInstance().servers.remove(server);
+			
+			if (deleteFiles) {
+				FileTools.deleteDirectory(server.path.value);
+			}
 
-		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdestroyed' ) );
-		_saveConfig();
-
+			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdeleted'));
+			_saveConfig();
+		} else {
+			// Normal destroy operation, not part of server deletion
+			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdestroyed'));
+			_saveConfig();
+		}
 	}
 
 	function _vagrantUped( machine:VagrantMachine, exitCode:Float ) {
@@ -1732,22 +1759,54 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _deleteServerInstance( server:Server, deleteFiles:Bool = false ) {
-
 		Logger.info( '${this}: Deleting ${server} deleteFiles:${deleteFiles}' );
 
+		// Check if we need to destroy the VM first
+		if (server.vmExistsInVirtualBox()) {
+			Logger.info( '${this}: Server has a VM that needs to be destroyed first' );
+			
+			try {
+				// Set pending delete to be handled in the _vagrantDestroyed callback
+				// This ensures deletion only proceeds after VM destruction is complete
+				_pendingDeleteServer = server;
+				_pendingDeleteFiles = deleteFiles;
+				
+				// Start VM destruction and return - we'll finish the deletion
+				// when the _vagrantDestroyed callback fires
+				server.destroy();
+				
+				// Notify user that we're destroying the VM first
+				ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdestroying', 'VM will be destroyed before deletion' ) );
+				
+				// The rest of the deletion will be handled in the _vagrantDestroyed callback
+				return;
+			} catch (e) {
+				// If VM destruction fails, log error and proceed with deletion anyway
+				Logger.error('${this}: Failed to destroy VM before deletion: ${e}, proceeding with deletion anyway');
+				if (server.console != null) {
+					server.console.appendText('Failed to destroy VM before deletion: ${e}, proceeding with deletion anyway', true);
+				}
+				
+				// Reset pending state since we're proceeding directly
+				_pendingDeleteServer = null;
+				_pendingDeleteFiles = false;
+			}
+		}
+
+		// No VM to destroy, proceed with immediate deletion
 		server.dispose();
 		ServerManager.getInstance().servers.remove( server );
 		
 		if ( deleteFiles ) {
-
-			FileTools.deleteDirectory( server.path.value );
-
+			try {
+				FileTools.deleteDirectory( server.path.value );
+			} catch (e) {
+				Logger.error('${this}: Error deleting server directory: ${e}');
+			}
 		}
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdeleted' ) );
-
 		_saveConfig();
-
 	}
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
