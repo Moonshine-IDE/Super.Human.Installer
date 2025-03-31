@@ -241,35 +241,6 @@ class DynamicConfigPage extends Page {
             _pendingUpdateContent = false;
             updateContent(true);
         }
-        
-        // Listen for when this page becomes active again
-        this.addEventListener(openfl.events.Event.ACTIVATE, _onPageActivated);
-    }
-    
-    /**
-     * Handler for when the page is activated (becomes visible again)
-     * This is used to ensure validation is updated when returning from other pages
-     */
-    private function _onPageActivated(e:openfl.events.Event):Void {
-        // Check if we're returning from the roles page by looking for the rolesProcessed flag
-        if (_server != null && _server.customProperties != null && 
-            Reflect.hasField(_server.customProperties, "rolesProcessed")) {
-            
-            Logger.info('${this}: Page activated after role configuration, checking validity');
-            
-            // Update the roles button and validation state
-            var rolesValid = _server.areRolesValid();
-            _buttonRoles.icon = rolesValid ? 
-                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
-                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
-            
-            // Update save button enabled state
-            var formValid = _form != null && _form.isValid();
-            _buttonSave.enabled = formValid && rolesValid;
-            
-            // Force content update to refresh all fields
-            updateContent(true);
-        }
     }
 
     /**
@@ -666,9 +637,7 @@ class DynamicConfigPage extends Page {
         if (Reflect.hasField(field, "hidden")) {
             var hiddenValue = Reflect.field(field, "hidden");
             isHidden = (hiddenValue == true || Std.string(hiddenValue).toLowerCase() == "true");
-            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}, type=${Type.typeof(hiddenValue)}');
-        } else {
-            Logger.info('${this}: Field ${field.name} has no hidden property defined');
+            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}');
         }
         
         if (isHidden) {
@@ -873,15 +842,14 @@ class DynamicConfigPage extends Page {
             _buttonRoles.icon = (_server.areRolesValid()) ? GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
             _buttonRoles.enabled = !_server.roles.locked;
             
-            // Always enable the save button (soft lock approach)
-            // Validation will be performed when the button is clicked
+            // We want to make sure that all fields are valid first, and that the roles have been validated before allowing users to save. If they missed a field it should be higlighted red so they know what to change
             _buttonSave.enabled = true;
             
             // Log validation status for debugging only
             var formValid = _form != null && _form.isValid();
             var rolesValid = _server.areRolesValid();
             Logger.info('${this}: Save button validation status (for debugging) - form valid: ${formValid}, roles valid: ${rolesValid}');
-            
+                        
             // Update provisioner dropdown - this is now handled by _updateProvisionerDropdown
             if (_dropdownCoreComponentVersion.selectedIndex == -1) {
                 for (i in 0..._dropdownCoreComponentVersion.dataProvider.length) {
@@ -1188,10 +1156,10 @@ class DynamicConfigPage extends Page {
     }
     
     override function _cancel(?e:Dynamic) {
-        // If this is a provisional server, remove it from the server manager
-        if (_server != null && _server.provisional) {
+        // Only remove the server if the server directory doesn't exist
+        // This ensures we only remove truly new servers that have never been saved
+        if (_server != null && !sys.FileSystem.exists(_server.serverDir)) {
             superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
-            Logger.info('${this}: Removed provisional server ${_server.id} from server manager');
         }
         
         // Use CANCEL_PAGE to return to the server overview page
@@ -1218,27 +1186,15 @@ class DynamicConfigPage extends Page {
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
-        // Validate the form - this will cause validation visuals to appear (red borders, etc.)
-        var formValid = _form.isValid();
-        if (!formValid) {
-            Logger.warning('${this}: Form validation failed, highlighting invalid fields');
-            // Don't return here - let validation visuals appear
-        }
+        // Validate if roles are valid
+        _buttonRoles.setValidity(_server.areRolesValid());
         
-        // Check role validity and update button appearance
-        var rolesValid = _server.areRolesValid();
-        _buttonRoles.setValidity(rolesValid);
-        
-        // Log validation status
-        Logger.info('${this}: Save button clicked - form valid: ${formValid}, roles valid: ${rolesValid}');
-        
-        // Only proceed with the save if all validations pass
-        if (!formValid || !rolesValid) {
-            Logger.warning('${this}: Save operation aborted due to validation failures');
+        // Check if roles are valid before proceeding with save
+        if (!_server.areRolesValid()) {
+            Logger.warning('${this}: Cannot save server configuration - roles are not valid');
             return;
         }
 
-        // If we get here, validation passed - proceed with saving
         // Making sure the event is fired
         var a = _server.roles.value.copy();
         _server.roles.value = a;

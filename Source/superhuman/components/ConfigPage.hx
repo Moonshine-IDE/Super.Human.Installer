@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+
+import champaign.core.logging.Logger;
 import genesis.application.components.GenesisFormRow;
 import feathers.controls.Check;
 import feathers.controls.Label;
@@ -299,11 +301,12 @@ class ConfigPage extends Page {
             } else {
                 // For standard provisioners, look at root customProperties
                 for (field in Reflect.fields(_server.customProperties)) {
-                    // Skip dynamicCustomProperties and dynamicAdvancedCustomProperties
+                    // Skip dynamicCustomProperties, dynamicAdvancedCustomProperties, and rolesProcessed
                     if (field != "dynamicCustomProperties" && 
                         field != "dynamicAdvancedCustomProperties" &&
                         field != "provisionerDefinition" &&
-                        field != "serviceTypeData") {
+                        field != "serviceTypeData" &&
+                        field != "rolesProcessed") {
                         
                         var value = Reflect.field(_server.customProperties, field);
                         if (value != null && Std.isOfType(value, String)) {
@@ -516,11 +519,12 @@ class ConfigPage extends Page {
     }
     
     function _buttonCancelTriggered( e:TriggerEvent ) {
-        // If this is a provisional server, remove it from the server manager
-        if (_server != null && _server.provisional) {
+        // Only remove the server if the server directory doesn't exist
+        // This ensures we only remove truly new servers that have never been saved
+        if (_server != null && !sys.FileSystem.exists(_server.serverDir)) {
+            // This is a truly new server that has never been saved - safe to remove
             superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
         }
-        
         // Dispatch the CANCEL_PAGE event to match what SuperHumanInstaller is listening for
         this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE));
     }

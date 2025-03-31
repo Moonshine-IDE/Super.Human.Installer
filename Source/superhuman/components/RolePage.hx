@@ -479,13 +479,13 @@ class RolePage extends Page {
 
     function _buttonCloseTriggered( e:TriggerEvent ) {
         // Set a flag indicating the user has completed role configuration
-        // This will be used by custom provisioners to ensure role processing
         if (_server != null) {
             if (_server.customProperties == null) {
                 _server.customProperties = {};
             }
             
-            // Mark roles as processed - this flag will only be checked for custom provisioners
+            // Mark roles as processed - set for all provisioner types
+            // This flag is important for validation and should not be shown ANYWHERE
             Reflect.setField(_server.customProperties, "rolesProcessed", true);
             Logger.info('${this}: Marked roles as processed for server ID: ${_server.id}');
         }

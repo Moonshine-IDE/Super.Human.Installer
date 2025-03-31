@@ -259,6 +259,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			var server = ServerManager.getInstance().createServer( s, s.provisioner.type );
 			server.onUpdate.add( onServerPropertyChanged );
+			
+			// Mark servers loaded from config as non-provisional
+			Reflect.setField(server, "_provisional", false);
 
 		}
 
