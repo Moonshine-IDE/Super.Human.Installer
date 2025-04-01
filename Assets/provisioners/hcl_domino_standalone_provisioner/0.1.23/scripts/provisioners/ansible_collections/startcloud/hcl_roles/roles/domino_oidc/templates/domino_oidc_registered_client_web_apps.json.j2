@@ -18,7 +18,7 @@
                                 "RC_client_id": "{{ domino_oidc_client_id }}",
                                 "RC_auth_method": "2",
                                 "RC_client_secret": "{{ domino_oidc_client_secret }}",
-                                "RC_Name": "Web",
+                                "RC_Name": "{{ settings.hostname }} Web",
                                 "RC_redirect_uris": ["https://{{ domino_install_proxy_url }}/auth/protocol/oidc", "https://{{ settings.hostname }}.{{ settings.domain }}/auth/protocol/oidc"],
                                 "RC_aud": "{{ domino_organization }}-O={{ id_vault_name }}",
                                 "RC_scope": "openid email Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",

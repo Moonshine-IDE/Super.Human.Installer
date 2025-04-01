@@ -128,6 +128,65 @@
             seconds: "{{ domino_startup_delay }}"
 
         -
+          name: "Creating/Updating Domino Verse internet Site Document"
+          block:
+              -
+                name: "Handing templated gather_domino_verse_internet_site_doc.json JSON to Genesis"
+                ansible.builtin.template:
+                  dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_verse_internet_site_doc.json"
+                  mode: "a+x"
+                  owner: "{{ domino_user }}"
+                  group: "{{ domino_group }}"
+                  src: "gather_domino_verse_internet_site_doc.json.j2"
+
+              -
+                name: "Waiting until Genesis returns OK after processing gather_domino_verse_internet_site_doc.json"
+                ansible.builtin.wait_for:
+                  path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_verse_internet_site_doc.json"
+
+              -
+                name: "Checking if gather_domino_verse_internet_site_doc.json JSON applied succesfully"
+                ansible.builtin.lineinfile:
+                  path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_verse_internet_site_doc.json"
+                  line: "OK"
+                  state: present
+                check_mode: true
+                register: presence_oidc_gather_for_additional
+                failed_when: presence_oidc_gather_for_additional is changed
+
+              -
+                name: "Checking for verse_internet_site_doc_check"
+                register: verse_internet_site_doc_check
+                ansible.builtin.stat:
+                  path: "/JavaAddin/Genesis/jsonresponse/oidc_domino_verse_internet_site_doc.txt"
+                  get_md5: false
+
+              -
+                name: "Reading OIDC hostnames from file"
+                when: verse_internet_site_doc_check.stat.exists
+                ansible.builtin.slurp:
+                  src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_domino_verse_internet_site_doc.txt"
+                register: oidc_provider_file_internet_site_doc_for_verse
+
+              -
+                name: "Processing Domino OIDC Provider Inetsite doc entry"
+                when: verse_internet_site_doc_check.stat.exists
+                ansible.builtin.set_fact:
+                  oidc_provider_file_internet_site_doc_for_verse_additional_raw: "{{ oidc_provider_file_internet_site_doc_for_verse['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+              -
+                name: "Removing OIDCHostname= prefix, checking for Auth URL for server, and ensuring unique entries"
+                when: verse_internet_site_doc_check.stat.exists
+                ansible.builtin.set_fact:
+                  oidc_provider_file_internet_site_doc_for_verse_additional: "{{ oidc_provider_file_internet_site_doc_for_verse_additional_raw | regex_replace('ISiteName=', ' ') | split(' ') | unique | join(' ') }}"
+
+              -
+                name: "Setting Update/Create on document creation to prevent duplicates by checking oidc_provider_file_internet_site_doc_for_verse_additional for matching hostname"
+                when: verse_internet_site_doc_check.stat.exists
+                ansible.builtin.set_fact:
+                  domino_verse_inet_site_create: "{{ false if settings.hostname + ' Verse' in oidc_provider_file_internet_site_doc_for_verse_additional else domino_verse_inet_site_create | default(true) }}"
+
+        -
           name: "Handing Verse templated JSON to Genesis to create Verse Internet Site Document"
           ansible.builtin.template:
             dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/verse-internet-site-document.json"
@@ -231,9 +290,9 @@
                 oidc_hostnames_raw_for_verse: "{{ oidc_hostnames_file['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
 
             -
-              name: "Removing OIDCHostname= prefix and checking for domino_verse_proxy_url"
+              name: "Removing OIDCHostname= prefix, checking for domino_verse_proxy_url, and ensuring unique entries"
               ansible.builtin.set_fact:
-                oidc_hostnames_processed_for_verse: "{{ oidc_hostnames_raw_for_verse | regex_replace('^OIDCHostname=', '') }}"
+                oidc_hostnames_processed_for_verse: "{{ oidc_hostnames_raw_for_verse | regex_replace('OIDCHostname=', '') | split(' ') | unique | join(' ') }}"
 
             -
               name: "Appending domino_verse_proxy_url if not present"
@@ -321,14 +380,14 @@
                 oidc_registered_clients_redirect_uris_raw: "{{ oidc_registered_clients_file_redirect_uris['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
 
             -
-              name: "Removing RC_Name= prefix and checking for Registered client name"
+              name: "Removing RC_Name= prefix, checking for Registered client name, and ensuring unique entries"
               ansible.builtin.set_fact:
-                oidc_registered_clients_processed_verse: "{{ oidc_registered_clients_raw_verse | regex_replace('^RC_Name=', '') }}"
+                oidc_registered_clients_processed_verse: "{{ oidc_registered_clients_raw_verse | regex_replace('RC_Name=', ' ') | split(' ') | unique | join(' ') }}"
 
             -
-              name: "Removing RC_redirect_uris= prefix and checking for domino_verse_proxy_url"
+              name: "Removing RC_redirect_uris= prefix, checking for domino_verse_proxy_url, and ensuring unique entries"
               ansible.builtin.set_fact:
-                oidc_registered_clients_redirect_uri_processed_verse: "{{ oidc_registered_clients_redirect_uris_raw | regex_replace('^RC_redirect_uris=', '') }}"
+                oidc_registered_clients_redirect_uri_processed_verse: "{{ oidc_registered_clients_redirect_uris_raw | regex_replace('RC_redirect_uris=', ' ') | split(' ') | unique | join(' ') }}"
 
             -
               name: "Appending Verse Name if not present"

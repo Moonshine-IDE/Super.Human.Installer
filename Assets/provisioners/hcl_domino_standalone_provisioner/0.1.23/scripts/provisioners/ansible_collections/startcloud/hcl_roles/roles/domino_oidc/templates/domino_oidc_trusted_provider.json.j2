@@ -15,15 +15,15 @@
                             "items": {
                                 "Form": "OIDCProvider",
                                     {% if domino_oidc_provider_federation_enabled and domino_oidc_provider_web_enabled %}
-                                        "OIDCHostname": ["bearer.vault.{{ domino_server_name_common }}","{{ domino_install_proxy_url }}","{{ settings.hostname }}.{{ settings.domain }}"],
+                                        "OIDCHostname": ["bearer.vault.{{ domino_origin_server_name_common }}","{{ domino_install_proxy_url }}","{{ settings.hostname }}.{{ settings.domain }}"],
                                         "OIDCIDVaultScope": "Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",
                                     {% elif domino_oidc_provider_federation_enabled %}
-                                        "OIDCHostname": ["bearer.vault.{{ domino_server_name_common }}"],
+                                        "OIDCHostname": ["bearer.vault.{{ domino_origin_server_name_common }}"],
                                         "OIDCIDVaultScope": "Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",
                                     {% else %}
                                         "OIDCHostname": ["{{ domino_install_proxy_url }}","{{ settings.hostname }}.{{ settings.domain }}"],
                                     {% endif %}
-                                "OIDCProviderName": "Domino OIDC Provider",
+                                "OIDCProviderName": "{{ settings.hostname }} Domino OIDC Provider",
                                 "OIDCBaseURL": "https://{{ domino_oidc_install_proxy_url }}/auth/protocol/oidc",
 {% if domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled %}
                                 "OIDC_TrustedRoots": "{{ ca_subject_key_id }}",

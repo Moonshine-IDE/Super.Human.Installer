@@ -3,6 +3,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [1.2.0]
+
+The 1.2.0 release of Super.Human.Installer adds support for additional Domino server configuration, improves server management, and updates installer components.
+
+### Added
+* Added Hotfix option for Nomad role ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Added new hashes for latest versions ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139)):
+  * Nomad Web 1.0.15-IF1
+  * Leap 1.0.17
+  * Domino 12.0.2 FP6
+* Added default enabled JEDI role for improved server functionality ([#141](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/141))
+
+### Changed
+* Phase 3 updates for [hcl_domino_standalone_provisioner v0.1.23](https://github.com/STARTcloud/hcl_domino_standalone_provisioner) ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Phase 3 updates for [additional Domino servers](https://github.com/STARTcloud/hcl_domino_additional_provisioner) ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+* Improved logging for gathering status of server ([#139](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/139))
+
+### Fixed
+* Fixed error when recreating server after deletion ([#92](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/92))
+* Fixed isse where deleted server was still flagged as provisioned [#106](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/106))
+
 ## Super Human Installer [1.1.0]
 
 The 1.1.0 release of Super.Human.Installer enhances Domino Server support and improves VM management capabilities.

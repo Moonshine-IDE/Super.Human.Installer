@@ -1,0 +1,26 @@
+{
+	"title": "Updating the internet site doc for Domino OIDC Auth Provider",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 1. Export original data ---",
+			"databases": [
+				{
+					"action": "export",
+					"filePath": "names.nsf",
+					"documents": [
+						{
+							"action": "export",
+							"filePath": "JavaAddin/Genesis/jsonresponse/gather_domino_oidc_auth_inet_site_doc.txt",
+							"search": {
+							   "formula":"Form=\"WebSite\" & ISiteName=\"{{ settings.hostname }} Domino OIDC Provider\"",
+                               "number":0
+							},
+							"evaluate": "\"ISiteName=\"+@Implode(ISiteName)"
+						}
+					]
+				}
+			]
+		}
+	]
+}

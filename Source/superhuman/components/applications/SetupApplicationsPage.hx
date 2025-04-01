@@ -20,6 +20,7 @@ class SetupApplicationsPage extends Page
 	final _width:Float = GenesisApplicationTheme.GRID * 100;
 	
 	private var _appData:ApplicationData;
+	private var _fd:FileDialog;
 	
 	public function new()
 	{
@@ -86,13 +87,15 @@ class SetupApplicationsPage extends Page
     }
     
     function _locateButtonTriggered( e:TriggerEvent ) {
-
+		
+        if ( _fd != null ) return;
+        
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        var fd = new FileDialog();
+        _fd = new FileDialog();
         
         var currentDir:String; 
 	
-        fd.onSelect.add( path -> {
+        _fd.onSelect.add( path -> {
 			
         		path = Path.removeTrailingSlashes(path);
             currentDir = Path.directory( path );
@@ -105,9 +108,19 @@ class SetupApplicationsPage extends Page
 			
 			textInputPath.text = path;
 			_showError();
+
+			_fd.onSelect.removeAll();
+			_fd.onCancel.removeAll();
+            _fd = null;
         } );
 
-        fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'settingspage.applications.titleapppath', _appData.appName ) );
+        _fd.onCancel.add( () -> {
+            _fd.onCancel.removeAll();
+			_fd.onSelect.removeAll();
+            _fd = null;
+        } );
+
+        _fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'settingspage.applications.titleapppath', _appData.appName ) );
     }
     
     function _showError() {

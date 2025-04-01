@@ -79,6 +79,7 @@ class RolePage extends Page {
     // Fields to store provisioner info from custom provisioners
     public var _provisionerDefinition:ProvisionerDefinition;
     public var _lastDefinitionName:String;
+    var _fd:FileDialog;
     
     public function new() {
 
@@ -513,6 +514,7 @@ class RolePickerItem extends LayoutGroup {
     var _roleImpl:ServerRoleImpl;
     var _selectInstallerLabel:Label;
     var _server:Server;
+    var _fd:FileDialog;
 
     public var role( get, never ):RoleData;
     function get_role() return _roleImpl.role;
@@ -703,12 +705,14 @@ class RolePickerItem extends LayoutGroup {
     }
 
     function _installerButtonTriggered( e:TriggerEvent ) {
-
+        
+        if ( _fd != null ) return;
+        
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        var fd = new FileDialog();
+        _fd = new FileDialog();
         var currentDir:String;
 
-        fd.onSelect.add( path -> {
+        _fd.onSelect.add( path -> {
 			
             var currentPath = new Path(path);
             var fullFileName = currentPath.file + "." + currentPath.ext;
@@ -762,18 +766,32 @@ class RolePickerItem extends LayoutGroup {
                     );
                 }
             }
-        });
 
-        fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locateinstaller', _roleImpl.name ) );
+            _fd.onSelect.removeAll();
+            _fd.onCancel.removeAll();
+            _fd = null;
+
+        } );
+
+        _fd.onCancel.add( () -> {
+            _fd.onCancel.removeAll();
+            _fd.onSelect.removeAll();
+            _fd = null;
+        } );
+
+        _fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locateinstaller', _roleImpl.name ) );
+
     }
 
     function _hotfixButtonTriggered( e:TriggerEvent ) {
         
+        if ( _fd != null ) return;
+        
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        var fd = new FileDialog();
+        _fd = new FileDialog();
         var currentDir:String;
 
-        fd.onSelect.add( path -> {
+        _fd.onSelect.add( path -> {
             var currentPath = new Path(path);
             var fullFileName = currentPath.file + "." + currentPath.ext;
             
@@ -830,16 +848,31 @@ class RolePickerItem extends LayoutGroup {
             }
         });
 
-        fd.browse(FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString('rolepage.role.locatehotfix', _roleImpl.name));
+            _fd.onSelect.removeAll();
+            _fd.onCancel.removeAll();
+            _fd = null;
+
+        } );
+
+        _fd.onCancel.add( () -> {
+            _fd.onCancel.removeAll();
+            _fd.onSelect.removeAll();
+            _fd = null;
+        } );
+
+        _fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locatehotfix', _roleImpl.name ) );
+
     }
 
     function _fixpackButtonTriggered( e:TriggerEvent ) {
         
+        if ( _fd != null ) return;
+        
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        var fd = new FileDialog();
+        _fd = new FileDialog();
         var currentDir:String;
 
-        fd.onSelect.add( path -> {
+        _fd.onSelect.add( path -> {
             var currentPath = new Path(path);
             var fullFileName = currentPath.file + "." + currentPath.ext;
             
@@ -894,7 +927,19 @@ class RolePickerItem extends LayoutGroup {
             }
         });
 
-        fd.browse(FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString('rolepage.role.locatefixpack', _roleImpl.name));
+            _fd.onSelect.removeAll();
+            _fd.onCancel.removeAll();
+            _fd = null;
+        } );
+
+        _fd.onCancel.add( () -> {
+            _fd.onCancel.removeAll();
+            _fd.onSelect.removeAll();
+            _fd = null;
+        } );
+
+        _fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locatefixpack', _roleImpl.name ) );
+
     }
 
 }

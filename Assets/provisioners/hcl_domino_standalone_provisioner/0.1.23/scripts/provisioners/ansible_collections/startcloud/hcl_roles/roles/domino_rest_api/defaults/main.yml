@@ -3,9 +3,17 @@ run_tasks: true
 # Version information
 domino_rest_api_version: 1.1.2
 
-domino_rest_api_archive: "{% if domino_rest_api_version is version('1', '==') %}Domino_REST_API_V1_Installer.tar.gz{% elif domino_rest_api_version is version('1.0.9', '>=') %}Domino_REST_API_V{{ domino_rest_api_version }}_R{{ domino_major_version }}_Installer.tar.gz{% else %}Domino_REST_API_V{{ domino_rest_api_version }}_Installer.tar.gz{% endif %}"
+# Try to extract version from archive name if version is null but archive is specified
+domino_rest_api_version_from_archive: "{% if (domino_rest_api_version is not defined or domino_rest_api_version is none or domino_rest_api_version == '') and (domino_rest_api_archive is defined and domino_rest_api_archive is not none and domino_rest_api_archive != '') and domino_rest_api_archive is search('V(\\d+\\.\\d+\\.\\d+)') %}{{ domino_rest_api_archive | regex_search('V(\\d+\\.\\d+\\.\\d+)', '\\1') }}{% else %}{% endif %}"
 
-domino_rest_api_installer_jar: "{% if domino_rest_api_version is version('1', '==') %}restapiInstall.jar{% elif domino_rest_api_version is version('1.0.9', '>=') %}restapiInstall-r{{ domino_major_version }}.jar{% else %}restapiInstall.jar{% endif %}"
+# Use extracted version if available, otherwise use provided version or default
+domino_rest_api_version_safe: "{% if domino_rest_api_version_from_archive is defined and domino_rest_api_version_from_archive != '' %}{{ domino_rest_api_version_from_archive }}{% else %}{{ domino_rest_api_version | default('1.1.2', true) }}{% endif %}"
+
+# First check if archive is explicitly defined, otherwise calculate based on version
+domino_rest_api_archive: "{% if domino_rest_api_archive is defined and domino_rest_api_archive is not none and domino_rest_api_archive != '' %}{{ domino_rest_api_archive }}{% elif domino_rest_api_version_safe is version('1', '==') %}Domino_REST_API_V1_Installer.tar.gz{% elif domino_rest_api_version_safe is version('1.0.9', '>=') %}Domino_REST_API_V{{ domino_rest_api_version_safe }}_R{{ domino_major_version }}_Installer.tar.gz{% else %}Domino_REST_API_V{{ domino_rest_api_version_safe }}_Installer.tar.gz{% endif %}"
+
+# Use the safe version for installer jar calculation
+domino_rest_api_installer_jar: "{% if domino_rest_api_version_safe is version('1', '==') %}restapiInstall.jar{% elif domino_rest_api_version_safe is version('1.0.9', '>=') %}restapiInstall-r{{ domino_major_version }}.jar{% else %}restapiInstall.jar{% endif %}"
 
 domino_rest_api_debug: true
 installer_url_app_path: "Super.Human.Installer/Domino_rest_api"

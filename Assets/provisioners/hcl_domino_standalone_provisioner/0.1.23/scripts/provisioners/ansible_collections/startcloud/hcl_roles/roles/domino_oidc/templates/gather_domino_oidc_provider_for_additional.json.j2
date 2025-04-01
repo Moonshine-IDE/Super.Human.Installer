@@ -11,12 +11,12 @@
 					"documents": [
 						{
 							"action": "export",
-							"filePath": "JavaAddin/Genesis/jsonresponse/oidc_hostnames.txt",
+							"filePath": "JavaAddin/Genesis/jsonresponse/oidc_provider_for_additional.txt",
 							"search": {
-							   "formula":"Form=\"OIDCProvider\" & OIDCProviderName=\"{{ settings.hostname }} Domino OIDC Provider\"",
+							   "formula":"Form=\"DominoOIDCProvider\" & OIDCP_InternetSite=\"{{ domino_oidc_install_proxy_url }}\"",
                                "number":0
 							},
-							"evaluate": "\"OIDCHostname=\"+@Implode(OIDCHostname)"
+							"evaluate": "\"OIDCP_InternetSite=\"+@Implode(OIDCP_InternetSite)"
 						}
 					]
 				}

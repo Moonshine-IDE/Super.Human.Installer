@@ -273,9 +273,9 @@ hosts:
       nomadweb_hash: ::NOMADWEB_HASH::
       nomadweb_archive: ::NOMADWEB_INSTALLER::
       nomadweb_version: ::NOMADWEB_VERSION::
+      nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
       nomad_hotfix_archive: ::NOMADWEB_HOTFIX_INSTALLER:: ### NEW VARIABLES NEEDED FOR DOMINO HOTFIX, Default to False, until the HF button is added in SHI
       nomad_hotfix_version: ::NOMADWEB_VERSION_HOTFIX_INSTALL:: # "HF1"
-      nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
 
       # Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
