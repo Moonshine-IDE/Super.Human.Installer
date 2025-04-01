@@ -413,12 +413,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupBrowserPage.addEventListener( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP, _closeSetupBrowserPage );
 		this.addPage( _setupBrowserPage, PAGE_SETUP_BROWSERS );
 		
-		//_setupApplicationsPage = new SetupApplicationsPage();
-		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
-		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
-		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
-		//_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
-		//this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
+		_setupApplicationsPage = new SetupApplicationsPage();
+		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE, _refreshBrowsersPage);
+		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
+		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
+		this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
 		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;

@@ -191,11 +191,13 @@ class AdditionalServer extends Server {
 
     public function locateServerProvisionerId( ?callback:()->Void ) {
 
+        if ( _fd != null ) return;
+        
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        var fd = new FileDialog();
+        _fd = new FileDialog();
         var currentDir:String;
 
-        fd.onSelect.add( path -> {
+        _fd.onSelect.add( path -> {
 
             currentDir = Path.directory( path );
             _serverProvisionerId.value = path;
@@ -205,9 +207,19 @@ class AdditionalServer extends Server {
             if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
             if ( callback != null ) callback();
 
+            _fd.onSelect.removeAll();
+            _fd.onCancel.removeAll();
+            _fd = null;
+
         } );
 
-        fd.browse( FileDialogType.OPEN, null, dir + "/", "Locate your Server Id file with .ids extension" );
+        _fd.onCancel.add( () -> {
+            _fd.onCancel.removeAll();
+            _fd.onSelect.removeAll();
+            _fd = null;
+        } );
+
+        _fd.browse( FileDialogType.OPEN, null, dir + "/", "Locate your Server Id file with .ids extension" );
 
     }
 
