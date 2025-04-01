@@ -1,16 +1,24 @@
 {
-	"title": "Creating the Domino OIDC Provider Form",
+	"title": "Creating the {{ settings.hostname }} Domino OIDC Provider Form",
     "versionjson": "1.0.0", 
     "steps": [ 
         { 
-            "title": "--- Creating Domino OIDC Provider ---", 
+            "title": "--- Creating {{ settings.hostname }} Domino OIDC Provider ---", 
             "databases": [ 
                 { 
                     "action": "update", 
                     "filePath": "idpcat.nsf", 
                     "documents":[
                         { 
+{% if domino_provider_create %}
                             "action": "create", 
+{% else %}
+                            "action": "update", 
+							"search": {
+							   "formula":"Form=\"DominoOIDCProvider\" & OIDCP_InternetSite=\"{{ domino_oidc_install_proxy_url }}\"",
+                                "number":0
+							},
+{% endif %}
                             "computeWithForm": false,
                             "items": {
                                 "Form": "DominoOIDCProvider",

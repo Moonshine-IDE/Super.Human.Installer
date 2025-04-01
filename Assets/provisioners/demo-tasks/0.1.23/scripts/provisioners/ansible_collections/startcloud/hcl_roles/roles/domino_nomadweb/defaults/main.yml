@@ -19,9 +19,8 @@ nomadweb_debug: false
 nomadweb_app_switcher_enabled: true
 
 nomad_hotfix_install: false
-nomad_hotfix_version: "HF1"
+nomad_hotfix_version: "IF1"
 nomad_hotfix_archive: "HCL_Nomad_server_{{ nomadweb_version }}-{{ nomad_hotfix_version }}_linux.tar.gz"
-
 installer_url_app_path: "Super.Human.Installer/Nomad"
 domino_nomadweb_port_forwards:
   -

@@ -187,6 +187,7 @@ domino_server_name_common_with_org: "{{ (domino_major_version is defined and
                                          domino_server_name + '.' + domino_server_domain + '/' + domino_organization
                                        ) }}"
 
+
 ## Do not change these unless you know exactly what you are doing, these are set to false in case the oidc role isn't included.
 super_human_portal_enabled: true
 domino_oidc_provider_leap_enabled: false
