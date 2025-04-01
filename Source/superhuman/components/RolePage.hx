@@ -848,12 +848,6 @@ class RolePickerItem extends LayoutGroup {
             }
         });
 
-            _fd.onSelect.removeAll();
-            _fd.onCancel.removeAll();
-            _fd = null;
-
-        } );
-
         _fd.onCancel.add( () -> {
             _fd.onCancel.removeAll();
             _fd.onSelect.removeAll();
@@ -926,11 +920,6 @@ class RolePickerItem extends LayoutGroup {
                 }
             }
         });
-
-            _fd.onSelect.removeAll();
-            _fd.onCancel.removeAll();
-            _fd = null;
-        } );
 
         _fd.onCancel.add( () -> {
             _fd.onCancel.removeAll();
