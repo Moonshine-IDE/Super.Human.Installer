@@ -92,7 +92,7 @@ class Server {
         var sc = new Server();
 
         sc._id = data.server_id;
-        sc._serverDir = Path.normalize( rootDir + "/demo-tasks/" + sc._id );
+        sc._serverDir = Path.normalize( rootDir + "/hcl_domino_standalone_provisioner/" + sc._id );
         FileSystem.createDirectory( sc._serverDir );
         sc._path.value = sc._serverDir;
 
