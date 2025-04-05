@@ -37,6 +37,7 @@ import superhuman.server.SyncMethod;
 import haxe.io.Path;
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
+import superhuman.components.SecretsPage;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.io.Bytes;
@@ -121,6 +122,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_ROLES = "page-roles";
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
+	static public final PAGE_SECRETS = "page-secrets";
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
 	
@@ -161,6 +163,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _setupBrowserPage:SetupBrowserPage;
 	var _setupApplicationsPage:SetupApplicationsPage;
 	var _additionalServerPage:AdditionalServerPage;
+	var _secretsPage:SecretsPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -451,8 +454,15 @@ class SuperHumanInstaller extends GenesisApplication {
         _settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplicationPage);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_SECRETS_PAGE, _openSecretsPage);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
+		
+        _secretsPage = new SecretsPage();
+        _secretsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSecrets );
+        _secretsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+        _secretsPage.addEventListener( SuperHumanApplicationEvent.OPEN_EXTERNAL_URL, _openExternalUrl );
+		this.addPage( _secretsPage, PAGE_SECRETS );
 
 		_rolePage = new RolePage();
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
@@ -984,11 +994,19 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS && this.previousPageId != PAGE_SECRETS) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
 		}
+	}
+	
+	function _cancelSecrets( e:SuperHumanApplicationEvent ) {
+		this.selectedPageId = PAGE_SETTINGS;
+	}
+	
+	function _openSecretsPage( e:SuperHumanApplicationEvent ) {
+		this.selectedPageId = PAGE_SECRETS;
 	}
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
@@ -1104,6 +1122,15 @@ class SuperHumanInstaller extends GenesisApplication {
 			}
 		}
 		Browsers.openLink(e.server.webAddress);
+	}
+	
+	function _openExternalUrl( e:SuperHumanApplicationEvent ) {
+		if (e.url != null && e.url.length > 0) {
+			Logger.info('${this}: Opening external URL: ${e.url}');
+			Browsers.openLink(e.url);
+		} else {
+			Logger.warning('${this}: Cannot open external URL - URL is null or empty');
+		}
 	}
 
 	function _saveConfig() {

@@ -235,6 +235,20 @@ class SettingsPage extends Page {
         
         _form.addChild(_rowProvisioners);
         
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add Global Secrets button
+        var _rowSecrets = new GenesisFormRow();
+        _rowSecrets.text = "Global Secrets";
+        
+        var _buttonGlobalSecrets = new GenesisFormButton("Manage Global Secrets");
+        _buttonGlobalSecrets.addEventListener(TriggerEvent.TRIGGER, _openGlobalSecrets);
+        _rowSecrets.content.addChild(_buttonGlobalSecrets);
+        
+        _form.addChild(_rowSecrets);
+        
         var line = new HLine();
         line.width = _width;
         this.addChild( line );
@@ -324,6 +338,14 @@ class SettingsPage extends Page {
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
+    }
+    
+    /**
+     * Navigate to the Global Secrets page
+     * @param e The trigger event
+     */
+    function _openGlobalSecrets(e:TriggerEvent) {
+        dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_SECRETS_PAGE));
     }
     
     /**

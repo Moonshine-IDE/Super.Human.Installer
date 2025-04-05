@@ -30,19 +30,39 @@
 
 package superhuman.config;
 
-import superhuman.browser.BrowserData;
-import superhuman.config.SuperHumanPreferences;
-import superhuman.config.SuperHumanSecrets;
-import superhuman.config.SuperHumanUserConfig;
-import superhuman.server.data.ServerData;
-import superhuman.application.ApplicationData;
+typedef HclDownloadPortalApiKey = {
+    name: String,
+    key: String
+}
 
-typedef SuperHumanConfig = {
+typedef GitApiKey = {
+    name: String,
+    key: String
+}
 
-    preferences:SuperHumanPreferences,
-    servers:Array<ServerData>,
-    user:SuperHumanUserConfig,
-	browsers:Array<BrowserData>,
-	applications:Array<ApplicationData>,
-    ?secrets:SuperHumanSecrets
+typedef VagrantAtlasToken = {
+    name: String,
+    key: String
+}
+
+typedef CustomResourceUrl = {
+    name: String,
+    url: String,
+    useAuth: Bool,
+    user: String,
+    pass: String
+}
+
+typedef DockerHubCredential = {
+    name: String,
+    docker_hub_user: String,
+    docker_hub_token: String
+}
+
+typedef SuperHumanSecrets = {
+    ?hcl_download_portal_api_keys: Array<HclDownloadPortalApiKey>,
+    ?git_api_keys: Array<GitApiKey>,
+    ?vagrant_atlas_token: Array<VagrantAtlasToken>,
+    ?custom_resource_url: Array<CustomResourceUrl>,
+    ?docker_hub: Array<DockerHubCredential>
 }

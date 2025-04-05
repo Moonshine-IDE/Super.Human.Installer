@@ -122,6 +122,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final LAYOUT_GROUP_PERCENTAGE_BAR:String = "layout-group-percentage-bar";
     public static final TEXT_AREA_PRIVACY:String = "text-area-privacy";
 
+    public static final ICON_ADD:String = "assets/images/common/add.png";
     public static final ICON_CHECKBOX_LARGE:String = "assets/images/common/checkbox_large.png";
     public static final ICON_CHECKBOX_LARGE_SELECTED:String = "assets/images/common/checkbox_large_selected.png";
     public static final ICON_CLEAR:String = "assets/images/common/clear.png";

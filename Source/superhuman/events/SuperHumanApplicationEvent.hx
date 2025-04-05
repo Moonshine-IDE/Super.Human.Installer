@@ -85,6 +85,8 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_FTP_CLIENT:String = "openFtpClient";
     public static final IMPORT_PROVISIONER:String = "importProvisioner";
     public static final PROVISIONER_DATA_UPDATED:String = "provisionerDataUpdated";
+    public static final OPEN_SECRETS_PAGE:String = "openSecretsPage";
+    public static final OPEN_EXTERNAL_URL:String = "openExternalUrl";
 
     public var console:Console;
     public var data:String;
@@ -95,6 +97,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var browserData:BrowserData;
     public var appData:ApplicationData;
     public var serviceTypeData:ServiceTypeData;
+    public var url:String;
     
     public function new( type:String ) {
 
