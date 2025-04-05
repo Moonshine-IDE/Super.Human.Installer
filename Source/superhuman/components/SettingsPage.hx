@@ -31,6 +31,8 @@
 package superhuman.components;
 
 import genesis.application.components.GenesisFormRow;
+import feathers.controls.ScrollContainer;
+import feathers.layout.VerticalLayoutData;
 import lime.ui.FileDialog;
 import lime.ui.FileDialogType;
 import superhuman.server.SyncMethod;
@@ -49,6 +51,7 @@ import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.VerticalAlign;
+import feathers.layout.VerticalLayout;
 import genesis.application.components.GenesisForm;
 import genesis.application.components.GenesisFormButton;
 import genesis.application.components.GenesisFormCheckBox;
@@ -57,6 +60,7 @@ import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.theme.SuperHumanInstallerTheme;
 
 class SettingsPage extends Page {
 
@@ -122,8 +126,28 @@ class SettingsPage extends Page {
         line.width = _width;
         this.addChild( line );
 
+        // Create a scroll container for the content
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.variant = SuperHumanInstallerTheme.SCROLL_CONTAINER_DARK;
+        scrollContainer.layoutData = new VerticalLayoutData(100, 100);
+        scrollContainer.autoHideScrollBars = false;
+        scrollContainer.fixedScrollBars = true;
+        
+        // Set up vertical layout for the scroll container
+        var scrollLayout = new VerticalLayout();
+        scrollLayout.horizontalAlign = HorizontalAlign.CENTER;
+        scrollLayout.gap = GenesisApplicationTheme.GRID;
+        scrollLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingLeft = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingRight = GenesisApplicationTheme.GRID * 3; // Extra padding on right side for scrollbar
+        scrollContainer.layout = scrollLayout;
+        
+        // Add the scroll container to the page
+        this.addChild(scrollContainer);
+
         _form = new GenesisForm();
-        this.addChild( _form );
+        scrollContainer.addChild(_form);
 
         _rowApplicationWindow = new GenesisFormRow();
         _rowApplicationWindow.text = LanguageManager.getInstance().getString( 'settingspage.interface.title' );
