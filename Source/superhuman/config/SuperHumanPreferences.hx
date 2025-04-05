@@ -45,4 +45,5 @@ typedef SuperHumanPreferences = {
     ?windowx:Int,
     ?windowy:Int,
     ?syncmethod:SyncMethod,
+    ?userPreferredSyncMethod:SyncMethod,
 }

@@ -6,12 +6,11 @@
     <f:layoutData>
         <f:VerticalLayoutData percentHeight="100"/>
     </f:layoutData>
-    <f:LayoutGroup>
+    
+    <!-- We'll create the toggle in code to ensure consistency with other toggles -->
+    <f:LayoutGroup id="toggleContainer">
         <f:layout>
-            <f:HorizontalLayout gap="12"/>
+            <f:HorizontalLayout gap="12" verticalAlign="MIDDLE"/>
         </f:layout>
-
-        <f:Radio id="scpCheck" text="scp" variant="radio-medium"/>
-        <f:Radio id="rsyncCheck" text="rsync" variant="radio-medium"/>
     </f:LayoutGroup>
 </f:LayoutGroup>

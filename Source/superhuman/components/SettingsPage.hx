@@ -269,8 +269,12 @@ class SettingsPage extends Page {
         }
 
         if (_fileSyncSetting != null) {
-       	 	_fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
-		}
+            // Set the selected sync method
+            _fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
+            
+            // Set the disabled state based on the global flag
+            _fileSyncSetting.syncDisabled = superhuman.config.SuperHumanGlobals.IS_SYNC_DISABLED;
+        }
      }
 
      public function setBrowsers(browsers:Array<BrowserData>) {

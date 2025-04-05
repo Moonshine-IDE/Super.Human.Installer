@@ -1590,9 +1590,34 @@ class SuperHumanInstaller extends GenesisApplication {
 					_footer.sysInfo = sysInfoBase;
 				}
 				
-				// Only show rsync warning on non-Windows systems
-				if (!isWindows && rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9")
-				{
+				// Determine if we're on a Mac system
+				var isMac:Bool = Capabilities.os.toLowerCase().indexOf("mac") >= 0;
+				
+				// Define the rsync compatibility check once
+				var rsyncIncompatibleVersion:Bool = rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9";
+				
+				// Determine if system has incompatible rsync (Mac-specific issue)
+				var isRsyncIncompatible:Bool = isMac && rsyncIncompatibleVersion;
+				
+				// Set global flag for disabling the sync toggle
+				SuperHumanGlobals.IS_SYNC_DISABLED = isRsyncIncompatible;
+				
+				// If on Mac with incompatible rsync, force SCP but remember user preference
+				if (isRsyncIncompatible) {
+					// Store original preference if not already saved
+					if (_config.preferences.userPreferredSyncMethod == null) {
+						_config.preferences.userPreferredSyncMethod = _config.preferences.syncmethod;
+					}
+					// Force SCP for Mac with incompatible rsync
+					_config.preferences.syncmethod = SyncMethod.SCP;
+				} else if (_config.preferences.userPreferredSyncMethod != null) {
+					// Restore user preference if we're not on an incompatible system
+					_config.preferences.syncmethod = _config.preferences.userPreferredSyncMethod;
+					_config.preferences.userPreferredSyncMethod = null;
+				}
+				
+				// Show warning for any non-Windows system with incompatible rsync
+				if (!isWindows && rsyncIncompatibleVersion) {
 					_footer.warning = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
 				}
 
