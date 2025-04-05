@@ -3,6 +3,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [1.3.0]
+
+The 1.3.0 release of Super.Human.Installer fixes critical bugs related to application stability and server configuration.
+
+### Fixed
+* Fixed issue where application crashes when file chooser dialog is opened twice ([#138](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/138))
+* Fixed error where domino_rest_api fails even when not configured in server setup ([#144](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/144))
+
 ## Super Human Installer [1.2.0]
 
 The 1.2.0 release of Super.Human.Installer adds support for additional Domino server configuration, improves server management, and updates installer components.
