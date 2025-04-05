@@ -61,6 +61,7 @@ import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
+import prominic.sys.applications.git.Git;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.io.AbstractExecutor;
@@ -486,7 +487,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		Vagrant.getInstance().onDestroy.add( _vagrantDestroyed );
 		Vagrant.getInstance().onUp.add( _vagrantUped );
 		VirtualBox.getInstance().onInit.add( _virtualBoxInitialized );
-		ParallelExecutor.create().add( Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit() ).onStop.add( _checkAppsInitialized ).execute();
+		Git.getInstance().onInit.add( _gitInitialized );
+		ParallelExecutor.create().add( Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit(), Git.getInstance().getInit() ).onStop.add( _checkAppsInitialized ).execute();
 
 	}
 
@@ -499,13 +501,16 @@ class SuperHumanInstaller extends GenesisApplication {
 				Vagrant.getInstance().onGlobalStatus.add( _vagrantGlobalStatusFinished ).onVersion.add( _vagrantVersionUpdated );
 				VirtualBox.getInstance().onVersion.add( _virtualBoxVersionUpdated ).onListVMs.add( _virtualBoxListVMsUpdated );
 
+				Git.getInstance().onVersion.add( _gitVersionUpdated );
+				
 				var pe = ParallelExecutor.create();
 				pe.add( 
 					Vagrant.getInstance().getVersion(),
 					VirtualBox.getInstance().getBridgedInterfaces(),
 					VirtualBox.getInstance().getHostInfo(),
 					VirtualBox.getInstance().getVersion(),
-					VirtualBox.getInstance().getListVMs( true )
+					VirtualBox.getInstance().getListVMs( true ),
+					Git.getInstance().getVersion()
 				 );
 
 				var rsyncExecutor = Vagrant.getInstance().getRsyncVersion();
@@ -586,10 +591,26 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 	}
+	
+	function _gitInitialized( a:AbstractApp ) {
+		
+		if ( Git.getInstance().exists ) {
+			Logger.info( '${this}: Git is installed at ${Git.getInstance().path}' );
+		} else {
+			Logger.warning( '${this}: Git is not installed' );
+		}
+		
+	}
 
 	function _virtualBoxVersionUpdated() {
 
 		Logger.info( '${this}: VirtualBox version: ${VirtualBox.getInstance().version}' );
+
+	}
+	
+	function _gitVersionUpdated() {
+
+		Logger.info( '${this}: Git version: ${Git.getInstance().version}' );
 
 	}
 
@@ -1555,6 +1576,11 @@ class SuperHumanInstaller extends GenesisApplication {
 				
 				// Create base system info without rsync
 				var sysInfoBase = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
+				
+				// Add Git information if available
+				if (Git.getInstance().exists && Git.getInstance().version != null) {
+					sysInfoBase += ' | Git: ${Git.getInstance().version}';
+				}
 				
 				// Only add rsync info for non-Windows systems
 				if (!isWindows) {
