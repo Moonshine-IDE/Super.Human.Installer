@@ -105,10 +105,8 @@ class ServerManager {
         
         if (server != null) {
             // All new servers start as provisional until saved
-            if (Reflect.hasField(server, "_provisional")) {
-                Reflect.setField(server, "_provisional", true);
-                Logger.info('${this}: Server ${server.id} marked as provisional');
-            }
+            server.markAsProvisional();
+            Logger.info('${this}: Server ${server.id} marked as provisional');
             
             // Add to server collection
             _servers.add(server);

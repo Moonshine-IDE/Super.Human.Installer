@@ -214,6 +214,11 @@ class AdditionalServerPage extends Page
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {
+        // Only remove the server if the server directory doesn't exist
+        // This ensures we only remove truly new servers that have never been saved
+        if (_server != null && !sys.FileSystem.exists(_server.serverDir)) {
+            superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
+        }
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE ) );
     }
 }

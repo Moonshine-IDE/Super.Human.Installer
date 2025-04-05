@@ -114,7 +114,7 @@ class Server {
         sc._path.value = sc._serverDir;
         
         // Set the provisional flag to indicate this server hasn't been confirmed yet
-        sc._provisional = true;
+        sc.markAsProvisional();
         
         var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
@@ -991,6 +991,15 @@ class Server {
 
     }
 
+    /**
+     * Marks this server as provisional, meaning it's newly created and not yet saved/configured.
+     * Provisional servers are removed from the system if the user cancels configuration.
+     */
+    public function markAsProvisional() {
+        this._provisional = true;
+        Logger.info('${this}: Marked as provisional');
+    }
+    
     public function saveHostsFile() {
         // Check if this is a custom provisioner
         var isCustomProvisioner = (this.provisioner.data.type != ProvisionerType.StandaloneProvisioner && 

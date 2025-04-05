@@ -61,8 +61,9 @@ class AdditionalServer extends Server {
 
         sc._id = data.server_id;
         sc._serverDir = Path.normalize( rootDir + "/hcl_domino_additional_provisioner/" + sc._id );
-        FileSystem.createDirectory( sc._serverDir );
+        // Don't create the directory until the server is saved
         sc._path.value = sc._serverDir;
+        sc.markAsProvisional(); // Use the shared method instead of directly setting the field
 
         var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ];
 
