@@ -386,10 +386,10 @@ class StandaloneProvisioner extends AbstractProvisioner {
         		versions.push(ver);
         	}
         	
-        if (_sourcePath != null ) 
+        	if (_sourcePath != null ) 
         {
         		ver = {path: Path.addTrailingSlash( _targetPath ) + _versionFile, 
-        			   version: getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + AbstractProvisioner._SCRIPTS_ROOT + _versionFile )};
+        			   version: getVersionFromFile( Path.addTrailingSlash( _sourcePath ) + _versionFile )};
         		versions.push(ver);
 		}
 

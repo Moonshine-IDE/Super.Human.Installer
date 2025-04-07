@@ -352,7 +352,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     function _setAssetLoaderStyles( loader:AssetLoader ) {
 
-        loader.scaleX = loader.scaleY = .7;
+        loader.scaleX = loader.scaleY = .6;
 
     }
 

@@ -117,8 +117,8 @@ class SecretsPage extends Page {
         super.initialize();
 
         _content.width = _width;
-        _content.maxWidth = GenesisApplicationTheme.GRID * 150; // Increase maxWidth to accommodate wider content
-
+        _content.maxWidth = GenesisApplicationTheme.GRID * 150;
+        
         // Create title group
         _titleGroup = new LayoutGroup();
         var _titleGroupLayout = new HorizontalLayout();

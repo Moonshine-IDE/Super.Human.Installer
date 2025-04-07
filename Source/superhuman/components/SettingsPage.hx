@@ -44,6 +44,7 @@ import superhuman.components.browsers.BrowsersList;
 import superhuman.browser.BrowserData;
 import superhuman.managers.ProvisionerManager;
 import genesis.application.managers.ToastManager;
+import champaign.core.logging.Logger;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -349,26 +350,13 @@ class SettingsPage extends Page {
     }
     
     /**
-     * Handle the import provisioner button click
+     * Navigate to the provisioner import page when the Import Provisioner button is clicked
      * @param e The trigger event
      */
     function _importProvisioner(e:TriggerEvent) {
-        var fd = new FileDialog();
-        fd.onSelect.add(path -> {
-            // Import the provisioner
-            var success = ProvisionerManager.importProvisioner(path);
-            
-            if (success) {
-                ToastManager.getInstance().showToast("Provisioner imported successfully");
-                
-                // Dispatch event to notify the application that a provisioner was imported
-                var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
-                this.dispatchEvent(event);
-            } else {
-                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and scripts.");
-            }
-        });
-        
-        fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, "Select Provisioner Directory");
+        // Dispatch event to open the provisioner import page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE);
+        Logger.info('${this}: Requesting to open provisioner import page');
+        this.dispatchEvent(event);
     }
 }

@@ -224,23 +224,9 @@ class ServiceTypePage extends Page {
      * @param e The trigger event
      */
     function _importProvisioner(e:TriggerEvent) {
-        var fd = new FileDialog();
-        fd.onSelect.add(path -> {
-            // Import the provisioner
-            var success = ProvisionerManager.importProvisioner(path);
-            
-            if (success) {
-                ToastManager.getInstance().showToast("Provisioner imported successfully");
-                
-                // Dispatch event to notify the application that a provisioner was imported
-                var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
-                this.dispatchEvent(event);
-            } else {
-                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and scripts.");
-            }
-        });
-        
-        fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, "Select Provisioner Directory");
+        // Open the new provisioner import page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE);
+        this.dispatchEvent(event);
     }
     
     /**

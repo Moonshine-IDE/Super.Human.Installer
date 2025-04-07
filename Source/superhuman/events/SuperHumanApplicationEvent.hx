@@ -87,6 +87,8 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final PROVISIONER_DATA_UPDATED:String = "provisionerDataUpdated";
     public static final OPEN_SECRETS_PAGE:String = "openSecretsPage";
     public static final OPEN_EXTERNAL_URL:String = "openExternalUrl";
+    public static final OPEN_PROVISIONER_IMPORT_PAGE:String = "openProvisionerImportPage";
+    public static final CLOSE_PROVISIONER_IMPORT_PAGE:String = "closeProvisionerImportPage";
 
     public var console:Console;
     public var data:String;

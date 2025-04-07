@@ -45,6 +45,7 @@ import superhuman.server.data.ServiceTypeData;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.components.serviceType.ServiceTypePage;
 import superhuman.components.browsers.SetupBrowserPage;
+import superhuman.components.ProvisionerImportPage;
 import superhuman.browser.Browsers;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
@@ -80,6 +81,7 @@ import superhuman.components.LoadingPage;
 import superhuman.components.RolePage;
 import superhuman.components.ServerPage;
 import superhuman.components.SettingsPage;
+import superhuman.components.ProvisionerImportPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
@@ -125,6 +127,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SECRETS = "page-secrets";
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
+	static public final PAGE_PROVISIONER_IMPORT = "page-provisioner-import";
 	
 	static var _instance:SuperHumanInstaller;
 
@@ -164,6 +167,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _setupApplicationsPage:SetupApplicationsPage;
 	var _additionalServerPage:AdditionalServerPage;
 	var _secretsPage:SecretsPage;
+	var _provisionerImportPage:ProvisionerImportPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -445,6 +449,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER, _createCustomServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage );
 		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
 		
 		_configPage = new ConfigPage();
@@ -474,6 +479,7 @@ class SuperHumanInstaller extends GenesisApplication {
         _settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_SECRETS_PAGE, _openSecretsPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
 		
@@ -500,6 +506,11 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.OPEN_DOWNLOAD_BROWSER, _openDownloadBrowser);
 		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
 		this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
+		
+		_provisionerImportPage = new ProvisionerImportPage();
+		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
+		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.CLOSE_PROVISIONER_IMPORT_PAGE, _closeProvisionerImportPage );
+		this.addPage( _provisionerImportPage, PAGE_PROVISIONER_IMPORT );
 		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
@@ -1027,6 +1038,15 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _openSecretsPage( e:SuperHumanApplicationEvent ) {
 		this.selectedPageId = PAGE_SECRETS;
 	}
+	
+	/**
+	 * Navigate to the provisioner import page
+	 * @param e The event
+	 */
+	function _openProvisionerImportPage( e:SuperHumanApplicationEvent ) {
+		Logger.info('${this}: Opening provisioner import page');
+		this.selectedPageId = PAGE_PROVISIONER_IMPORT;
+	}
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
@@ -1375,6 +1395,18 @@ class SuperHumanInstaller extends GenesisApplication {
 	
     function _closeSetupAppPage(e:SuperHumanApplicationEvent) {
         this.selectedPageId = this.previousPageId;
+    }
+    
+    function _closeProvisionerImportPage(e:SuperHumanApplicationEvent) {
+        // Return to the previous page or the settings page, depending on where we came from
+        if (this.previousPageId != null && this.previousPageId != PAGE_PROVISIONER_IMPORT) {
+            this.selectedPageId = this.previousPageId;
+        } else {
+            // Default to settings page if we can't determine the previous page
+            this.selectedPageId = PAGE_SETTINGS;
+        }
+        
+        Logger.info('${this}: Closing provisioner import page, returning to ${this.selectedPageId}');
     }
     
     /**

@@ -51,9 +51,10 @@ import sys.io.File;
 
 class AbstractProvisioner {
 
-    static final _SCRIPTS_ROOT:String = "scripts/";
+    // Use root directory for scripts to support different repository structures
+    static final _SCRIPTS_ROOT:String = "";
     static final _TEMPLATES_ROOT:String = "templates/";
-    static final _CORE_ROOT:String = _SCRIPTS_ROOT + "core/";
+    static final _CORE_ROOT:String = "core/";
     
     /**
      * Convert a path to the platform-specific format with long path support for Windows
@@ -357,16 +358,31 @@ class AbstractProvisioner {
     }
 
     public function getFileContentFromSourceScriptsDirectory( path:String ):String {
-
-        var fullPath = Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT + path;
-        if ( !FileSystem.exists( _getPlatformPath(fullPath) ) ) return null;
+        // Updated to look directly in the version root directory instead of a scripts subdirectory
+        // This supports both traditional directory structures and GitHub nested directory structures
+        var fullPath = Path.addTrailingSlash( _sourcePath ) + path;
         
-        try {
-            return File.getContent( _getPlatformPath(fullPath) );
-        } catch( e ) {}
-
+        // First try the direct path (for root-level files)
+        if ( FileSystem.exists( _getPlatformPath(fullPath) ) ) {
+            try {
+                return File.getContent( _getPlatformPath(fullPath) );
+            } catch( e ) {
+                Logger.error('Error reading file at ${fullPath}: ${e}');
+            }
+        }
+        
+        // If that fails, try looking in a "scripts" subdirectory (for backward compatibility)
+        var scriptsPath = Path.addTrailingSlash( _sourcePath ) + "scripts/" + path;
+        if ( FileSystem.exists( _getPlatformPath(scriptsPath) ) ) {
+            try {
+                return File.getContent( _getPlatformPath(scriptsPath) );
+            } catch( e ) {
+                Logger.error('Error reading file from scripts directory at ${scriptsPath}: ${e}');
+            }
+        }
+        
+        Logger.verbose('File not found at either ${fullPath} or ${scriptsPath}');
         return null;
-
     }
 
     public function getFileContentFromSourceTemplateDirectory( path:String ):String {

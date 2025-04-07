@@ -38,18 +38,28 @@ import feathers.data.ArrayCollection;
 import haxe.io.Bytes;
 import haxe.io.BytesInput;
 import haxe.io.BytesOutput;
+import openfl.events.Event;
+import openfl.events.IOErrorEvent;
+import openfl.events.ProgressEvent;
+import openfl.net.URLLoader;
+import openfl.net.URLLoaderDataFormat;
+import openfl.net.URLRequest;
+import openfl.net.URLRequestHeader;
+import openfl.utils.ByteArray;
 import haxe.io.Path;
 import haxe.zip.Entry;
 import haxe.zip.Reader;
 import haxe.zip.Tools;
 import haxe.zip.Writer;
 import lime.system.System;
+import openfl.filesystem.File;
 import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 import yaml.Yaml;
 import yaml.util.ObjectMap;
+import genesis.application.managers.ToastManager;
 
 /**
  * Structure for provisioner role definition
@@ -279,12 +289,11 @@ class ProvisionerManager {
                     continue;
                 }
                 
-                // Check if this is a valid version directory (has scripts subdirectory)
+                // For future provisioners, scripts files will be in the main directory
+                // For backwards compatibility, we'll check for scripts directory but not require it
                 var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
-                if (!FileSystem.exists(scriptsPath) || !FileSystem.isDirectory(scriptsPath)) {
-                    Logger.warning('Skipping invalid version directory (no scripts folder): ${versionPath}');
-                    continue;
-                }
+                var hasScriptsDir = FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath);
+                Logger.info('Version directory ${versionDir}: ${hasScriptsDir ? "has" : "does not have"} scripts folder');
                 
                 // Check for version-specific metadata file - MUST EXIST
                 var versionMetadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
@@ -351,9 +360,27 @@ class ProvisionerManager {
                         _cachedProvisioners.set(metadata.type, []);
                     }
                     
-                    // Now we can safely push to the array
-                    _cachedProvisioners.get(metadata.type).push(provDef);
-                    Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
+                    // Check if this version already exists in the cache
+                    var versionExists = false;
+                    var cachedVersions = _cachedProvisioners.get(metadata.type);
+                    
+                    for (existingDef in cachedVersions) {
+                        if (existingDef.data.version.toString() == versionInfo.toString()) {
+                            Logger.info('Version ${versionDir} of ${metadata.type} already exists in cache, updating definition');
+                            // Update the existing definition with the new path and metadata
+                            existingDef.root = versionPath;
+                            existingDef.metadata = versionMetadata;
+                            versionExists = true;
+                            break;
+                        }
+                    }
+                    
+                    // Only add to the cache if it doesn't already exist
+                    if (!versionExists) {
+                        _cachedProvisioners.get(metadata.type).push(provDef);
+                        Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
+                    }
+                    
                     validVersionCount++;
                 }
             }
@@ -1356,8 +1383,871 @@ class ProvisionerManager {
     }
     
     /**
+     * Import a specific provisioner version into an existing or new collection
+     * @param sourcePath Path to the version directory containing provisioner.yml and scripts
+     * @return Bool Success or failure
+     */
+    static public function importProvisionerVersion(sourcePath:String):Bool {
+        // First, validate that the source directory contains a valid provisioner version
+        if (!FileSystem.exists(sourcePath) || !FileSystem.isDirectory(sourcePath)) {
+            Logger.error('Invalid path: ${sourcePath} is not a directory');
+            return false;
+        }
+        
+        // Check for provisioner.yml file
+        var versionMetadataPath = Path.addTrailingSlash(sourcePath) + VERSION_METADATA_FILENAME;
+        if (!FileSystem.exists(versionMetadataPath)) {
+            Logger.error('Version directory is missing provisioner.yml at ${versionMetadataPath}');
+            return false;
+        }
+        
+        // For backward compatibility, check for scripts directory but don't require it
+        var scriptsDir = Path.addTrailingSlash(sourcePath) + "scripts";
+        var hasScriptsDir = FileSystem.exists(scriptsDir) && FileSystem.isDirectory(scriptsDir);
+        Logger.info('Version directory ${hasScriptsDir ? "has" : "does not have"} scripts folder: ${scriptsDir}');
+        
+        // Read the version metadata
+        var versionMetadata = readProvisionerVersionMetadata(sourcePath);
+        if (versionMetadata == null) {
+            Logger.error('Failed to read version metadata from ${versionMetadataPath}');
+            return false;
+        }
+        
+        // Extract the provisioner type from the version metadata
+        if (versionMetadata.type == null) {
+            Logger.error('Version metadata is missing required "type" field');
+            return false;
+        }
+        
+        // Check if a version identifier is available - prioritize the metadata version field
+        var versionId:String = null;
+        
+        // First check for the version field in the metadata (even if it's a number, convert to string)
+        if (versionMetadata.version != null) {
+            // Ensure version is treated as a string (in case it was parsed as a number from YAML)
+            versionId = Std.string(versionMetadata.version);
+            Logger.info('Using version from provisioner.yml metadata: ${versionId}');
+        } else {
+            // Fallback to directory name if it looks like a version number
+            var dirName = Path.withoutDirectory(Path.removeTrailingSlashes(sourcePath));
+            var versionRegex = ~/^\d+(\.\d+)*$/;
+            
+            if (versionRegex.match(dirName)) {
+                versionId = dirName;
+                Logger.info('No version field in metadata, using directory name as version: ${versionId}');
+            } else {
+                // No version identifier found
+                Logger.error('Cannot determine version ID for import. Directory name is not a version number and metadata has no version field.');
+                return false;
+            }
+        }
+        
+        // Now that we have the type and version, we need to find or create the collection
+        var provisionersDir = getProvisionersDirectory();
+        var collectionPath = Path.addTrailingSlash(provisionersDir) + versionMetadata.type;
+        var collectionMetadataPath = Path.addTrailingSlash(collectionPath) + PROVISIONER_METADATA_FILENAME;
+        var collectionExists = FileSystem.exists(collectionPath) && FileSystem.isDirectory(collectionPath);
+        var collectionMetadataExists = FileSystem.exists(collectionMetadataPath);
+        
+        // Check if the destination version directory already exists
+        var versionDestPath = Path.addTrailingSlash(collectionPath) + versionId;
+        if (FileSystem.exists(versionDestPath)) {
+            // Version already exists, show a toast notification
+            ToastManager.getInstance().showToast('Version ${versionId} already exists in the ${versionMetadata.type} collection');
+            return false;
+        }
+        
+        // Create or update the collection
+        if (!collectionExists) {
+            // Create the collection directory
+            try {
+                FileSystem.createDirectory(collectionPath);
+                Logger.info('Created new collection directory at ${collectionPath}');
+            } catch (e) {
+                Logger.error('Failed to create collection directory: ${e}');
+                return false;
+            }
+            
+            // Create a collection metadata file based on the version metadata
+            var collectionMetadata:ProvisionerMetadata = {
+                name: versionMetadata.name,
+                type: versionMetadata.type,
+                description: versionMetadata.description,
+                author: versionMetadata.author
+            };
+            
+            try {
+                _writeYamlFile(collectionMetadataPath, collectionMetadata);
+                Logger.info('Created collection metadata at ${collectionMetadataPath}');
+            } catch (e) {
+                Logger.error('Failed to create collection metadata: ${e}');
+                return false;
+            }
+        } else if (!collectionMetadataExists) {
+            // Collection directory exists but no metadata file, create one
+            var collectionMetadata:ProvisionerMetadata = {
+                name: versionMetadata.name,
+                type: versionMetadata.type,
+                description: versionMetadata.description,
+                author: versionMetadata.author
+            };
+            
+            try {
+                _writeYamlFile(collectionMetadataPath, collectionMetadata);
+                Logger.info('Created missing collection metadata at ${collectionMetadataPath}');
+            } catch (e) {
+                Logger.error('Failed to create missing collection metadata: ${e}');
+                return false;
+            }
+        }
+        
+        // Now import the version into the collection
+        try {
+            // Create the destination version directory
+            FileSystem.createDirectory(versionDestPath);
+            
+            // Zip the entire version directory to handle nested files
+            var zipBytes = _zipDirectory(sourcePath);
+            
+            // Unzip to the destination
+            _unzipToDirectory(zipBytes, versionDestPath);
+            
+            Logger.info('Successfully imported version ${versionId} into collection ${versionMetadata.type}');
+            
+            // If we have a collection metadata, refresh the cache
+            var collectionMetadata = readProvisionerMetadata(collectionPath);
+            if (collectionMetadata != null) {
+                _addProvisionerVersionsToCache(collectionPath, collectionMetadata);
+            }
+            
+            return true;
+        } catch (e) {
+            Logger.error('Error importing version: ${e}');
+            return false;
+        }
+    }
+    
+    /**
+     * Write a YAML file with the given content
+     * @param filePath Path to the file to write
+     * @param content Content to write in YAML format
+     */
+    static private function _writeYamlFile(filePath:String, content:Dynamic):Void {
+        // Create a YAML string manually since the Yaml library doesn't have a good writer
+        var yamlStr = "# Provisioner Collection Metadata\n";
+        
+        for (field in Reflect.fields(content)) {
+            var value = Reflect.field(content, field);
+            if (value != null) {
+                yamlStr += '${field}: ${value}\n';
+            }
+        }
+        
+        File.saveContent(filePath, yamlStr);
+    }
+    
+    /**
+     * Import a provisioner from GitHub
+     * @param organization GitHub organization or username
+     * @param repository Repository name
+     * @param branch Branch name (defaults to "main")
+     * @param useGit Whether to use git clone instead of HTTP download
+     * @param tokenName Name of GitHub token to use from secrets (optional)
+     * @return Bool Success or failure
+     */
+    static public function importProvisionerFromGitHub(
+        organization:String, 
+        repository:String, 
+        branch:String = "main", 
+        useGit:Bool = false,
+        tokenName:String = null
+    ):Bool {
+        Logger.info('Importing provisioner from GitHub: ${organization}/${repository} branch ${branch}');
+        
+        // Create a temporary directory for the download
+        var tempDir = Path.addTrailingSlash(getProvisionersDirectory()) + ".temp_" + organization + "_" + repository + "_" + Date.now().getTime();
+        Logger.info('Created temporary directory at: ${tempDir}');
+        if (!FileSystem.exists(tempDir)) {
+            try {
+                FileSystem.createDirectory(tempDir);
+            } catch (e) {
+                Logger.error('Failed to create temporary directory: ${e}');
+                return false;
+            }
+        }
+        
+        var success = false;
+        var repoDir = tempDir; // Default location
+        
+        try {
+            // Find GitHub token if specified
+            var token:String = null;
+            if (tokenName != null && tokenName != "") {
+                var secrets = SuperHumanInstaller.getInstance().config.secrets;
+                if (secrets != null && secrets.git_api_keys != null) {
+                    for (gitToken in secrets.git_api_keys) {
+                        if (gitToken.name == tokenName) {
+                            token = gitToken.key;
+                            break;
+                        }
+                    }
+                }
+                
+                if (token == null) {
+                    Logger.warning('Specified GitHub token "${tokenName}" not found in secrets');
+                }
+            }
+            
+            // Download the repository
+            if (useGit) {
+                var gitCloneDir = Path.addTrailingSlash(tempDir) + "git_clone";
+                Logger.info('Using git clone with recursive submodules and longpaths support');
+                success = _downloadWithGit(organization, repository, branch, tempDir, token);
+                repoDir = gitCloneDir; // With git, the repo is in the git_clone subdirectory
+            } else {
+                success = _downloadWithHttp(organization, repository, branch, tempDir, token);
+                repoDir = Path.addTrailingSlash(tempDir) + "extracted"; // With HTTP, the repo is in the extracted subdirectory
+            }
+            
+            if (!success) {
+                Logger.error('Failed to download GitHub repository');
+                _cleanupTempDir(tempDir);
+                return false;
+            }
+            
+            Logger.info('Repository downloaded, searching for provisioner in: ${repoDir}');
+            
+            // Check the repository structure using the actual repository name for better matching
+                // List directory contents for debugging
+            try {
+                var items = FileSystem.readDirectory(repoDir);
+                Logger.info('Repository directory contents:');
+                for (item in items) {
+                    var isDir = FileSystem.isDirectory(Path.addTrailingSlash(repoDir) + item);
+                    Logger.info('  - ${item} (isDirectory: ${isDir})');
+                }
+            } catch (e) {
+                Logger.error('Error listing repository contents: ${e}');
+            }
+            
+            Logger.info('Searching for provisioner root structure in cloned repository...');
+            var provisionerPath = _findProvisionerRoot(repoDir, repository);
+            if (provisionerPath == null) {
+                Logger.error('Could not find valid provisioner structure in the repository');
+                _cleanupTempDir(tempDir);
+                return false;
+            
+            }
+            
+            Logger.info('Found provisioner structure at: ${provisionerPath}');
+            
+            // Determine if this is a collection or a single version
+            var isCollection = FileSystem.exists(Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME);
+            
+            if (isCollection) {
+                // Import as a collection
+                Logger.info('Importing GitHub repository as a provisioner collection');
+                success = importProvisioner(provisionerPath);
+            } else {
+                // Import as a version
+                Logger.info('Importing GitHub repository as a provisioner version');
+                success = importProvisionerVersion(provisionerPath);
+            }
+            
+            // Clean up temporary files
+            _cleanupTempDir(tempDir);
+            
+            return success;
+        } catch (e) {
+            Logger.error('Error importing from GitHub: ${e}');
+            _cleanupTempDir(tempDir);
+            return false;
+        }
+    }
+    
+    /**
+     * Download a GitHub repository using HTTP (ZIP download)
+     * Uses OpenFL's URLLoader with a synchronous wait
+     */
+    static private function _downloadWithHttp(
+        organization:String, 
+        repository:String, 
+        branch:String, 
+        destinationDir:String,
+        token:String = null
+    ):Bool {
+        // Create URL for the ZIP download
+        var url = 'https://github.com/${organization}/${repository}/archive/refs/heads/${branch}.zip';
+        Logger.info('Downloading GitHub repository via HTTP: ${organization}/${repository} branch ${branch}');
+        Logger.info('Download URL: ${url}');
+        
+        var zipPath = Path.addTrailingSlash(destinationDir) + "repo.zip";
+        var extractDir = Path.addTrailingSlash(destinationDir) + "extracted";
+        if (!FileSystem.exists(extractDir)) {
+            FileSystem.createDirectory(extractDir);
+        }
+        
+        // Status flags
+        var success = false;
+        var done = false;
+        var downloadError = null;
+        
+        try {
+            // Create URL request with optional auth header
+            var request = new URLRequest(url);
+            if (token != null && token.length > 0) {
+                Logger.info('Using GitHub token for authentication');
+                request.requestHeaders = [
+                    new URLRequestHeader("Authorization", 'token ${token}')
+                ];
+            }
+            
+            // Set up loader and event handlers
+            var loader = new URLLoader();
+            loader.dataFormat = URLLoaderDataFormat.BINARY;
+            
+            loader.addEventListener(Event.COMPLETE, function(e:Event) {
+                try {
+                    Logger.info('Download complete, saving to ${zipPath}');
+                    var data:ByteArray = cast(loader.data, ByteArray);
+                    var bytes = Bytes.ofData(data);
+                    File.saveBytes(zipPath, bytes);
+                    success = true;
+                } catch (e) {
+                    Logger.error('Error saving downloaded file: ${e}');
+                    success = false;
+                }
+                done = true;
+            });
+            
+            loader.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent) {
+                Logger.error('Error downloading file: ${e.text}');
+                downloadError = e.text;
+                success = false;
+                done = true;
+            });
+            
+            loader.addEventListener(ProgressEvent.PROGRESS, function(e:ProgressEvent) {
+                if (e.bytesTotal > 0) {
+                    var percent = Math.round((e.bytesLoaded / e.bytesTotal) * 100);
+                    Logger.info('Download progress: ${percent}% (${e.bytesLoaded}/${e.bytesTotal} bytes)');
+                }
+            });
+            
+            // Start the download
+            Logger.info('Starting download from ${url}');
+            loader.load(request);
+            
+            // Wait for download to complete with timeout
+            var startTime = Date.now().getTime();
+            var timeout = 10 * 60 * 1000; // 10 minutes
+            
+            // Simple blocking wait
+            while (!done) {
+                Sys.sleep(0.2); // Sleep for 200ms
+                
+                var currentTime = Date.now().getTime();
+                if (currentTime - startTime > timeout) {
+                    Logger.error('Download timed out after ${timeout/1000} seconds');
+                    return false;
+                }
+            }
+            
+            // Check if download completed successfully
+            if (!success) {
+                Logger.error('Download failed: ${downloadError != null ? downloadError : "Unknown error"}');
+                return false;
+            }
+            
+            // Extract zip file
+            if (!FileSystem.exists(zipPath)) {
+                Logger.error('ZIP file not found after download: ${zipPath}');
+                return false;
+            }
+            
+            // Read and extract the ZIP file
+            Logger.info('Extracting ZIP file to ${extractDir}');
+            try {
+                var zipBytes = File.getBytes(zipPath);
+                var zipEntries = Reader.readZip(new BytesInput(zipBytes));
+                
+                Logger.info('ZIP file contains ${zipEntries.length} entries');
+                
+                // Extract all files
+                var extractedCount = 0;
+                for (entry in zipEntries) {
+                    // Skip directories
+                    if (StringTools.endsWith(entry.fileName, "/")) {
+                        var dirPath = Path.addTrailingSlash(extractDir) + entry.fileName;
+                        _createDirectoryRecursive(dirPath);
+                        continue;
+                    }
+                    
+                    // Create parent directories if needed
+                    var filePath = Path.addTrailingSlash(extractDir) + entry.fileName;
+                    var parentDir = Path.directory(filePath);
+                    _createDirectoryRecursive(parentDir);
+                    
+                    // Extract the file
+                    try {
+                        if (entry.compressed) {
+                            haxe.zip.Tools.uncompress(entry);
+                        }
+                        File.saveBytes(filePath, entry.data);
+                        extractedCount++;
+                    } catch (e) {
+                        Logger.warning('Failed to extract file ${entry.fileName}: ${e}');
+                    }
+                }
+                
+                Logger.info('Successfully extracted ${extractedCount} files');
+                
+                // Verify the extraction was successful
+                if (extractedCount > 0) {
+                    // Try to find the extracted repository directory - usually in {repository}-{branch} format
+                    try {
+                        var files = FileSystem.readDirectory(extractDir);
+                        var repoFound = false;
+                        
+                        for (file in files) {
+                            var filePath = Path.addTrailingSlash(extractDir) + file;
+                            if (FileSystem.isDirectory(filePath) && file.indexOf(repository) >= 0) {
+                                Logger.info('Found extracted repository directory: ${file}');
+                                repoFound = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!repoFound) {
+                            Logger.warning('Could not find repository directory in extracted files - proceeding anyway');
+                        }
+                    } catch (e) {
+                        Logger.warning('Error checking extracted directory: ${e} - proceeding anyway');
+                    }
+                    
+                    return true;
+                } else {
+                    Logger.error('No files were extracted from the ZIP');
+                    return false;
+                }
+            } catch (e) {
+                Logger.error('Error extracting ZIP file: ${e}');
+                return false;
+            }
+        } catch (e) {
+            Logger.error('Error during HTTP download: ${e}');
+            return false;
+        }
+    }
+    
+    /**
+     * Download a GitHub repository using git clone with support for recursive submodules
+     * and a shorter path to handle Windows path length limitations
+     */
+    static private function _downloadWithGit(
+        organization:String, 
+        repository:String, 
+        branch:String, 
+        destinationDir:String,
+        token:String = null
+    ):Bool {
+        Logger.info('Downloading GitHub repository via git clone: ${organization}/${repository} branch ${branch}');
+        
+        // Create a shorter temporary directory for initial clone
+        // Try several potential short temp paths in order
+        var shortTempDir = null;
+        
+        // Initialize temp options array
+        var tempOptions:Array<String> = [];
+        
+        // For Windows, use the user profile directory to get much shorter paths
+        if (Sys.systemName() == "Windows") {
+            // Get user home directory (typically C:\Users\<username>\)
+            var userHome = Sys.getEnv("USERPROFILE");
+            if (userHome != null && userHome != "" && FileSystem.exists(userHome)) {
+                tempOptions.push(Path.addTrailingSlash(userHome));
+            } else {
+                // Fallback to "C:\Users\<username>\" by getting username from environment
+                var username = Sys.getEnv("USERNAME");
+                if (username != null && username != "") {
+                    tempOptions.push('C:/Users/${username}/');
+                }
+            }
+            
+            // Add other Windows-specific fallbacks
+            tempOptions.push("C:/Temp");
+            var envTemp = Sys.getEnv("TEMP");
+            if (envTemp != null && envTemp != "") {
+                tempOptions.push(envTemp);
+            }
+        } else {
+            // For Mac/Linux, ONLY use application storage directory - they don't have path length limitations like Windows
+            tempOptions.push(System.applicationStorageDirectory);
+        }
+        
+        // Find first writable location with shortest path
+        for (option in tempOptions) {
+            var path = StringTools.trim(option);
+            if (path != "" && FileSystem.exists(path) && _canWriteToDirectory(path)) {
+                shortTempDir = Path.addTrailingSlash(path) + "temp";
+                break;
+            }
+        }
+        
+        // If all else fails, use the original destination directory
+        if (shortTempDir == null) {
+            shortTempDir = Path.addTrailingSlash(destinationDir) + "temp";
+        }
+        
+        var cloneDir = Path.addTrailingSlash(destinationDir) + "git_clone";
+        
+        try {
+            // Create short temporary directory if it doesn't exist (or clear it if it does)
+            if (FileSystem.exists(shortTempDir)) {
+                try {
+                    _deleteDirectory(shortTempDir);
+                } catch (e) {
+                    Logger.warning('Failed to clean up existing temp directory: ${e}');
+                }
+            }
+            
+            Logger.info('Creating temporary directory with shorter path: ${shortTempDir}');
+            FileSystem.createDirectory(shortTempDir);
+            
+            // Create final clone directory if it doesn't exist
+            if (!FileSystem.exists(cloneDir)) {
+                FileSystem.createDirectory(cloneDir);
+            }
+            
+            // Build the clone URL
+            var cloneUrl = "";
+            if (token != null) {
+                // Use HTTPS with token for authentication
+                cloneUrl = 'https://${token}@github.com/${organization}/${repository}.git';
+            } else {
+                // Use plain HTTPS for public repos
+                cloneUrl = 'https://github.com/${organization}/${repository}.git';
+            }
+            
+            // Enable long paths in git for Windows to avoid path length limitations
+            Logger.info('Configuring git for long paths');
+            Sys.command('git config --global core.longpaths true');
+            
+            // Single command for cloning with recursive submodules and longpaths enabled
+            Logger.info('Performing git clone with recursive submodules to shorter path');
+            var cloneCmd = 'git clone --depth 1 --recursive -c core.longpaths=true --branch ${branch} ${cloneUrl} ${shortTempDir}/repo';
+            
+            Logger.info('Executing git clone command: ${cloneCmd}');
+            var cloneProcess = Sys.command(cloneCmd);
+            if (cloneProcess != 0) {
+                Logger.error('Failed to clone GitHub repository, exit code: ${cloneProcess}');
+                
+                // Clean up the temporary directory
+                try {
+                    _deleteDirectory(shortTempDir);
+                } catch (e) {
+                    Logger.warning('Failed to clean up temporary directory: ${e}');
+                }
+                
+                return false;
+            }
+            
+            // Now that we have cloned to a shorter path, move contents to the destination using zip/unzip
+            Logger.info('Clone successful. Moving files from ${shortTempDir}/repo to ${cloneDir}');
+            
+            try {
+                // Use zip/unzip functionality to handle potential long paths
+                Logger.info('Using zip/unzip to handle potentially long paths');
+                
+                // Zip the entire source directory
+                var zipBytes = _zipDirectory('${shortTempDir}/repo');
+                Logger.info('Repository directory zipped successfully');
+                
+                // Unzip to the destination
+                _unzipToDirectory(zipBytes, cloneDir);
+                Logger.info('Repository directory unzipped to destination successfully');
+                
+                // Clean up the temporary directory
+                try {
+                    _deleteDirectory(shortTempDir);
+                } catch (e) {
+                    Logger.warning('Failed to clean up temporary directory: ${e}');
+                }
+                
+                return true;
+            } catch (e) {
+                Logger.error('Error copying files to destination: ${e}');
+                return false;
+            }
+        } catch (e) {
+            Logger.error('Error during git clone: ${e}');
+            return false;
+        }
+    }
+    
+    /**
+     * Check if a directory is writable by attempting to create a test file
+     * @param directory Directory to check
+     * @return Bool true if directory is writable
+     */
+    static private function _canWriteToDirectory(directory:String):Bool {
+        if (!FileSystem.exists(directory)) {
+            return false;
+        }
+        
+        var testFile = Path.addTrailingSlash(directory) + ".write_test_" + Date.now().getTime();
+        try {
+            File.saveContent(testFile, "test");
+            FileSystem.deleteFile(testFile);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Copy a directory and all its contents recursively
+     * @param source Source directory path
+     * @param destination Destination directory path
+     */
+    static private function _copyDirectory(source:String, destination:String):Void {
+        if (!FileSystem.exists(destination)) {
+            FileSystem.createDirectory(destination);
+        }
+        
+        var items = FileSystem.readDirectory(source);
+        for (item in items) {
+            var sourcePath = Path.addTrailingSlash(source) + item;
+            var destPath = Path.addTrailingSlash(destination) + item;
+            
+            if (FileSystem.isDirectory(sourcePath)) {
+                _copyDirectory(sourcePath, destPath);
+            } else {
+                File.copy(sourcePath, destPath);
+            }
+        }
+    }
+    
+    /**
+     * Find the root directory of a provisioner in the repository
+     * @param repositoryPath Path to the repository
+     * @param actualRepositoryName Optional name of the repository for better matching
+     * @return String|null Path to the provisioner root, or null if not found
+     */
+    static private function _findProvisionerRoot(repositoryPath:String, actualRepositoryName:String = null):String {
+        Logger.info('Searching for provisioner root in: ${repositoryPath}');
+        
+        // First, check if the repo root itself is a provisioner
+        if (_isProvisionerDirectory(repositoryPath)) {
+            Logger.info('Repository root is a valid provisioner');
+            return repositoryPath;
+        }
+        
+        try {
+            // Use the actual repository name if provided, otherwise get it from the path
+            var repoName = actualRepositoryName != null ? actualRepositoryName : Path.withoutDirectory(Path.removeTrailingSlashes(repositoryPath));
+            Logger.info('Using repository name: ${repoName}');
+            
+            // Read first level directories
+            var items = FileSystem.readDirectory(repositoryPath);
+            Logger.info('Found ${items.length} items in repository root');
+            
+            // Create a function to recursively check directories up to a certain depth
+            function checkDirectory(dirPath:String, relativePath:String, depth:Int = 0, maxDepth:Int = 3):String {
+                if (depth > maxDepth) return null;
+                
+                // Check if this directory is a provisioner
+                if (_isProvisionerDirectory(dirPath)) {
+                    Logger.info('Found valid provisioner at depth ${depth}: ${relativePath}');
+                    return dirPath;
+                }
+                
+                // Don't go deeper if we're already at max depth
+                if (depth == maxDepth) return null;
+                
+                try {
+                    var subItems = FileSystem.readDirectory(dirPath);
+                    Logger.verbose('Checking ${subItems.length} items at depth ${depth}: ${relativePath}');
+                    
+                    // First check any directories with the same name as the repository (common pattern)
+                    for (subItem in subItems) {
+                        var subItemPath = Path.addTrailingSlash(dirPath) + subItem;
+                        var newRelativePath = relativePath.length > 0 ? relativePath + "/" + subItem : subItem;
+                        
+                        if (FileSystem.isDirectory(subItemPath) && subItem == repoName) {
+                            Logger.info('Found subdirectory with same name as repository at depth ${depth}: ${newRelativePath}');
+                            
+                            // Check if this matches the expected structure
+                            var result = checkDirectory(subItemPath, newRelativePath, depth + 1, maxDepth);
+                            if (result != null) return result;
+                        }
+                    }
+                    
+                    // Then check all other directories
+                    for (subItem in subItems) {
+                        var subItemPath = Path.addTrailingSlash(dirPath) + subItem;
+                        var newRelativePath = relativePath.length > 0 ? relativePath + "/" + subItem : subItem;
+                        
+                        if (FileSystem.isDirectory(subItemPath) && subItem != repoName) {
+                            var result = checkDirectory(subItemPath, newRelativePath, depth + 1, maxDepth);
+                            if (result != null) return result;
+                        }
+                    }
+                } catch (e) {
+                    Logger.warning('Error checking subdirectories of ${dirPath}: ${e}');
+                }
+                
+                return null;
+            }
+            
+            // Start recursive search from the repository root
+            var provisioner = checkDirectory(repositoryPath, "", 0);
+            if (provisioner != null) return provisioner;
+            
+            // First priority: Look for a subdirectory with the same name as the repository
+            for (item in items) {
+                var itemPath = Path.addTrailingSlash(repositoryPath) + item;
+                if (FileSystem.isDirectory(itemPath) && item == repoName) {
+                    Logger.info('Found subdirectory with same name as repository: ${item}');
+                    
+                    // Check if this directory is a provisioner
+                    if (_isProvisionerDirectory(itemPath)) {
+                        Logger.info('Directory ${item} is a valid provisioner');
+                        return itemPath;
+                    }
+                    
+                    var versionMetadataPath = Path.addTrailingSlash(itemPath) + VERSION_METADATA_FILENAME;
+                    if (FileSystem.exists(versionMetadataPath)) {
+                        Logger.info('Found provisioner.yml in ${item}');
+                        return itemPath;
+                    }
+                }
+            }
+            
+            // Second priority: Look for a directory specifically named "provisioner"
+            for (item in items) {
+                var itemPath = Path.addTrailingSlash(repositoryPath) + item;
+                if (FileSystem.isDirectory(itemPath) && item == "provisioner") {
+                    Logger.info('Found "provisioner" directory');
+                    if (_isProvisionerDirectory(itemPath)) {
+                        Logger.info('Directory "provisioner" is a valid provisioner');
+                        return itemPath;
+                    }
+                }
+            }
+            
+            // Third priority: Check all first-level subdirectories
+            for (item in items) {
+                var itemPath = Path.addTrailingSlash(repositoryPath) + item;
+                if (FileSystem.isDirectory(itemPath)) {
+                    // Check if this directory is a provisioner
+                    if (_isProvisionerDirectory(itemPath)) {
+                        Logger.info('First-level directory ${item} is a valid provisioner');
+                        return itemPath;
+                    }
+                    
+                    // Check second level 
+                    try {
+                        var subItems = FileSystem.readDirectory(itemPath);
+                        for (subItem in subItems) {
+                            var subItemPath = Path.addTrailingSlash(itemPath) + subItem;
+                            if (FileSystem.isDirectory(subItemPath)) {
+                                if (_isProvisionerDirectory(subItemPath)) {
+                                    Logger.info('Second-level directory ${item}/${subItem} is a valid provisioner');
+                                    return subItemPath;
+                                }
+                                
+                                // Check third level for deeper nesting
+                                try {
+                                    var subSubItems = FileSystem.readDirectory(subItemPath);
+                                    for (subSubItem in subSubItems) {
+                                        var subSubItemPath = Path.addTrailingSlash(subItemPath) + subSubItem;
+                                        if (FileSystem.isDirectory(subSubItemPath) && _isProvisionerDirectory(subSubItemPath)) {
+                                            Logger.info('Third-level directory ${item}/${subItem}/${subSubItem} is a valid provisioner');
+                                            return subSubItemPath;
+                                        }
+                                    }
+                                } catch (e) {
+                                    // Ignore errors at this level
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        Logger.warning('Error checking subdirectories of ${itemPath}: ${e}');
+                    }
+                }
+            }
+        } catch (e) {
+            Logger.error('Error searching for provisioner root: ${e}');
+        }
+        
+        Logger.warning('No valid provisioner structure found in repository');
+        return null;
+    }
+    
+    /**
+     * Check if a directory contains a valid provisioner structure
+     * @param directoryPath Path to check
+     * @return Bool True if the directory looks like a provisioner
+     */
+    static private function _isProvisionerDirectory(directoryPath:String):Bool {
+        // Check for collection structure (has provisioner-collection.yml)
+        if (FileSystem.exists(Path.addTrailingSlash(directoryPath) + PROVISIONER_METADATA_FILENAME)) {
+            return true;
+        }
+        
+        // Check for version structure - just need provisioner.yml 
+        // Future provisioners will have scripts moved up to main directory
+        var hasVersionMetadata = FileSystem.exists(Path.addTrailingSlash(directoryPath) + VERSION_METADATA_FILENAME);
+        
+        // If we have the metadata file, consider it a valid provisioner directory
+        if (hasVersionMetadata) {
+            Logger.info('Found provisioner.yml in directory: ${directoryPath}');
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Clean up a temporary directory
+     * @param tempDir Path to the temporary directory
+     */
+    static private function _cleanupTempDir(tempDir:String):Void {
+        if (FileSystem.exists(tempDir)) {
+            try {
+                _deleteDirectory(tempDir);
+            } catch (e) {
+                Logger.warning('Failed to clean up temporary directory ${tempDir}: ${e}');
+            }
+        }
+    }
+    
+    /**
+     * Recursively delete a directory and all its contents
+     * @param dirPath Path to the directory to delete
+     */
+    static private function _deleteDirectory(dirPath:String):Void {
+        if (!FileSystem.exists(dirPath) || !FileSystem.isDirectory(dirPath)) {
+            return;
+        }
+        
+        var items = FileSystem.readDirectory(dirPath);
+        for (item in items) {
+            var itemPath = Path.addTrailingSlash(dirPath) + item;
+            if (FileSystem.isDirectory(itemPath)) {
+                _deleteDirectory(itemPath);
+            } else {
+                FileSystem.deleteFile(itemPath);
+            }
+        }
+        
+        FileSystem.deleteDirectory(dirPath);
+    }
+    
+    /**
      * Get valid version directories from a provisioner directory
-     * Valid versions must contain a scripts subdirectory
+     * Valid versions must contain a provisioner.yml file
      * @param provisionerPath Path to the provisioner directory
      * @return Array<String> Array of valid version directory names
      */
@@ -1375,12 +2265,17 @@ class ProvisionerManager {
                     continue;
                 }
                 
-                // Check if this is a valid version directory (has scripts subdirectory)
-                var scriptsPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + "scripts";
-                if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath)) {
+                // Check if this is a valid version directory (has provisioner.yml)
+                var versionMetadataPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + VERSION_METADATA_FILENAME;
+                if (FileSystem.exists(versionMetadataPath)) {
                     validVersions.push(item);
+                    
+                    // Log whether it has a scripts folder (for backward compatibility info)
+                    var scriptsPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + "scripts";
+                    var hasScriptsDir = FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath);
+                    Logger.info('Valid version directory: ${item} (has scripts folder: ${hasScriptsDir})');
                 } else {
-                    Logger.warning('Invalid version directory (no scripts folder): ${item}');
+                    Logger.warning('Invalid version directory (no provisioner.yml file): ${item}');
                 }
             }
         } catch (e) {
@@ -1395,6 +2290,42 @@ class ProvisionerManager {
      * @param directory The directory to zip
      * @return Bytes The zipped content
      */
+    /**
+     * Convert a path to the platform-specific format with long path support for Windows
+     * @param path The original path 
+     * @return The platform-appropriate path
+     */
+    #if windows
+    static private function _getWindowsLongPath(path:String):String {
+        // Only apply the prefix if the path is long and doesn't already have it
+        if (path.length > 240 && !StringTools.startsWith(path, "\\\\?\\")) {
+            // Make sure path is absolute and uses backslashes
+            var normalizedPath = StringTools.replace(Path.normalize(path), "/", "\\");
+            
+            // Check if it's a UNC path (network share)
+            if (StringTools.startsWith(normalizedPath, "\\\\")) {
+                return "\\\\?\\UNC\\" + normalizedPath.substr(2);
+            } else if (Path.isAbsolute(normalizedPath)) {
+                return "\\\\?\\" + normalizedPath;
+            }
+        }
+        return path;
+    }
+    #end
+
+    /**
+     * Convert a path to the platform-specific format
+     * @param path The original path
+     * @return The platform-appropriate path
+     */
+    static private function _getPlatformPath(path:String):String {
+        #if windows
+        return _getWindowsLongPath(path);
+        #else
+        return path;
+        #end
+    }
+    
     static private function _zipDirectory(directory:String):Bytes {
         var entries:List<Entry> = new List<Entry>();
         _addDirectoryToZip(directory, "", entries);
@@ -1414,46 +2345,54 @@ class ProvisionerManager {
      * @param entries The list of zip entries
      */
     static private function _addDirectoryToZip(directory:String, path:String, entries:List<Entry>):Void {
-        var items = FileSystem.readDirectory(directory);
-        
-        for (item in items) {
-            var itemPath = Path.addTrailingSlash(directory) + item;
-            var zipPath = path.length > 0 ? path + "/" + item : item;
+        try {
+            // Use platform-specific path for directory operations
+            var platformDirectory = _getPlatformPath(directory);
+            var items = FileSystem.readDirectory(platformDirectory);
             
-            if (FileSystem.isDirectory(itemPath)) {
-                // Add directory entry
-                var entry:Entry = {
-                    fileName: zipPath + "/",
-                    fileSize: 0,
-                    fileTime: Date.now(),
-                    compressed: false,
-                    dataSize: 0,
-                    data: Bytes.alloc(0),
-                    crc32: 0
-                };
-                entries.add(entry);
+            for (item in items) {
+                var itemPath = Path.addTrailingSlash(directory) + item;
+                var platformItemPath = _getPlatformPath(itemPath);
+                var zipPath = path.length > 0 ? path + "/" + item : item;
                 
-                // Recursively add directory contents
-                _addDirectoryToZip(itemPath, zipPath, entries);
-            } else {
-                // Add file entry without compression
-                try {
-                    var data = File.getBytes(itemPath);
+                if (FileSystem.isDirectory(platformItemPath)) {
+                    // Add directory entry
                     var entry:Entry = {
-                        fileName: zipPath,
-                        fileSize: data.length,
-                        fileTime: FileSystem.stat(itemPath).mtime,
-                        compressed: false, // No compression
-                        dataSize: data.length,
-                        data: data,
-                        crc32: haxe.crypto.Crc32.make(data)
+                        fileName: zipPath + "/",
+                        fileSize: 0,
+                        fileTime: Date.now(),
+                        compressed: false,
+                        dataSize: 0,
+                        data: Bytes.alloc(0),
+                        crc32: 0
                     };
-                    // Skip compression completely
                     entries.add(entry);
-                } catch (e) {
-                    Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
+                    
+                    // Recursively add directory contents
+                    _addDirectoryToZip(itemPath, zipPath, entries);
+                } else {
+                    // Add file entry without compression
+                    try {
+                        var data = File.getBytes(platformItemPath);
+                        var entry:Entry = {
+                            fileName: zipPath,
+                            fileSize: data.length,
+                            fileTime: FileSystem.stat(platformItemPath).mtime,
+                            compressed: false, // No compression
+                            dataSize: data.length,
+                            data: data,
+                            crc32: haxe.crypto.Crc32.make(data)
+                        };
+                        // Skip compression completely
+                        entries.add(entry);
+                    } catch (e) {
+                        Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
+                    }
                 }
             }
+        } catch (e) {
+            Logger.error('Error reading directory: ${directory} - ${e}');
+            throw e;
         }
     }
     
@@ -1465,28 +2404,67 @@ class ProvisionerManager {
     static private function _unzipToDirectory(zipBytes:Bytes, directory:String):Void {
         var entries = Reader.readZip(new BytesInput(zipBytes));
         
+        // Ensure the root extraction directory exists
+        var platformDirectory = _getPlatformPath(directory);
+        if (!FileSystem.exists(platformDirectory)) {
+            try {
+                Logger.info('Creating root extraction directory: ${directory}');
+                FileSystem.createDirectory(platformDirectory);
+            } catch (e) {
+                Logger.error('Failed to create root extraction directory: ${directory} - ${e}');
+                throw new haxe.Exception('Could not create extraction directory: ${e.message}');
+            }
+        }
+        
+        // Process all entries
         for (entry in entries) {
             var fileName = entry.fileName;
             
-            // Skip directory entries
-            if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
-                var dirPath = Path.addTrailingSlash(directory) + fileName;
-                _createDirectoryRecursive(dirPath);
+            // Skip invalid entries
+            if (fileName == null || fileName == "") {
+                Logger.warning('Skipping entry with empty filename');
                 continue;
             }
             
-            // Create parent directories if needed
-            var filePath = Path.addTrailingSlash(directory) + fileName;
-            var parentDir = Path.directory(filePath);
-            _createDirectoryRecursive(parentDir);
+            // Normalize path separators to avoid issues
+            fileName = StringTools.replace(fileName, "\\", "/");
             
-            // Extract file
+            // Skip directory entries
+            if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
+                try {
+                    var dirPath = Path.addTrailingSlash(directory) + fileName;
+                    Logger.verbose('Creating directory: ${dirPath}');
+                    _createDirectoryRecursive(dirPath);
+                } catch (e) {
+                    Logger.warning('Could not create directory: ${fileName} - ${e}');
+                }
+                continue;
+            }
+            
+            // Process file entry
             try {
-                var data = entry.data;
+                // Create parent directories if needed
+                var filePath = Path.addTrailingSlash(directory) + fileName;
+                var parentDir = Path.directory(filePath);
+                
+                if (parentDir != null && parentDir != "") {
+                    try {
+                        _createDirectoryRecursive(parentDir);
+                    } catch (e) {
+                        Logger.error('Failed to create parent directory ${parentDir}: ${e}');
+                        continue; // Skip this file if parent directory creation fails
+                    }
+                }
+                
+                // Uncompress if needed
                 if (entry.compressed) {
                     Tools.uncompress(entry);
                 }
-                File.saveBytes(filePath, entry.data);
+                
+                // Save file with platform-specific path handling
+                var platformFilePath = _getPlatformPath(filePath);
+                Logger.verbose('Extracting file: ${fileName} to ${platformFilePath}');
+                File.saveBytes(platformFilePath, entry.data);
             } catch (e) {
                 Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
             }
@@ -1498,12 +2476,17 @@ class ProvisionerManager {
      * @param directory The directory path to create
      */
     static private function _createDirectoryRecursive(directory:String):Void {
-        if (directory == null || directory == "" || FileSystem.exists(directory)) {
+        if (directory == null || directory == "") {
+            return;
+        }
+        
+        var platformDir = _getPlatformPath(directory);
+        if (FileSystem.exists(platformDir)) {
             return;
         }
         
         _createDirectoryRecursive(Path.directory(directory));
-        FileSystem.createDirectory(directory);
+        FileSystem.createDirectory(platformDir);
     }
 
 }
