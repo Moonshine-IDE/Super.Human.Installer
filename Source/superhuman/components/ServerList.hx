@@ -309,7 +309,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonOpenBrowser );
 
         _buttonSSH = new GenesisButton();
-        _buttonSSH.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CONSOLE );
+        _buttonSSH.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SSH );
         _buttonSSH.width = CONTROL_BUTTON_WIDTH;
         _buttonSSH.height = CONTROL_BUTTON_HEIGHT;
         _buttonSSH.enabled = false;

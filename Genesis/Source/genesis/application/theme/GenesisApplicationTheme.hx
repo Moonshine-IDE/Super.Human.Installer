@@ -130,6 +130,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final ICON_CONSOLE:String = "assets/images/common/console.png";
     public static final ICON_COPY:String = "assets/images/common/copy.png";
     public static final ICON_DELETE:String = "assets/images/common/delete.png";
+    public static final ICON_SSH:String = "assets/images/common/ssh.png";
     public static final ICON_DESTROY:String = "assets/images/common/destroy.png";
     public static final ICON_DESTROY_SMALL:String = "assets/images/common/destroy_small.png";
     public static final ICON_ERROR:String = "assets/images/common/error.png";
