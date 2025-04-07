@@ -1584,7 +1584,7 @@ class SuperHumanInstaller extends GenesisApplication {
 				} else {
 					// Fallback to server page if dynamic config page is not available
 					this.selectedPageId = PAGE_SERVER;
-					Logger.info('${this}: No suitable config page found, returning to server list');
+					Logger.error('${this}: No suitable config page found, returning to server list');
 				}
 		}
 	}

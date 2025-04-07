@@ -46,4 +46,5 @@ typedef SuperHumanPreferences = {
     ?windowy:Int,
     ?syncmethod:SyncMethod,
     ?userPreferredSyncMethod:SyncMethod,
+    ?defaultNetworkInterface:String,
 }

@@ -157,9 +157,48 @@ class DynamicAdvancedConfigPage extends Page {
         // We'll only add it if the provisioner.yml has a corresponding field
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkinterface.text');
-        _dropdownNetworkInterface = new GenesisFormPupUpListView(VirtualBox.getInstance().bridgedInterfacesCollection);
+        // Create a custom collection with Default and None options at the beginning
+        var originalCollection = VirtualBox.getInstance().bridgedInterfacesCollection;
+        var interfaceCollection = new feathers.data.ArrayCollection<BridgedInterface>();
+        
+        // Get the default network interface from global preferences
+        var defaultNic = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+        
+        // Add Default option (empty string)
+        interfaceCollection.add({ name: "" });
+        
+        // Add None option (special "none" value)
+        interfaceCollection.add({ name: "none" });
+        
+        // Create a deduplicated collection by excluding empty names, "none", and the default interface
+        var addedNames = new Map<String, Bool>();
+        addedNames.set("", true);  // Already added empty string (Default)
+        addedNames.set("none", true); // Already added "none"
+        
+        if (defaultNic != null && defaultNic != "" && defaultNic != "none") {
+            addedNames.set(defaultNic, true); // Mark default as added to avoid duplicates
+        }
+        
+        // Add all original interfaces, excluding duplicates and the default
+        for (i in 0...originalCollection.length) {
+            var interfaceItem = originalCollection.get(i);
+            if (interfaceItem.name != "" && interfaceItem.name != "none" && !addedNames.exists(interfaceItem.name)) {
+                interfaceCollection.add(interfaceItem);
+                addedNames.set(interfaceItem.name, true);
+            }
+        }
+        
+        _dropdownNetworkInterface = new GenesisFormPupUpListView(interfaceCollection);
         _dropdownNetworkInterface.itemToText = (item:BridgedInterface) -> {
-            if (item.name == "") return LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkinterface.default');
+            if (item.name == "") {
+                // Get the default network interface from global preferences
+                var defaultNic = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+                if (defaultNic != null && defaultNic != "" && defaultNic != "none") {
+                    return 'Default (' + defaultNic + ')';
+                }
+                return 'Default (none selected)';
+            }
+            if (item.name == "none") return "None";
             return item.name;
         };
         // Don't set selectedIndex here, wait until we have data
@@ -255,7 +294,8 @@ class DynamicAdvancedConfigPage extends Page {
             // Find the matching network interface
             for (i in 0..._dropdownNetworkInterface.dataProvider.length) {
                 var d = _dropdownNetworkInterface.dataProvider.get(i);
-                if (d != null && d.name == _server.networkBridge.value) {
+                // Use getEffectiveNetworkInterface to get the actual interface value
+                if (d != null && d.name == _server.getEffectiveNetworkInterface()) {
                     _dropdownNetworkInterface.selectedIndex = i;
                     break;
                 }
@@ -659,7 +699,7 @@ class DynamicAdvancedConfigPage extends Page {
                     var maxValue = field.max != null ? field.max : 100;
                     
                     // For common integer fields, make sure we're using integer step values
-                    var isIntegerField = (field.name == "numCPUs" || field.name == "setupWait");
+                    var isIntegerField = (field.name == "numCPUs" || field.name == "setupWait" || field.name == "CONSOLE_PORT");
                     
                     // Memory field should increment by whole numbers but allow decimal values
                     var usesWholeNumberStep = isIntegerField || field.name == "memory";
@@ -808,7 +848,7 @@ class DynamicAdvancedConfigPage extends Page {
         }
     }
 
-    override function updateContent(forced:Bool = false) {
+    override public function updateContent(forced:Bool = false) {
         super.updateContent();
 
         // If the form is not initialized yet, store the update request for later
@@ -925,14 +965,14 @@ class DynamicAdvancedConfigPage extends Page {
                         var basicPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
                         if (basicPropsObj != null) {
                             var fields = Reflect.fields(basicPropsObj);
-                            Logger.info('${this}: Checking ${fields.length} fields in dynamicCustomProperties as fallback');
+                            Logger.error('${this}: Checking ${fields.length} fields in dynamicCustomProperties as fallback');
                             
                             // Only check for fields that we have in our dynamic fields
                             for (fieldName in _dynamicFields.keys()) {
                                 if (Reflect.hasField(basicPropsObj, fieldName)) {
                                     var value = Reflect.field(basicPropsObj, fieldName);
                                     customPropValues.set(fieldName, value);
-                                    Logger.info('${this}: Found matching field in dynamicCustomProperties as fallback: ${fieldName} = ${value}');
+                                    Logger.error('${this}: Found matching field in dynamicCustomProperties as fallback: ${fieldName} = ${value}');
                                 }
                             }
                         }
@@ -1083,7 +1123,7 @@ class DynamicAdvancedConfigPage extends Page {
                         }
                         
                         // Special handling for integer fields to ensure they're whole numbers
-                        if (fieldName == "numCPUs" || fieldName == "setupWait") {
+                        if (fieldName == "numCPUs" || fieldName == "setupWait" || fieldName == "CONSOLE_PORT") {
                             numValue = Math.round(numValue);
                         }
                         
@@ -1225,7 +1265,21 @@ class DynamicAdvancedConfigPage extends Page {
 
         // Update standard fields
         if (_dropdownNetworkInterface.selectedItem != null) {
-            _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
+            // Get the selected network interface
+            var selectedInterface = _dropdownNetworkInterface.selectedItem.name;
+            
+            // Handle "Default" (empty string) case
+            if (selectedInterface == "") {
+                // Use the default from preferences
+                var defaultNic = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+                if (defaultNic != null && defaultNic != "" && defaultNic != "none") {
+                    selectedInterface = defaultNic;
+                }
+            }
+            
+            // Set the value in the server object
+            _server.networkBridge.value = selectedInterface;
+            Logger.info('${this}: Set network bridge to "${selectedInterface}"');
         }
         
         // Update server properties from dynamic fields
@@ -1306,6 +1360,11 @@ class DynamicAdvancedConfigPage extends Page {
                     // Set setup wait time via Property object
                     _server.setupWait.value = Std.parseInt(value);
                     Logger.info('${this}: Set setup wait to ${value}');
+                } else if (fieldName == "CONSOLE_PORT") {
+                    // Ensure CONSOLE_PORT is always stored as an integer
+                    var intValue = Std.parseInt(value);
+                    value = Std.string(intValue); // Ensure it's a valid integer string
+                    Logger.info('${this}: Set CONSOLE_PORT to integer value ${intValue}');
                 } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
                     var prop = _customProperties.get(fieldName);

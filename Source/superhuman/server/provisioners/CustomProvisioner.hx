@@ -55,6 +55,7 @@ class CustomProvisioner extends StandaloneProvisioner {
 
     /**
      * Override copyFiles to ensure we use the correct source path for custom provisioners
+     * Always using the zip/unzip method for consistent file transfer and long path handling
      */
     override public function copyFiles(?callback:()->Void) {
         if (exists) {
@@ -81,17 +82,43 @@ class CustomProvisioner extends StandaloneProvisioner {
             Logger.info('${this}: Using default source path: ${sourcePath}');
         }
 
-        // Temporarily store the original _sourcePath
-        var originalSource = _sourcePath;
+        // Create target directory if it doesn't exist
+        createTargetDirectory();
+
+        Logger.info('${this}: Copying custom provisioner files to ${_targetPath} using zip/unzip method');
+        if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, ""));
         
-        // Set the source path to the correct one
-        _sourcePath = sourcePath;
-        
-        // Call the parent implementation which now uses zip/unzip
-        super.copyFiles(callback);
-        
-        // Restore the original source path
-        _sourcePath = originalSource;
+        try {
+            // First zip the entire source directory to handle potential long paths
+            Logger.info('${this}: Zipping source directory: ${sourcePath}');
+            var zipBytes = _zipDirectory(sourcePath);
+            
+            // Then unzip to the target directory
+            Logger.info('${this}: Unzipping to target directory: ${_targetPath}');
+            _unzipToDirectory(zipBytes, _targetPath);
+            
+            Logger.info('${this}: Successfully copied files using zip/unzip method');
+            if (callback != null) callback();
+            
+        } catch (e) {
+            Logger.error('${this}: Error copying files using zip/unzip: ${e}');
+            if (console != null) console.appendText('Error copying provisioner files: ${e}', true);
+            
+            // Fall back to parent implementation as a last resort
+            Logger.info('${this}: Falling back to parent implementation');
+            
+            // Temporarily store the original _sourcePath
+            var originalSource = _sourcePath;
+            
+            // Set the source path to the correct one
+            _sourcePath = sourcePath;
+            
+            // Call the parent implementation
+            super.copyFiles(callback);
+            
+            // Restore the original source path
+            _sourcePath = originalSource;
+        }
     }
 
 
@@ -346,7 +373,7 @@ override public function get_data():ProvisionerData {
     }
     
     // Fallback to the base version while preserving the original type
-    Logger.info('${this}: Using fallback with original type: ${originalType}');
+    Logger.error('${this}: Using fallback with original type: ${originalType}');
     return {
         type: originalType,
         version: baseData.version
@@ -366,20 +393,9 @@ override public function generateHostsFileContent():String {
         
         // Log template status
         if (_hostsTemplate == null || _hostsTemplate.length == 0) {
-            Logger.warning('${this}: Template not found using standard method, will try alternative locations');
+            Logger.warning('${this}: Template not found using standard method, will try alternative location');
             
-            // Try to look in the scripts directory
-            var scriptsTemplatePath = Path.addTrailingSlash(_sourcePath) + "scripts/templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
-            
-            if (FileSystem.exists(scriptsTemplatePath)) {
-                try {
-                    _hostsTemplate = File.getContent(scriptsTemplatePath);
-                } catch (e) {
-                    Logger.error('${this}: Error reading template at ${scriptsTemplatePath}: ${e}');
-                }
-            }
-            
-            // If still no template, try to fall back to the standalone provisioner template
+            // Try to fall back to the standalone provisioner template
             if (_hostsTemplate == null || _hostsTemplate.length == 0) {
                 // Get the latest standalone provisioner definition
                 var standaloneProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.StandaloneProvisioner);
@@ -412,6 +428,40 @@ override public function generateHostsFileContent():String {
         // Create a simple hosts file generator for custom provisioners
         // This is a simplified version that just does basic variable substitution
         var content = _hostsTemplate;
+        
+        // Initialize variables for ALL roles from the provisioner definition
+        if (_server != null && _server.customProperties != null && 
+            Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+            
+            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+            if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                Reflect.hasField(provDef.metadata, "roles")) {
+                
+                var rolesList:Dynamic = Reflect.field(provDef.metadata, "roles");
+                if (rolesList != null) {
+                    // Cast the dynamic rolesList to Array<Dynamic> or iterate using indices
+                    var rolesArray:Array<Dynamic> = cast(rolesList, Array<Dynamic>);
+                    Logger.info('${this}: Initializing variables for ${rolesArray.length} roles from provisioner metadata');
+                    
+                    for (i in 0...rolesArray.length) {
+                        var roleInfo = rolesArray[i];
+                        if (roleInfo != null && Reflect.hasField(roleInfo, "name")) {
+                            var roleName = Reflect.field(roleInfo, "name");
+                            var roleUpper = roleName.toUpperCase();
+                            roleUpper = StringTools.replace(roleUpper, "-", "_");
+                            
+                            // Initialize all standard variables for this role
+                            content = _initializeStandardVariables(content, roleUpper);
+                            
+                            // Set role enablement to false by default
+                            content = _replaceVariable(content, roleName, "false");
+                            
+                            Logger.verbose('${this}: Initialized variables for role ${roleName}');
+                        }
+                    }
+                }
+            }
+        }
      
         // Extract just the hostname part (before the first dot)
         var fullHostname = _server.hostname.value;
@@ -471,9 +521,132 @@ override public function generateHostsFileContent():String {
         // Process all roles with their exact names - no prefixes
         for (role in _server.roles.value) {
             var roleValue = role.enabled ? "true" : "false";
+            var roleName = role.value;
             
-            // Only use the exact role name as defined
-            content = _replaceVariable(content, role.value, roleValue);
+            // Set the basic role enablement variable
+            content = _replaceVariable(content, roleName, roleValue);
+            
+            // Set standard variables for all roles
+            var roleUpper = roleName.toUpperCase();
+            
+            // Handle role name that contains hyphens
+            roleUpper = StringTools.replace(roleUpper, "-", "_");
+            
+            // Initialize all standard variables with default values
+            content = _initializeStandardVariables(content, roleUpper);
+            
+            // Process installer file information for standard roles
+            if (role.files != null) {
+                // Main installer
+                if (role.files.installer != null) {
+                    var installerFileName = role.files.installerFileName;
+                    var installerHash = role.files.installerHash;
+                    var installerVersion = role.files.installerVersion;
+                    
+                    // Override with actual values if they exist
+                    // Main installer
+                    if (installerFileName != null) {
+                        content = _replaceVariable(content, roleUpper + "_INSTALLER", installerFileName);
+                    }
+                    
+                    if (installerHash != null) {
+                        content = _replaceVariable(content, roleUpper + "_HASH", installerHash);
+                    }
+                    
+                    if (installerVersion != null) {
+                        var fullVersion = null;
+                        if (Reflect.hasField(installerVersion, "fullVersion"))
+                            fullVersion = Reflect.field(installerVersion, "fullVersion");
+                        
+                        if (fullVersion != null) {
+                            content = _replaceVariable(content, roleUpper + "_INSTALLER_VERSION", fullVersion);
+                            
+                            // Special handling for domino version fields
+                            if (roleName == "domino") {
+                                var majorVersion = null;
+                                var minorVersion = null;
+                                var patchVersion = null;
+                                
+                                if (Reflect.hasField(installerVersion, "majorVersion"))
+                                    majorVersion = Reflect.field(installerVersion, "majorVersion");
+                                if (Reflect.hasField(installerVersion, "minorVersion"))
+                                    minorVersion = Reflect.field(installerVersion, "minorVersion");
+                                if (Reflect.hasField(installerVersion, "patchVersion"))
+                                    patchVersion = Reflect.field(installerVersion, "patchVersion");
+                                
+                                if (majorVersion != null) {
+                                    content = _replaceVariable(content, "DOMINO_INSTALLER_MAJOR_VERSION", majorVersion);
+                                    content = _replaceVariable(content, "DOMINO_MAJOR_VERSION", majorVersion);
+                                }
+                                
+                                if (minorVersion != null) {
+                                    content = _replaceVariable(content, "DOMINO_INSTALLER_MINOR_VERSION", minorVersion);
+                                    content = _replaceVariable(content, "DOMINO_MINOR_VERSION", minorVersion);
+                                }
+                                
+                                if (patchVersion != null) {
+                                    content = _replaceVariable(content, "DOMINO_INSTALLER_PATCH_VERSION", patchVersion);
+                                    content = _replaceVariable(content, "DOMINO_PATCH_VERSION", patchVersion);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Process hotfixes using standardized variables
+                if (role.files.hotfixes != null && role.files.hotfixes.length > 0) {
+                    var hotfixPath = new Path(role.files.hotfixes[0]);
+                    var hotfixFileName = hotfixPath.file + "." + hotfixPath.ext;
+                    var roleUpper = roleName.toUpperCase();
+                    roleUpper = StringTools.replace(roleUpper, "-", "_");
+                    
+                    // Set standard hotfix variables
+                    content = _replaceVariable(content, roleUpper + "_HF_INSTALL", "true");
+                    content = _replaceVariable(content, roleUpper + "_HF_INSTALLER", hotfixFileName);
+                    
+                    if (role.files.installerHotFixVersion != null) {
+                        var fullVersion = null;
+                        if (Reflect.hasField(role.files.installerHotFixVersion, "fullVersion"))
+                            fullVersion = Reflect.field(role.files.installerHotFixVersion, "fullVersion");
+                        
+                        if (fullVersion != null) {
+                            content = _replaceVariable(content, roleUpper + "_HF_INSTALLER_VERSION", fullVersion);
+                        }
+                    }
+                    
+                    if (role.files.installerHotFixHash != null) {
+                        content = _replaceVariable(content, roleUpper + "_HF_HASH", role.files.installerHotFixHash);
+                    }
+                }
+                
+                // Process fixpacks using standardized variables
+                if (role.files.fixpacks != null && role.files.fixpacks.length > 0) {
+                    var fixpackPath = new Path(role.files.fixpacks[0]);
+                    var fixpackFileName = fixpackPath.file + "." + fixpackPath.ext;
+                    var roleUpper = roleName.toUpperCase();
+                    roleUpper = StringTools.replace(roleUpper, "-", "_");
+                    
+                    // Set standard fixpack variables
+                    content = _replaceVariable(content, roleUpper + "_FP_INSTALL", "true");
+                    content = _replaceVariable(content, roleUpper + "_FP_INSTALLER", fixpackFileName);
+                    
+                    if (role.files.installerFixpackVersion != null) {
+                        var fullVersion = null;
+                        if (Reflect.hasField(role.files.installerFixpackVersion, "fullVersion"))
+                            fullVersion = Reflect.field(role.files.installerFixpackVersion, "fullVersion");
+                        
+                        if (fullVersion != null) {
+                            content = _replaceVariable(content, roleUpper + "_FP_INSTALLER_VERSION", fullVersion);
+                        }
+                    }
+                    
+                    if (role.files.installerFixpackHash != null) {
+                        content = _replaceVariable(content, roleUpper + "_FP_HASH", role.files.installerFixpackHash);
+                    }
+                    
+
+                }
+            }
         }
 
         // Add custom properties if available
@@ -492,18 +665,7 @@ override public function generateHostsFileContent():String {
             
             // Prepare a map of all custom properties for template variable substitution
             var allCustomProps = new Map<String, String>();
-            
-            // Add some known common fields that might appear in templates
-            var commonFields = [
-                "SYNCBACK_ID_FILES", "DEBUG_ALL_ANSIBLE_TASKS", "USE_HTTP_PROXY", 
-                "HTTP_PROXY_HOST", "HTTP_PROXY_PORT", "CERT_SELFSIGNED",
-                "DOMINO_IS_ADDITIONAL_INSTANCE", "DOMINO_SERVER_ID", "DOMINO_ORIGIN_HOSTNAME",
-                "DOWNLOAD_BASE_URL", "DOWNLOAD_AUTH_USER", "DOWNLOAD_AUTH_PASS", "DOWNLOAD_AUTH_ENABLED"
-            ];
-            
-            for (field in commonFields) {
-                allCustomProps.set(field, "");
-            }
+
             
             // Get default field values from the provisioner definition if available
             if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
@@ -668,6 +830,37 @@ override public function saveHostsFile() {
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfileerror', Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE, '${e.details()} Message: ${e.message}'), true);
     }
 }
+
+    /**
+     * Initialize standard variables for a role using the standardized naming pattern
+     * This ensures all roles have consistent default values for all potential variables
+     * @param content The template content to operate on 
+     * @param roleUpper The uppercase role name (with hyphens converted to underscores)
+     * @return The content with variables initialized
+     */
+    private function _initializeStandardVariables(content:String, roleUpper:String):String {
+        var result = content;
+        
+        // Main installer variables
+        result = _replaceVariable(result, roleUpper + "_INSTALLER", "");
+        result = _replaceVariable(result, roleUpper + "_HASH", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_VERSION", "");
+        
+        // Fixpack variables
+        result = _replaceVariable(result, roleUpper + "_FP_INSTALL", "false");
+        result = _replaceVariable(result, roleUpper + "_FP_INSTALLER", "");
+        result = _replaceVariable(result, roleUpper + "_FP_INSTALLER_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_FP_HASH", "");
+        
+        // Hotfix variables
+        result = _replaceVariable(result, roleUpper + "_HF_INSTALL", "false");
+        result = _replaceVariable(result, roleUpper + "_HF_INSTALLER", "");
+        result = _replaceVariable(result, roleUpper + "_HF_INSTALLER_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_HF_HASH", "");
+        
+        
+        return result;
+    }
 
     /**
      * Helper method to replace variables in the template using the ::VARIABLENAME:: format

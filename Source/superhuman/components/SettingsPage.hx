@@ -56,10 +56,13 @@ import feathers.layout.VerticalLayout;
 import genesis.application.components.GenesisForm;
 import genesis.application.components.GenesisFormButton;
 import genesis.application.components.GenesisFormCheckBox;
+import genesis.application.components.GenesisFormPupUpListView;
 import genesis.application.components.HLine;
 import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
+import prominic.sys.applications.oracle.BridgedInterface;
+import prominic.sys.applications.oracle.VirtualBox;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.theme.SuperHumanInstallerTheme;
 
@@ -90,6 +93,8 @@ class SettingsPage extends Page {
     var _rowApplications:GenesisFormRow;
     var _rowProvisioners:GenesisFormRow;
     var _buttonImportProvisioner:GenesisFormButton;
+    var _rowNetworkInterface:GenesisFormRow;
+    var _dropdownNetworkInterface:GenesisFormPupUpListView;
 
     var _browsersList:BrowsersList;
     var _applicationsList:ApplicationsList;
@@ -191,6 +196,35 @@ class SettingsPage extends Page {
         _cbDisableVagrantLogging = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.disablevagrantlogging' ) );
         _rowAdvanced.content.addChild( _cbDisableVagrantLogging );
         _form.addChild( _rowAdvanced );
+        
+        _rowNetworkInterface = new GenesisFormRow();
+        _rowNetworkInterface.text = "Default Network Interface";
+        
+        // Create a custom collection with None option (empty string) first, followed by all interfaces
+        var originalCollection = VirtualBox.getInstance().bridgedInterfacesCollection;
+        var interfaceCollection = new feathers.data.ArrayCollection<BridgedInterface>();
+        
+        // Add None option (empty string)
+        interfaceCollection.add({ name: "" });
+        
+        // Add all original interfaces, excluding any that might have empty name
+        // This prevents duplicates of the "None" option
+        for (i in 0...originalCollection.length) {
+            var interfaceItem = originalCollection.get(i);
+            if (interfaceItem.name != "") {
+                interfaceCollection.add(interfaceItem);
+            }
+        }
+        
+        _dropdownNetworkInterface = new GenesisFormPupUpListView(interfaceCollection);
+        _dropdownNetworkInterface.itemToText = (item:BridgedInterface) -> {
+            if (item.name == "") return "None";
+            return item.name;
+        };
+        _dropdownNetworkInterface.selectedIndex = 0;
+        _dropdownNetworkInterface.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.prompt' );
+        _rowNetworkInterface.content.addChild( _dropdownNetworkInterface );
+        _form.addChild( _rowNetworkInterface );
 
         _rowKeepFailedServersRunning = new GenesisFormRow();
         _cbKeepFailedServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.keepfailedserversrunning' ) );
@@ -290,6 +324,22 @@ class SettingsPage extends Page {
             // Set the disabled state based on the global flag
             _fileSyncSetting.syncDisabled = superhuman.config.SuperHumanGlobals.IS_SYNC_DISABLED;
         }
+        
+        if (_dropdownNetworkInterface != null) {
+            _dropdownNetworkInterface.selectedIndex = 0; // Default to "None"
+            
+            // If there is a default network interface set in preferences, select it
+            if (SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface != null) {
+                var defaultInterface = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+                for (i in 0..._dropdownNetworkInterface.dataProvider.length) {
+                    var d = _dropdownNetworkInterface.dataProvider.get(i);
+                    if (d.name == defaultInterface) {
+                        _dropdownNetworkInterface.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
      }
 
      public function setBrowsers(browsers:Array<BrowserData>) {
@@ -336,6 +386,13 @@ class SettingsPage extends Page {
         SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning = _cbKeepFailedServersRunning.selected;
         SuperHumanInstaller.getInstance().config.preferences.syncmethod = _fileSyncSetting.selectedSyncMethod;
+        
+        // Save the selected network interface
+        if (_dropdownNetworkInterface.selectedItem != null) {
+            SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface = _dropdownNetworkInterface.selectedItem.name;
+        } else {
+            SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface = "";
+        }
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 

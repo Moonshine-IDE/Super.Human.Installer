@@ -157,15 +157,15 @@ class Server {
                 if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.StandaloneProvisioner)) {
                     // Standalone provisioner fallback
                     sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, null, sc._serverDir, sc);
-                    Logger.info('${sc}: Created StandaloneProvisioner with null root (fallback)');
+                    Logger.error('${sc}: Created StandaloneProvisioner with null root (fallback)');
                 } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
                     // Additional provisioner fallback - create the proper AdditionalProvisioner instance, not StandaloneProvisioner
                     sc._provisioner = new superhuman.server.provisioners.AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, null, sc._serverDir, sc);
-                    Logger.info('${sc}: Created AdditionalProvisioner with null root (fallback)');
+                    Logger.error('${sc}: Created AdditionalProvisioner with null root (fallback)');
                 } else {
                     // Custom provisioner fallback
                     sc._provisioner = new CustomProvisioner(effectiveProvisionerType, null, sc._serverDir, sc);
-                    Logger.info('${sc}: Created CustomProvisioner of type ${effectiveProvisionerType} with null root (fallback)');
+                    Logger.error('${sc}: Created CustomProvisioner of type ${effectiveProvisionerType} with null root (fallback)');
                 }
             }
         }
@@ -376,6 +376,26 @@ class Server {
     
     public var networkBridge( get, never ):ValidatingProperty;
     function get_networkBridge() return _networkBridge;
+    
+    /**
+     * Gets the effective network interface to use, checking for default value
+     * If the server's network interface is empty/"" (default), this returns the global default
+     * Otherwise returns the server's configured value
+     * @return The effective network interface name to use
+     */
+    public function getEffectiveNetworkInterface():String {
+        // If the server's network interface is empty (default), use the global preference
+        if (_networkBridge != null && (_networkBridge.value == null || _networkBridge.value == "")) {
+            // Get the global default from preferences
+            var defaultInterface = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+            
+            // Return the global default if it exists, otherwise empty string
+            return (defaultInterface != null) ? defaultInterface : "";
+        }
+        
+        // Otherwise return the server's configured network interface
+        return _networkBridge.value;
+    }
     
     public var networkAddress( get, never ):ValidatingProperty;
     function get_networkAddress() return _networkAddress;

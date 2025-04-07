@@ -484,34 +484,6 @@ class ProvisionerManager {
                 }
             } catch (yamlError) {
                 Logger.error('YAML parsing error: ${yamlError}');
-                
-                // Try a manual parsing as fallback
-                Logger.info('Attempting manual parsing of the YAML file');
-                var lines = content.split("\n");
-                var manualMetadata:Dynamic = {};
-                
-                for (line in lines) {
-                    // Skip comments and empty lines
-                    var trimmed = StringTools.ltrim(line);
-                    if (StringTools.startsWith(trimmed, "#") || StringTools.trim(line) == "") continue;
-                    
-                    // Find key-value pairs
-                    var colonPos = line.indexOf(":");
-                    if (colonPos > 0) {
-                        var key = StringTools.trim(line.substr(0, colonPos));
-                        var value = StringTools.trim(line.substr(colonPos + 1));
-                        
-                        // Remove quotes if present
-                        if (StringTools.startsWith(value, '"') && value.length > 0 && value.charAt(value.length - 1) == '"') {
-                            value = value.substr(1, value.length - 2);
-                        }
-                        
-                        Reflect.setField(manualMetadata, key, value);
-                        Logger.info('Manually parsed field: ${key} = ${value}');
-                    }
-                }
-                
-                metadata = manualMetadata;
             }
             
             // Validate required fields with more detailed logging
@@ -653,32 +625,6 @@ class ProvisionerManager {
                 }
             } catch (yamlError) {
                 Logger.error('YAML parsing error in version metadata: ${yamlError}');
-                
-                // Try a manual parsing as fallback
-                var lines = content.split("\n");
-                var manualMetadata:Dynamic = {};
-                
-                for (line in lines) {
-                    // Skip comments and empty lines
-                    var trimmed = StringTools.ltrim(line);
-                    if (StringTools.startsWith(trimmed, "#") || StringTools.trim(line) == "") continue;
-                    
-                    // Find key-value pairs
-                    var colonPos = line.indexOf(":");
-                    if (colonPos > 0) {
-                        var key = StringTools.trim(line.substr(0, colonPos));
-                        var value = StringTools.trim(line.substr(colonPos + 1));
-                        
-                        // Remove quotes if present
-                        if (StringTools.startsWith(value, '"') && value.length > 0 && value.charAt(value.length - 1) == '"') {
-                            value = value.substr(1, value.length - 2);
-                        }
-                        
-                        Reflect.setField(manualMetadata, key, value);
-                    }
-                }
-                
-                metadata = manualMetadata;
             }
             
             // Validate required fields
@@ -1935,21 +1881,139 @@ class ProvisionerManager {
             
             // Single command for cloning with recursive submodules and longpaths enabled
             Logger.info('Performing git clone with recursive submodules to shorter path');
-            var cloneCmd = 'git clone --depth 1 --recursive -c core.longpaths=true --branch ${branch} ${cloneUrl} ${shortTempDir}/repo';
             
-            Logger.info('Executing git clone command: ${cloneCmd}');
-            var cloneProcess = Sys.command(cloneCmd);
-            if (cloneProcess != 0) {
-                Logger.error('Failed to clone GitHub repository, exit code: ${cloneProcess}');
-                
-                // Clean up the temporary directory
-                try {
-                    _deleteDirectory(shortTempDir);
-                } catch (e) {
-                    Logger.warning('Failed to clean up temporary directory: ${e}');
+            // For Windows, use a more robust approach with multiple specific git commands
+            if (Sys.systemName() == "Windows") {
+                // First ensure directory exists
+                if (!FileSystem.exists('${shortTempDir}/repo')) {
+                    FileSystem.createDirectory('${shortTempDir}/repo');
                 }
                 
-                return false;
+                // Create a function to run git commands with output capture and logging
+                function runGitCommand(command:String, description:String):Bool {
+                    Logger.info('${description}: ${command}');
+                    
+                    // Use Process instead of Sys.command to capture output
+                    var process = new sys.io.Process(command);
+                    var exitCode = process.exitCode();
+                    
+                    // Capture and log stdout
+                    var output = process.stdout.readAll().toString();
+                    if (output != null && output.length > 0) {
+                        var lines = output.split("\n");
+                        for (line in lines) {
+                            if (StringTools.trim(line).length > 0) {
+                                Logger.info('Git output: ${line}');
+                            }
+                        }
+                    }
+                    
+                    // Capture and log stderr
+                    var error = process.stderr.readAll().toString();
+                    if (error != null && error.length > 0) {
+                        var lines = error.split("\n");
+                        for (line in lines) {
+                            if (StringTools.trim(line).length > 0) {
+                                Logger.warning('Git error: ${line}');
+                            }
+                        }
+                    }
+                    
+                    // Close the process
+                    process.close();
+                    
+                    // Log the result
+                    if (exitCode != 0) {
+                        Logger.warning('${description} exited with code ${exitCode}');
+                    } else {
+                        Logger.info('${description} completed successfully');
+                    }
+                    
+                    return exitCode == 0;
+                }
+                
+                // Run multiple commands to ensure proper cloning with submodules
+                Logger.info('Using multi-step git clone approach for Windows with long path support');
+                
+                // Step 1: Initialize git repository
+                var initSuccess = runGitCommand('git -c core.longpaths=true init ${shortTempDir}/repo', 
+                                           "Initializing git repo");
+                
+                // Step 2: Add remote
+                var remoteSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true remote add origin ${cloneUrl}', 
+                                             "Adding remote");
+                
+                // Step 3: Fetch the specified branch
+                var fetchSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true fetch --depth 1 origin ${branch}', 
+                                            "Fetching branch");
+                if (!fetchSuccess) {
+                    Logger.error('Failed to fetch branch ${branch}');
+                    return false;
+                }
+                
+                // Step 4: Checkout the branch
+                var checkoutSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true checkout FETCH_HEAD', 
+                                               "Checking out branch");
+                if (!checkoutSuccess) {
+                    Logger.error('Failed to checkout branch');
+                    return false;
+                }
+                
+                // Step 5: Initialize and update submodules
+                Logger.info('Initializing submodules with long path support');
+                var submoduleSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true submodule update --init --recursive', 
+                                                "Initializing submodules");
+                
+                // Continue even if submodules had issues - we'll work with whatever we got
+                if (!submoduleSuccess) {
+                    Logger.warning('Submodule initialization had issues, but continuing with available files');
+                }
+            } else {
+                // For macOS/Linux, a single command approach with output logging
+                var cloneCmd = 'git clone --depth 1 --recursive --branch ${branch} ${cloneUrl} ${shortTempDir}/repo';
+                Logger.info('Executing git clone command: ${cloneCmd}');
+                
+                // Use Process instead of Sys.command to capture output
+                var process = new sys.io.Process(cloneCmd);
+                var exitCode = process.exitCode();
+                
+                // Capture and log stdout
+                var output = process.stdout.readAll().toString();
+                if (output != null && output.length > 0) {
+                    var lines = output.split("\n");
+                    for (line in lines) {
+                        if (StringTools.trim(line).length > 0) {
+                            Logger.info('Git output: ${line}');
+                        }
+                    }
+                }
+                
+                // Capture and log stderr
+                var error = process.stderr.readAll().toString();
+                if (error != null && error.length > 0) {
+                    var lines = error.split("\n");
+                    for (line in lines) {
+                            if (StringTools.trim(line).length > 0) {
+                                Logger.warning('Git error: ${line}');
+                        }
+                    }
+                }
+                
+                // Close the process
+                process.close();
+                
+                if (exitCode != 0) {
+                    Logger.error('Failed to clone GitHub repository, exit code: ${exitCode}');
+                    
+                    // Clean up the temporary directory
+                    try {
+                        _deleteDirectory(shortTempDir);
+                    } catch (e) {
+                        Logger.warning('Failed to clean up temporary directory: ${e}');
+                    }
+                    
+                    return false;
+                }
             }
             
             // Now that we have cloned to a shorter path, move contents to the destination using zip/unzip
@@ -2327,6 +2391,7 @@ class ProvisionerManager {
     }
     
     static private function _zipDirectory(directory:String):Bytes {
+        Logger.info('Zipping directory: ${directory}');
         var entries:List<Entry> = new List<Entry>();
         _addDirectoryToZip(directory, "", entries);
         
@@ -2402,6 +2467,7 @@ class ProvisionerManager {
      * @param directory The directory to unzip to
      */
     static private function _unzipToDirectory(zipBytes:Bytes, directory:String):Void {
+        Logger.info('Unzipping to directory: ${directory}');
         var entries = Reader.readZip(new BytesInput(zipBytes));
         
         // Ensure the root extraction directory exists
@@ -2433,7 +2499,6 @@ class ProvisionerManager {
             if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
                 try {
                     var dirPath = Path.addTrailingSlash(directory) + fileName;
-                    Logger.verbose('Creating directory: ${dirPath}');
                     _createDirectoryRecursive(dirPath);
                 } catch (e) {
                     Logger.warning('Could not create directory: ${fileName} - ${e}');
@@ -2463,12 +2528,12 @@ class ProvisionerManager {
                 
                 // Save file with platform-specific path handling
                 var platformFilePath = _getPlatformPath(filePath);
-                Logger.verbose('Extracting file: ${fileName} to ${platformFilePath}');
                 File.saveBytes(platformFilePath, entry.data);
             } catch (e) {
                 Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
             }
         }
+        Logger.info('Unzip completed');
     }
     
     /**
