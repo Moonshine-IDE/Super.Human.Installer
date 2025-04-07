@@ -96,6 +96,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_TINY:String = "button-tiny";
     public static final BUTTON_WARNING:String = "button-warning";
     public static final BUTTON_BROWSER_WARNING:String = "button-browser-warning";
+    public static final BUTTON_SERVER_LIST:String = "button-server-list";
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
     public static final RADIO_MEDIUM:String = "radio-medium";
@@ -286,6 +287,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Button, BUTTON_TINY, _setButtonTinyStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_WARNING, _setButtonWarningStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_BROWSER_WARNING, _setButtonNoBackgrounIconStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_SERVER_LIST, _setButtonServerListStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON_INVALID, _setPopUpListViewInvalidButtonStyles );
         this.styleProvider.setStyleFunction( Button, PopUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
@@ -350,7 +352,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     function _setAssetLoaderStyles( loader:AssetLoader ) {
 
-        loader.scaleX = loader.scaleY = .5;
+        loader.scaleX = loader.scaleY = .7;
 
     }
 
@@ -488,6 +490,17 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         button.textFormat = _themeTypography.Pale;
         button.disabledTextFormat = _themeTypography.Pale;
         button.disabledAlpha = .5;
+
+    }
+    
+    function _setButtonServerListStyles( button:Button ) {
+
+        _setButtonStyles( button );
+        // Override padding to zero for server list buttons
+        button.setPadding( 0 );
+        // Keep horizontalAlign and verticalAlign centered
+        button.horizontalAlign = HorizontalAlign.CENTER;
+        button.verticalAlign = VerticalAlign.MIDDLE;
 
     }
 

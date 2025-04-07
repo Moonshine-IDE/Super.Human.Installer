@@ -238,6 +238,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         this.addChild( buttonGroup );
 
         _buttonStart = new GenesisButton();
+        _buttonStart.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonStart.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_START );
         _buttonStart.width = CONTROL_BUTTON_WIDTH;
         _buttonStart.height = CONTROL_BUTTON_HEIGHT;
@@ -247,6 +248,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonStart );
 
         _buttonStop = new GenesisButton();
+        _buttonStop.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonStop.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_STOP );
         _buttonStop.width = CONTROL_BUTTON_WIDTH;
         _buttonStop.height = CONTROL_BUTTON_HEIGHT;
@@ -256,6 +258,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonStop );
 
         _buttonSuspend = new GenesisButton();
+        _buttonSuspend.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonSuspend.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SUSPEND );
         _buttonSuspend.width = CONTROL_BUTTON_WIDTH;
         _buttonSuspend.height = CONTROL_BUTTON_HEIGHT;
@@ -265,6 +268,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonSuspend );
 
         _buttonSync = new GenesisButton();
+        _buttonSync.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonSync.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_UPLOAD );
         _buttonSync.width = CONTROL_BUTTON_WIDTH;
         _buttonSync.height = CONTROL_BUTTON_HEIGHT;
@@ -274,6 +278,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonSync );
 
         _buttonProvision = new GenesisButton();
+        _buttonProvision.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonProvision.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_REFRESH );
         _buttonProvision.width = CONTROL_BUTTON_WIDTH;
         _buttonProvision.height = CONTROL_BUTTON_HEIGHT;
@@ -283,6 +288,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonProvision );
 
         _buttonDestroy = new GenesisButton();
+        _buttonDestroy.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonDestroy.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DESTROY );
         _buttonDestroy.width = CONTROL_BUTTON_WIDTH;
         _buttonDestroy.height = CONTROL_BUTTON_HEIGHT;
@@ -292,6 +298,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonDestroy );
 
         _buttonConsole = new GenesisButton();
+        _buttonConsole.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonConsole.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OUTPUT );
         _buttonConsole.width = CONTROL_BUTTON_WIDTH;
         _buttonConsole.height = CONTROL_BUTTON_HEIGHT;
@@ -300,6 +307,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonConsole );
 
         _buttonOpenBrowser = new GenesisButton();
+        _buttonOpenBrowser.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonOpenBrowser.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WEB );
         _buttonOpenBrowser.width = CONTROL_BUTTON_WIDTH;
         _buttonOpenBrowser.height = CONTROL_BUTTON_HEIGHT;
@@ -309,6 +317,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonOpenBrowser );
 
         _buttonSSH = new GenesisButton();
+        _buttonSSH.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonSSH.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SSH );
         _buttonSSH.width = CONTROL_BUTTON_WIDTH;
         _buttonSSH.height = CONTROL_BUTTON_HEIGHT;
@@ -318,6 +327,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonSSH );
 
         _buttonOpenDir = new GenesisButton();
+        _buttonOpenDir.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonOpenDir.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_FOLDER );
         _buttonOpenDir.width = CONTROL_BUTTON_WIDTH;
         _buttonOpenDir.height = CONTROL_BUTTON_HEIGHT;
@@ -326,6 +336,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonOpenDir );
 
         _buttonOpenTerminal = new GenesisButton();
+        _buttonOpenTerminal.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonOpenTerminal.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CONSOLE );
         _buttonOpenTerminal.width = CONTROL_BUTTON_WIDTH;
         _buttonOpenTerminal.height = CONTROL_BUTTON_HEIGHT;
@@ -334,6 +345,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonOpenTerminal );
 
         _buttonDelete = new GenesisButton();
+        _buttonDelete.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonDelete.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DELETE );
         _buttonDelete.width = CONTROL_BUTTON_WIDTH;
         _buttonDelete.height = CONTROL_BUTTON_HEIGHT;
@@ -342,6 +354,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonDelete );
 
         _buttonFtp = new GenesisButton();
+        _buttonFtp.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonFtp.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_FILEZILLA );
         _buttonFtp.width = CONTROL_BUTTON_WIDTH;
         _buttonFtp.height = CONTROL_BUTTON_HEIGHT;
@@ -354,6 +367,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( spacer );
 
         _buttonConfigure = new GenesisButton();
+        _buttonConfigure.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonConfigure.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SETTINGS );
         _buttonConfigure.width = CONTROL_BUTTON_WIDTH;
         _buttonConfigure.height = CONTROL_BUTTON_HEIGHT;
