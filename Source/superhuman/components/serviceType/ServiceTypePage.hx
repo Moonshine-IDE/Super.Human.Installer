@@ -106,9 +106,19 @@ class ServiceTypePage extends Page {
             line.width = _w;
     	    this.addChild( line );
     	    
-    	    _serviceTypeGrid = new ServiceTypeGrid(new ArrayCollection(_serviceTypesCollection));
-    	    _serviceTypeGrid.selectedIndex = 0;
+    	    // Create grid with empty collection if serviceTypesCollection is null or empty
+    	    var dataProvider = new ArrayCollection(_serviceTypesCollection != null && _serviceTypesCollection.length > 0 ? 
+    	                                          _serviceTypesCollection : []);
+    	    _serviceTypeGrid = new ServiceTypeGrid(dataProvider);
     	    _serviceTypeGrid.width = _w;
+    	    
+    	    // Only set selectedIndex if there are items
+    	    if (dataProvider.length > 0) {
+    	        _serviceTypeGrid.selectedIndex = 0;
+    	        champaign.core.logging.Logger.info('Set grid selectedIndex = 0, items: ${dataProvider.length}');
+    	    } else {
+    	        champaign.core.logging.Logger.warning('Grid has no items, skipping selectedIndex');
+    	    }
     	    _serviceTypeGrid.columns = new ArrayCollection([
 			new GridViewColumn("Service", (data) -> {
 				// Strip version from display name
@@ -226,7 +236,7 @@ class ServiceTypePage extends Page {
                 var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
                 this.dispatchEvent(event);
             } else {
-                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner.yml file and at least one version directory with scripts.");
+                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and scripts.");
             }
         });
         
@@ -238,34 +248,46 @@ class ServiceTypePage extends Page {
      * @param serviceTypes The new service types collection
      */
     public function updateServiceTypes(serviceTypes:Array<ServiceTypeData>) {
+
         // Update the internal collection
         _serviceTypesCollection = serviceTypes;
         
         // Sort the provisioners by type: Standalone first, Additional second, custom types last
-        _serviceTypesCollection.sort((a, b) -> {
-            // Standalone first
-            if (a.provisionerType == ProvisionerType.StandaloneProvisioner && b.provisionerType != ProvisionerType.StandaloneProvisioner)
-                return -1;
-            if (a.provisionerType != ProvisionerType.StandaloneProvisioner && b.provisionerType == ProvisionerType.StandaloneProvisioner)
-                return 1;
-            
-            // Additional second
-            if (a.provisionerType == ProvisionerType.AdditionalProvisioner && b.provisionerType != ProvisionerType.AdditionalProvisioner)
-                return -1;
-            if (a.provisionerType != ProvisionerType.AdditionalProvisioner && b.provisionerType == ProvisionerType.AdditionalProvisioner)
-                return 1;
-            
-            // Everything else (custom provisioners) is equal priority
-            return 0;
-        });
+        if (_serviceTypesCollection != null && _serviceTypesCollection.length > 0) {
+            _serviceTypesCollection.sort((a, b) -> {
+                // Standalone first
+                if (a.provisionerType == ProvisionerType.StandaloneProvisioner && b.provisionerType != ProvisionerType.StandaloneProvisioner)
+                    return -1;
+                if (a.provisionerType != ProvisionerType.StandaloneProvisioner && b.provisionerType == ProvisionerType.StandaloneProvisioner)
+                    return 1;
+                
+                // Additional second
+                if (a.provisionerType == ProvisionerType.AdditionalProvisioner && b.provisionerType != ProvisionerType.AdditionalProvisioner)
+                    return -1;
+                if (a.provisionerType != ProvisionerType.AdditionalProvisioner && b.provisionerType == ProvisionerType.AdditionalProvisioner)
+                    return 1;
+                
+                // Everything else (custom provisioners) is equal priority
+                return 0;
+            });
+        } else {
+            champaign.core.logging.Logger.warning('ServiceTypePage: Service types collection is empty or null!');
+        }
         
         // Update the grid's data provider
         if (_serviceTypeGrid != null) {
-            _serviceTypeGrid.dataProvider = new ArrayCollection(_serviceTypesCollection);
+            // Create a new collection and log size
+            var dataProvider = new ArrayCollection(_serviceTypesCollection != null ? _serviceTypesCollection : []);
+            champaign.core.logging.Logger.info('ServiceTypePage: Creating data provider with ${dataProvider.length} items');
+            
+            _serviceTypeGrid.dataProvider = dataProvider;
             
             // Select the first item if available
-            if (_serviceTypesCollection.length > 0) {
+            if (dataProvider.length > 0) {
+                champaign.core.logging.Logger.info('ServiceTypePage: Setting selected index to 0');
                 _serviceTypeGrid.selectedIndex = 0;
+            } else {
+                champaign.core.logging.Logger.warning('ServiceTypePage: No items in data provider, not setting selectedIndex');
             }
             
             // Force the grid to update by calling updateAll on the data provider
@@ -273,6 +295,8 @@ class ServiceTypePage extends Page {
             
             // Validate the grid to ensure UI is updated
             _serviceTypeGrid.validateNow();
+        } else {
+            champaign.core.logging.Logger.warning('ServiceTypePage: Service type grid is null!');
         }
     }
     

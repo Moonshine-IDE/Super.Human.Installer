@@ -365,7 +365,7 @@ class SettingsPage extends Page {
                 var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
                 this.dispatchEvent(event);
             } else {
-                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner.yml file and at least one version directory with scripts.");
+                ToastManager.getInstance().showToast("Failed to import provisioner. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and scripts.");
             }
         });
         

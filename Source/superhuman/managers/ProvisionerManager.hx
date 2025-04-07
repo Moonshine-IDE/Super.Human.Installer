@@ -115,8 +115,9 @@ class ProvisionerManager {
     static final PROVISIONER_STANDALONE_LOCAL_PATH:String = "assets/provisioners/hcl_domino_standalone_provisioner/";
     static final PROVISIONER_ADDITIONAL_LOCAL_PATH:String = "assets/provisioners/hcl_domino_additional_provisioner/";
     
-    // Filename for provisioner metadata
-    static final PROVISIONER_METADATA_FILENAME:String = "provisioner.yml";
+    // Filenames for provisioner metadata
+    static final PROVISIONER_METADATA_FILENAME:String = "provisioner-collection.yml";
+    static final VERSION_METADATA_FILENAME:String = "provisioner.yml";
     
     /**
      * Get the path to the common provisioners directory
@@ -150,6 +151,68 @@ class ProvisionerManager {
         try {
             var provisionerDirs = FileSystem.readDirectory(provisionersDir);
             Logger.info('Found ${provisionerDirs.length} potential provisioner directories');
+            
+            // Log each provisioner directory before processing
+            Logger.info('Found provisioner directories:');
+            for (dir in provisionerDirs) {
+                var fullPath = Path.addTrailingSlash(provisionersDir) + dir;
+                var isDir = FileSystem.isDirectory(fullPath);
+                Logger.info('  - ${dir} (isDirectory: ${isDir})');
+                
+                // If it's a directory, check for metadata files
+                if (isDir) {
+                    var metadataPath = Path.addTrailingSlash(fullPath) + PROVISIONER_METADATA_FILENAME;
+                    var legacyPath = Path.addTrailingSlash(fullPath) + "provisioner.yml";
+                    var hasMetadata = FileSystem.exists(metadataPath);
+                    var hasLegacy = FileSystem.exists(legacyPath);
+                    Logger.info('    Has provisioner-collection.yml: ${hasMetadata}');
+                    Logger.info('    Has provisioner.yml in root: ${hasLegacy}');
+                    
+                    // Check version directories
+                    try {
+                        var versionDirs = FileSystem.readDirectory(fullPath);
+                        var versionSubdirs = versionDirs.filter(item -> 
+                            FileSystem.isDirectory(Path.addTrailingSlash(fullPath) + item) && 
+                            item != PROVISIONER_METADATA_FILENAME
+                        );
+                        
+                        Logger.info('    Version directories: ${versionSubdirs.length}');
+                        
+                        // Check each version directory for provisioner.yml
+                        for (versionDir in versionSubdirs) {
+                            var versionPath = Path.addTrailingSlash(fullPath) + versionDir;
+                            var versionMetadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
+                            var hasVersionMetadata = FileSystem.exists(versionMetadataPath);
+                            var hasScriptsDir = FileSystem.exists(Path.addTrailingSlash(versionPath) + "scripts") && 
+                                               FileSystem.isDirectory(Path.addTrailingSlash(versionPath) + "scripts");
+                            
+                            Logger.info('      - Version ${versionDir}:');
+                            Logger.info('        Has provisioner.yml: ${hasVersionMetadata}');
+                            Logger.info('        Has scripts directory: ${hasScriptsDir}');
+                            
+                            // Check content of version metadata file if it exists
+                            if (hasVersionMetadata) {
+                                try {
+                                    var content = File.getContent(versionMetadataPath);
+                                    Logger.info('        provisioner.yml content:');
+                                    var lines = content.split("\n");
+                                    var previewLines = lines.length > 5 ? lines.slice(0, 5) : lines;
+                                    for (line in previewLines) {
+                                        Logger.info('          ${line}');
+                                    }
+                                    if (lines.length > 5) {
+                                        Logger.info('          ...(${lines.length - 5} more lines)');
+                                    }
+                                } catch (e) {
+                                    Logger.error('        Error reading provisioner.yml: ${e}');
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        Logger.error('    Error reading version directories: ${e}');
+                    }
+                }
+            }
             
             for (provisionerDir in provisionerDirs) {
                 var provisionerPath = Path.addTrailingSlash(provisionersDir) + provisionerDir;
@@ -200,51 +263,139 @@ class ProvisionerManager {
     static private function _addProvisionerVersionsToCache(provisionerPath:String, metadata:ProvisionerMetadata):Void {
         try {
             var versionDirs = FileSystem.readDirectory(provisionerPath);
+            var validVersionCount = 0;
+            
+            // Log metadata being processed
+            Logger.info('Processing provisioner: ${metadata.name} (${metadata.type})');
+            Logger.info('Looking for valid versions in: ${provisionerPath}');
             
             for (versionDir in versionDirs) {
                 var versionPath = Path.addTrailingSlash(provisionerPath) + versionDir;
                 
-                // Skip if not a directory or if it's the provisioner.yml file
-                if (!FileSystem.isDirectory(versionPath) || versionDir == "provisioner.yml") {
+                // Skip if not a directory or if it's a metadata file
+                if (!FileSystem.isDirectory(versionPath) || 
+                    versionDir == PROVISIONER_METADATA_FILENAME || 
+                    versionDir == "provisioner.yml") {
                     continue;
                 }
                 
                 // Check if this is a valid version directory (has scripts subdirectory)
                 var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
                 if (!FileSystem.exists(scriptsPath) || !FileSystem.isDirectory(scriptsPath)) {
-                    Logger.verbose('Skipping invalid version directory (no scripts folder): ${versionPath}');
+                    Logger.warning('Skipping invalid version directory (no scripts folder): ${versionPath}');
                     continue;
                 }
                 
-                // Create a version-specific metadata copy
-                var versionMetadata = Reflect.copy(metadata);
+                // Check for version-specific metadata file - MUST EXIST
+                var versionMetadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
+                
+                if (!FileSystem.exists(versionMetadataPath)) {
+                    Logger.warning('Skipping version directory with missing provisioner.yml: ${versionPath}');
+                    continue;
+                }
+                
+                // Use our dedicated function to read version-specific metadata
+                var versionMetadata = readProvisionerVersionMetadata(versionPath);
+                
+                if (versionMetadata == null) {
+                    Logger.warning('Failed to read version-specific metadata from ${versionMetadataPath}');
+                    continue;
+                }
+                
+                // Add detailed logging to examine the fields
+                if (versionMetadata.configuration != null) {
+                    var basicCount = (versionMetadata.configuration.basicFields != null) ? 
+                        versionMetadata.configuration.basicFields.length : 0;
+                    var advancedCount = (versionMetadata.configuration.advancedFields != null) ? 
+                        versionMetadata.configuration.advancedFields.length : 0;
+                    
+                    Logger.info('Version metadata has ${basicCount} basic fields and ${advancedCount} advanced fields');
+                }
+                
+                // Override version field with the directory name to ensure consistency
                 versionMetadata.version = versionDir;
                 
-                // Create provisioner definition
-                var versionInfo = VersionInfo.fromString(versionDir);
-                var provDef:ProvisionerDefinition = {
-                    name: '${metadata.name} v${versionDir}',
-                    data: { type: metadata.type, version: versionInfo },
-                    root: versionPath,
-                    metadata: versionMetadata
-                };
+                // Fall back to collection metadata for fields that might be missing in version metadata
+                if (versionMetadata.name == null) versionMetadata.name = metadata.name;
+                if (versionMetadata.type == null) versionMetadata.type = metadata.type;
+                if (versionMetadata.description == null) versionMetadata.description = metadata.description;
+                if (versionMetadata.author == null) versionMetadata.author = metadata.author;
                 
-            // Add to cache - create the array if it doesn't exist
-            if (!_cachedProvisioners.exists(metadata.type)) {
-                Logger.info('Creating new cache entry for provisioner type: ${metadata.type}');
-                _cachedProvisioners.set(metadata.type, []);
+                // If configuration is missing from version metadata, inherit from collection
+                if (versionMetadata.configuration == null && metadata.configuration != null) {
+                    Logger.info('No configuration found in version-specific metadata, inheriting from collection metadata');
+                    versionMetadata.configuration = metadata.configuration;
+                }
+                
+                // If roles are missing from version metadata, inherit from collection
+                if (versionMetadata.roles == null && metadata.roles != null) {
+                    Logger.info('No roles found in version-specific metadata, inheriting from collection metadata');
+                    versionMetadata.roles = metadata.roles;
+                }
+                
+                Logger.info('Successfully prepared metadata for ${versionMetadataPath}');
+                
+                if (versionMetadata != null) {
+                    // Create provisioner definition
+                    var versionInfo = VersionInfo.fromString(versionDir);
+                    var provDef:ProvisionerDefinition = {
+                        name: '${metadata.name} v${versionDir}',
+                        data: { type: metadata.type, version: versionInfo },
+                        root: versionPath,
+                        metadata: versionMetadata
+                    };
+                    
+                    // Add to cache - create the array if it doesn't exist
+                    if (!_cachedProvisioners.exists(metadata.type)) {
+                        Logger.info('Creating new cache entry for provisioner type: ${metadata.type}');
+                        _cachedProvisioners.set(metadata.type, []);
+                    }
+                    
+                    // Now we can safely push to the array
+                    _cachedProvisioners.get(metadata.type).push(provDef);
+                    Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
+                    validVersionCount++;
+                }
             }
             
-            // Now we can safely push to the array
-            _cachedProvisioners.get(metadata.type).push(provDef);
-            Logger.info('Added provisioner to cache: ${provDef.name}, type: ${metadata.type}, version: ${versionDir}');
+            // If there are no valid versions but we have a provisioner-collection.yml
+            // Add a disabled placeholder entry so the provisioner shows up in the UI but is greyed out
+            if (validVersionCount == 0) {
+                Logger.warning('No valid versions found for provisioner: ${metadata.name} (${metadata.type})');
+                
+                // Create a disabled entry using the metadata from the collection file
+                var placeholderVersionInfo = VersionInfo.fromString("0.0.0");
+                var provDef:ProvisionerDefinition = {
+                    name: '${metadata.name} (Invalid)',
+                    data: { 
+                        type: metadata.type, 
+                        version: placeholderVersionInfo 
+                    },
+                    root: provisionerPath,
+                    metadata: metadata
+                };
+                
+                // Add to cache with disabled flag
+                if (!_cachedProvisioners.exists(metadata.type)) {
+                    _cachedProvisioners.set(metadata.type, []);
+                }
+                
+                _cachedProvisioners.get(metadata.type).push(provDef);
+                Logger.info('Added disabled provisioner to cache: ${provDef.name}, type: ${metadata.type}');
+                
+                // In UI, this provisioner will be shown but disabled using the isEnabled flag in ServiceTypeData
             }
             
             // Sort the provisioners by version, newest first
-            if (_cachedProvisioners.exists(metadata.type)) {
+            if (_cachedProvisioners.exists(metadata.type) && _cachedProvisioners.get(metadata.type).length > 0) {
                 _cachedProvisioners.get(metadata.type).sort((a, b) -> {
                     var versionA = a.data.version;
                     var versionB = b.data.version;
+                    
+                    // Special case for the disabled entry (0.0.0)
+                    if (versionA == "0.0.0") return 1; // Put disabled entries at the end
+                    if (versionB == "0.0.0") return -1;
+                    
                     return versionB > versionA ? 1 : (versionB < versionA ? -1 : 0);
                 });
             }
@@ -255,53 +406,322 @@ class ProvisionerManager {
     }
     
     /**
-     * Read and parse provisioner metadata from provisioner.yml file
+     * Read and parse provisioner metadata from provisioner-collection.yml file
      * @param path Path to the provisioner directory
      * @return ProvisionerMetadata|null Metadata if file exists and is valid, null otherwise
      */
     static public function readProvisionerMetadata(path:String):ProvisionerMetadata {
         var metadataPath = Path.addTrailingSlash(path) + PROVISIONER_METADATA_FILENAME;
         
+        // Add detailed logging
+        Logger.info('Attempting to read provisioner collection metadata from: ${metadataPath}');
+        
+        // Only look for provisioner-collection.yml in the root directory
         if (!FileSystem.exists(metadataPath)) {
-            Logger.warning('Provisioner metadata file not found at ${metadataPath}');
+            Logger.error('No collection metadata file found at ${metadataPath}');
+            return null;
+        }
+        
+        Logger.info('Found ${PROVISIONER_METADATA_FILENAME} file at ${metadataPath}');
+        
+        try {
+            // Read the file content directly
+            var content = File.getContent(metadataPath);
+            var previewLength:Int = cast Math.min(100, content.length);
+            Logger.info('File content preview: ${content.substr(0, previewLength)}...');
+            
+            // Try to parse the YAML content
+            var metadata:Dynamic = null;
+            
+            try {
+                metadata = Yaml.read(metadataPath);
+                
+                // Debug the YAML parsing result
+                Logger.info('YAML parsing result type: ${Type.typeof(metadata)}');
+                if (metadata != null) {
+                    // Check for ObjectMap type (common YAML parser output)
+                    if (Std.isOfType(metadata, ObjectMap)) {
+                        var objMap:ObjectMap<String, Dynamic> = cast metadata;
+                        var keys = [for (k in objMap.keys()) k];
+                        Logger.info('YAML parsed as ObjectMap with keys: ${keys.join(", ")}');
+                        
+                        // Create a standard object from ObjectMap for easier handling
+                        var stdObj:Dynamic = {};
+                        for (key in keys) {
+                            Reflect.setField(stdObj, key, objMap.get(key));
+                        }
+                        metadata = stdObj;
+                    } else {
+                        Logger.info('YAML parsed as standard object');
+                    }
+                }
+            } catch (yamlError) {
+                Logger.error('YAML parsing error: ${yamlError}');
+                
+                // Try a manual parsing as fallback
+                Logger.info('Attempting manual parsing of the YAML file');
+                var lines = content.split("\n");
+                var manualMetadata:Dynamic = {};
+                
+                for (line in lines) {
+                    // Skip comments and empty lines
+                    var trimmed = StringTools.ltrim(line);
+                    if (StringTools.startsWith(trimmed, "#") || StringTools.trim(line) == "") continue;
+                    
+                    // Find key-value pairs
+                    var colonPos = line.indexOf(":");
+                    if (colonPos > 0) {
+                        var key = StringTools.trim(line.substr(0, colonPos));
+                        var value = StringTools.trim(line.substr(colonPos + 1));
+                        
+                        // Remove quotes if present
+                        if (StringTools.startsWith(value, '"') && value.length > 0 && value.charAt(value.length - 1) == '"') {
+                            value = value.substr(1, value.length - 2);
+                        }
+                        
+                        Reflect.setField(manualMetadata, key, value);
+                        Logger.info('Manually parsed field: ${key} = ${value}');
+                    }
+                }
+                
+                metadata = manualMetadata;
+            }
+            
+            // Validate required fields with more detailed logging
+            var hasName = Reflect.hasField(metadata, "name");
+            var hasType = Reflect.hasField(metadata, "type");
+            var hasDescription = Reflect.hasField(metadata, "description");
+            
+            Logger.info('Field validation - hasName: ${hasName}, hasType: ${hasType}, hasDescription: ${hasDescription}');
+            
+            if (!hasName || !hasType || !hasDescription) {
+                Logger.warning('Invalid provisioner-collection.yml at ${metadataPath}: missing required fields');
+                
+                // For collection files, we'll try to recreate metadata from the path
+                if (metadataPath.indexOf(PROVISIONER_METADATA_FILENAME) >= 0) {
+                    Logger.info('Attempting to create metadata from provisioner path');
+                    
+                    // Extract type from directory name
+                    var dirName = Path.withoutDirectory(Path.removeTrailingSlashes(path));
+                    
+                    // Create a default metadata based on path
+                    var defaultMetadata = createDefaultMetadata(dirName, "");
+                    Logger.info('Created default metadata from path: ${defaultMetadata.name}, ${defaultMetadata.type}');
+                    
+                    return defaultMetadata;
+                }
+                return null;
+            }
+            
+            // Get basic fields
+            var name:String = Reflect.field(metadata, "name");
+            var type:String = Reflect.field(metadata, "type");
+            var description:String = Reflect.field(metadata, "description");
+            var author:Null<String> = Reflect.hasField(metadata, "author") ? Reflect.field(metadata, "author") : null;
+            var version:Null<String> = Reflect.hasField(metadata, "version") ? Reflect.field(metadata, "version") : null;
+            
+                    // Parse configuration if it exists
+                    var configuration:ProvisionerConfiguration = null;
+                    if (Reflect.hasField(metadata, "configuration")) {
+                        var configData:Dynamic = Reflect.field(metadata, "configuration");
+                        Logger.info('Configuration data type: ${Type.typeof(configData)}');
+                        
+                        var basicFields = null;
+                        var advancedFields = null;
+                        
+                        // Handle ObjectMap case
+                        if (Std.isOfType(configData, ObjectMap)) {
+                            var objMap:ObjectMap<String, Dynamic> = cast configData;
+                            if (objMap.exists("basicFields")) {
+                                basicFields = objMap.get("basicFields");
+                                Logger.info('Found basicFields in ObjectMap, count: ${basicFields != null ? basicFields.length : 0}');
+                            }
+                            if (objMap.exists("advancedFields")) {
+                                advancedFields = objMap.get("advancedFields");
+                                Logger.info('Found advancedFields in ObjectMap, count: ${advancedFields != null ? advancedFields.length : 0}');
+                            }
+                        } 
+                        // Handle standard object case
+                        else if (Reflect.hasField(configData, "basicFields")) {
+                            basicFields = Reflect.field(configData, "basicFields");
+                            Logger.info('Found basicFields in standard object, count: ${basicFields != null ? basicFields.length : 0}');
+                        
+                            if (Reflect.hasField(configData, "advancedFields")) {
+                                advancedFields = Reflect.field(configData, "advancedFields");
+                                Logger.info('Found advancedFields in standard object, count: ${advancedFields != null ? advancedFields.length : 0}');
+                            }
+                        }
+                        
+                        configuration = {
+                            basicFields: _parseFieldsArray(basicFields),
+                            advancedFields: _parseFieldsArray(advancedFields)
+                        };
+                        
+                        // Log the results to confirm
+                        var basicParsedCount = configuration.basicFields != null ? configuration.basicFields.length : 0;
+                        var advancedParsedCount = configuration.advancedFields != null ? configuration.advancedFields.length : 0;
+                        Logger.info('Parsed configuration: basicFields=${basicParsedCount}, advancedFields=${advancedParsedCount}');
+                    }
+            
+            // Parse roles if they exist
+            var roles:Array<ProvisionerRole> = null;
+            if (Reflect.hasField(metadata, "roles")) {
+                var rolesData:Array<Dynamic> = Reflect.field(metadata, "roles");
+                roles = _parseRolesArray(rolesData);
+            }
+            
+            Logger.info('Successfully parsed collection metadata for ${name} (${type})');
+            
+            return {
+                name: name,
+                type: type,
+                description: description,
+                author: author,
+                version: version,
+                configuration: configuration,
+                roles: roles
+            };
+        } catch (e) {
+            Logger.error('Error reading provisioner-collection.yml at ${metadataPath}: ${e}');
+            return null;
+        }
+    }
+    
+    /**
+     * Read and parse version-specific provisioner metadata from provisioner.yml file inside a version directory
+     * @param versionPath Path to the version directory (e.g. "/path/to/provisioner/0.1.23/")
+     * @return ProvisionerMetadata|null Metadata if file exists and is valid, null otherwise
+     */
+    static public function readProvisionerVersionMetadata(versionPath:String):ProvisionerMetadata {
+        var metadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
+        
+        if (!FileSystem.exists(metadataPath)) {
+            Logger.error('No version metadata file found at ${metadataPath}');
             return null;
         }
         
         try {
             var content = File.getContent(metadataPath);
-            var previewLength = content.length > 200 ? 200 : content.length;
+            var previewLength:Int = cast Math.min(100, content.length);
             
-            var metadata:ObjectMap<String, Dynamic> = Yaml.read(metadataPath);
+            // Parse the YAML content
+            var metadata:Dynamic = null;
+            
+            try {
+                metadata = Yaml.read(metadataPath);
+                
+                if (metadata != null) {
+                    // Check for ObjectMap type (common YAML parser output)
+                    if (Std.isOfType(metadata, ObjectMap)) {
+                        var objMap:ObjectMap<String, Dynamic> = cast metadata;
+                        var keys = [for (k in objMap.keys()) k];
+                        
+                        // Create a standard object from ObjectMap for easier handling
+                        var stdObj:Dynamic = {};
+                        for (key in keys) {
+                            Reflect.setField(stdObj, key, objMap.get(key));
+                        }
+                        metadata = stdObj;
+                    }
+                }
+            } catch (yamlError) {
+                Logger.error('YAML parsing error in version metadata: ${yamlError}');
+                
+                // Try a manual parsing as fallback
+                var lines = content.split("\n");
+                var manualMetadata:Dynamic = {};
+                
+                for (line in lines) {
+                    // Skip comments and empty lines
+                    var trimmed = StringTools.ltrim(line);
+                    if (StringTools.startsWith(trimmed, "#") || StringTools.trim(line) == "") continue;
+                    
+                    // Find key-value pairs
+                    var colonPos = line.indexOf(":");
+                    if (colonPos > 0) {
+                        var key = StringTools.trim(line.substr(0, colonPos));
+                        var value = StringTools.trim(line.substr(colonPos + 1));
+                        
+                        // Remove quotes if present
+                        if (StringTools.startsWith(value, '"') && value.length > 0 && value.charAt(value.length - 1) == '"') {
+                            value = value.substr(1, value.length - 2);
+                        }
+                        
+                        Reflect.setField(manualMetadata, key, value);
+                    }
+                }
+                
+                metadata = manualMetadata;
+            }
             
             // Validate required fields
-            if (!metadata.exists("name") || !metadata.exists("type") || !metadata.exists("description")) {
+            var hasName = Reflect.hasField(metadata, "name");
+            var hasType = Reflect.hasField(metadata, "type");
+            var hasDescription = Reflect.hasField(metadata, "description");
+            
+            if (!hasName || !hasType || !hasDescription) {
                 Logger.warning('Invalid provisioner.yml at ${metadataPath}: missing required fields');
                 return null;
             }
             
-            // Parse configuration if it exists
+            // Get basic fields
+            var name:String = Reflect.field(metadata, "name");
+            var type:String = Reflect.field(metadata, "type");
+            var description:String = Reflect.field(metadata, "description");
+            var author:Null<String> = Reflect.hasField(metadata, "author") ? Reflect.field(metadata, "author") : null;
+            var version:Null<String> = Reflect.hasField(metadata, "version") ? Reflect.field(metadata, "version") : null;
+            
+            // Parse configuration if it exists with more detailed handling
             var configuration:ProvisionerConfiguration = null;
-            if (metadata.exists("configuration")) {
-                var configData:ObjectMap<String, Dynamic> = metadata.get("configuration");
+            if (Reflect.hasField(metadata, "configuration")) {
+                var configData:Dynamic = Reflect.field(metadata, "configuration");
+                
+                var basicFields = null;
+                var advancedFields = null;
+                
+                // Handle ObjectMap case
+                if (Std.isOfType(configData, ObjectMap)) {
+                    var objMap:ObjectMap<String, Dynamic> = cast configData;
+                    if (objMap.exists("basicFields")) {
+                        basicFields = objMap.get("basicFields");
+                    }
+                    if (objMap.exists("advancedFields")) {
+                        advancedFields = objMap.get("advancedFields");
+                    }
+                } 
+                // Handle standard object case
+                else if (Reflect.hasField(configData, "basicFields")) {
+                    basicFields = Reflect.field(configData, "basicFields");
+                
+                    if (Reflect.hasField(configData, "advancedFields")) {
+                        advancedFields = Reflect.field(configData, "advancedFields");
+                    }
+                }
+                
+                // Parse fields arrays and create configuration
                 configuration = {
-                    basicFields: _parseFieldsArray(configData.exists("basicFields") ? configData.get("basicFields") : null),
-                    advancedFields: _parseFieldsArray(configData.exists("advancedFields") ? configData.get("advancedFields") : null)
+                    basicFields: _parseFieldsArray(basicFields),
+                    advancedFields: _parseFieldsArray(advancedFields)
                 };
+                
+                // Log the results to confirm
+                var basicParsedCount = configuration.basicFields != null ? configuration.basicFields.length : 0;
+                var advancedParsedCount = configuration.advancedFields != null ? configuration.advancedFields.length : 0;
             }
             
             // Parse roles if they exist
             var roles:Array<ProvisionerRole> = null;
-            if (metadata.exists("roles")) {
-                var rolesData:Array<Dynamic> = metadata.get("roles");
+            if (Reflect.hasField(metadata, "roles")) {
+                var rolesData:Array<Dynamic> = Reflect.field(metadata, "roles");
                 roles = _parseRolesArray(rolesData);
             }
             
             return {
-                name: metadata.get("name"),
-                type: metadata.get("type"),
-                description: metadata.get("description"),
-                author: metadata.exists("author") ? metadata.get("author") : null,
-                version: metadata.exists("version") ? metadata.get("version") : null,
+                name: name,
+                type: type,
+                description: description,
+                author: author,
+                version: version,
                 configuration: configuration,
                 roles: roles
             };
@@ -690,7 +1110,6 @@ class ProvisionerManager {
             for ( p in a ) {
                 var pTypeStr = Std.string(p.data.type).toLowerCase();
                 if (pTypeStr == typeStr) {
-                    Logger.info('Found match using case-insensitive comparison: ${p.data.type} matches ${type}');
                     c.add(p);
                 }
             }
@@ -718,7 +1137,6 @@ class ProvisionerManager {
                     
                     if (!isStandard) {
                         c.add(p);
-                        Logger.info('Added custom provisioner as fallback: ${p.name} (${p.data.type})');
                     }
                 }
             }
@@ -738,7 +1156,6 @@ class ProvisionerManager {
 
     static public function getProvisionerDefinition( type:ProvisionerType, version:VersionInfo ):Null<ProvisionerDefinition> {
         // First, try the most precise search - exact string match on type
-        Logger.info('Looking for provisioner type: ${type}, version: ${version}');
         
         // Get all provisioners
         var allProvisioners = getBundledProvisioners();
@@ -748,33 +1165,60 @@ class ProvisionerManager {
         
         // If no exact matches, try case-insensitive match
         if (typeProvisioners.length == 0) {
-            Logger.info('No exact matches found for type ${type}, trying case-insensitive match');
             var typeStr = Std.string(type).toLowerCase();
             typeProvisioners = allProvisioners.filter(p -> Std.string(p.data.type).toLowerCase() == typeStr);
         }
         
         // If we found provisioners of the requested type
         if (typeProvisioners.length > 0) {
-            Logger.info('Found ${typeProvisioners.length} provisioners matching type ${type}');
             
             // Check for "empty" version by string representation to avoid null checks
             var versionStr = version.toString();
             if (versionStr == "0.0.0" || versionStr == "") {
-                Logger.info('Empty version (${versionStr}), returning newest version of ${type}');
-                return typeProvisioners[0]; // Already sorted newest first
+                var result = typeProvisioners[0]; // Already sorted newest first
+                
+                // Make sure version-specific metadata is fully loaded
+                if (result != null && result.root != null) {
+                    var versionMetadata = readProvisionerVersionMetadata(result.root);
+                    if (versionMetadata != null) {
+                        // Update metadata to ensure configuration fields are available
+                        result.metadata = versionMetadata;
+                    }
+                }
+                
+                return result;
             }
             
             // Otherwise, try to find the requested version
             for (provisioner in typeProvisioners) {
                 if (provisioner.data.version.toString() == versionStr) {
-                    Logger.info('Found matching provisioner: ${provisioner.name} with version ${versionStr}');
+                    
+                    // Make sure version-specific metadata is fully loaded
+                    if (provisioner != null && provisioner.root != null) {
+                        var versionMetadata = readProvisionerVersionMetadata(provisioner.root);
+                        if (versionMetadata != null) {
+                            // Update metadata to ensure configuration fields are available
+                            provisioner.metadata = versionMetadata;
+                        }
+                    }
+                    
                     return provisioner;
                 }
             }
             
             // If requested version not found, return the newest version
-            Logger.info('Requested version ${versionStr} not found, returning newest version of ${type}');
-            return typeProvisioners[0];
+            var result = typeProvisioners[0];
+            
+            // Make sure version-specific metadata is fully loaded
+            if (result != null && result.root != null) {
+                var versionMetadata = readProvisionerVersionMetadata(result.root);
+                if (versionMetadata != null) {
+                    // Update metadata to ensure configuration fields are available
+                    result.metadata = versionMetadata;
+                }
+            }
+            
+            return result;
         }
         
         // Log if we couldn't find any provisioners
@@ -798,16 +1242,14 @@ class ProvisionerManager {
      * @return Bool True if import was successful, false otherwise
      */
     static public function importProvisioner(sourcePath:String):Bool {
-        Logger.info('Importing provisioner from ${sourcePath}');
         
         // Validate that the source directory contains a valid provisioner
         var metadata = readProvisionerMetadata(sourcePath);
         if (metadata == null) {
-            Logger.error('Invalid provisioner at ${sourcePath}: missing or invalid provisioner.yml');
+            Logger.error('Invalid provisioner at ${sourcePath}: missing or invalid provisioner-collection.yml');
             return false;
         }
         
-        Logger.info('Valid provisioner found: ${metadata.name} (${metadata.type})');
         
         // Create the destination directory
         var destPath = Path.addTrailingSlash(getProvisionersDirectory()) + metadata.type;
@@ -836,16 +1278,14 @@ class ProvisionerManager {
                 }
                 
                 if (allVersionsExist) {
-                    Logger.info('All versions already exist in destination, skipping import');
                     return true;
                 }
             } else {
                 // Create the destination directory if it doesn't exist
                 FileSystem.createDirectory(destPath);
-                Logger.info('Created destination directory: ${destPath}');
             }
             
-            // Copy provisioner.yml to the destination directory
+            // Copy provisioner-collection.yml to the destination directory
             var sourceMetadataPath = Path.addTrailingSlash(sourcePath) + PROVISIONER_METADATA_FILENAME;
             var destMetadataPath = Path.addTrailingSlash(destPath) + PROVISIONER_METADATA_FILENAME;
             
@@ -855,7 +1295,6 @@ class ProvisionerManager {
             }
             
             File.copy(sourceMetadataPath, destMetadataPath);
-            Logger.info('Copied provisioner.yml metadata file');
             
             // Process and import version directories
             var sourceVersionDirs = _getValidVersionDirectories(sourcePath);
@@ -874,7 +1313,6 @@ class ProvisionerManager {
                 
                 // Skip if version already exists
                 if (FileSystem.exists(versionDestPath)) {
-                    Logger.info('Version ${versionDir} already exists, skipping');
                     skippedCount++;
                     continue;
                 }
@@ -883,11 +1321,9 @@ class ProvisionerManager {
                     // Create the destination version directory
                     FileSystem.createDirectory(versionDestPath);
                     
-                    Logger.info('Zipping version directory: ${versionDir}');
                     // Zip the entire version directory
                     var zipBytes = _zipDirectory(versionSourcePath);
                     
-                    Logger.info('Unzipping to destination: ${versionDestPath}');
                     // Unzip to the destination
                     _unzipToDirectory(zipBytes, versionDestPath);
                     
@@ -932,9 +1368,10 @@ class ProvisionerManager {
             var items = FileSystem.readDirectory(provisionerPath);
             
             for (item in items) {
-                // Skip if not a directory or if it's the provisioner.yml file
+                // Skip if not a directory or if it's one of the metadata files
                 if (!FileSystem.isDirectory(Path.addTrailingSlash(provisionerPath) + item) || 
-                    item == PROVISIONER_METADATA_FILENAME) {
+                    item == PROVISIONER_METADATA_FILENAME ||
+                    item == VERSION_METADATA_FILENAME) {
                     continue;
                 }
                 
@@ -942,7 +1379,6 @@ class ProvisionerManager {
                 var scriptsPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + "scripts";
                 if (FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath)) {
                     validVersions.push(item);
-                    Logger.info('Found valid version directory: ${item}');
                 } else {
                     Logger.warning('Invalid version directory (no scripts folder): ${item}');
                 }

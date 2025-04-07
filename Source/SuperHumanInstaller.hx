@@ -311,6 +311,16 @@ class SuperHumanInstaller extends GenesisApplication {
 		if (provisioners.length > 0) {
 			var provisioner = provisioners[0];
 			
+			// Check if this is a valid provisioner or a disabled placeholder
+			// The placeholder will have version 0.0.0
+			var isValidProvisioner = provisioner.data.version.toString() != "0.0.0";
+			
+			// Add detailed logging
+			Logger.info('Creating service type entry for provisioner: ${provisioner.name}');
+			Logger.info('  - Type: ${type}');
+			Logger.info('  - Version: ${provisioner.data.version}');
+			Logger.info('  - Valid: ${isValidProvisioner}');
+			
 			// Determine server UI type based on naming convention
 			// Default to Domino for unknown types
 			var serverType = type.indexOf("additional") >= 0 ? 
@@ -319,6 +329,12 @@ class SuperHumanInstaller extends GenesisApplication {
 			// Read the provisioner metadata to get the description
 			var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
 			var description = metadata != null ? metadata.description : provisioner.name;
+			
+			// If this is a disabled placeholder, mark it with "(INVALID)" suffix in the description
+			if (!isValidProvisioner) {
+				description += " (INVALID - missing provisioner.yml in version directories)";
+				Logger.warning('Adding invalid provisioner to service types: ${provisioner.name}');
+			}
 			
 			// Get the base name without version
 			var baseName = provisioner.name;
@@ -333,9 +349,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		description: description,
 		provisionerType: type,
 		serverType: serverType,
-		isEnabled: true,
+		isEnabled: isValidProvisioner, // Only enable if it's a valid provisioner
 		provisioner: provisioner // Store the actual provisioner definition
 	});
+	
+	// Log the service type that was added
+	Logger.info('Added service type: ${provisioner.name}, enabled: ${isValidProvisioner}');
 		}
 	}
 

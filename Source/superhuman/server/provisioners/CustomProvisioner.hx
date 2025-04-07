@@ -249,12 +249,50 @@ class CustomProvisioner extends StandaloneProvisioner {
     }
 
 /**
+ * Initialize the server's custom properties with metadata from the provisioner
+ * This ensures the dynamic pages can access the configuration
+ */
+private function _initializeServerMetadata() {
+    if (_server == null || _server.customProperties == null) {
+        return;
+    }
+    
+    // Get the provisioner definition for this server
+    var provisionerDefinition = null;
+    
+    // Check both userData and customProperties for the provisioner definition
+    if (_server.userData != null && Reflect.hasField(_server.userData, "provisionerDefinition")) {
+        provisionerDefinition = Reflect.field(_server.userData, "provisionerDefinition");
+        Logger.info('${this}: Found provisioner definition in server userData');
+        
+        // Copy from userData to customProperties to ensure consistency
+        Reflect.setField(_server.customProperties, "provisionerDefinition", provisionerDefinition);
+    } else if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+        provisionerDefinition = Reflect.field(_server.customProperties, "provisionerDefinition");
+        Logger.info('${this}: Found provisioner definition in server customProperties');
+    }
+    
+    // Create dynamicCustomProperties if it doesn't exist
+    if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+        Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+        Logger.info('${this}: Created dynamicCustomProperties container');
+    }
+    
+    // Ensure we don't add any duplicate metadata fields - they can be referenced directly
+    // from the provisioner definition when needed
+    Logger.info('${this}: Using provisionerDefinition as the single source of truth for metadata');
+}
+
+/**
  * Override data includes the correct version and type
  * Using serverProvisionerId as the single authoritative source for version information
  * Ensures consistent type handling by preserving the original type
  * @return ProvisionerData with the correct version
  */
 override public function get_data():ProvisionerData {
+    // Initialize server metadata if needed
+    _initializeServerMetadata();
+    
     // Create a baseline data object
     var baseData = super.get_data();
     Logger.info('${this}: Getting data with base type: ${baseData.type}');
@@ -322,7 +360,6 @@ override public function get_data():ProvisionerData {
 override public function generateHostsFileContent():String {
         // Try to get the template content from several potential locations
         var templatePath = Path.addTrailingSlash(_sourcePath) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
-        Logger.info('${this}: Looking for hosts template at: ${templatePath}');
         
         // First try to get the template from the normal source template directory method
         _hostsTemplate = getFileContentFromSourceTemplateDirectory(StandaloneProvisioner.HOSTS_TEMPLATE_FILE);
@@ -333,12 +370,10 @@ override public function generateHostsFileContent():String {
             
             // Try to look in the scripts directory
             var scriptsTemplatePath = Path.addTrailingSlash(_sourcePath) + "scripts/templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
-            Logger.info('${this}: Trying to find template at: ${scriptsTemplatePath}');
             
             if (FileSystem.exists(scriptsTemplatePath)) {
                 try {
                     _hostsTemplate = File.getContent(scriptsTemplatePath);
-                    Logger.info('${this}: Found template at: ${scriptsTemplatePath}');
                 } catch (e) {
                     Logger.error('${this}: Error reading template at ${scriptsTemplatePath}: ${e}');
                 }
@@ -351,20 +386,16 @@ override public function generateHostsFileContent():String {
                 if (standaloneProvisioners != null && standaloneProvisioners.length > 0) {
                     var latestStandaloneProvisioner = standaloneProvisioners[0];
                     var standalonePath = Path.addTrailingSlash(latestStandaloneProvisioner.root) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
-                    Logger.info('${this}: Trying to use fallback template from standalone provisioner: ${standalonePath}');
                     
                     if (FileSystem.exists(standalonePath)) {
                         try {
                             _hostsTemplate = File.getContent(standalonePath);
-                            Logger.info('${this}: Using fallback template from: ${standalonePath}');
                         } catch (e) {
                             Logger.error('${this}: Error reading fallback template at ${standalonePath}: ${e}');
                         }
                     }
                 }
             }
-        } else {
-            Logger.info('${this}: Successfully loaded template with standard method');
         }
         
         // Log the final template state
@@ -388,7 +419,6 @@ override public function generateHostsFileContent():String {
         var dotIndex = fullHostname.indexOf(".");
         if (dotIndex > 0) {
             hostnameOnly = fullHostname.substring(0, dotIndex);
-            Logger.info('${this}: Extracted hostname "${hostnameOnly}" from full hostname "${fullHostname}"');
         }
         
         // Replace variables with server values
@@ -444,78 +474,10 @@ override public function generateHostsFileContent():String {
             
             // Only use the exact role name as defined
             content = _replaceVariable(content, role.value, roleValue);
-            Logger.info('${this}: Setting role variable ${role.value} = ${roleValue}');
         }
 
         // Add custom properties if available
         if (_server.customProperties != null) {
-            var customProps = _server.customProperties;
-            
-            // Log the current state of customProperties for debugging
-            Logger.info('${this}: Processing customProperties with fields: ${Reflect.fields(customProps).join(", ")}');
-            
-            // Process all custom properties in a consistent way
-            var allCustomProps = new Map<String, String>();
-            var hiddenFields = new Map<String, Bool>();
-            
-            // Helper function to safely get a field value
-            function getFieldValue(obj:Dynamic, field:String):Dynamic {
-                if (obj == null || !Reflect.hasField(obj, field)) return null;
-                return Reflect.field(obj, field);
-            }
-            
-            // Helper function to check if a field is hidden
-            function isFieldHidden(fieldName:String, provDef:Dynamic):Bool {
-                if (provDef == null || !Reflect.hasField(provDef, "metadata") || 
-                    !Reflect.hasField(provDef.metadata, "configuration")) {
-                    return false;
-                }
-                
-                var config = provDef.metadata.configuration;
-                
-                // Check in basic fields
-                if (Reflect.hasField(config, "basicFields")) {
-                    var basicFields = Reflect.field(config, "basicFields");
-                    if (basicFields != null) {
-                        for (i in 0...basicFields.length) {
-                            var field = basicFields[i];
-                            if (field != null && 
-                                Reflect.hasField(field, "name") && 
-                                Reflect.field(field, "name") == fieldName) {
-                                // Check if it has hidden property set to true
-                                if (Reflect.hasField(field, "hidden")) {
-                                    var hidden = Reflect.field(field, "hidden");
-                                    return hidden == true || Std.string(hidden).toLowerCase() == "true";
-                                }
-                                return false;
-                            }
-                        }
-                    }
-                }
-                
-                // Check in advanced fields
-                if (Reflect.hasField(config, "advancedFields")) {
-                    var advancedFields = Reflect.field(config, "advancedFields");
-                    if (advancedFields != null) {
-                        for (i in 0...advancedFields.length) {
-                            var field = advancedFields[i];
-                            if (field != null && 
-                                Reflect.hasField(field, "name") && 
-                                Reflect.field(field, "name") == fieldName) {
-                                // Check if it has hidden property set to true
-                                if (Reflect.hasField(field, "hidden")) {
-                                    var hidden = Reflect.field(field, "hidden");
-                                    return hidden == true || Std.string(hidden).toLowerCase() == "true";
-                                }
-                                return false;
-                            }
-                        }
-                    }
-                }
-                
-                return false;
-            }
-            
             // Helper function to convert a value to string safely
             function safeToString(value:Dynamic):String {
                 if (value == null) return "";
@@ -528,59 +490,10 @@ override public function generateHostsFileContent():String {
                 }
             }
             
-            // Using server.customProperties.provisionerDefinition if available
-            var provisionerDef = null;
-            if (Reflect.hasField(customProps, "provisionerDefinition")) {
-                provisionerDef = Reflect.field(customProps, "provisionerDefinition");
-                if (provisionerDef != null && Reflect.hasField(provisionerDef, "metadata")) {
-                    var metadata = Reflect.field(provisionerDef, "metadata");
-                    
-                    // Process fields from this provisioner definition
-                    if (metadata != null && Reflect.hasField(metadata, "configuration")) {
-                        var config = Reflect.field(metadata, "configuration");
-                        
-                        // Add basic fields from the provisioner definition
-                        if (config != null && Reflect.hasField(config, "basicFields")) {
-                            var basicFields = Reflect.field(config, "basicFields");
-                            if (basicFields != null) {
-                                for (i in 0...basicFields.length) {
-                                    var field = basicFields[i];
-                                    if (field != null && Reflect.hasField(field, "name")) {
-                                        var fieldName = Reflect.field(field, "name");
-                                        var defaultValue = "";
-                                        if (Reflect.hasField(field, "defaultValue") && Reflect.field(field, "defaultValue") != null) {
-                                            defaultValue = safeToString(Reflect.field(field, "defaultValue"));
-                                        }
-                                        allCustomProps.set(fieldName, defaultValue);
-                                        Logger.info('${this}: Added basic field from definition: ${fieldName} with default ${defaultValue}');
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Add advanced fields from the provisioner definition
-                        if (config != null && Reflect.hasField(config, "advancedFields")) {
-                            var advancedFields = Reflect.field(config, "advancedFields");
-                            if (advancedFields != null) {
-                                for (i in 0...advancedFields.length) {
-                                    var field = advancedFields[i];
-                                    if (field != null && Reflect.hasField(field, "name")) {
-                                        var fieldName = Reflect.field(field, "name");
-                                        var defaultValue = "";
-                                        if (Reflect.hasField(field, "defaultValue") && Reflect.field(field, "defaultValue") != null) {
-                                            defaultValue = safeToString(Reflect.field(field, "defaultValue"));
-                                        }
-                                        allCustomProps.set(fieldName, defaultValue);
-                                        Logger.info('${this}: Added advanced field from definition: ${fieldName} with default ${defaultValue}');
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // Prepare a map of all custom properties for template variable substitution
+            var allCustomProps = new Map<String, String>();
             
-            // Also add some known common fields that might appear in templates
+            // Add some known common fields that might appear in templates
             var commonFields = [
                 "SYNCBACK_ID_FILES", "DEBUG_ALL_ANSIBLE_TASKS", "USE_HTTP_PROXY", 
                 "HTTP_PROXY_HOST", "HTTP_PROXY_PORT", "CERT_SELFSIGNED",
@@ -589,67 +502,94 @@ override public function generateHostsFileContent():String {
             ];
             
             for (field in commonFields) {
-                if (!allCustomProps.exists(field)) {
-                    allCustomProps.set(field, "");
-                    Logger.info('${this}: Added common field placeholder: ${field}');
-                }
+                allCustomProps.set(field, "");
             }
             
-            // For custom provisioners, we want to ONLY use dynamicCustomProperties
-            // This ensures a clean separation between custom and standard provisioner properties
-            var basicProps = getFieldValue(customProps, "dynamicCustomProperties");
-            
-            if (basicProps != null) {
-                Logger.info('${this}: Processing dynamicCustomProperties with fields: ${Reflect.fields(basicProps).join(", ")}');
-                
-                // Get all fields from dynamicCustomProperties
-                var fields = Reflect.fields(basicProps);
-                for (field in fields) {
-                    // Skip internal fields
-                    if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+            // Get default field values from the provisioner definition if available
+            if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                    Reflect.hasField(provDef.metadata, "configuration")) {
                     
-                    // Get and convert the value
-                    var value = Reflect.field(basicProps, field);
-                    if (value != null) {
-                        var strValue = safeToString(value);
-                        // Override with the actual value from custom properties
-                        allCustomProps.set(field, strValue);
-                        Logger.info('${this}: Updated custom property ${field} = ${strValue}');
+                    var config = provDef.metadata.configuration;
+                    
+                    // Extract default values from basic fields
+                    if (Reflect.hasField(config, "basicFields")) {
+                        var fields = Reflect.field(config, "basicFields");
+                        if (fields != null) {
+                            for (i in 0...fields.length) {
+                                var field = fields[i];
+                                if (field != null && Reflect.hasField(field, "name")) {
+                                    var fieldName = Reflect.field(field, "name");
+                                    var defaultValue = "";
+                                    if (Reflect.hasField(field, "defaultValue") && 
+                                        Reflect.field(field, "defaultValue") != null) {
+                                        defaultValue = safeToString(Reflect.field(field, "defaultValue"));
+                                    }
+                                    allCustomProps.set(fieldName, defaultValue);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Extract default values from advanced fields
+                    if (Reflect.hasField(config, "advancedFields")) {
+                        var fields = Reflect.field(config, "advancedFields");
+                        if (fields != null) {
+                            for (i in 0...fields.length) {
+                                var field = fields[i];
+                                if (field != null && Reflect.hasField(field, "name")) {
+                                    var fieldName = Reflect.field(field, "name");
+                                    var defaultValue = "";
+                                    if (Reflect.hasField(field, "defaultValue") && 
+                                        Reflect.field(field, "defaultValue") != null) {
+                                        defaultValue = safeToString(Reflect.field(field, "defaultValue"));
+                                    }
+                                    allCustomProps.set(fieldName, defaultValue);
+                                }
+                            }
+                        }
                     }
                 }
-            } else {
-                Logger.info('${this}: No dynamicCustomProperties found in server');
             }
             
-            // Add advanced properties (higher priority)
-            var advancedProps = getFieldValue(customProps, "dynamicAdvancedCustomProperties");
-            if (advancedProps != null) {
-                Logger.info('${this}: Processing dynamicAdvancedCustomProperties with fields: ${Reflect.fields(advancedProps).join(", ")}');
-                
-                // Get all fields from dynamicAdvancedCustomProperties
-                var fields = Reflect.fields(advancedProps);
-                for (field in fields) {
-                    // Skip internal fields
-                    if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+            // Now prioritize values from dynamicCustomProperties (highest priority)
+            if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                var props = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                if (props != null) {
                     
-                    // Get and convert the value
-                    var value = Reflect.field(advancedProps, field);
-                    if (value != null) {
-                        var strValue = safeToString(value);
-                        // Override with the actual value from advanced custom properties (highest priority)
-                        allCustomProps.set(field, strValue);
-                        Logger.info('${this}: Updated advanced custom property ${field} = ${strValue}');
+                    for (field in Reflect.fields(props)) {
+                        // Skip internal fields
+                        if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+                        
+                        var value = Reflect.field(props, field);
+                        if (value != null) {
+                            allCustomProps.set(field, safeToString(value));
+                        }
+                    }
+                }
+            }
+            
+            // Then check dynamicAdvancedCustomProperties (also high priority)
+            if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+                var props = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+                if (props != null) {
+                    
+                    for (field in Reflect.fields(props)) {
+                        // Skip internal fields
+                        if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+                        
+                        var value = Reflect.field(props, field);
+                        if (value != null) {
+                            allCustomProps.set(field, safeToString(value));
+                        }
                     }
                 }
             }
             
             // Replace all variables in the template
-            Logger.info('${this}: Replacing ${Lambda.count(allCustomProps)} custom properties in template');
             for (field => value in allCustomProps) {
-                var before = content;
                 content = _replaceVariable(content, field, value);
-                var replaced = (before != content);
-                Logger.info('${this}: Replaced property ${field} = ${value}, success=${replaced}');
             }
         } else {
             Logger.warning('${this}: No customProperties available on server');
@@ -664,7 +604,6 @@ override public function generateHostsFileContent():String {
  * @return Always returns true for custom provisioners
  */
 override public function saveSafeId(safeid:String):Bool {
-    Logger.info('${this}: Custom provisioners do not use SafeID, skipping copy operation');
     return true;
 }
 
@@ -674,7 +613,6 @@ override public function saveSafeId(safeid:String):Bool {
  */
 override public function get_hostFileExists():Bool {
     var exists = this.fileExists(StandaloneProvisioner.HOSTS_FILE);
-    Logger.info('${this}: Checking if Hosts.yml exists: ${exists} at path ${Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE}');
     return exists;
 }
 
@@ -683,35 +621,24 @@ override public function get_hostFileExists():Bool {
  * This method validates the server before saving and logs detailed validation results
  */
 override public function saveHostsFile() {
-    Logger.info('${this}: Saving Hosts.yml file for custom provisioner');
-    
     // Create target directory and ensure it exists regardless of validation
     createTargetDirectory();
 
     // Log the custom properties state to help with debugging
     if (_server != null && _server.customProperties != null) {
-        Logger.info('${this}: Server has customProperties with fields: ${Reflect.fields(_server.customProperties).join(", ")}');
         
         if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
             var basicFields = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-            if (basicFields != null) {
-                Logger.info('${this}: dynamicCustomProperties has fields: ${Reflect.fields(basicFields).join(", ")}');
-            } else {
+            if (basicFields == null) {
                 Logger.warning('${this}: dynamicCustomProperties is null');
             }
-        } else {
-            Logger.info('${this}: No dynamicCustomProperties found');
         }
         
         if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
             var advancedFields = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
-            if (advancedFields != null) {
-                Logger.info('${this}: dynamicAdvancedCustomProperties has fields: ${Reflect.fields(advancedFields).join(", ")}');
-            } else {
+            if (advancedFields == null) {
                 Logger.warning('${this}: dynamicAdvancedCustomProperties is null');
             }
-        } else {
-            Logger.info('${this}: No dynamicAdvancedCustomProperties found');
         }
     } else {
         Logger.warning('${this}: Server has no customProperties');
@@ -727,7 +654,6 @@ override public function saveHostsFile() {
         var hostsFilePath = Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE;
         File.saveContent(hostsFilePath, content);
         
-        Logger.info('${this}: Custom provisioner created Hosts.yml at ${hostsFilePath}');
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfile', hostsFilePath));
         
         // Update server status after saving hosts file
@@ -736,7 +662,6 @@ override public function saveHostsFile() {
             
             // Make sure to save the server data to persist any changes to customProperties
             _server.saveData();
-            Logger.info('${this}: Saved server data to persist customProperties');
         }
     } catch (e:Exception) {
         Logger.error('${this}: Custom provisioner could not create Hosts.yml file. Details: ${e.details()} Message: ${e.message}');
@@ -778,7 +703,6 @@ override public function saveHostsFile() {
             // Check if any replacements were made
             if (before != result) {
                 replaced = true;
-                Logger.info('${this}: Replaced variable ${variation} with value "${value}"');
             }
         }
         

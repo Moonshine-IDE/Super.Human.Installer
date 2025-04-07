@@ -6,7 +6,7 @@
 **/Dist/*
 **/dump/*
 *.code-workspace
-
+*./hcl_domino_test_provisioner/*
 # Include files despite the parent folder being ignored
 !**/.vscode/*.local.*
 .shi-config

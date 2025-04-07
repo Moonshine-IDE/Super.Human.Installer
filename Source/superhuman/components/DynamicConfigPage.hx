@@ -41,6 +41,8 @@ import feathers.layout.VerticalLayout;
 import feathers.layout.VerticalLayoutData;
 import feathers.events.TriggerEvent;
 import feathers.layout.HorizontalAlign;
+import haxe.io.Path;
+import sys.FileSystem;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.VerticalAlign;
@@ -117,8 +119,6 @@ class DynamicConfigPage extends Page {
         // Create the title group at the top (outside scroll container)
         _titleGroup = new LayoutGroup();
         var _titleGroupLayout = new HorizontalLayout();
-        _titleGroupLayout.horizontalAlign = HorizontalAlign.LEFT;
-        _titleGroupLayout.verticalAlign = VerticalAlign.MIDDLE;
         _titleGroup.layout = _titleGroupLayout;
         _titleGroup.width = _w;
         this.addChild(_titleGroup);
@@ -522,19 +522,75 @@ class DynamicConfigPage extends Page {
         _dynamicRows = new Map();
         
         // Create dynamic fields based on the provisioner configuration
-        if (_provisionerDefinition != null && _provisionerDefinition.metadata != null && 
-            _provisionerDefinition.metadata.configuration != null && 
-            _provisionerDefinition.metadata.configuration.basicFields != null) {
+        var configFound = false;
+        var basicFields:Array<Dynamic> = null;
+        
+        // ONLY use version-specific metadata from the provisioner definition
+        if (_provisionerDefinition != null && _provisionerDefinition.metadata != null) {
+            Logger.info('${this}: Checking provisioner version metadata for configuration');
             
-            // Add each field from the configuration
-            var basicFields:Array<Dynamic> = cast _provisionerDefinition.metadata.configuration.basicFields;
+            if (_provisionerDefinition.metadata.configuration != null && 
+                _provisionerDefinition.metadata.configuration.basicFields != null) {
+                
+                basicFields = cast _provisionerDefinition.metadata.configuration.basicFields;
+                Logger.info('${this}: Found ${basicFields.length} basic fields in provisioner version metadata');
+                configFound = true;
+            } else {
+                Logger.warning('${this}: No configuration or basicFields found in provisioner version metadata');
+                
+                // If this is a version directory provisioner, try to load from version provisioner.yml
+                if (_provisionerDefinition.root != null) {
+                    var versionPath = _provisionerDefinition.root;
+                    var versionMetadataPath = Path.addTrailingSlash(versionPath) + "provisioner.yml";
+                    
+                    Logger.info('${this}: Checking for version-specific metadata at ${versionMetadataPath}');
+                    
+                    if (FileSystem.exists(versionMetadataPath)) {
+                        try {
+                            // Use the specific function for version metadata
+                            var versionMetadata = ProvisionerManager.readProvisionerVersionMetadata(versionPath);
+                            
+                            if (versionMetadata != null && versionMetadata.configuration != null && 
+                                versionMetadata.configuration.basicFields != null) {
+                                
+                                basicFields = cast versionMetadata.configuration.basicFields;
+                                Logger.info('${this}: Found ${basicFields.length} basic fields in version-specific metadata');
+                                configFound = true;
+                                
+                                // Store this metadata for future use
+                                if (_server.customProperties == null) {
+                                    _server.customProperties = {};
+                                }
+                                Reflect.setField(_server.customProperties, "versionMetadata", versionMetadata);
+                                
+                                // Also update the provisioner definition's metadata with this version-specific metadata
+                                _provisionerDefinition.metadata = versionMetadata;
+                            } else {
+                                Logger.warning('${this}: Version-specific metadata has no valid configuration or basicFields');
+                            }
+                        } catch (e) {
+                            Logger.error('${this}: Error reading version metadata: ${e}');
+                        }
+                    } else {
+                        Logger.warning('${this}: No provisioner.yml found at ${versionMetadataPath}');
+                    }
+                } else {
+                    Logger.warning('${this}: Provisioner definition has no root path');
+                }
+            }
+        } else {
+            Logger.warning('${this}: No provisioner definition or metadata available');
+        }
+        
+        // If config was found, add the fields
+        if (configFound && basicFields != null) {
             Logger.info('${this}: Adding ${basicFields.length} dynamic fields to form');
             
             for (field in basicFields) {
                 _addDynamicField(field);
             }
         } else {
-            Logger.warning('Unable to add dynamic fields - missing configuration or basicFields');
+            Logger.warning('${this}: No fields found in provisioner.yml - form will be empty');
         }
     }
     
@@ -1142,13 +1198,158 @@ class DynamicConfigPage extends Page {
     }
     
     /**
-     * Update the roles button icon when the version dropdown selection changes
+     * Handle version dropdown changes and migrate field values between versions
      * @param e The change event
      */
     function _versionDropdownChanged(e:Event) {
         // Only update if we have a valid server
         if (_server != null) {
-            // Update the button icon based on the current validation state
+            // Get the previously selected provisioner definition
+            var oldProvisionerDef = _provisionerDefinition;
+            
+            // Get the newly selected provisioner definition
+            var newProvisionerDef:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+            
+            if (oldProvisionerDef != null && newProvisionerDef != null && 
+                oldProvisionerDef.data.version.toString() != newProvisionerDef.data.version.toString()) {
+                
+                Logger.info('${this}: Switching provisioner version from ${oldProvisionerDef.data.version} to ${newProvisionerDef.data.version}');
+                
+                // Save current field values before switching
+                var savedValues = new Map<String, Dynamic>();
+                for (fieldName => field in _dynamicFields) {
+                    var value = null;
+                    
+                    if (Reflect.hasField(field, "hidden") && Reflect.field(field, "hidden") == true) {
+                        // For hidden fields, use the value directly
+                        if (Reflect.hasField(field, "value")) {
+                            value = Reflect.field(field, "value");
+                        }
+                    } else if (Std.isOfType(field, GenesisFormTextInput)) {
+                        var input:GenesisFormTextInput = cast field;
+                        value = StringTools.trim(input.text);
+                    } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                        var stepper:GenesisFormNumericStepper = cast field;
+                        value = Std.string(stepper.value);
+                    } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                        var checkbox:GenesisFormCheckBox = cast field;
+                        value = checkbox.selected ? "true" : "false";
+                    } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
+                        var dropdown:GenesisFormPupUpListView = cast field;
+                        var selectedItem = dropdown.selectedItem;
+                        value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
+                    }
+                    
+                    if (value != null) {
+                        savedValues.set(fieldName, value);
+                        Logger.info('${this}: Saved field value for migration: ${fieldName} = ${value}');
+                    }
+                }
+                
+                // Set the new provisioner definition which will rebuild the form
+                setProvisionerDefinition(newProvisionerDef);
+                
+                // Get list of field names in new version
+                var newFieldNames = new Map<String, Bool>();
+                if (newProvisionerDef.metadata != null && 
+                    newProvisionerDef.metadata.configuration != null && 
+                    newProvisionerDef.metadata.configuration.basicFields != null) {
+                    
+                    var basicFields:Array<Dynamic> = cast newProvisionerDef.metadata.configuration.basicFields;
+                    for (field in basicFields) {
+                        if (field != null && field.name != null) {
+                            newFieldNames.set(field.name, true);
+                        }
+                    }
+                    
+                    // Now migrate values to new fields where names match
+                    for (fieldName => value in savedValues) {
+                        // Only migrate values for fields that exist in the new version
+                        if (newFieldNames.exists(fieldName) && _dynamicFields.exists(fieldName)) {
+                            var field = _dynamicFields.get(fieldName);
+                            
+                            if (Reflect.hasField(field, "hidden") && Reflect.field(field, "hidden") == true) {
+                                // For hidden fields, update the value directly
+                                if (Reflect.hasField(field, "value")) {
+                                    Reflect.setField(field, "value", value);
+                                }
+                            } else if (Std.isOfType(field, GenesisFormTextInput)) {
+                                var input:GenesisFormTextInput = cast field;
+                                input.text = Std.string(value);
+                            } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                                var stepper:GenesisFormNumericStepper = cast field;
+                                stepper.value = Std.parseFloat(Std.string(value));
+                            } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                                var checkbox:GenesisFormCheckBox = cast field;
+                                checkbox.selected = Std.string(value).toLowerCase() == "true";
+                            } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
+                                var dropdown:GenesisFormPupUpListView = cast field;
+                                if (dropdown.dataProvider != null) {
+                                    for (i in 0...dropdown.dataProvider.length) {
+                                        var option = dropdown.dataProvider.get(i);
+                                        if (option != null && option.length > 0 && option[0] == value) {
+                                            dropdown.selectedIndex = i;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            Logger.info('${this}: Migrated field value: ${fieldName} = ${value}');
+                        } else {
+                            Logger.info('${this}: Field ${fieldName} not found in new version, discarding value: ${value}');
+                        }
+                    }
+                    
+                    // Store the migrated values in the server's customProperties
+                    if (_server.customProperties == null) {
+                        _server.customProperties = {};
+                    }
+                    
+                    if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                        Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+                    }
+                    
+                    var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                    
+                    // Copy migrated values to customProperties
+                    for (fieldName => field in _dynamicFields) {
+                        if (newFieldNames.exists(fieldName)) {
+                            var value = null;
+                            
+                            if (Reflect.hasField(field, "hidden") && Reflect.field(field, "hidden") == true) {
+                                if (Reflect.hasField(field, "value")) {
+                                    value = Reflect.field(field, "value");
+                                }
+                            } else if (Std.isOfType(field, GenesisFormTextInput)) {
+                                var input:GenesisFormTextInput = cast field;
+                                value = StringTools.trim(input.text);
+                            } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                                var stepper:GenesisFormNumericStepper = cast field;
+                                value = Std.string(stepper.value);
+                            } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                                var checkbox:GenesisFormCheckBox = cast field;
+                                value = checkbox.selected ? "true" : "false";
+                            } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
+                                var dropdown:GenesisFormPupUpListView = cast field;
+                                var selectedItem = dropdown.selectedItem;
+                                value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
+                            }
+                            
+                            if (value != null) {
+                                // Store value only in dynamicCustomProperties to avoid duplication
+                                Reflect.setField(customPropsObj, fieldName, value);
+                                Logger.info('${this}: Updated dynamicCustomProperties with migrated value: ${fieldName} = ${value}');
+                            }
+                        }
+                    }
+                }
+                
+                // Refresh UI to show updated fields
+                updateContent(true);
+            }
+            
+            // Update the roles button icon based on the current validation state
             _buttonRoles.icon = (_server.areRolesValid()) ? 
                 GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
                 GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
@@ -1200,21 +1401,32 @@ class DynamicConfigPage extends Page {
         _server.roles.value = a;
         _server.syncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod;
         
-        // Update server properties from dynamic fields
+        // Ensure dynamicCustomProperties exists
+        if (_server.customProperties == null) {
+            _server.customProperties = {};
+        }
+        
+        // Initialize dynamicCustomProperties if needed
+        if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+        }
+        
+        // Get reference to dynamicCustomProperties object
+        var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+        
+        // Update all fields
         for (fieldName => field in _dynamicFields) {
             var value:String = null;
             
-            // Special handling for hidden fields stored as objects with {hidden: true, value: defaultValue}
+            // Extract the value from the appropriate field type
             if (Reflect.hasField(field, "hidden") && Reflect.field(field, "hidden") == true) {
-                // For hidden fields, use the defaultValue directly
+                // Handle hidden fields
                 if (Reflect.hasField(field, "value")) {
                     value = Std.string(Reflect.field(field, "value"));
-                    Logger.info('${this}: Using default value for hidden field ${fieldName}: ${value}');
                 }
             } else if (Std.isOfType(field, GenesisFormTextInput)) {
                 var input:GenesisFormTextInput = cast field;
                 value = StringTools.trim(input.text);
-                Logger.info('${this}: Getting value from text input ${fieldName}: ${value}');
             } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                 var stepper:GenesisFormNumericStepper = cast field;
                 value = Std.string(stepper.value);
@@ -1228,197 +1440,127 @@ class DynamicConfigPage extends Page {
             }
             
             if (value != null) {
-                // Handle special cases for standard server properties
-                // Important: Map known custom provisioner fields to server standard fields
-                if (fieldName == "hostname") {
-                    // Set the server hostname via Property object
+                // Always store all fields in dynamicCustomProperties, this is the required location
+                Reflect.setField(dynamicProps, fieldName, value);
+                Logger.info('${this}: Stored property ${fieldName} = ${value} in dynamicCustomProperties');
+                
+                // Special case for DOMAIN and hostname, which need URL updates
+                if (fieldName == "DOMAIN") {
+                    // Update URL components
+                    if (_server.url != null) {
+                        _server.url.domainName = value;
+                    }
+                } else if (fieldName == "hostname") {
+                    // Update hostname property as generateHostsFileContent directly reads from it
                     _server.hostname.value = value;
-                } else if (fieldName == "organization") {
-                    // Set the server organization via Property object
+                    
+                    // Update URL components
+                    if (_server.url != null) {
+                        _server.url.hostname = value;
+                    }
+                } 
+                // Only update standard server properties if template generation needs them
+                else if (fieldName == "organization") {
                     _server.organization.value = value;
                 } else if (fieldName == "userEmail") {
-                    // Set user email via Property object
                     _server.userEmail.value = value;
                 } else if (fieldName == "openBrowser") {
-                    // Set open browser flag via Property object
                     var boolValue = value.toLowerCase() == "true";
                     _server.openBrowser.value = boolValue;
                 } else if (fieldName == "numCPUs") {
-                    // Set CPU count via Property object
                     _server.numCPUs.value = Std.parseInt(value);
                 } else if (fieldName == "memory") {
-                    // Set memory via Property object
                     _server.memory.value = Std.parseFloat(value);
                 } else if (fieldName == "networkAddress") {
-                    // Set network address via Property object
                     _server.networkAddress.value = value;
                 } else if (fieldName == "networkNetmask") {
-                    // Set network netmask via Property object
                     _server.networkNetmask.value = value;
                 } else if (fieldName == "networkGateway") {
-                    // Set network gateway via Property object
                     _server.networkGateway.value = value;
                 } else if (fieldName == "nameServer1") {
-                    // Set DNS server 1 via Property object
                     _server.nameServer1.value = value;
                 } else if (fieldName == "nameServer2") {
-                    // Set DNS server 2 via Property object
                     _server.nameServer2.value = value;
                 } else if (fieldName == "networkBridge") {
-                    // Set network bridge via Property object
                     _server.networkBridge.value = value;
                 } else if (fieldName == "dhcp4") {
-                    // Set DHCP flag via Property object
                     var boolValue = value.toLowerCase() == "true";
                     _server.dhcp4.value = boolValue;
                 } else if (fieldName == "disableBridgeAdapter") {
-                    // Set disable bridge adapter flag via Property object
                     var boolValue = value.toLowerCase() == "true";
-                    _server.disableBridgeAdapter.value = boolValue; 
+                    _server.disableBridgeAdapter.value = boolValue;
                 } else if (fieldName == "setupWait") {
-                    // Set setup wait time via Property object
                     _server.setupWait.value = Std.parseInt(value);
-                } else if (_customProperties.exists(fieldName)) {
-                    // Update custom property
-                    var prop = _customProperties.get(fieldName);
-                    if (prop != null && Reflect.hasField(prop, "value")) {
-                        // Update the Property object
-                        Reflect.setField(prop, "value", value);
-                        
-                        // Initialize customProperties if needed
-                        if (_server.customProperties == null) {
-                            _server.customProperties = {};
-                        }
-                        
-                        // Initialize dynamicCustomProperties if needed
-                        if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-                            Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
-                        }
-                        
-                        // Get reference to dynamicCustomProperties
-                        var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-                        
-                        // Save in both locations to ensure compatibility
-                        Reflect.setField(customPropsObj, fieldName, value);
-                        Reflect.setField(_server.customProperties, fieldName, value);
-                        
-                        // Log the save operation
-                        Logger.info('${this}: Saved custom property ${fieldName} with value ${value} in both locations');
-                        
-                        // Force an immediate save to persist changes
-                        _server.saveData();
-                        
-                        // Double check the save
-                        var savedValue = Reflect.field(customPropsObj, fieldName);
-                        Logger.info('${this}: Verified saved value for ${fieldName}: ${savedValue}');
-                    }
-                } else {
-                    // Store the value directly in customProperties to preserve exact case
-                    if (_server.customProperties == null) {
-                        _server.customProperties = {};
-                    }
-                    Reflect.setField(_server.customProperties, fieldName, value);
-                    Logger.info('${this}: Stored custom property ${fieldName} with exact case: ${value}');
                 }
+                // All other fields are only stored in dynamicCustomProperties
             }
         }
         
-        // Store custom properties in server's customProperties if available
-        if (_server != null && _customProperties.keys().hasNext()) {
-            // Make sure customProperties is initialized
-            if (_server.customProperties == null) {
-                _server.customProperties = {};
+        // Update the provisioner with the selected version
+        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        if (dvv != null) {
+            var versionStr = dvv.data.version.toString();
+            Logger.info('${this}: Updating provisioner to version ${versionStr}');
+            
+            // Create a copy of the provisioner data for update
+            var updatedData = {
+                type: dvv.data.type,
+                version: dvv.data.version
+            };
+            
+            // Set the serverProvisionerId as the single source of truth for version
+            if (_server.serverProvisionerId != null) {
+                _server.serverProvisionerId.value = versionStr;
+                Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
             }
             
-            // Initialize or update dynamicCustomProperties
-            if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-                Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+            // Store just the provisioner definition reference
+            Reflect.setField(_server.customProperties, "provisionerDefinition", dvv);
+            
+            // Store version information in dynamicCustomProperties
+            Reflect.setField(dynamicProps, "provisionerVersion", versionStr);
+            
+            // Update the server's provisioner with the server.updateProvisioner method
+            var success = _server.updateProvisioner(updatedData);
+            if (success) {
+                Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
+                // Update the roles button icon after changing provisioner
+                _buttonRoles.icon = (_server.areRolesValid()) ? 
+                    GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
+                    GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
+            } else {
+                Logger.warning('${this}: Failed to update provisioner to version ${versionStr}');
             }
-            
-            // Get reference to dynamicCustomProperties
-            var customPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-            
-            // Save all custom properties - only save to dynamicCustomProperties
-            // to avoid duplication in the server's customProperties
-            for (fieldName => field in _dynamicFields) {
-                var value:String = null;
-                
-                if (Std.isOfType(field, GenesisFormTextInput)) {
-                    var input:GenesisFormTextInput = cast field;
-                    value = StringTools.trim(input.text);
-                } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
-                    var stepper:GenesisFormNumericStepper = cast field;
-                    value = Std.string(stepper.value);
-                } else if (Std.isOfType(field, GenesisFormCheckBox)) {
-                    var checkbox:GenesisFormCheckBox = cast field;
-                    value = checkbox.selected ? "true" : "false";
-                } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
-                    var dropdown:GenesisFormPupUpListView = cast field;
-                    var selectedItem = dropdown.selectedItem;
-                    value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
-                }
-                
-                if (value != null) {
-                    // Only save to dynamicCustomProperties to avoid duplication
-                    Reflect.setField(customPropsObj, fieldName, value);
-                    Logger.info('${this}: Saved field ${fieldName} with value ${value} in dynamicCustomProperties');
-                }
-            }
-            
-            // Force an immediate save of server data to avoid race conditions
-            _server.saveData();
-            
-            // Force an update of the UI to show the new values
-            updateContent(true);
         }
-        
-    // Update the provisioner with the selected version
-    var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
-    if (dvv != null) {
-        var versionStr = dvv.data.version.toString();
-        Logger.info('${this}: Updating provisioner to version ${versionStr}');
-        
-        // Create a copy of the provisioner data for update
-        var updatedData = {
-            type: dvv.data.type,
-            version: dvv.data.version
-        };
-        
-        // Set the serverProvisionerId as the single source of truth for version
-        if (_server.serverProvisionerId != null) {
-            _server.serverProvisionerId.value = versionStr;
-            Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
-        }
-        
-        // For backwards compatibility, store minimal version info in customProperties
-        if (_server.customProperties == null) {
-            _server.customProperties = {};
-        }
-        
-        // Store the basic provisioner definition reference
-        Reflect.setField(_server.customProperties, "provisionerDefinition", dvv);
-        
-        // Update the server's provisioner with the server.updateProvisioner method
-        var success = _server.updateProvisioner(updatedData);
-        if (success) {
-            Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
-            // Update the roles button icon after changing provisioner
-            _buttonRoles.icon = (_server.areRolesValid()) ? 
-                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK) : 
-                GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
-        } else {
-            Logger.warning('${this}: Failed to update provisioner to version ${versionStr}');
-        }
-        
-        // Force an immediate save of the server data
-        _server.saveData();
-        
-        Logger.info('${this}: Provisioner version updated and saved');
-    } else {
-        Logger.warning('${this}: No provisioner selected in dropdown, cannot update version');
-    }
 
-        // Save the server data one final time to ensure everything is persisted
+        // Before saving, minimize the serviceTypeData if it exists to avoid bloat
+        var originalServiceTypeData = null;
+        if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "serviceTypeData")) {
+            // Temporarily store the original serviceTypeData
+            originalServiceTypeData = Reflect.field(_server.customProperties, "serviceTypeData");
+            
+            // Extract only the essential fields we need from serviceTypeData
+            if (originalServiceTypeData != null) {
+                var minimalServiceTypeData = {
+                    isEnabled: Reflect.hasField(originalServiceTypeData, "isEnabled") ? 
+                        Reflect.field(originalServiceTypeData, "isEnabled") : true,
+                    provisionerType: Reflect.hasField(originalServiceTypeData, "provisionerType") ? 
+                        Reflect.field(originalServiceTypeData, "provisionerType") : _server.provisioner.type,
+                    value: Reflect.hasField(originalServiceTypeData, "value") ? 
+                        Reflect.field(originalServiceTypeData, "value") : "",
+                    description: Reflect.hasField(originalServiceTypeData, "description") ? 
+                        Reflect.field(originalServiceTypeData, "description") : "",
+                    serverType: Reflect.hasField(originalServiceTypeData, "serverType") ? 
+                        Reflect.field(originalServiceTypeData, "serverType") : ""
+                };
+                
+                // Replace with the minimal version for saving
+                Reflect.setField(_server.customProperties, "serviceTypeData", minimalServiceTypeData);
+                Logger.info('${this}: Minimized serviceTypeData to reduce bloat in server.shi file');
+            }
+        }
+
+        // Save the server data to persist all changes
         _server.saveData();
         
         // Force an update of the UI to show the saved values
@@ -1427,7 +1569,6 @@ class DynamicConfigPage extends Page {
         // Update the last used safe ID
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
-        // EXPLICIT: Force the provisioner to copy files regardless of exists check
         _server.provisioner.copyFiles();
         
         // Initialize server files if this is a provisional server

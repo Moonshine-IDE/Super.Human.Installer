@@ -53,9 +53,11 @@ import genesis.application.components.HLine;
 import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
+import haxe.io.Path;
 import openfl.events.Event;
 import prominic.sys.applications.oracle.BridgedInterface;
 import prominic.sys.applications.oracle.VirtualBox;
+import sys.FileSystem;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
 import superhuman.managers.ProvisionerManager.ProvisionerField;
@@ -361,22 +363,120 @@ class DynamicAdvancedConfigPage extends Page {
         }
         
         // Create dynamic fields based on the provisioner configuration
-        if (_provisionerDefinition != null && _provisionerDefinition.metadata != null && 
-            _provisionerDefinition.metadata.configuration != null && 
-            _provisionerDefinition.metadata.configuration.advancedFields != null) {
+        var configFound = false;
+        var advancedFields:Array<Dynamic> = null;
+        
+        // ONLY use version-specific metadata from the provisioner definition
+        if (_provisionerDefinition != null && _provisionerDefinition.metadata != null) {
+            Logger.info('${this}: Checking provisioner version metadata for configuration');
             
+            if (_provisionerDefinition.metadata.configuration != null && 
+                _provisionerDefinition.metadata.configuration.advancedFields != null) {
+                
+                advancedFields = cast _provisionerDefinition.metadata.configuration.advancedFields;
+                Logger.info('${this}: Found ${advancedFields.length} advanced fields in provisioner version metadata');
+                configFound = true;
+            } else {
+                Logger.warning('${this}: No configuration or advancedFields found in provisioner version metadata');
+                
+                // If this is a version directory provisioner, try to load from version provisioner.yml
+                if (_provisionerDefinition.root != null) {
+                    var versionPath = _provisionerDefinition.root;
+                    var versionMetadataPath = Path.addTrailingSlash(versionPath) + "provisioner.yml";
+                    
+                    Logger.info('${this}: Checking for version-specific metadata at ${versionMetadataPath}');
+                    
+                    if (FileSystem.exists(versionMetadataPath)) {
+                        try {
+                            // Use the specific function for version metadata
+                            var versionMetadata = ProvisionerManager.readProvisionerVersionMetadata(versionPath);
+                            
+                            if (versionMetadata != null && versionMetadata.configuration != null && 
+                                versionMetadata.configuration.advancedFields != null) {
+                                
+                                advancedFields = cast versionMetadata.configuration.advancedFields;
+                                Logger.info('${this}: Found ${advancedFields.length} advanced fields in version-specific metadata');
+                                configFound = true;
+                                
+                                // Store this metadata for future use
+                                if (_server.customProperties == null) {
+                                    _server.customProperties = {};
+                                }
+                                Reflect.setField(_server.customProperties, "versionMetadata", versionMetadata);
+                                
+                                // Also update the provisioner definition's metadata with this version-specific metadata
+                                _provisionerDefinition.metadata = versionMetadata;
+                            } else {
+                                Logger.warning('${this}: Version-specific metadata has no valid configuration or advancedFields');
+                            }
+                        } catch (e) {
+                            Logger.error('${this}: Error reading version metadata: ${e}');
+                        }
+                    } else {
+                        Logger.warning('${this}: No provisioner.yml found at ${versionMetadataPath}');
+                    }
+                } else {
+                    Logger.warning('${this}: Provisioner definition has no root path');
+                }
+            }
+        } else {
+            Logger.warning('${this}: No provisioner definition or metadata available');
+        }
+        
+        // For advanced config, always ensure network interface is handled
+        // Add network interface handling based on what was found
+        var needsNetworkInterface = false;
+        
+        // Check if networkBridge or networkInterface was found in the config
+        if (configFound && advancedFields != null) {
+            for (field in advancedFields) {
+                if (field.name == "networkBridge" || field.name == "networkInterface") {
+                    needsNetworkInterface = true;
+                    break;
+                }
+            }
+        }
+        
+        // If network interface isn't in the fields or no fields were found, 
+        // make sure we add minimal network config
+        if (!needsNetworkInterface || advancedFields == null || advancedFields.length == 0) {
+            // Create minimal network config if we don't have it already
+            if (advancedFields == null) {
+                advancedFields = [];
+            }
+            
+            // Add networkBridge field
+            advancedFields.push({ 
+                name: "networkBridge", 
+                type: "text", 
+                label: LanguageManager.getInstance().getString('serveradvancedconfigpage.form.networkbridge.text')
+            });
+            
+            configFound = true;
+            needsNetworkInterface = true;
+            Logger.info('${this}: Added minimal network configuration field');
+        }
+        
+        // Add the network interface field if needed
+        if (needsNetworkInterface && _form != null && _rowNetworkInterface != null) {
+            _form.addChild(_rowNetworkInterface);
+            Logger.info('${this}: Added network interface dropdown to form');
+        }
+        
+        // If config was found, add the fields
+        if (configFound && advancedFields != null) {
             // Add each field from the configuration
-            for (field in _provisionerDefinition.metadata.configuration.advancedFields) {
+            for (field in advancedFields) {
                 // Skip networkBridge/networkInterface since we handle it separately
                 if (field.name == "networkBridge" || field.name == "networkInterface") {
                     continue;
                 }
                 
-                Logger.info('Adding advanced field to form: ${field.name}, type: ${field.type}, label: ${field.label}');
+                Logger.info('${this}: Adding advanced field to form: ${field.name}, type: ${field.type}, label: ${field.label}');
                 _addDynamicField(field);
             }
         } else {
-            Logger.warning('Unable to add dynamic advanced fields - missing configuration or advancedFields');
+            Logger.warning('${this}: No advanced fields found in provisioner.yml - form will be minimal');
         }
     }
     
@@ -391,6 +491,13 @@ class DynamicAdvancedConfigPage extends Page {
         }
         
         var fieldName = field.name;
+        
+        // Special handling for CONSOLE_PORT field - set default to server ID
+        var isConsolePortField = (fieldName == "CONSOLE_PORT");
+        if (isConsolePortField) {
+            Logger.info('${this}: Setting CONSOLE_PORT default value to match server ID: ${_server.id}');
+            field.defaultValue = _server.id;
+        }
         Logger.info('${this}: Initializing server property: ${fieldName}, type: ${field.type}');
         
         // Check if the property already exists on the server - checking multiple ways
@@ -554,6 +661,9 @@ class DynamicAdvancedConfigPage extends Page {
                     // For common integer fields, make sure we're using integer step values
                     var isIntegerField = (field.name == "numCPUs" || field.name == "setupWait");
                     
+                    // Memory field should increment by whole numbers but allow decimal values
+                    var usesWholeNumberStep = isIntegerField || field.name == "memory";
+                    
                     // Force default value to be an integer for integer fields
                     if (isIntegerField && !Math.isNaN(defaultValue)) {
                         defaultValue = Math.round(defaultValue);
@@ -562,11 +672,11 @@ class DynamicAdvancedConfigPage extends Page {
                     var stepper = new GenesisFormNumericStepper(defaultValue, minValue, maxValue);
                     
                     // For integer fields like numCPUs and setupWait, set the step to 1.0 
-                    // This makes the stepper increment in whole numbers only
-                    if (isIntegerField) {
+                    // Also set step to 1.0 for memory field to increment by whole numbers
+                    if (isIntegerField || field.name == "memory") {
                         // Set step property directly on the NumericStepper instance
                         stepper.step = 1.0;
-                        Logger.info('${this}: Set step size to 1.0 for integer field ${field.name}');
+                        Logger.info('${this}: Set step size to 1.0 for field ${field.name}');
                     }
                     
                     stepper.toolTip = field.tooltip != null ? field.tooltip : "";
@@ -1237,10 +1347,9 @@ class DynamicAdvancedConfigPage extends Page {
                     // Get reference to dynamicAdvancedCustomProperties
                     var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
                     
-                    // Save in both locations to ensure compatibility
+                    // Only store in dynamicAdvancedCustomProperties to avoid duplication
                     Reflect.setField(customPropsObj, fieldName, value);
-                    Reflect.setField(_server.customProperties, fieldName, value);
-                    Logger.info('${this}: Stored custom property ${fieldName} with value ${value} in both locations');
+                    Logger.info('${this}: Stored custom property ${fieldName} with value ${value} in dynamicAdvancedCustomProperties');
                     
                     // Also create a custom property for change tracking
                     var prop = new champaign.core.primitives.Property<String>(value);

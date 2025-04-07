@@ -204,39 +204,75 @@ class Server {
 
     }
 
-    static public function getComputedName( hostname:String, organization:String ):ServerURL {
+    static public function getComputedName( hostname:String, organization:String, ?customProperties:Dynamic = null, ?provisioner:AbstractProvisioner = null ):ServerURL {
 
         var result:ServerURL = { domainName: "", hostname: "", path: "" };
-
+        
+        // Check if this is a custom provisioner (not one of the standard types)
+        var isCustomProvisioner = false;
+        if (provisioner != null) {
+            isCustomProvisioner = (
+                Std.string(provisioner.type) != Std.string(ProvisionerType.StandaloneProvisioner) && 
+                Std.string(provisioner.type) != Std.string(ProvisionerType.AdditionalProvisioner) &&
+                Std.string(provisioner.type) != Std.string(ProvisionerType.Default)
+            );
+        }
+        
+        // Special handling for custom provisioners
+        if (isCustomProvisioner && customProperties != null) {
+            // For custom provisioners, ONLY look for DOMAIN field in dynamicCustomProperties
+            var domain = null;
+            
+            // Check in dynamicCustomProperties - this is the ONLY place for custom provisioners
+            if (Reflect.hasField(customProperties, "dynamicCustomProperties")) {
+                var dynamicProps = Reflect.field(customProperties, "dynamicCustomProperties");
+                if (dynamicProps != null && Reflect.hasField(dynamicProps, "DOMAIN")) {
+                    domain = Reflect.field(dynamicProps, "DOMAIN");
+                    if (domain != null && domain != "") {
+                        Logger.info('Using DOMAIN from dynamicCustomProperties: ${domain}');
+                    }
+                }
+            }
+            
+            // Use the domain if found, otherwise set a default domain
+            if (domain != null && domain != "") {
+                // For custom provisioners, hostname is just the subdomain
+                // and domain is directly from the DOMAIN field
+                result.hostname = hostname;
+                result.domainName = domain;
+                result.path = ""; // No path for custom provisioners
+                
+                Logger.info('Custom provisioner URL: ${result.hostname}.${result.domainName}');
+                return result;
+            }
+        }
+        
+        // Original behavior for standard provisioners or if no domain was found for custom provisioner
         var a = hostname.split( "." );
 
         if ( a.length == 1 && a[0].length > 0 ) {
-
             result.hostname = a[0];
-            result.domainName = organization + ".com";
-
+            
+            // Even for custom provisioners, if we didn't find a DOMAIN field,
+            // fall back to using organization + ".com" if organization is not empty
+            if (organization != null && organization != "") {
+                result.domainName = organization + ".com";
+            } else {
+                // For custom provisioners without a DOMAIN field or organization,
+                // use a default domain to prevent the ".." issue
+                result.domainName = "example.com";
+            }
         } else if ( a.length == 3 ) {
-
             result.hostname = a[0];
             result.domainName = a[1] + "." + a[2];
-
         } else {
-
-            /*
-            result.hostname = a[0].toLowerCase();
-            var s = "";
-            for ( i in 1...a.length ) s += a[i].toLowerCase() + ".";
-            result.domainName = s;
-            */
             result.hostname = "configure";
             result.domainName = "host.name";
-
         }
 
         result.path = organization;
 
         return result;
-
     }
 
     var _action:Property<ServerAction>;
@@ -429,7 +465,7 @@ class Server {
 
     public var url( get, never ):ServerURL;
     function get_url() {
-        return getComputedName( _hostname.value, _organization.value );
+        return getComputedName( _hostname.value, _organization.value, _customProperties, _provisioner );
     }
     
     public var userEmail( get, never ):ValidatingProperty;
@@ -460,7 +496,6 @@ class Server {
     function get_customProperties() return _customProperties;
     function set_customProperties(value:Dynamic):Dynamic { _customProperties = value; return _customProperties; }
     
-    // Backwards compatibility accessor
     public var userData(get, set):Dynamic;
     function get_userData() return _customProperties;
     function set_userData(value:Dynamic):Dynamic { _customProperties = value; return _customProperties; }
@@ -565,8 +600,36 @@ class Server {
 
     public function getData():ServerData {
 
-        var data:ServerData = {
+        // Process the customProperties to minimize serviceTypeData before serialization
+        var processedCustomProperties = this._customProperties;
+        if (processedCustomProperties != null && Reflect.hasField(processedCustomProperties, "serviceTypeData")) {
+            // Create a copy to avoid modifying the original
+            processedCustomProperties = Reflect.copy(this._customProperties);
+            
+            // Get the original serviceTypeData
+            var originalServiceTypeData = Reflect.field(processedCustomProperties, "serviceTypeData");
+            
+            // Minimize it to just the essential fields
+            if (originalServiceTypeData != null) {
+                var minimalServiceTypeData = {
+                    isEnabled: Reflect.hasField(originalServiceTypeData, "isEnabled") ? 
+                        Reflect.field(originalServiceTypeData, "isEnabled") : true,
+                    provisionerType: Reflect.hasField(originalServiceTypeData, "provisionerType") ? 
+                        Reflect.field(originalServiceTypeData, "provisionerType") : this._provisioner.type,
+                    value: Reflect.hasField(originalServiceTypeData, "value") ? 
+                        Reflect.field(originalServiceTypeData, "value") : "",
+                    description: Reflect.hasField(originalServiceTypeData, "description") ? 
+                        Reflect.field(originalServiceTypeData, "description") : "",
+                    serverType: Reflect.hasField(originalServiceTypeData, "serverType") ? 
+                        Reflect.field(originalServiceTypeData, "serverType") : ""
+                };
+                
+                // Replace with the minimal version for serialization
+                Reflect.setField(processedCustomProperties, "serviceTypeData", minimalServiceTypeData);
+            }
+        }
 
+        var data:ServerData = {
             server_hostname: this._hostname.value,
             server_id: this._id,
             resources_ram: this._memory.value,
@@ -591,7 +654,7 @@ class Server {
             syncMethod: this._syncMethod,
             existingServerName: "",
             existingServerIpAddress: "",
-            customProperties: this._customProperties
+            customProperties: processedCustomProperties
         };
 
         return data;
@@ -609,22 +672,18 @@ class Server {
      * This should be called when a user confirms server configuration
      */
     public function initializeServerFiles():Void {
-        Logger.info('${this}: Initializing server files in ${_serverDir}');
         
         // Create the server directory if it doesn't exist
         if (!FileSystem.exists(_serverDir)) {
             try {
                 FileSystem.createDirectory(_serverDir);
-                Logger.info('${this}: Created server directory at ${_serverDir}');
             } catch (e) {
-                Logger.error('${this}: Failed to create server directory: ${e}');
                 return;
             }
         }
         
         // Copy provisioner files to the server directory
         initDirectory();
-        Logger.info('${this}: Copied provisioner files to server directory');
         
         // Save the hosts file
         saveHostsFile();
@@ -634,8 +693,6 @@ class Server {
         
         // Mark the server as no longer provisional
         _provisional = false;
-        
-        Logger.info('${this}: Server files initialized successfully');
     }
 
     public function isValid():Bool {
@@ -667,12 +724,6 @@ class Server {
         // Roles are validated differently based on provisioner type, but always checked
         var areRolesOK:Bool = areRolesValid();
 
-        Logger.info('${this}: Validation results - isCustomProvisioner=${isCustomProvisioner}, ' +
-                   'hasVagrant=${hasVagrant}, hasVirtualBox=${hasVirtualBox}, ' +
-                   'isHostnameValid=${isHostnameValid}, isOrganizationValid=${isOrganizationValid}, ' +
-                   'isMemorySufficient=${isMemorySufficient}, isCPUCountSufficient=${isCPUCountSufficient}, ' +
-                   'isNetworkValid=${isNetworkValid}, hasSafeId=${hasSafeId}, areRolesOK=${areRolesOK}');
-        
         var isValid:Bool = 
             hasVagrant &&
             hasVirtualBox &&
@@ -736,12 +787,10 @@ class Server {
     			if (appData != null && appData.exists)
     			{
     				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
-    				Logger.info( '${this}: ' + LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
 			}
 			else
 			{
 				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
-				Logger.info( '${this}: ' + LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
 				return;
 			}
 		}
@@ -757,7 +806,6 @@ class Server {
     		#if windows
 			clientCommand = 'start "" "${appData.executablePath}" ${ftpAppCommand}';
 			Sys.command( clientCommand );
-			Logger.info( '${this}: ' + '[Execute: ${clientCommand}]' );
     		#else
 			var ftpExecutor = new Executor(clientCommand, [ftpAppCommand]);
     			ftpExecutor.execute();
@@ -766,6 +814,32 @@ class Server {
     
     public function saveData() {
         try {
+            // Check if this is a custom provisioner
+            var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                      this.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                      this.provisioner.type != ProvisionerType.Default);
+            
+            // For custom provisioners, we need to ensure there's no duplication of values
+            if (isCustomProvisioner && this._customProperties != null) {
+                
+                // If dynamicCustomProperties exists, remove any duplicate properties at root level
+                if (Reflect.hasField(this._customProperties, "dynamicCustomProperties")) {
+                    var dynamicProps = Reflect.field(this._customProperties, "dynamicCustomProperties");
+                    if (dynamicProps != null) {
+                        // Get all fields in dynamicCustomProperties
+                        var fieldNames = Reflect.fields(dynamicProps);
+                        
+                        // Check for each field if it also exists at the root level
+                        for (fieldName in fieldNames) {
+                            if (Reflect.hasField(this._customProperties, fieldName)) {
+                                // Remove the duplicate field from root level
+                                Reflect.deleteField(this._customProperties, fieldName);
+                            }
+                        }
+                    }
+                }
+            }
+            
             // Get the server data with customProperties included
             var data = getData();
             
@@ -780,26 +854,19 @@ class Server {
                 // Ensure the provisionerDefinition.data.type matches the top-level provisioner.type
                 if (data.provisioner != null && provData != null) {
                     if (Std.string(Reflect.field(provData, "type")) != Std.string(data.provisioner.type)) {
-                        Logger.warning('${this}: Type mismatch in customProperties, fixing...');
                         Reflect.setField(provData, "type", data.provisioner.type);
                     }
                 }
             }
             
-            // Log what we're saving
-            Logger.info('${this}: Saving server data to ${Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE}');
-            Logger.info('${this}: customProperties included in save: ${this._customProperties != null}');
-            
             // Check if customProperties exists and has dynamic custom properties
             if (this._customProperties != null) {
                 var hasCustomProps = Reflect.hasField(this._customProperties, "dynamicCustomProperties");
                 var hasAdvancedProps = Reflect.hasField(this._customProperties, "dynamicAdvancedCustomProperties");
-                Logger.info('${this}: customProperties has: dynamicCustomProperties=${hasCustomProps}, dynamicAdvancedCustomProperties=${hasAdvancedProps}');
             }
             
             var s = Json.stringify(data);
             File.saveContent(Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE, s);
-            Logger.info('${this}: Server data saved successfully');
 
         } catch (e) {
             Logger.error('${this}: Error saving server data: ${e}');
@@ -833,7 +900,6 @@ class Server {
         var versionStr = null;
         if (data != null && data.version != null) {
             versionStr = data.version.toString();
-            Logger.info('${this}: Updating provisioner from version ${this._provisioner.version} to ${versionStr}');
         } else {
             Logger.warning('${this}: Updating provisioner with null or invalid version');
             return false;
@@ -843,21 +909,18 @@ class Server {
         var vcd = ProvisionerManager.getProvisionerDefinition(data.type, data.version);
         
         if (vcd != null) {
-            Logger.info('${this}: Found matching provisioner definition: ${vcd.name}');
             var newRoot:String = vcd.root;
             this._provisioner.reinitialize(newRoot);
             
             // STEP 1: Update serverProvisionerId - this is the single source of truth for version
             if (this._serverProvisionerId != null) {
                 this._serverProvisionerId.value = versionStr;
-                Logger.info('${this}: Updated serverProvisionerId to ${versionStr}');
             }
             
             // STEP 2: Update the internal _version field which is used by the data getter
             if (Reflect.hasField(this._provisioner, "_version")) {
                 try {
                     Reflect.setField(this._provisioner, "_version", data.version);
-                    Logger.info('${this}: Updated provisioner._version to ${data.version}');
                 } catch (e) {
                     Logger.warning('${this}: Could not update provisioner._version directly: ${e}');
                 }
@@ -870,7 +933,6 @@ class Server {
             
             // STEP 4: Store the provisioner definition in customProperties
             Reflect.setField(this._customProperties, "provisionerDefinition", vcd);
-            Logger.info('${this}: Stored provisioner definition in customProperties');
             
             // STEP 5: For custom provisioners, ensure we update any related custom properties
             var isCustomProvisioner = (data.type != ProvisionerType.StandaloneProvisioner && 
@@ -885,7 +947,6 @@ class Server {
                 // Store version information in dynamicCustomProperties for UI components to access
                 var dynamicProps = Reflect.field(this._customProperties, "dynamicCustomProperties");
                 Reflect.setField(dynamicProps, "provisionerVersion", versionStr);
-                Logger.info('${this}: Stored provisionerVersion in dynamicCustomProperties: ${versionStr}');
             }
             
             // Trigger update notification
@@ -894,7 +955,6 @@ class Server {
             // Save the updated data immediately
             this.saveData();
             
-            Logger.info('${this}: Successfully updated provisioner to version ${versionStr}');
             return true;
         } else {
             Logger.warning('${this}: Could not find provisioner definition for type ${data.type}, version ${versionStr}');
@@ -905,11 +965,9 @@ class Server {
     function _prepareFiles() {
         // The provisioner files were already copied during server initialization when Save was clicked
         // Skip directly to installer files preparation and continue the startup process
-        Logger.info('${this}: Using provisioner files copied during server initialization when Save was clicked');
         
         // Just verify essential files exist and regenerate if missing
         if (!_provisioner.hostFileExists) {
-            Logger.info('${this}: Hosts file not found, regenerating it');
             _provisioner.saveHostsFile();
         }
         
@@ -918,9 +976,6 @@ class Server {
     }
 
     function _prepareFilesComplete() {
-
-        Logger.info( '${this}: Configuration files copied to ${this._serverDir}' );
-        Logger.info( '${this}: Copying installer files to ${this._serverDir}/installers' );
 
         var paths:Array<PathPair> = [];
 
@@ -959,15 +1014,12 @@ class Server {
 
         }
 
-        Logger.info( '${this}: Installer and Fixpack path pairs: ${paths}' );
-
         _provisioner.copyInstallers( paths, _batchCopyComplete );
 
     }
 
     function _batchCopyComplete() {
 
-        Logger.info( '${this}: Setting working directory to ${_serverDir}' );
         if (console != null) {
         		console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.setworkingdirectory', _serverDir ) );
 		}
@@ -997,7 +1049,6 @@ class Server {
      */
     public function markAsProvisional() {
         this._provisional = true;
-        Logger.info('${this}: Marked as provisional');
     }
     
     public function saveHostsFile() {
@@ -1125,13 +1176,11 @@ class Server {
                 // Check for the rolesProcessed flag that's set when the user visits and closes the roles page
                 if (Reflect.hasField(_customProperties, "rolesProcessed")) {
                     rolesProcessed = Reflect.field(_customProperties, "rolesProcessed") == true;
-                    Logger.info('${this}: Roles have been processed: ${rolesProcessed}');
                 }
             }
             
             // If the user hasn't visited and closed the roles page, return false to force them to visit
             if (!rolesProcessed) {
-                Logger.info('${this}: Custom provisioner requires roles to be processed - user must visit roles page');
                 return false;
             }
             
@@ -1158,7 +1207,6 @@ class Server {
                             var rolesArray:Array<Dynamic> = cast roles;
                             
                             // Build a map of role names to installer requirements
-                            Logger.info('${this}: Found ${rolesArray.length} roles in provisioner metadata for custom provisioner');
                             for (role in rolesArray) {
                                 if (role != null && Reflect.hasField(role, "name")) {
                                     var requiresInstaller = false;
@@ -1172,7 +1220,6 @@ class Server {
                                     }
                                     
                                     customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
-                                    Logger.info('${this}: Role ${Reflect.field(role, "name")} from metadata, requiresInstaller=${requiresInstaller}');
                                 }
                             }
                         }
@@ -1183,15 +1230,11 @@ class Server {
             // If we have no metadata roles but this is a custom provisioner, 
             // assume all roles are valid with no installer requirements
             var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
-            if (noValidMetadataRoles) {
-                Logger.info('${this}: No metadata roles found for custom provisioner, will validate all roles without installer requirements');
-            }
-            
+
             // Now validate each role
             for (r in this._roles.value) {
                 if (r.enabled) {
                     hasEnabledRole = true;
-                    Logger.info('${this}: Found enabled role: ${r.value}');
                     
                     // If we have no metadata or the role is in the metadata, it's valid
                     var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
@@ -1276,7 +1319,6 @@ class Server {
                             var rolesArray:Array<Dynamic> = cast roles;
                             
                             // Build a map of role names to installer requirements
-                            Logger.info('${this}: Found ${rolesArray.length} roles in provisioner metadata for custom provisioner');
                             for (role in rolesArray) {
                                 if (role != null && Reflect.hasField(role, "name")) {
                                     var requiresInstaller = false;
@@ -1290,7 +1332,6 @@ class Server {
                                     }
                                     
                                     customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
-                                    Logger.info('${this}: Role ${Reflect.field(role, "name")} from metadata, requiresInstaller=${requiresInstaller}');
                                 }
                             }
                         }
@@ -1302,7 +1343,6 @@ class Server {
             // assume all roles are valid with no installer requirements
             var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
             if (noValidMetadataRoles) {
-                Logger.info('${this}: No metadata roles found for custom provisioner, will validate all roles without installer requirements');
                 if (!hasMetadata) {
                     Logger.warning('${this}: Warning: No metadata found for custom provisioner');
                     if (console != null) {
@@ -1315,7 +1355,6 @@ class Server {
             for (r in this._roles.value) {
                 if (r.enabled) {
                     hasEnabledRole = true;
-                    Logger.info('${this}: Found enabled role: ${r.value}');
                     
                     // If we have no metadata or the role is in the metadata, it's valid
                     var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
@@ -1352,8 +1391,6 @@ class Server {
                             }
                             
                             return false;
-                        } else {
-                            Logger.info('${this}: Role ${r.value} has valid installer: ${r.files.installer}');
                         }
                     }
                 }
@@ -1428,13 +1465,9 @@ class Server {
         var s = _provisioner.webAddress;
 
         if ( s == null ) {
-
-            Logger.info( '${this}: The web address file has invalid content or non-existent' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
         } else {
-
-            Logger.info( '${this}: Web address file content: ${s}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }
@@ -1472,7 +1505,6 @@ class Server {
 
         Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
 
-        Logger.info( '${this}: _onVagrantProvision' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -1481,7 +1513,6 @@ class Server {
     function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant provision: ${data}' );
 
     }
 
@@ -1519,18 +1550,12 @@ class Server {
         if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
-
-        Logger.info( '${this}: _onVagrantRSync' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
-
     }
 
     function _vagrantRSyncStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant rsync: ${data}' );
-
     }
 
     function _vagrantRSyncStandardErrorData( executor:AbstractExecutor, data:String ) {
@@ -1554,7 +1579,6 @@ class Server {
 
         // If we're in the middle of provisioning, use a different approach
         if (_vagrantUpExecutor != null && _vagrantUpExecutor.running) {
-            Logger.info('${this}: Stopping server during provisioning');
             if (console != null) console.appendText("Stopping provisioning process...", true);
             
             // Mark that we're canceling provisioning
@@ -1570,7 +1594,6 @@ class Server {
             
             // Try to forcefully stop the VM using VirtualBox directly
             if (this.virtualBoxId != null) {
-                Logger.info('${this}: Using VirtualBox to power off VM: ${this.virtualBoxId}');
                 if (console != null) console.appendText("Using VirtualBox to forcefully power off the VM...", true);
                 
                 // Execute the VirtualBox poweroff command
@@ -1585,7 +1608,6 @@ class Server {
                     );
                     powerOffExecutor.execute(this._serverDir);
                     
-                    Logger.info('${this}: VirtualBox poweroff command issued successfully');
                     if (console != null) console.appendText("VirtualBox poweroff command issued successfully", true);
                 } catch (e:Dynamic) {
                     Logger.error('${this}: Error executing VirtualBox poweroff: ${e}');
@@ -1604,7 +1626,6 @@ class Server {
             
             // Also try to stop the Vagrant process directly
             try {
-                Logger.info('${this}: Also stopping Vagrant process');
                 _vagrantUpExecutor.stop(true);
             } catch (e:Dynamic) {
                 Logger.error('${this}: Error stopping Vagrant process: ${e}');
@@ -1639,7 +1660,6 @@ class Server {
             
             // Try to forcefully stop the VM using VirtualBox directly
             if (this.virtualBoxId != null) {
-                Logger.info('${this}: Using VirtualBox to power off VM: ${this.virtualBoxId}');
                 if (console != null) console.appendText("Vagrant halt failed. Using VirtualBox to forcefully power off the VM...", true);
                 
                 // Execute the VirtualBox poweroff command
@@ -1649,7 +1669,6 @@ class Server {
                     );
                     powerOffExecutor.execute(this._serverDir);
                     
-                    Logger.info('${this}: VirtualBox poweroff command issued successfully');
                     if (console != null) console.appendText("VirtualBox poweroff command issued successfully", true);
                 } catch (e:Dynamic) {
                     Logger.error('${this}: Error executing VirtualBox poweroff: ${e}');
@@ -1659,8 +1678,6 @@ class Server {
                 Logger.warning('${this}: Cannot power off VM - virtualBoxId is null');
                 if (console != null) console.appendText("Cannot power off VM - machine ID is not available", true);
             }
-        } else {
-            Logger.info( '${this}: Server stopped' );
         }
 
         this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
@@ -1668,10 +1685,7 @@ class Server {
     }
 
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant halt: ${data}' );
-
     }
 
     function _vagrantHaltStandardErrorData( executor:AbstractExecutor, data:String ) {
@@ -1717,8 +1731,6 @@ class Server {
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspendederror' ), true );
 
         } else {
-
-            Logger.info( '${this}: Server suspended' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspended' ) );
 
         }
@@ -1737,7 +1749,10 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroy' ) );
 
         this._busy.value = true;
-        this._status.value = ServerStatus.Destroying( this._status.value == ServerStatus.Aborted );
+        // Always set unregisterVM (second parameter) to true if:
+        // 1. Current status is Aborted OR
+        // 2. VM exists in VirtualBox
+        this._status.value = ServerStatus.Destroying( this._status.value == ServerStatus.Aborted || this.vmExistsInVirtualBox() );
 
         _provisioner.deleteWebAddressFile();
 
@@ -1752,18 +1767,13 @@ class Server {
     }
 
     function _vagrantDestroyStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant destroy: ${data}' );
-
     }
 
     function _vagrantDestroyStandardErrorData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null ) console.appendText( data, true );
         Logger.error( '${this}: Vagrant destroy error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyerror' ), true );
-
     }
 
     function _onVagrantDestroy( machine:VagrantMachine ) {
@@ -1772,8 +1782,7 @@ class Server {
             var machineInfo = machine != null ? 
                 (machine.serverId != null ? 'machine with serverId=${machine.serverId}' : 'machine with null serverId') : 
                 'null machine';
-            Logger.info('${this}: _onVagrantDestroy called with ${machineInfo}');
-            
+
             // Validate machine parameter first to avoid null reference
             if (machine == null) {
                 Logger.warning('${this}: Vagrant destroy callback received null machine');
@@ -1838,7 +1847,6 @@ class Server {
                 var isDestroying = curStatus != null && curStatus.match(ServerStatus.Destroying(true));
                 
                 if (isDestroying) {
-                    Logger.info('${this}: Server was being explicitly destroyed, running _unregisterVM');
                     try {
                         _unregisterVM();
                     } catch (e) {
@@ -1853,7 +1861,6 @@ class Server {
                         }
                     }
                 } else {
-                    Logger.info('${this}: Server was not being explicitly destroyed, refreshing VM info');
                     refreshVirtualBoxInfo();
                 }
             } catch (e) {
@@ -1895,7 +1902,6 @@ class Server {
 
         if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
 
-        Logger.info('${this}: unregistered VM Id ' + machine.virtualBoxId);
         VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
 
         refreshVirtualBoxInfo();
@@ -1929,7 +1935,6 @@ class Server {
      */
     function _checkAndInstallVagrantPlugin() {
         if (console != null) console.appendText("Checking for vagrant-scp-sync plugin...");
-        Logger.info('${this}: Checking for vagrant-scp-sync plugin');
         
         try {
             // First check if the plugin is already installed
@@ -1939,14 +1944,12 @@ class Server {
             // Collect the output as it comes
             checkExecutor.onStdOut.add((executor:AbstractExecutor, data:String) -> {
                 pluginOutput += data;
-                Logger.info('${this}: Plugin list: ${data}');
                 if (console != null) console.appendText(data);
             });
             
             checkExecutor.onStop.add((executor:AbstractExecutor) -> {
                 if (pluginOutput.indexOf("vagrant-scp-sync") >= 0) {
                     // Plugin is already installed, proceed directly to vagrant up
-                    Logger.info('${this}: vagrant-scp-sync plugin already installed');
                     if (console != null) console.appendText("vagrant-scp-sync plugin already installed");
                     _executeVagrantUp();
                 } else {
@@ -1971,7 +1974,6 @@ class Server {
      */
     function _safeInstallVagrantPlugin() {
         if (console != null) console.appendText("Installing vagrant-scp-sync plugin...");
-        Logger.info('${this}: Installing vagrant-scp-sync plugin');
         
         try {
             // Create a custom executor for the plugin installation command
@@ -1991,7 +1993,6 @@ class Server {
                 // Execute only if the executor was properly initialized
                 try {
                     pluginExecutor.execute();
-                    Logger.info('${this}: Plugin installation executor started successfully');
                 } catch (execError:Dynamic) {
                     Logger.error('${this}: Error executing plugin installation: ${execError}');
                     if (console != null) console.appendText('Error executing plugin installation: ${execError}', true);
@@ -2012,12 +2013,10 @@ class Server {
     }
     
     function _pluginInstallStarted(executor:AbstractExecutor) {
-        Logger.info('${this}: Vagrant plugin installation started');
         if (console != null) console.appendText("Vagrant plugin installation started");
     }
     
     function _pluginInstallStopped(executor:AbstractExecutor) {
-        Logger.info('${this}: Vagrant plugin installation completed with exit code: ${executor.exitCode}');
         if (console != null) {
             if (executor.exitCode == 0) {
                 console.appendText("Vagrant plugin installation completed successfully");
@@ -2033,7 +2032,6 @@ class Server {
     
     function _pluginInstallStandardOutputData(executor:AbstractExecutor, data:String) {
         if (console != null) console.appendText(data);
-        Logger.info('${this}: Vagrant plugin installation: ${data}');
     }
     
     function _pluginInstallStandardErrorData(executor:AbstractExecutor, data:String) {
@@ -2058,7 +2056,6 @@ class Server {
 
     function _vagrantUpStarted( executor:AbstractExecutor ) {
 
-        Logger.info( '${this}: Vagrant up started' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstarted' ) );
 
     }
@@ -2073,12 +2070,9 @@ class Server {
 
         if ( executor.exitCode > 0 || wasExplicitlyCanceled ) {
             Logger.error( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}${wasExplicitlyCanceled ? " (manually canceled by user)" : ""}' );
-        } else {
-            Logger.info( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
         }
 
         var elapsed = StrTools.timeToFormattedString( _vagrantUpElapsedTime );
-        Logger.info( '${this}: Vagrant up elapsed time: ${elapsed}' );
 
         if ( console != null ) {
             if (wasExplicitlyCanceled) {
@@ -2099,8 +2093,6 @@ class Server {
         if ( hasExecutionErrors ) {
             // Special handling for user cancellation
             if (wasExplicitlyCanceled) {
-                // Set to error state but keep the VM around
-                Logger.info('${this}: Server provisioning was canceled by user, keeping VM for potential destroy');
                 
                 // Force state to Stopped with errors to show destroy button
                 this._status.value = ServerStatus.Stopped(true);
@@ -2111,8 +2103,6 @@ class Server {
             }
             // Normal handling for non-cancellation errors
             else if ( keepFailedServersRunning ) {
-                // Keeping the failed server running in its current state
-                Logger.info( '${this}: Server start was unsuccessful, keeping the server in its current status' );
 
                 // Refreshing VirtualBox info
                 this._currentAction = ServerAction.GetStatus( true );
@@ -2120,8 +2110,6 @@ class Server {
             } else {
                 // Stop or destroy the server
                 if ( _provisionedBeforeStart ) {
-                    // The server was provisioned before, so 'vagrant halt' is needed
-                    Logger.info( '${this}: Server start was unsuccessful, stopping server' );
 
                     if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantUpHalt ) )
                         Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
@@ -2129,8 +2117,6 @@ class Server {
                     this._currentAction = ServerAction.Stop( true );
                     Vagrant.getInstance().getHalt( this._combinedVirtualMachine.value.vagrantMachine, false ).execute( this._serverDir );
                 } else {
-                    // The server wasn't provisioned before, so 'vagrant destroy' is needed
-                    Logger.info( '${this}: First start was unsuccessful, destroying server' );
 
                     if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
                         Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
@@ -2159,7 +2145,6 @@ class Server {
      
     		var vagrantLogging:Bool = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
         if ( console != null && !vagrantLogging ) console.appendText( new String( data ) );
-        Logger.info( '${this}: Vagrant up: ${data}' );
         _provisioner.updateTaskProgress( data );
         
     }
@@ -2181,13 +2166,11 @@ class Server {
         // Remove the callback
         VirtualBox.getInstance().onPowerOffVM.remove(_onProvisioningPowerOffVM);
         
-        Logger.info('${this}: VirtualBox poweroff completed for machine: ${machine.virtualBoxId}');
         if (console != null) console.appendText("VM has been successfully powered off.", true);
         
         // Force delete the provisioning proof file to ensure it's marked as not provisioned
         if (_provisioner != null) {
             _provisioner.deleteProvisioningProofFile();
-            Logger.info('${this}: Deleted provisioning proof file to mark server as corrupt (not provisioned)');
             if (console != null) console.appendText("Marking server as corrupt since provisioning was interrupted.", true);
         }
         
@@ -2197,7 +2180,6 @@ class Server {
         
         // Wait for 30 seconds to allow any Ruby provisioning processes to terminate
         if (console != null) console.appendText("Waiting 30 seconds for provisioning processes to clean up...", true);
-        Logger.info('${this}: Waiting 30 seconds for provisioning processes to clean up before finalizing state');
         
         // Create a timer for the 30-second delay
         var cleanupTimer = new Timer(30000); // 30 seconds in milliseconds
@@ -2211,7 +2193,6 @@ class Server {
             }
             
             // Explicitly set state to Stopped with errors to make the destroy button appear
-            Logger.info('${this}: 30-second cleanup timer completed, now setting state to Stopped(true)');
             if (console != null) console.appendText("Cleanup completed. Setting server to stopped with error state...", true);
             
             this._status.value = ServerStatus.Stopped(true);
@@ -2219,11 +2200,9 @@ class Server {
             
             // Wait a brief moment before refreshing the VirtualBox info to ensure UI state has updated
             Timer.delay(() -> {
-                Logger.info('${this}: Refreshing VM info after state update');
                 // Refresh VM info to update the UI
                 refreshVirtualBoxInfo();
                 
-                Logger.info('${this}: Server status updated to Stopped(true) after poweroff and cleanup delay');
                 if (console != null) console.appendText("Server is now in a stopped and corrupt state. You can destroy the VM if needed.", true);
             }, 500); // Small additional delay to ensure UI state updates first
         };
@@ -2233,7 +2212,6 @@ class Server {
 
         if ( machine.serverId != this._id ) return;
 
-        Logger.info( '${this}: Vagrant destroy finished after server\'s first start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
@@ -2254,7 +2232,6 @@ class Server {
 
         if ( machine.serverId != this._id ) return;
 
-        Logger.info( '${this}: Vagrant halt finished after server start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpHalt );
 
         //if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
@@ -2276,7 +2253,6 @@ class Server {
     public function refreshVirtualBoxInfo() {
         if ( _refreshingVirtualBoxVMInfo) return;
 
-        Logger.info( '${this}: Refreshing combined VM ${this._combinedVirtualMachine.value.virtualBoxMachine} and execute at ${this._serverDir}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
         
@@ -2307,7 +2283,7 @@ class Server {
     
     function _virtualMachineStandardErrorData( executor:AbstractExecutor, data:String ) {
 
-    		Logger.info( '${this}: Refreshed Virtual Machine error: ${data}');
+    	Logger.info( '${this}: Refreshed Virtual Machine error: ${data}');
     }
     
     function _onVirtualBoxShowVMInfo( machine:VirtualBoxMachine ) {

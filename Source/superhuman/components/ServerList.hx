@@ -744,7 +744,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Stopped( hasError ):
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
-                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned;
+                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned || _server.vmExistsInVirtualBox();
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true; // Always show delete button for stopped servers
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
