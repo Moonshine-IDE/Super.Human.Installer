@@ -508,8 +508,12 @@ class RolePickerItem extends LayoutGroup {
     var _check:AdvancedCheckBox;
     var _descriptionLabel:Label;
     var _fixpackButton:Button;
+    var _fixpackGroup:LayoutGroup;
+    var _fixpackDropdown:PopUpListView;
     var _helpImage:AdvancedAssetLoader;
     var _hotfixButton:Button;
+    var _hotfixGroup:LayoutGroup;
+    var _hotfixDropdown:PopUpListView;
     var _installerButton:Button;
     var _installerDropdown:PopUpListView;
     var _installerDropdownGroup:LayoutGroup;
@@ -523,6 +527,7 @@ class RolePickerItem extends LayoutGroup {
     var _server:Server;
     var _fd:FileDialog;
     var _cachedFiles:Array<SuperHumanCachedFile>;
+    var _allFilesGroup:LayoutGroup;
 
     public var role( get, never ):RoleData;
     function get_role() return _roleImpl.role;
@@ -571,6 +576,15 @@ class RolePickerItem extends LayoutGroup {
         spacer.layoutData = new HorizontalLayoutData( 100 );
         _labelGroup.addChild( spacer );
 
+        // Create a container for all dropdowns and browse buttons
+        _allFilesGroup = new LayoutGroup();
+        var allFilesLayout = new VerticalLayout();
+        allFilesLayout.gap = GenesisApplicationTheme.GRID;
+        _allFilesGroup.layout = allFilesLayout;
+        _allFilesGroup.layoutData = new HorizontalLayoutData();
+        _labelGroup.addChild(_allFilesGroup);
+        
+        // === INSTALLER ROW ===
         // Create installer dropdown group
         _installerDropdownGroup = new LayoutGroup();
         var dropdownLayout = new HorizontalLayout();
@@ -592,18 +606,56 @@ class RolePickerItem extends LayoutGroup {
         _installerButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
         _installerDropdownGroup.addChild(_installerButton);
         
-        // Add the dropdown group to the label group
-        _labelGroup.addChild(_installerDropdownGroup);
-
-        _fixpackButton = new Button( LanguageManager.getInstance().getString( 'rolepage.role.buttonfixpack' ) );
-        _fixpackButton.addEventListener( TriggerEvent.TRIGGER, _fixpackButtonTriggered );
-        _fixpackButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-        _labelGroup.addChild( _fixpackButton );
+        // Add the installer group to the files container
+        _allFilesGroup.addChild(_installerDropdownGroup);
         
-        _hotfixButton = new Button( LanguageManager.getInstance().getString( 'rolepage.role.buttonhotfix' ) );
-        _hotfixButton.addEventListener( TriggerEvent.TRIGGER, _hotfixButtonTriggered );
+        // === FIXPACK ROW ===
+        // Create fixpack dropdown group
+        _fixpackGroup = new LayoutGroup();
+        _fixpackGroup.layout = new HorizontalLayout();
+        cast(_fixpackGroup.layout, HorizontalLayout).gap = GenesisApplicationTheme.GRID;
+        cast(_fixpackGroup.layout, HorizontalLayout).verticalAlign = VerticalAlign.MIDDLE;
+        
+        // Create fixpack dropdown
+        _fixpackDropdown = new PopUpListView();
+        _fixpackDropdown.prompt = "Select fixpack...";
+        _fixpackDropdown.addEventListener(Event.CHANGE, _fixpackDropdownChanged);
+        _fixpackDropdown.width = GenesisApplicationTheme.GRID * 30;
+        _fixpackDropdown.layoutData = new HorizontalLayoutData(100);
+        _fixpackGroup.addChild(_fixpackDropdown);
+        
+        // Add fixpack browse button
+        _fixpackButton = new Button("Browse...");
+        _fixpackButton.addEventListener(TriggerEvent.TRIGGER, _fixpackButtonTriggered);
+        _fixpackButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        _fixpackGroup.addChild(_fixpackButton);
+        
+        // Add fixpack group to files container
+        _allFilesGroup.addChild(_fixpackGroup);
+        
+        // === HOTFIX ROW ===
+        // Create hotfix dropdown group
+        _hotfixGroup = new LayoutGroup();
+        _hotfixGroup.layout = new HorizontalLayout();
+        cast(_hotfixGroup.layout, HorizontalLayout).gap = GenesisApplicationTheme.GRID;
+        cast(_hotfixGroup.layout, HorizontalLayout).verticalAlign = VerticalAlign.MIDDLE;
+        
+        // Create hotfix dropdown
+        _hotfixDropdown = new PopUpListView();
+        _hotfixDropdown.prompt = "Select hotfix...";
+        _hotfixDropdown.addEventListener(Event.CHANGE, _hotfixDropdownChanged);
+        _hotfixDropdown.width = GenesisApplicationTheme.GRID * 30;
+        _hotfixDropdown.layoutData = new HorizontalLayoutData(100);
+        _hotfixGroup.addChild(_hotfixDropdown);
+        
+        // Add hotfix browse button
+        _hotfixButton = new Button("Browse...");
+        _hotfixButton.addEventListener(TriggerEvent.TRIGGER, _hotfixButtonTriggered);
         _hotfixButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-        _labelGroup.addChild( _hotfixButton );
+        _hotfixGroup.addChild(_hotfixButton);
+        
+        // Add hotfix group to files container
+        _allFilesGroup.addChild(_hotfixGroup);
 
         _selectInstallerLabel = new Label( LanguageManager.getInstance().getString( 'rolepage.role.noinstaller', _roleImpl.fileHint ) );
         _selectInstallerLabel.includeInLayout = _selectInstallerLabel.visible = false;
@@ -642,8 +694,10 @@ class RolePickerItem extends LayoutGroup {
         _installerGroup.removeChildren();
         _installerGroup.visible = _installerGroup.includeInLayout = false;
         
-        // Populate the installer dropdown with cached files
+        // Populate all dropdowns with cached files
         _populateInstallerDropdown();
+        _populateFixpackDropdown();
+        _populateHotfixDropdown();
         
         // Check if this is a custom role with installer settings
         var showInstaller = true;
@@ -652,18 +706,27 @@ class RolePickerItem extends LayoutGroup {
         
         // Check for custom installer settings
         if (Reflect.hasField(_roleImpl.role, "showInstaller")) {
+            // Get installer settings from role configuration
             showInstaller = Reflect.field(_roleImpl.role, "showInstaller");
             showFixpack = Reflect.field(_roleImpl.role, "showFixpack");
             showHotfix = Reflect.field(_roleImpl.role, "showHotfix");
+            
+            // Log the settings for debugging
+            Logger.info('${this}: Role ${_roleImpl.role.value} settings: installer=${showInstaller}, fixpack=${showFixpack}, hotfix=${showHotfix}');
         }
         
-        // Hide installer buttons for custom roles unless specified
-        _installerButton.includeInLayout = _installerButton.visible = showInstaller;
-        _hotfixButton.includeInLayout = _hotfixButton.visible = showHotfix && _roleImpl.role.enabled;
-        _fixpackButton.includeInLayout = _fixpackButton.visible = showFixpack && _roleImpl.role.enabled;
+        // Show/hide all file selection groups based on role being enabled
+        _allFilesGroup.includeInLayout = _allFilesGroup.visible = _roleImpl.role.enabled;
         
-        // Enable installer button only if role is enabled
+        // Show/hide each row based on settings
+        _installerDropdownGroup.includeInLayout = _installerDropdownGroup.visible = showInstaller; 
+        _fixpackGroup.includeInLayout = _fixpackGroup.visible = showFixpack;
+        _hotfixGroup.includeInLayout = _hotfixGroup.visible = showHotfix;
+        
+        // All buttons should be enabled if the role is enabled (redundant but explicit)
         _installerButton.enabled = _roleImpl.role.enabled;
+        _fixpackButton.enabled = _roleImpl.role.enabled;
+        _hotfixButton.enabled = _roleImpl.role.enabled;
         
         // Show installer file if one is selected
         if (_roleImpl.role.files.installer != null) {
@@ -734,37 +797,59 @@ class RolePickerItem extends LayoutGroup {
 
     }
 
+    // Single dialog flag to manage all file dialogs
+    private var _isFileDialogOpen:Bool = false;
+    
     /**
      * Populate the installer dropdown with cached files
      */
     private function _populateInstallerDropdown() {
+        // Temporarily remove event listener to prevent change events during initialization
+        _installerDropdown.removeEventListener(Event.CHANGE, _installerDropdownChanged);
+        
         // Create a new collection for the dropdown
         var dropdownItems = new ArrayCollection<Dynamic>();
-        
-        // Add "Browse..." as first item
-        dropdownItems.add({
-            label: "Browse file system...",
-            file: null,
-            isBrowse: true
-        });
         
         // Get cached files for this role type
         _cachedFiles = SuperHumanFileCache.getInstance().getFilesByRoleAndType(_roleImpl.role.value, "installers");
         
-        // Add each cached file to the dropdown
-        for (cachedFile in _cachedFiles) {
-            var displayName = '${cachedFile.originalFilename}';
-            if (cachedFile.version != null && cachedFile.version.fullVersion != null) {
-                displayName += ' (${cachedFile.version.fullVersion})';
+        // Filter to only include files that actually exist
+        var validCachedFiles = _cachedFiles.filter(function(file) return file.exists);
+        
+        // Add a placeholder prompt item if there are no valid cached files
+        if (validCachedFiles.length == 0) {
+            dropdownItems.add({
+                label: "No valid cached files available",
+                file: null,
+                isPlaceholder: true
+            });
+            
+            // Log info about filtered files
+            if (_cachedFiles.length > 0) {
+                Logger.info('${this}: Filtered out ${_cachedFiles.length - validCachedFiles.length} missing files from dropdown');
             }
-            if (!cachedFile.exists) {
-                displayName += ' [Missing]';
+        }
+        
+        // Add each valid cached file to the dropdown with improved formatting
+        for (cachedFile in validCachedFiles) {
+            var displayName = '';
+            
+            // Format the filename more clearly
+            if (cachedFile.originalFilename != null && cachedFile.originalFilename != "") {
+                displayName = '${cachedFile.originalFilename}';
+            } else {
+                // Fallback in case original filename is missing
+                displayName = Path.withoutDirectory(cachedFile.path);
+            }
+            
+            // Add version in a clear format if available
+            if (cachedFile.version != null && cachedFile.version.fullVersion != null) {
+                displayName += ' - v${cachedFile.version.fullVersion}';
             }
             
             dropdownItems.add({
                 label: displayName,
-                file: cachedFile,
-                isBrowse: false
+                file: cachedFile
             });
         }
         
@@ -772,43 +857,46 @@ class RolePickerItem extends LayoutGroup {
         _installerDropdown.dataProvider = dropdownItems;
         _installerDropdown.itemToText = (item) -> item.label;
         
+        // Save the intended selection index for later
+        var indexToSelect = -1;
+        
         // If a file is already selected, try to select it in the dropdown
         if (_roleImpl.role.files.installer != null && _roleImpl.role.files.installerHash != null) {
             // Find the cached file with matching hash
             for (i in 0...dropdownItems.length) {
                 var item = dropdownItems.get(i);
-                if (!item.isBrowse && item.file != null && item.file.hash == _roleImpl.role.files.installerHash) {
-                    _installerDropdown.selectedIndex = i;
+                if (item.file != null && item.file.hash == _roleImpl.role.files.installerHash) {
+                    indexToSelect = i;
                     break;
                 }
             }
-        } else {
-            // No file selected, select first item (Browse)
-            _installerDropdown.selectedIndex = 0;
         }
+        
+        // Apply selection without triggering change events
+        _installerDropdown.selectedIndex = indexToSelect;
+        
+        // Restore the event listener after setting the selection
+        _installerDropdown.addEventListener(Event.CHANGE, _installerDropdownChanged);
     }
-    
-    // Flag to prevent multiple dialog opening
-    private var _isDialogShowing:Bool = false;
     
     /**
      * Handle installer dropdown selection change
      */
     private function _installerDropdownChanged(e:Event) {
-        // Guard against event re-triggering
-        if (_isDialogShowing) return;
+        // Guard against invalid selection
         if (_installerDropdown.selectedItem == null) return;
+        if (_installerDropdown.selectedIndex == -1) return;
+        
+        // Guard against selection events while a dialog is open
+        if (_isFileDialogOpen) {
+            Logger.info('${this}: Ignoring dropdown change event while dialog is open');
+            return;
+        }
         
         var selectedItem = _installerDropdown.selectedItem;
         
-        if (selectedItem.isBrowse) {
-            // User selected "Browse..." option
-            // Wait a short time to prevent instant dialog spam
-            haxe.Timer.delay(() -> {
-                if (!_isDialogShowing) {
-                    _showFileDialog("installers");
-                }
-            }, 300); // Small delay to prevent spam
+        // Skip placeholder items
+        if (Reflect.hasField(selectedItem, "isPlaceholder") && selectedItem.isPlaceholder) {
             return;
         }
         
@@ -817,19 +905,19 @@ class RolePickerItem extends LayoutGroup {
         
         if (!selectedFile.exists) {
             // File exists in registry but not in cache
-            _isDialogShowing = true;
+            _isFileDialogOpen = true; // Set flag before showing dialog
             Alert.show(
                 "This file is registered but missing from the cache. Would you like to locate it?",
                 "Missing File",
                 ["Locate File", "Cancel"],
                 (state) -> {
                     if (state.index == 0) {
-                        // User wants to locate the file
+                        // User wants to locate the file - dialog flag managed by _showFileDialog
                         _showFileDialog("installers", selectedFile.hash);
                     } else {
-                        // Revert selection
+                        // Reset dialog flag and revert selection
+                        _isFileDialogOpen = false;
                         _populateInstallerDropdown();
-                        _isDialogShowing = false;
                     }
                 }
             );
@@ -846,30 +934,260 @@ class RolePickerItem extends LayoutGroup {
     }
     
     /**
-     * Handle browse button click - just open the file dialog directly
+     * Populate the fixpack dropdown with cached files
      */
-    function _installerButtonTriggered(e:TriggerEvent) {
-        // Prevent opening dialog if one is already open
-        if (_isDialogOpen) return;
-        _showFileDialog("installers");
+    private function _populateFixpackDropdown() {
+        // Temporarily remove event listener to prevent change events during initialization
+        _fixpackDropdown.removeEventListener(Event.CHANGE, _fixpackDropdownChanged);
+        
+        // Create a new collection for the dropdown
+        var dropdownItems = new ArrayCollection<Dynamic>();
+        
+        // Get cached files for this role type
+        var cachedFixpacks = SuperHumanFileCache.getInstance().getFilesByRoleAndType(_roleImpl.role.value, "fixpacks");
+        
+        // Filter to only include files that actually exist
+        var validCachedFiles = cachedFixpacks.filter(function(file) return file.exists);
+        
+        // Add a placeholder prompt item if there are no valid cached files
+        if (validCachedFiles.length == 0) {
+            dropdownItems.add({
+                label: "No valid cached fixpacks available",
+                file: null,
+                isPlaceholder: true
+            });
+            
+            // Log info about filtered files
+            if (cachedFixpacks.length > 0) {
+                Logger.info('${this}: Filtered out ${cachedFixpacks.length - validCachedFiles.length} missing fixpack files from dropdown');
+            }
+        }
+        
+        // Add each valid cached file to the dropdown with improved formatting
+        for (cachedFile in validCachedFiles) {
+            var displayName = '';
+            
+            // Format the filename more clearly
+            if (cachedFile.originalFilename != null && cachedFile.originalFilename != "") {
+                displayName = '${cachedFile.originalFilename}';
+            } else {
+                // Fallback in case original filename is missing
+                displayName = Path.withoutDirectory(cachedFile.path);
+            }
+            
+            // Add version in a clear format if available
+            if (cachedFile.version != null && cachedFile.version.fullVersion != null) {
+                displayName += ' - v${cachedFile.version.fullVersion}';
+            }
+            
+            dropdownItems.add({
+                label: displayName,
+                file: cachedFile
+            });
+        }
+        
+        // Set the dropdown data provider
+        _fixpackDropdown.dataProvider = dropdownItems;
+        _fixpackDropdown.itemToText = (item) -> item.label;
+        
+        // Restore the event listener after setting the selection
+        _fixpackDropdown.addEventListener(Event.CHANGE, _fixpackDropdownChanged);
     }
     
     /**
-     * Flag to prevent dialog spam
+     * Handle fixpack dropdown selection change
      */
-    private var _isDialogOpen:Bool = false;
+    private function _fixpackDropdownChanged(e:Event) {
+        // Guard against invalid selection
+        if (_fixpackDropdown.selectedItem == null) return;
+        if (_fixpackDropdown.selectedIndex == -1) return;
+        
+        // Guard against selection events while a dialog is open
+        if (_isFileDialogOpen) {
+            Logger.info('${this}: Ignoring fixpack dropdown change event while dialog is open');
+            return;
+        }
+        
+        var selectedItem = _fixpackDropdown.selectedItem;
+        
+        // Skip placeholder items
+        if (Reflect.hasField(selectedItem, "isPlaceholder") && selectedItem.isPlaceholder) {
+            return;
+        }
+        
+        var selectedFile = selectedItem.file;
+        if (selectedFile == null) return;
+        
+        if (!selectedFile.exists) {
+            // File exists in registry but not in cache
+            _isFileDialogOpen = true; // Set flag before showing dialog
+            Alert.show(
+                "This fixpack file is registered but missing from the cache. Would you like to locate it?",
+                "Missing Fixpack File",
+                ["Locate File", "Cancel"],
+                (state) -> {
+                    if (state.index == 0) {
+                        // User wants to locate the file - dialog flag managed by _showFileDialog
+                        _showFileDialog("fixpacks", selectedFile.hash);
+                    } else {
+                        // Reset dialog flag and revert selection
+                        _isFileDialogOpen = false;
+                        _populateFixpackDropdown();
+                    }
+                }
+            );
+            return;
+        }
+        
+        // Add the fixpack to the role's fixpacks list
+        if (!_roleImpl.role.files.fixpacks.contains(selectedFile.path)) {
+            _roleImpl.role.files.fixpacks.push(selectedFile.path);
+            _roleImpl.role.files.installerFixpackHash = selectedFile.hash;
+            _roleImpl.role.files.installerFixpackVersion = selectedFile.version;
+            
+            updateData();
+        }
+    }
+    
+    /**
+     * Populate the hotfix dropdown with cached files
+     */
+    private function _populateHotfixDropdown() {
+        // Temporarily remove event listener to prevent change events during initialization
+        _hotfixDropdown.removeEventListener(Event.CHANGE, _hotfixDropdownChanged);
+        
+        // Create a new collection for the dropdown
+        var dropdownItems = new ArrayCollection<Dynamic>();
+        
+        // Get cached files for this role type
+        var cachedHotfixes = SuperHumanFileCache.getInstance().getFilesByRoleAndType(_roleImpl.role.value, "hotfixes");
+        
+        // Filter to only include files that actually exist
+        var validCachedFiles = cachedHotfixes.filter(function(file) return file.exists);
+        
+        // Add a placeholder prompt item if there are no valid cached files
+        if (validCachedFiles.length == 0) {
+            dropdownItems.add({
+                label: "No valid cached hotfixes available",
+                file: null,
+                isPlaceholder: true
+            });
+            
+            // Log info about filtered files
+            if (cachedHotfixes.length > 0) {
+                Logger.info('${this}: Filtered out ${cachedHotfixes.length - validCachedFiles.length} missing hotfix files from dropdown');
+            }
+        }
+        
+        // Add each valid cached file to the dropdown with improved formatting
+        for (cachedFile in validCachedFiles) {
+            var displayName = '';
+            
+            // Format the filename more clearly
+            if (cachedFile.originalFilename != null && cachedFile.originalFilename != "") {
+                displayName = '${cachedFile.originalFilename}';
+            } else {
+                // Fallback in case original filename is missing
+                displayName = Path.withoutDirectory(cachedFile.path);
+            }
+            
+            // Add version in a clear format if available
+            if (cachedFile.version != null && cachedFile.version.fullVersion != null) {
+                displayName += ' - v${cachedFile.version.fullVersion}';
+            }
+            
+            dropdownItems.add({
+                label: displayName,
+                file: cachedFile
+            });
+        }
+        
+        // Set the dropdown data provider
+        _hotfixDropdown.dataProvider = dropdownItems;
+        _hotfixDropdown.itemToText = (item) -> item.label;
+        
+        // Restore the event listener after setting the selection
+        _hotfixDropdown.addEventListener(Event.CHANGE, _hotfixDropdownChanged);
+    }
+    
+    /**
+     * Handle hotfix dropdown selection change
+     */
+    private function _hotfixDropdownChanged(e:Event) {
+        // Guard against invalid selection
+        if (_hotfixDropdown.selectedItem == null) return;
+        if (_hotfixDropdown.selectedIndex == -1) return;
+        
+        // Guard against selection events while a dialog is open
+        if (_isFileDialogOpen) {
+            Logger.info('${this}: Ignoring hotfix dropdown change event while dialog is open');
+            return;
+        }
+        
+        var selectedItem = _hotfixDropdown.selectedItem;
+        
+        // Skip placeholder items
+        if (Reflect.hasField(selectedItem, "isPlaceholder") && selectedItem.isPlaceholder) {
+            return;
+        }
+        
+        var selectedFile = selectedItem.file;
+        if (selectedFile == null) return;
+        
+        if (!selectedFile.exists) {
+            // File exists in registry but not in cache
+            _isFileDialogOpen = true; // Set flag before showing dialog
+            Alert.show(
+                "This hotfix file is registered but missing from the cache. Would you like to locate it?",
+                "Missing Hotfix File",
+                ["Locate File", "Cancel"],
+                (state) -> {
+                    if (state.index == 0) {
+                        // User wants to locate the file - dialog flag managed by _showFileDialog
+                        _showFileDialog("hotfixes", selectedFile.hash);
+                    } else {
+                        // Reset dialog flag and revert selection
+                        _isFileDialogOpen = false;
+                        _populateHotfixDropdown();
+                    }
+                }
+            );
+            return;
+        }
+        
+        // Add the hotfix to the role's hotfixes list
+        if (!_roleImpl.role.files.hotfixes.contains(selectedFile.path)) {
+            _roleImpl.role.files.hotfixes.push(selectedFile.path);
+            _roleImpl.role.files.installerHotFixHash = selectedFile.hash;
+            _roleImpl.role.files.installerHotFixVersion = selectedFile.version;
+            
+            updateData();
+        }
+    }
+    
+    /**
+     * Handle browse button click - open the file dialog
+     */
+    function _installerButtonTriggered(e:TriggerEvent) {
+        _showFileDialog("installers");
+    }
 
     /**
-     * Show file dialog for selecting a file
+     * Unified file dialog handler for selecting a file
      * @param fileType The type of file (installers, hotfixes, fixpacks)
      * @param expectedHash Optional hash to verify when locating a missing file
+     * @return True if dialog was opened, false if already open
      */
-    private function _showFileDialog(fileType:String, ?expectedHash:String) {
-        // Guard against multiple dialogs
-        if (_fd != null || _isDialogOpen) return;
+    private function _showFileDialog(fileType:String, ?expectedHash:String):Bool {
+        // Guard against multiple dialogs with centralized flag
+        if (_fd != null || _isFileDialogOpen) {
+            Logger.warning('${this}: Attempted to open file dialog while another dialog is active');
+            return false;
+        }
         
         // Set flag to indicate dialog is open
-        _isDialogOpen = true;
+        _isFileDialogOpen = true;
+        Logger.info('${this}: Opening file dialog for ${fileType}');
         
         var dir = (SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null) ? 
             SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
@@ -878,48 +1196,55 @@ class RolePickerItem extends LayoutGroup {
         var currentDir:String;
         
         _fd.onSelect.add(path -> {
-            var currentPath = new Path(path);
-            var fullFileName = currentPath.file + "." + currentPath.ext;
-            
-            currentDir = Path.directory(path);
-            if (currentDir != null) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
-            
-            // Calculate hash
-            var fileHash = SuperHumanHashes.calculateMD5(path);
-            
-            if (expectedHash != null && fileHash != expectedHash) {
-                // Hash doesn't match expected value for missing file
-                Alert.show(
-                    "The selected file doesn't match the expected hash. Would you like to use it anyway?",
-                    "Hash Mismatch",
-                    ["Use Anyway", "Cancel"],
-                    (state) -> {
-                        if (state.index == 0) {
-                            // Use the file anyway and add to cache
-                            _processSelectedFile(path, fullFileName, fileHash, fileType);
+            try {
+                var currentPath = new Path(path);
+                var fullFileName = currentPath.file + "." + currentPath.ext;
+                
+                currentDir = Path.directory(path);
+                if (currentDir != null) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
+                
+                // Calculate hash
+                var fileHash = SuperHumanHashes.calculateMD5(path);
+                
+                if (expectedHash != null && fileHash != expectedHash) {
+                    // Hash doesn't match expected value for missing file
+                    Alert.show(
+                        "The selected file doesn't match the expected hash. Would you like to use it anyway?",
+                        "Hash Mismatch",
+                        ["Use Anyway", "Cancel"],
+                        (state) -> {
+                            if (state.index == 0) {
+                                // Use the file anyway and add to cache
+                                _processSelectedFile(path, fullFileName, fileHash, fileType);
+                            }
+                            // Reset dialog flag regardless of choice
+                            _isFileDialogOpen = false;
                         }
-                        // Reset dialog flag regardless of choice
-                        _isDialogOpen = false;
-                    }
-                );
-            } else {
-                // Process the selected file
-                _processSelectedFile(path, fullFileName, fileHash, fileType);
-                // Reset dialog flag
-                _isDialogOpen = false;
+                    );
+                } else {
+                    // Process the selected file
+                    _processSelectedFile(path, fullFileName, fileHash, fileType);
+                    // Reset dialog flag after processing
+                    _isFileDialogOpen = false;
+                }
+            } catch (e) {
+                Logger.error('Error processing selected file: ${e}');
+                _isFileDialogOpen = false; // Always reset flag
             }
             
+            // Clean up dialog resources
             _fd.onSelect.removeAll();
             _fd.onCancel.removeAll();
             _fd = null;
         });
         
         _fd.onCancel.add(() -> {
+            Logger.info('${this}: File dialog cancelled');
             _fd.onCancel.removeAll();
             _fd.onSelect.removeAll();
             _fd = null;
-            // Reset dialog flag
-            _isDialogOpen = false;
+            // Reset dialog flag on cancel
+            _isFileDialogOpen = false;
         });
         
         var dialogTitle = "Select File";
@@ -933,6 +1258,7 @@ class RolePickerItem extends LayoutGroup {
         }
         
         _fd.browse(FileDialogType.OPEN, null, dir + "/", dialogTitle);
+        return true;
     }
     
     /**
@@ -945,32 +1271,84 @@ class RolePickerItem extends LayoutGroup {
     private function _processSelectedFile(path:String, fullFileName:String, fileHash:String, fileType:String) {
         // Check if this is a custom role - if yes, skip hash checking
         var isCustomRole = false;
+        var hashes:Array<String> = [];
+        var validHash = false;
+        var version = null;
+        
         try {
             // If the role doesn't exist in SuperHumanHashes, this will be null
-            var hashes:Array<String> = [];
             switch (fileType) {
                 case "installers":
                     hashes = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
+                    if (fileHash != null && hashes != null && hashes.indexOf(fileHash) >= 0) {
+                        version = SuperHumanHashes.getInstallerVersion(_roleImpl.role.value, fileHash);
+                        validHash = true;
+                    }
                 case "hotfixes":
                     hashes = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
+                    if (fileHash != null && hashes != null && hashes.indexOf(fileHash) >= 0) {
+                        version = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, fileHash);
+                        validHash = true;
+                    }
                 case "fixpacks":
                     hashes = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
+                    if (fileHash != null && hashes != null && hashes.indexOf(fileHash) >= 0) {
+                        version = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, fileHash);
+                        validHash = true;
+                    }
             }
             isCustomRole = (hashes == null || hashes.length == 0);
+            
+            Logger.info('${this}: Processing file (${fileType}): ${Path.withoutDirectory(path)}, hash: ${fileHash}, valid hash: ${validHash}, custom role: ${isCustomRole}');
         } catch (e) {
+            Logger.error('${this}: Error checking hash validity: ${e}');
             isCustomRole = true;
         }
         
-        // Get the cached file if it exists
+        // Check if file exists in cache registry
         var cachedFile = SuperHumanFileCache.getInstance().getFileByHash(fileHash);
         
-        if (cachedFile != null) {
-            // File already exists in registry - just use it
+        // If file exists in registry AND physically exists, use it directly
+        if (cachedFile != null && cachedFile.exists) {
+            Logger.info('${this}: Using existing cached file: ${cachedFile.path}');
             _useFileBasedOnType(cachedFile.path, fullFileName, cachedFile.hash, cachedFile.version, fileType);
             return;
         }
         
+        // If file exists in registry but doesn't physically exist, offer to add it to cache
+        if (cachedFile != null && !cachedFile.exists) {
+            Logger.info('${this}: File registered in cache but missing from disk: ${cachedFile.path}');
+            Alert.show(
+                "This file has a valid hash but is missing from the cache directory. Would you like to add it to the cache?",
+                "Add to Cache",
+                ["Add to Cache", "Use Without Caching"],
+                (state) -> {
+                    if (state.index == 0) {
+                        // Add to cache
+                        var result = SuperHumanFileCache.getInstance().addFile(
+                            path, 
+                            _roleImpl.role.value, 
+                            fileType, 
+                            version
+                        );
+                        
+                        if (result != null) {
+                            _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
+                        } else {
+                            // Failed to add to cache, use directly
+                            _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
+                        }
+                    } else {
+                        // Use without caching
+                        _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
+                    }
+                }
+            );
+            return;
+        }
+        
         if (isCustomRole) {
+            Logger.info('${this}: Handling file for custom role (no hash checking required)');
             // For custom roles, just add the file without hash checking
             // But first ask if the user wants to add it to the cache
             Alert.show(
@@ -1000,113 +1378,90 @@ class RolePickerItem extends LayoutGroup {
                     }
                 }
             );
+        } else if (validHash) {
+            // Standard role with valid hash but not in cache - offer to add
+            Logger.info('${this}: Standard role with valid hash but not in cache: ${Path.withoutDirectory(path)}');
+            Alert.show(
+                "This file has a valid hash. Would you like to add it to the cache for future use?",
+                "Add to Cache",
+                ["Add to Cache", "Use Without Caching"],
+                (state) -> {
+                    if (state.index == 0) {
+                        // Add to cache
+                        var result = SuperHumanFileCache.getInstance().addFile(
+                            path, 
+                            _roleImpl.role.value, 
+                            fileType, 
+                            version
+                        );
+                        
+                        if (result != null) {
+                            _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
+                        } else {
+                            // Failed to add to cache, use directly
+                            _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
+                        }
+                    } else {
+                        // Use without caching
+                        _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
+                    }
+                }
+            );
         } else {
-            // For standard roles, check if hash is in SuperHumanHashes
-            var hashes:Array<String> = [];
-            var version = null;
+            // Standard role with invalid hash - warn user
+            Logger.info('${this}: Standard role with invalid hash: ${Path.withoutDirectory(path)}');
             
+            var alertText = "";
             switch (fileType) {
                 case "installers":
-                    hashes = SuperHumanHashes.getInstallersHashes(_roleImpl.role.value);
-                    if (fileHash != null && hashes.indexOf(fileHash) >= 0) {
-                        version = SuperHumanHashes.getInstallerVersion(_roleImpl.role.value, fileHash);
-                    }
+                    alertText = LanguageManager.getInstance().getString('alert.installerhash.text', _roleImpl.name);
                 case "hotfixes":
-                    hashes = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
-                    if (fileHash != null && hashes.indexOf(fileHash) >= 0) {
-                        version = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, fileHash);
-                    }
+                    alertText = LanguageManager.getInstance().getString('alert.hotfixhash.text', _roleImpl.name);
                 case "fixpacks":
-                    hashes = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
-                    if (fileHash != null && hashes.indexOf(fileHash) >= 0) {
-                        version = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, fileHash);
-                    }
+                    alertText = LanguageManager.getInstance().getString('alert.fixpackhash.text', _roleImpl.name);
             }
             
-            var validHash = (fileHash != null && hashes.indexOf(fileHash) >= 0);
+            var alertTitle = "";
+            switch (fileType) {
+                case "installers":
+                    alertTitle = LanguageManager.getInstance().getString('alert.installerhash.title');
+                case "hotfixes":
+                    alertTitle = LanguageManager.getInstance().getString('alert.hotfixhash.title');
+                case "fixpacks":
+                    alertTitle = LanguageManager.getInstance().getString('alert.fixpackhash.title');
+            }
             
-            if (validHash) {
-                // Ask about adding to cache
-                Alert.show(
-                    "This file has a valid hash. Would you like to add it to the cache for future use?",
-                    "Add to Cache",
-                    ["Add to Cache", "Use Without Caching"],
-                    (state) -> {
-                        if (state.index == 0) {
-                            // Add to cache
+            Alert.show(
+                alertText,
+                alertTitle,
+                ["Add to Cache Anyway", "Use Without Caching", "Cancel"],
+                (state) -> {
+                    switch (state.index) {
+                        case 0:
+                            // Add to cache anyway
                             var result = SuperHumanFileCache.getInstance().addFile(
                                 path, 
                                 _roleImpl.role.value, 
                                 fileType, 
-                                version
+                                {}
                             );
                             
                             if (result != null) {
                                 _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
                             } else {
                                 // Failed to add to cache, use directly
-                                _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
-                            }
-                        } else {
-                            // Use without caching
-                            _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
-                        }
-                    }
-                );
-            } else {
-                // Invalid hash - warn the user
-                var alertText = "";
-                switch (fileType) {
-                    case "installers":
-                        alertText = LanguageManager.getInstance().getString('alert.installerhash.text', _roleImpl.name);
-                    case "hotfixes":
-                        alertText = LanguageManager.getInstance().getString('alert.hotfixhash.text', _roleImpl.name);
-                    case "fixpacks":
-                        alertText = LanguageManager.getInstance().getString('alert.fixpackhash.text', _roleImpl.name);
-                }
-                
-                var alertTitle = "";
-                switch (fileType) {
-                    case "installers":
-                        alertTitle = LanguageManager.getInstance().getString('alert.installerhash.title');
-                    case "hotfixes":
-                        alertTitle = LanguageManager.getInstance().getString('alert.hotfixhash.title');
-                    case "fixpacks":
-                        alertTitle = LanguageManager.getInstance().getString('alert.fixpackhash.title');
-                }
-                
-                Alert.show(
-                    alertText,
-                    alertTitle,
-                    ["Add to Cache Anyway", "Use Without Caching", "Cancel"],
-                    (state) -> {
-                        switch (state.index) {
-                            case 0:
-                                // Add to cache anyway
-                                var result = SuperHumanFileCache.getInstance().addFile(
-                                    path, 
-                                    _roleImpl.role.value, 
-                                    fileType, 
-                                    {}
-                                );
-                                
-                                if (result != null) {
-                                    _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
-                                } else {
-                                    // Failed to add to cache, use directly
-                                    _useFileBasedOnType(path, fullFileName, fileHash, null, fileType);
-                                }
-                            
-                            case 1:
-                                // Use without caching
                                 _useFileBasedOnType(path, fullFileName, fileHash, null, fileType);
-                                
-                            default:
-                                // Cancel - do nothing
-                        }
+                            }
+                        
+                        case 1:
+                            // Use without caching
+                            _useFileBasedOnType(path, fullFileName, fileHash, null, fileType);
+                            
+                        default:
+                            // Cancel - do nothing
                     }
-                );
-            }
+                }
+            );
         }
     }
     
@@ -1139,152 +1494,18 @@ class RolePickerItem extends LayoutGroup {
         updateData();
     }
 
-    function _hotfixButtonTriggered( e:TriggerEvent ) {
-        
-        if ( _fd != null ) return;
-        
-        var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        _fd = new FileDialog();
-        var currentDir:String;
-
-        _fd.onSelect.add( path -> {
-            var currentPath = new Path(path);
-            var fullFileName = currentPath.file + "." + currentPath.ext;
-            
-            currentDir = Path.directory( path );
-            
-            if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
-
-            // Check if this is a custom role - if yes, skip hash checking
-            var isCustomRole = false;
-            try {
-                // If the role doesn't exist in SuperHumanHashes, this will be null
-                var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
-                isCustomRole = (hashes == null || hashes.length == 0);
-            } catch (e) {
-                isCustomRole = true;
-            }
-            
-            if (isCustomRole) {
-                // For custom roles, just add the file without hash checking
-                if (!_roleImpl.role.files.hotfixes.contains(path)) {
-                    _roleImpl.role.files.hotfixes.push(path);
-                }
-                updateData();
-            } else {
-                // For standard roles, use the normal hash checking
-                var hashes:Array<String> = SuperHumanHashes.getHotFixesHashes(_roleImpl.role.value);
-                var v = FileTools.checkMD5(path, hashes);
-
-                if (v != null) {
-                    if (!_roleImpl.role.files.hotfixes.contains(path)) {	
-                        //Only latest added hotfix will be taken into account 
-                        _roleImpl.role.files.installerHotFixVersion = SuperHumanHashes.getHotfixesVersion(_roleImpl.role.value, v);
-                        _roleImpl.role.files.installerHotFixHash = v;
-                        _roleImpl.role.files.hotfixes.push(path);
-                    }
-                    updateData();
-                } else {
-                    Alert.show(
-                        LanguageManager.getInstance().getString('alert.hotfixhash.text', _roleImpl.name),
-                        LanguageManager.getInstance().getString('alert.hotfixhash.title'),
-                        [LanguageManager.getInstance().getString('alert.hotfixhash.buttonyes'), LanguageManager.getInstance().getString('alert.hotfixhash.buttonno')],
-                        (state) -> {
-                            switch state.index {
-                                case 0:
-                                    if (!_roleImpl.role.files.hotfixes.contains(path)) {
-                                        _roleImpl.role.files.hotfixes.push(path);
-                                    }
-                                    updateData();
-                                default:
-                            }
-                        }
-                    );
-                }
-            }
-        });
-
-        _fd.onCancel.add( () -> {
-            _fd.onCancel.removeAll();
-            _fd.onSelect.removeAll();
-            _fd = null;
-        } );
-
-        _fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locatehotfix', _roleImpl.name ) );
-
+    /**
+     * Handler for hotfix button - uses the unified file dialog
+     */
+    function _hotfixButtonTriggered(e:TriggerEvent) {
+        _showFileDialog("hotfixes");
     }
 
-    function _fixpackButtonTriggered( e:TriggerEvent ) {
-        
-        if ( _fd != null ) return;
-        
-        var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
-        _fd = new FileDialog();
-        var currentDir:String;
-
-        _fd.onSelect.add( path -> {
-            var currentPath = new Path(path);
-            var fullFileName = currentPath.file + "." + currentPath.ext;
-            
-            currentDir = Path.directory( path );
-            if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
-
-            // Check if this is a custom role - if yes, skip hash checking
-            var isCustomRole = false;
-            try {
-                // If the role doesn't exist in SuperHumanHashes, this will be null
-                var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
-                isCustomRole = (hashes == null || hashes.length == 0);
-            } catch (e) {
-                isCustomRole = true;
-            }
-            
-            if (isCustomRole) {
-                // For custom roles, just add the file without hash checking
-                if (!_roleImpl.role.files.fixpacks.contains(path)) {
-                    _roleImpl.role.files.fixpacks.push(path);
-                }
-                updateData();
-            } else {
-                // For standard roles, use the normal hash checking
-                var hashes:Array<String> = SuperHumanHashes.getFixPacksHashes(_roleImpl.role.value);
-                var v = FileTools.checkMD5(path, hashes);
-
-                if (v != null) {
-                    if (!_roleImpl.role.files.fixpacks.contains(path)) {
-                        _roleImpl.role.files.installerFixpackVersion = SuperHumanHashes.getFixpacksVersion(_roleImpl.role.value, v);
-                        _roleImpl.role.files.installerFixpackHash = v;
-                        _roleImpl.role.files.fixpacks.push(path);
-                    }
-                    updateData();
-                } else {
-                    Alert.show(
-                        LanguageManager.getInstance().getString('alert.fixpackhash.text', _roleImpl.name),
-                        LanguageManager.getInstance().getString('alert.fixpackhash.title'),
-                        [LanguageManager.getInstance().getString('alert.fixpackhash.buttonyes'), LanguageManager.getInstance().getString('alert.fixpackhash.buttonno')],
-                        (state) -> {
-                            switch state.index {
-                                case 0:
-                                    if (!_roleImpl.role.files.fixpacks.contains(path)) {
-                                        _roleImpl.role.files.fixpacks.push(path);
-                                    }
-                                    updateData();
-                                default:
-                            }
-                        }
-                    );
-                }
-            }
-        });
-
-        _fd.onCancel.add( () -> {
-            _fd.onCancel.removeAll();
-            _fd.onSelect.removeAll();
-            _fd = null;
-        } );
-
-        _fd.browse( FileDialogType.OPEN, null, dir + "/", LanguageManager.getInstance().getString( 'rolepage.role.locatefixpack', _roleImpl.name ) );
-
+    /**
+     * Handler for fixpack button - uses the unified file dialog
+     */
+    function _fixpackButtonTriggered(e:TriggerEvent) {
+        _showFileDialog("fixpacks");
     }
 
 }
