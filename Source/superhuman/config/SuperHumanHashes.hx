@@ -139,4 +139,42 @@ class SuperHumanHashes
 		
 		return version;
 	}
+	
+	/**
+	 * Calculate MD5 hash for a file
+	 * @param filePath Path to the file
+	 * @return MD5 hash string or null if failed
+	 */
+	public static function calculateMD5(filePath:String):String {
+		if (!sys.FileSystem.exists(filePath)) {
+			return null;
+		}
+		
+		try {
+			// Log the command that will be used
+			#if windows
+			champaign.core.logging.Logger.info('[Shell]: Checking MD5 with command: certutil -hashfile "${filePath}" MD5');
+			#elseif mac
+			champaign.core.logging.Logger.info('[Shell]: Checking MD5 with command: md5 "${filePath}"');
+			#else
+			champaign.core.logging.Logger.info('[Shell]: Checking MD5 with command: md5sum "${filePath}"');
+			#end
+			
+			// Use Shell.md5() directly instead of FileTools.checkMD5()
+			// This avoids the issue where checkMD5 requires a matching hash in the array
+			var hash = prominic.sys.applications.bin.Shell.getInstance().md5(filePath);
+			if (hash != null) {
+				champaign.core.logging.Logger.info('MD5 hash calculated successfully: ${hash}');
+				return hash;
+			}
+			
+			champaign.core.logging.Logger.error('MD5 calculation returned null');
+			return null;
+		} catch (e) {
+			champaign.core.logging.Logger.error('Failed to calculate MD5 hash: ${e}');
+			return null;
+		}
+	}
+	
+	// Chunking method removed - we now only use the system commands via FileTools
 }

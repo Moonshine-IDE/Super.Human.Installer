@@ -90,6 +90,9 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_PROVISIONER_IMPORT_PAGE:String = "openProvisionerImportPage";
     public static final CLOSE_PROVISIONER_IMPORT_PAGE:String = "closeProvisionerImportPage";
     public static final PROVISIONER_IMPORT_COMPLETE:String = "provisionerImportComplete"; // Added for async import
+    public static final OPEN_HASH_MANAGER_PAGE:String = "openHashManagerPage";
+    public static final CLOSE_HASH_MANAGER_PAGE:String = "closeHashManagerPage";
+    public static final OPEN_FILE_CACHE_DIRECTORY:String = "openFileCacheDirectory";
 
     public var console:Console;
     public var data:String;

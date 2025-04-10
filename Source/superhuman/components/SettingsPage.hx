@@ -64,6 +64,7 @@ import genesis.application.theme.GenesisApplicationTheme;
 import prominic.sys.applications.oracle.BridgedInterface;
 import prominic.sys.applications.oracle.VirtualBox;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.server.cache.SuperHumanFileCache;
 import superhuman.theme.SuperHumanInstallerTheme;
 
 class SettingsPage extends Page {
@@ -284,6 +285,20 @@ class SettingsPage extends Page {
         
         _form.addChild(_rowSecrets);
         
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add File Cache Manager button
+        var _rowFileCache = new GenesisFormRow();
+        _rowFileCache.text = "Installer Files & Hashes";
+        
+        var _buttonHashManager = new GenesisFormButton("Manage Installer Files");
+        _buttonHashManager.addEventListener(TriggerEvent.TRIGGER, _openHashManager);
+        _rowFileCache.content.addChild(_buttonHashManager);
+        
+        _form.addChild(_rowFileCache);
+        
         var line = new HLine();
         line.width = _width;
         this.addChild( line );
@@ -415,5 +430,24 @@ class SettingsPage extends Page {
         var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE);
         Logger.info('${this}: Requesting to open provisioner import page');
         this.dispatchEvent(event);
+    }
+    
+    /**
+     * Navigate to the hash manager page when the Manage Installer Files button is clicked
+     * @param e The trigger event
+     */
+    function _openHashManager(e:TriggerEvent) {
+        // Dispatch event to open the hash manager page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_HASH_MANAGER_PAGE);
+        Logger.info('${this}: Requesting to open hash manager page');
+        this.dispatchEvent(event);
+    }
+    
+    /**
+     * Handle cancel button click
+     */
+    override function _cancel(?e:Dynamic) {
+        // Dispatch the cancel event which will be handled by SuperHumanInstaller
+        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE));
     }
 }

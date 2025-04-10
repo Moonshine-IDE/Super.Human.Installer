@@ -44,6 +44,7 @@ import haxe.io.Bytes;
 import superhuman.server.data.ServiceTypeData;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.components.serviceType.ServiceTypePage;
+import superhuman.components.HashManagerPage;
 import superhuman.components.browsers.SetupBrowserPage;
 import superhuman.components.ProvisionerImportPage;
 import superhuman.browser.Browsers;
@@ -129,6 +130,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
 	static public final PAGE_PROVISIONER_IMPORT = "page-provisioner-import";
+	static public final PAGE_HASH_MANAGER = "page-hash-manager";
 	
 	static var _instance:SuperHumanInstaller;
 
@@ -169,6 +171,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _additionalServerPage:AdditionalServerPage;
 	var _secretsPage:SecretsPage;
 	var _provisionerImportPage:ProvisionerImportPage;
+	var _hashManagerPage:HashManagerPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -481,6 +484,7 @@ class SuperHumanInstaller extends GenesisApplication {
         _settingsPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_SECRETS_PAGE, _openSecretsPage);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_HASH_MANAGER_PAGE, _openHashManagerPage);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
 		
@@ -512,6 +516,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
 		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.CLOSE_PROVISIONER_IMPORT_PAGE, _closeProvisionerImportPage );
 		this.addPage( _provisionerImportPage, PAGE_PROVISIONER_IMPORT );
+		
+		_hashManagerPage = new HashManagerPage();
+		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _closeHashManagerPage );
+		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.OPEN_FILE_CACHE_DIRECTORY, _openFileCacheDirectory );
+		this.addPage( _hashManagerPage, PAGE_HASH_MANAGER );
 		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
@@ -1025,7 +1035,10 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS && this.previousPageId != PAGE_SECRETS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS && 
+		    this.previousPageId != PAGE_SETUP_APPLICATIONS && 
+		    this.previousPageId != PAGE_SECRETS &&
+		    this.previousPageId != PAGE_HASH_MANAGER) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
@@ -1040,19 +1053,55 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.selectedPageId = PAGE_SECRETS;
 	}
 	
-	/**
-	 * Navigate to the provisioner import page
-	 * @param e The event
-	 */
-	function _openProvisionerImportPage( e:SuperHumanApplicationEvent ) {
-		Logger.info('${this}: Opening provisioner import page');
-		this.selectedPageId = PAGE_PROVISIONER_IMPORT;
-	}
+    /**
+     * Navigate to the provisioner import page
+     * @param e The event
+     */
+    function _openProvisionerImportPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Opening provisioner import page');
+        this.selectedPageId = PAGE_PROVISIONER_IMPORT;
+    }
+    
+    /**
+     * Navigate to the hash manager page
+     * @param e The event
+     */
+    function _openHashManagerPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Opening hash manager page');
+        this.selectedPageId = PAGE_HASH_MANAGER;
+    }
+    
+    /**
+     * Close the hash manager page
+     * @param e The event
+     */
+    function _closeHashManagerPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Closing hash manager page');
+        // Return to previous page if it exists, otherwise go to settings page
+        if (this.previousPageId != null && this.previousPageId != PAGE_HASH_MANAGER) {
+            this.selectedPageId = this.previousPageId;
+        } else {
+            this.selectedPageId = PAGE_SETTINGS;
+        }
+    }
+    
+    /**
+     * Open the file cache directory in the system file explorer
+     * @param e The event
+     */
+    function _openFileCacheDirectory( e:SuperHumanApplicationEvent ) {
+        var cacheDir = superhuman.server.cache.SuperHumanFileCache.getCacheDirectory();
+        Logger.info('${this}: Opening file cache directory: ${cacheDir}');
+        Shell.getInstance().open([cacheDir]);
+        ToastManager.getInstance().showToast("Opening cache directory");
+    }
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS) {
+		if (this.previousPageId != PAGE_SETUP_BROWSERS && 
+		    this.previousPageId != PAGE_SETUP_APPLICATIONS && 
+		    this.previousPageId != PAGE_HASH_MANAGER) {
 			this.selectedPageId = this.previousPageId;
 		} else {
 			this.selectedPageId = PAGE_SERVER;
