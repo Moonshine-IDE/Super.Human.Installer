@@ -1072,6 +1072,72 @@ class DynamicConfigPage extends Page {
             return;
         }
         
+        // Store all field values to server before navigating to advanced config
+        // This preserves the data without creating file structure
+        
+        // Ensure customProperties exists
+        if (_server.customProperties == null) {
+            _server.customProperties = {};
+        }
+        
+        // Ensure dynamicCustomProperties exists
+        if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+        }
+        
+        // Get reference to dynamicCustomProperties object
+        var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+        
+        // Save all dynamic field values
+        for (fieldName => field in _dynamicFields) {
+            var value:String = null;
+            
+            // Extract the value from the appropriate field type
+            if (Reflect.hasField(field, "hidden") && Reflect.field(field, "hidden") == true) {
+                // Handle hidden fields
+                if (Reflect.hasField(field, "value")) {
+                    value = Std.string(Reflect.field(field, "value"));
+                }
+            } else if (Std.isOfType(field, GenesisFormTextInput)) {
+                var input:GenesisFormTextInput = cast field;
+                value = StringTools.trim(input.text);
+            } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
+                var stepper:GenesisFormNumericStepper = cast field;
+                value = Std.string(stepper.value);
+            } else if (Std.isOfType(field, GenesisFormCheckBox)) {
+                var checkbox:GenesisFormCheckBox = cast field;
+                value = checkbox.selected ? "true" : "false";
+            } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
+                var dropdown:GenesisFormPupUpListView = cast field;
+                var selectedItem = dropdown.selectedItem;
+                value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
+            }
+            
+            if (value != null) {
+                // Store value in dynamicCustomProperties
+                Reflect.setField(dynamicProps, fieldName, value);
+                
+                // Update critical server properties directly for special fields
+                if (fieldName == "hostname") {
+                    _server.hostname.value = value;
+                } else if (fieldName == "organization") {
+                    _server.organization.value = value;
+                }
+            }
+        }
+        
+        // Save the provisioner selection if available
+        if (_dropdownCoreComponentVersion.selectedItem != null) {
+            var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+            _server.updateProvisioner(dvv.data);
+            
+            // Store provisioner version in dynamicCustomProperties
+            var versionStr = dvv.data.version.toString();
+            Reflect.setField(dynamicProps, "provisionerVersion", versionStr);
+        }
+        
+        Logger.info('${this}: Stored dynamic form data before navigating to advanced config page');
+        
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER);
         evt.server = _server;
         

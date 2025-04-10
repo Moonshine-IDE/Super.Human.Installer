@@ -1354,11 +1354,6 @@ class DynamicAdvancedConfigPage extends Page {
         // Explicitly save hosts file to ensure it's created for custom provisioners
         _server.saveHostsFile();
         
-        // Initialize server files if this is a provisional server
-        if (_server.provisional) {
-            _server.initializeServerFiles();
-        }
-        
         var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION);
         evt.server = _server;
         this.dispatchEvent(evt);

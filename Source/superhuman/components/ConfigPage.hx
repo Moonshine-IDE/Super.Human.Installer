@@ -422,6 +422,20 @@ class ConfigPage extends Page {
             return;
         }
         
+        // Store current form values to server object before navigating
+        // This preserves the data without creating file structure
+        _server.hostname.value = StringTools.trim(_inputHostname.text);
+        _server.organization.value = StringTools.trim(_inputOrganization.text);
+        
+        // Save the provisioner selection
+        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        _server.updateProvisioner(dvv.data);
+        
+        // Save common variables to the server's customProperties
+        _saveCommonVariables();
+        
+        Logger.info('${this}: Stored form data before navigating to advanced config page');
+        
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER );
         evt.server = _server;
         this.dispatchEvent( evt );

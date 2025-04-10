@@ -459,11 +459,6 @@ class AdvancedConfigPage extends Page {
         _server.dhcp4.value = _cbDHCP.selected;
         _server.disableBridgeAdapter.value = _cbDisableBridgeAdapter.selected;
 
-        // Initialize server files if this is a provisional server
-        if (_server.provisional) {
-            _server.initializeServerFiles();
-        }
-
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION );
         evt.server = _server;
         this.dispatchEvent( evt );
