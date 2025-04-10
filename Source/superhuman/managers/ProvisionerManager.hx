@@ -57,6 +57,7 @@ import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
+import sys.io.Process;
 import yaml.Yaml;
 import yaml.util.ObjectMap;
 import genesis.application.managers.ToastManager;
@@ -1633,20 +1634,31 @@ class ProvisionerManager {
                 success = importProvisionerVersion(provisionerPath);
             }
             
-            // Clean up temporary files
+            // Clean up temporary files - ensure this happens regardless of the import success
             Logger.info('Cleaning up temporary directories after import');
-            if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
+            if (shortTempDirPath != null) {
                 try {
-                    Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
-                    _safeDeleteDirectory(shortTempDirPath);
-                    
-                    // Also clean up the short temp path repo directory if it exists (for non-Windows)
-                    if (Sys.systemName() != "Windows") {
-                        var shortTempRepoDir = Path.addTrailingSlash(shortTempDirPath) + "repo";
-                        if (FileSystem.exists(shortTempRepoDir)) {
-                            Logger.info('Cleaning up short temp repo directory: ${shortTempRepoDir}');
-                            _deleteDirectory(shortTempRepoDir);
+                    if (FileSystem.exists(shortTempDirPath)) {
+                        Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
+                        
+                        // On Windows, the repo directory is specifically at C:/Users/Username/repo
+                        // We need to take special care with cleanup in this case
+                        if (Sys.systemName() == "Windows") {
+                            // Force cleanup of Windows repo directory - this is important!
+                            _forceCleanupWindowsRepoDir(shortTempDirPath);
+                        } else {
+                            // For non-Windows, use the standard cleanup
+                            _safeDeleteDirectory(shortTempDirPath);
+                            
+                            // Also clean up any nested repo directory
+                            var shortTempRepoDir = Path.addTrailingSlash(shortTempDirPath) + "repo";
+                            if (FileSystem.exists(shortTempRepoDir)) {
+                                Logger.info('Cleaning up short temp repo directory: ${shortTempRepoDir}');
+                                _deleteDirectory(shortTempRepoDir);
+                            }
                         }
+                    } else {
+                        Logger.info('Temporary directory does not exist, no cleanup needed: ${shortTempDirPath}');
                     }
                 } catch (e) {
                     Logger.warning('Failed to clean up temporary directories: ${e}');
@@ -2372,6 +2384,82 @@ class ProvisionerManager {
             Logger.info('Successfully deleted temporary directory: ${dirPath}');
         } catch (e) {
             Logger.warning('Error deleting directory ${dirPath}: ${e}');
+        }
+    }
+    
+    /**
+     * Force cleanup of Windows repo directory specifically
+     * This is a special case for the C:/Users/Username/repo path which is used for cloning
+     * @param dirPath The repo directory path to clean up
+     */
+    static private function _forceCleanupWindowsRepoDir(dirPath:String):Void {
+        Logger.info('Performing forced cleanup of Windows repo directory: ${dirPath}');
+        
+        // Verify this is actually the repo directory to be extra safe
+        if (dirPath == null || dirPath.toLowerCase().indexOf("\\repo") < 0 && dirPath.toLowerCase().indexOf("/repo") < 0) {
+            Logger.error('Not a Windows repo directory, refusing to force clean: ${dirPath}');
+            return;
+        }
+        
+        try {
+            // First try standard directory deletion
+            _deleteDirectory(dirPath);
+            Logger.info('Successfully deleted repo directory using standard method');
+        } catch (e) {
+            Logger.warning('Standard directory deletion failed: ${e}, trying command-line deletion');
+            
+            // Try using rd /s /q command which can sometimes work when the API fails
+            try {
+                var dirPathBackslash = StringTools.replace(dirPath, "/", "\\");
+                var command = 'rd /s /q "${dirPathBackslash}"';
+                Logger.info('Executing command: ${command}');
+                
+                var process = new Process(command);
+                var exitCode = process.exitCode();
+                var error = process.stderr.readAll().toString();
+                process.close();
+                
+                if (exitCode == 0) {
+                    Logger.info('Successfully deleted repo directory using rd command');
+                } else {
+                    // If rd fails, try to use robocopy trick (create empty dir and mirror it)
+                    Logger.warning('rd command failed with exit code ${exitCode}: ${error}, trying robocopy purge');
+                    
+                    // Create a temporary empty directory
+                    var tempEmptyDir = Path.addTrailingSlash(dirPath) + "..\\empty_temp_dir_" + Date.now().getTime();
+                    try {
+                        FileSystem.createDirectory(tempEmptyDir);
+                        
+                        // Use robocopy with /MIR to "mirror" the empty directory, effectively purging everything
+                        var robocopyCmd = 'robocopy "${tempEmptyDir}" "${dirPathBackslash}" /MIR /NFL /NDL /NJH /NJS /NC /NS';
+                        Logger.info('Executing robocopy purge: ${robocopyCmd}');
+                        
+                        var roboProcess = new Process(robocopyCmd);
+                        roboProcess.close();
+                        
+                        // Delete the temp empty directory
+                        FileSystem.deleteDirectory(tempEmptyDir);
+                        
+                        // Now try to remove the directory again
+                        if (FileSystem.exists(dirPath)) {
+                            FileSystem.deleteDirectory(dirPath);
+                            Logger.info('Successfully removed repo directory after robocopy purge');
+                        }
+                    } catch (tempDirErr) {
+                        Logger.error('Robocopy purge method failed: ${tempDirErr}');
+                        
+                        // As a last resort, report to the user that they may need to clean up manually
+                        Logger.warning('Failed to automatically clean up ${dirPath}. This directory may need to be manually removed.');
+                        ToastManager.getInstance().showToast('Note: The temporary repository at ${dirPath} could not be automatically cleaned up and may need manual removal.');
+                    }
+                }
+            } catch (cmdErr) {
+                Logger.warning('Command-line deletion failed: ${cmdErr}');
+                
+                // Report to the user that they may need to clean up manually
+                Logger.warning('Failed to automatically clean up ${dirPath}. This directory may need to be manually removed.');
+                ToastManager.getInstance().showToast('Note: The temporary repository at ${dirPath} could not be automatically cleaned up and may need manual removal.');
+            }
         }
     }
     

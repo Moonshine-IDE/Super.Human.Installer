@@ -48,6 +48,7 @@ import superhuman.server.data.ServerData;
 import superhuman.server.definitions.ProvisionerDefinition;
 import sys.FileSystem;
 import sys.io.File;
+import sys.io.Process;
 import yaml.Yaml;
 import yaml.util.ObjectMap;
 import StringTools;
@@ -247,7 +248,112 @@ class CustomProvisioner extends StandaloneProvisioner {
         return result;
     }
 
-    override public function copyFiles(?callback:()->Void) {
+    /**
+ * Use robocopy on Windows to copy deep directory structures
+ * Robocopy is a Windows-specific tool that handles long paths correctly
+ * @param sourcePath The source directory path
+ * @param targetPath The target directory path
+ * @return Bool success status
+ */
+private function _copyWithRobocopy(sourcePath:String, targetPath:String):Bool {
+    Logger.info('${this}: Using robocopy to copy from ${sourcePath} to ${targetPath}');
+    
+    // Format paths for robocopy - ensure trailing backslashes for directories
+    var sourceFormatted = StringTools.replace(Path.addTrailingSlash(sourcePath), "/", "\\");
+    var targetFormatted = StringTools.replace(Path.addTrailingSlash(targetPath), "/", "\\");
+    
+    try {
+        // Build robocopy command with options for handling long paths
+        // /E - Copy subdirectories including empty ones
+        // /COPY:DAT - Copy Data, Attributes, and Timestamps
+        // /R:1 - Retry 1 time (to minimize waiting if there's an issue)
+        // /W:1 - Wait 1 second between retries
+        // /NFL - Don't log file names (reduces log verbosity)
+        // /NDL - Don't log directory names (reduces log verbosity)
+        // /MT - Multi-threaded copying
+        // /NP - No progress (avoid console flooding)
+        // Normalize paths to Windows format - all backslashes
+        var sourceDir = StringTools.replace(sourcePath, "/", "\\");
+        var targetDir = StringTools.replace(targetPath, "/", "\\");
+        
+        // Remove trailing slashes/backslashes
+        if (StringTools.endsWith(sourceDir, "\\")) {
+            sourceDir = sourceDir.substr(0, sourceDir.length - 1);
+        }
+        if (StringTools.endsWith(targetDir, "\\")) {
+            targetDir = targetDir.substr(0, targetDir.length - 1);
+        }
+        
+        // Create a properly formatted robocopy command
+        // Note: We separate each argument properly with spaces outside the quotes
+        var command = 'robocopy "' + sourceDir + '" "' + targetDir + '" *.* /E /COPY:DAT /R:1 /W:1 /NFL /NDL /MT:8 /NP';
+        Logger.info('${this}: Executing command: ${command}');
+        
+        if (console != null) {
+            console.appendText('Executing robocopy for deep path handling: ${command}');
+        }
+        
+        // Run robocopy process
+        var process = new Process(command);
+        var exitCode = process.exitCode();
+        
+        // Get output and error streams
+        var output = process.stdout.readAll().toString();
+        var error = process.stderr.readAll().toString();
+        
+        // Close the process to free resources
+        process.close();
+        
+        // Log results
+        if (output.length > 0) {
+            Logger.info('${this}: Robocopy output: ${output}');
+        }
+        
+        if (error.length > 0) {
+            Logger.error('${this}: Robocopy error: ${error}');
+        }
+        
+        // Robocopy returns specific exit codes:
+        // 0 - No files copied (files already exist and are up to date)
+        // 1 - Files copied successfully
+        // 2 - Extra files/directories detected (not an error)
+        // 3 = 1+2 (Some files copied, some extra files/directories detected)
+        // Values 0-7 indicate success with various conditions
+        
+        if (exitCode >= 0 && exitCode <= 7) {
+            Logger.info('${this}: Robocopy completed successfully with exit code ${exitCode}');
+            
+            // Verify some key files were copied correctly
+            try {
+                var targetHostsFilePath = Path.addTrailingSlash(_targetPath) + "templates";
+                if (FileSystem.exists(_getPlatformPath(targetHostsFilePath))) {
+                    Logger.info('${this}: Successfully verified templates directory exists in target');
+                    return true;
+                } else {
+                    Logger.warning('${this}: Templates directory not found after robocopy operation');
+                }
+            } catch (verifyErr) {
+                Logger.warning('${this}: Error verifying copied files: ${verifyErr}');
+            }
+            
+            return true;
+        } else {
+            Logger.error('${this}: Robocopy failed with exit code ${exitCode}');
+            if (console != null) {
+                console.appendText('Robocopy failed with exit code ${exitCode}', true);
+            }
+            return false;
+        }
+    } catch (e) {
+        Logger.error('${this}: Error executing robocopy: ${e}');
+        if (console != null) {
+            console.appendText('Error executing robocopy: ${e}', true);
+        }
+        return false;
+    }
+}
+
+override public function copyFiles(?callback:()->Void) {
         if (exists) {
             if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, "(not required, skipping)"));
             if (callback != null) callback();
@@ -275,16 +381,32 @@ class CustomProvisioner extends StandaloneProvisioner {
         // Create target directory if it doesn't exist
         createTargetDirectory();
 
+        #if windows
+        // On Windows, use robocopy which handles long paths better
+        Logger.info('${this}: On Windows platform, using robocopy for deep path copying');
+        if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, " (using robocopy)"));
+        
+        // Log path lengths for debugging
+        Logger.info('${this}: Source path length: ${sourcePath.length}, Target path length: ${_targetPath.length}');
+        
+        // Use robocopy to handle long paths on Windows
+        var success = _copyWithRobocopy(sourcePath, _targetPath);
+        
+        if (success) {
+            Logger.info('${this}: Successfully copied files using robocopy');
+        } else {
+            Logger.error('${this}: Failed to copy files using robocopy');
+            if (console != null) console.appendText('Error copying provisioner files with robocopy', true);
+        }
+        
+        if (callback != null) callback();
+        
+        #else
+        // On non-Windows platforms, use the original zip/unzip method
         Logger.info('${this}: Copying custom provisioner files to ${_targetPath} using enhanced zip/unzip method');
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, ""));
         
         try {
-            #if windows
-            // Log the status of Windows registry setting for long paths
-            Logger.info('${this}: Current environment on Windows with long path support');
-            Logger.info('${this}: Source path length: ${sourcePath.length}, Target path length: ${_targetPath.length}');
-            #end
-            
             // Use our enhanced directory zipping method to better handle long paths
             Logger.info('${this}: Zipping source directory: ${sourcePath}');
             var zipBytes = _zipWholeDirectory(sourcePath);
@@ -317,6 +439,7 @@ class CustomProvisioner extends StandaloneProvisioner {
             // Call the callback even if we failed
             if (callback != null) callback();
         }
+        #end
     }
 
 
@@ -936,10 +1059,88 @@ override public function generateHostsFileContent():String {
     }
     
 /**
- * Override clearTargetDirectory to use Windows long path handling
- * This ensures that custom provisioners with deeply nested directories work properly on Windows
+ * Clear the target directory using robocopy on Windows for long paths
+ * Use standard API on other platforms
  */
 override public function clearTargetDirectory() {
+    #if windows
+    // On Windows, attempt to use robocopy to clear the directory first
+    try {
+        // Get platform-specific path
+        var platformTargetPath = _getPlatformPath(_targetPath);
+        
+        // Check if directory exists first
+        if (FileSystem.exists(platformTargetPath)) {
+            Logger.info('${this}: Clearing target directory: ${_targetPath}');
+            
+            if (!FileSystem.isDirectory(platformTargetPath)) {
+                Logger.error('${this}: Target path exists but is not a directory: ${_targetPath}');
+                return;
+            }
+            
+            // First try to use rd /s /q for directory removal (more reliable for long paths than FileSystem.deleteDirectory)
+            try {
+                var command = 'rd /s /q "' + StringTools.replace(platformTargetPath, "/", "\\") + '"';
+                Logger.info('${this}: Executing command: ${command}');
+                
+                var process = new Process(command);
+                var exitCode = process.exitCode();
+                var error = process.stderr.readAll().toString();
+                process.close();
+                
+                if (exitCode == 0) {
+                    Logger.info('${this}: Successfully deleted target directory using rd command');
+                } else {
+                    Logger.warning('${this}: rd command returned non-zero exit code: ${exitCode}');
+                    if (error.length > 0) {
+                        Logger.warning('${this}: rd error output: ${error}');
+                    }
+                    
+                    // Fall back to FileTools.deleteDirectory if rd fails
+                    FileTools.deleteDirectory(platformTargetPath);
+                    Logger.info('${this}: Successfully deleted target directory using FileTools');
+                }
+            } catch (deleteErr) {
+                Logger.error('${this}: Error deleting target directory: ${deleteErr}');
+                Logger.error('${this}: Path length: ${_targetPath.length}, Platform path: ${platformTargetPath}');
+                // Rethrow to maintain existing behavior
+                throw deleteErr;
+            }
+        }
+        
+        // Create the target directory with platform-specific handling
+        try {
+            FileSystem.createDirectory(platformTargetPath);
+            Logger.info('${this}: Successfully created target directory');
+        } catch (createErr) {
+            Logger.error('${this}: Error creating target directory with standard API: ${createErr}');
+            
+            // Try using mkdir as a fallback
+            try {
+                var command = 'mkdir "' + StringTools.replace(platformTargetPath, "/", "\\") + '"';
+                Logger.info('${this}: Attempting directory creation with command: ${command}');
+                
+                var process = new Process(command);
+                var exitCode = process.exitCode();
+                process.close();
+                
+                if (exitCode == 0) {
+                    Logger.info('${this}: Successfully created directory using mkdir command');
+                } else {
+                    Logger.error('${this}: Failed to create directory with mkdir, exit code: ${exitCode}');
+                    throw createErr; // Re-throw the original error
+                }
+            } catch (cmdErr) {
+                Logger.error('${this}: Failed to create directory using mkdir command: ${cmdErr}');
+                throw createErr; // Re-throw the original error
+            }
+        }
+    } catch (e) {
+        Logger.error('${this}: Error clearing target directory: ${e}');
+        throw e;
+    }
+    #else
+    // On non-Windows platforms, use the original implementation
     try {
         // Get platform-specific path
         var platformTargetPath = _getPlatformPath(_targetPath);
@@ -959,14 +1160,6 @@ override public function clearTargetDirectory() {
                 Logger.info('${this}: Successfully deleted target directory');
             } catch (deleteErr) {
                 Logger.error('${this}: Error deleting target directory: ${deleteErr}');
-                
-                #if windows
-                // Log additional info for Windows
-                Logger.error('${this}: On Windows, this could be related to path length issues');
-                Logger.error('${this}: Path length: ${_targetPath.length}, Platform path: ${platformTargetPath}');
-                #end
-                
-                // Rethrow to maintain existing behavior
                 throw deleteErr;
             }
         }
@@ -983,6 +1176,7 @@ override public function clearTargetDirectory() {
         Logger.error('${this}: Error clearing target directory: ${e}');
         throw e;
     }
+    #end
 }
 
 /**
