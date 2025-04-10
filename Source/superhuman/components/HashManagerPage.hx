@@ -94,6 +94,10 @@ class HashManagerPage extends Page {
     private var _buttonOpenCacheDir:Button;
     private var _scrollContainer:ScrollContainer;
     
+    // Sorting properties
+    private var _currentSortColumn:String = "role"; // Default sort column (changed from filename)
+    private var _currentSortAscending:Bool = true; // Default sort direction
+    
     // Selected file item
     private var _selectedFileItem:FileEntryItem = null;
     
@@ -244,97 +248,8 @@ class HashManagerPage extends Page {
         _listGroup.layout = _listGroupLayout;
         _scrollContainer.addChild(_listGroup);
         
-        // Add header row with proper styling matching the FileEntryItem structure
-        var headerContainer = new LayoutGroup();
-        var headerBackground = new RectangleSkin();
-        headerBackground.fill = FillStyle.SolidColor(0x444444);
-        headerContainer.backgroundSkin = headerBackground;
-        headerContainer.height = GenesisApplicationTheme.GRID * 6; // Increased height for header row
-        headerContainer.layoutData = new VerticalLayoutData(100);
-        
-        // Create header layout matching the item layout
-        var headerColumnsLayout = new HorizontalLayout();
-        headerColumnsLayout.paddingLeft = GenesisApplicationTheme.GRID * 2;
-        headerColumnsLayout.paddingRight = GenesisApplicationTheme.GRID * 2;
-        headerColumnsLayout.gap = GenesisApplicationTheme.GRID * 2;
-        headerColumnsLayout.verticalAlign = VerticalAlign.MIDDLE;
-        headerContainer.layout = headerColumnsLayout;
-        
-    // Create filename column group
-    var filenameHeaderGroup = new LayoutGroup();
-    filenameHeaderGroup.width = FileEntryItem.FILENAME_WIDTH;
-    var filenameHeaderLayout = new HorizontalLayout();
-    filenameHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
-    filenameHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
-    filenameHeaderGroup.layout = filenameHeaderLayout;
-    headerContainer.addChild(filenameHeaderGroup);
-    
-    // Add filename header label
-    var filenameHeader = new Label();
-    filenameHeader.text = "FILENAME";
-    filenameHeader.variant = GenesisApplicationTheme.LABEL_LARGE;
-    filenameHeaderGroup.addChild(filenameHeader);
-    
-    // Create hash column group
-    var hashHeaderGroup = new LayoutGroup();
-    hashHeaderGroup.width = FileEntryItem.HASH_WIDTH;
-    var hashHeaderLayout = new HorizontalLayout();
-    hashHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
-    hashHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
-    hashHeaderGroup.layout = hashHeaderLayout;
-    headerContainer.addChild(hashHeaderGroup);
-    
-    // Add hash header label
-    var hashHeader = new Label();
-    hashHeader.text = "HASH";
-    hashHeader.variant = GenesisApplicationTheme.LABEL_LARGE;
-    hashHeaderGroup.addChild(hashHeader);
-        
-        // Create role column group
-        var roleHeaderGroup = new LayoutGroup();
-        roleHeaderGroup.width = FileEntryItem.ROLE_WIDTH;
-        var roleHeaderLayout = new HorizontalLayout();
-        roleHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
-        roleHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
-        roleHeaderGroup.layout = roleHeaderLayout;
-        headerContainer.addChild(roleHeaderGroup);
-        
-        // Add role header label
-        var roleHeader = new Label();
-        roleHeader.text = "ROLE";
-        roleHeader.variant = GenesisApplicationTheme.LABEL_LARGE;
-        roleHeaderGroup.addChild(roleHeader);
-        
-        // Create type column group
-        var typeHeaderGroup = new LayoutGroup();
-        typeHeaderGroup.width = FileEntryItem.TYPE_WIDTH;
-        var typeHeaderLayout = new HorizontalLayout();
-        typeHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
-        typeHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
-        typeHeaderGroup.layout = typeHeaderLayout;
-        headerContainer.addChild(typeHeaderGroup);
-        
-        // Add type header label
-        var typeHeader = new Label();
-        typeHeader.text = "TYPE";
-        typeHeader.variant = GenesisApplicationTheme.LABEL_LARGE;
-        typeHeaderGroup.addChild(typeHeader);
-        
-        // Create version column group
-        var versionHeaderGroup = new LayoutGroup();
-        versionHeaderGroup.width = FileEntryItem.VERSION_WIDTH;
-        var versionHeaderLayout = new HorizontalLayout();
-        versionHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
-        versionHeaderGroup.layout = versionHeaderLayout;
-        headerContainer.addChild(versionHeaderGroup);
-        
-        // Add version header label
-        var versionHeader = new Label();
-        versionHeader.text = "VERSION";
-        versionHeader.variant = GenesisApplicationTheme.LABEL_LARGE;
-        versionHeaderGroup.addChild(versionHeader);
-        
-        _listGroup.addChild(headerContainer);
+        // Create sortable headers
+        _listGroup.addChild(createSortableHeaders());
         
         // Initialize file collection
         _fileCollection = [];
@@ -523,13 +438,271 @@ class HashManagerPage extends Page {
     }
     
     /**
+     * Create sortable column headers
+     */
+    private function createSortableHeaders():LayoutGroup {
+        var headerContainer = new LayoutGroup();
+        // Remove background completely for the header row
+        headerContainer.backgroundSkin = null;
+        headerContainer.height = GenesisApplicationTheme.GRID * 6; // Increased height for header row
+        headerContainer.layoutData = new VerticalLayoutData(100);
+        
+        // Create header layout matching the item layout
+        var headerColumnsLayout = new HorizontalLayout();
+        headerColumnsLayout.paddingLeft = GenesisApplicationTheme.GRID * 2;
+        headerColumnsLayout.paddingRight = GenesisApplicationTheme.GRID * 2;
+        headerColumnsLayout.gap = GenesisApplicationTheme.GRID * 2;
+        headerColumnsLayout.verticalAlign = VerticalAlign.MIDDLE;
+        headerContainer.layout = headerColumnsLayout;
+        
+        // Create filename column group with sort button
+        var filenameHeaderGroup = new LayoutGroup();
+        filenameHeaderGroup.width = FileEntryItem.FILENAME_WIDTH;
+        var filenameHeaderLayout = new HorizontalLayout();
+        filenameHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
+        filenameHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
+        filenameHeaderGroup.layout = filenameHeaderLayout;
+        headerContainer.addChild(filenameHeaderGroup);
+        
+        // Add filename sort button with bold text
+        var filenameHeader = new Button();
+        filenameHeader.text = "FILENAME" + (_currentSortColumn == "filename" ? (_currentSortAscending ? " ▲" : " ▼") : "");
+        // Use default button style instead of tiny
+        
+        // Apply bold white text formatting
+        var filenameFormat = new openfl.text.TextFormat();
+        filenameFormat.bold = true;
+        filenameFormat.color = 0xFFFFFF; // White text
+        filenameHeader.textFormat = filenameFormat;
+        
+        // Remove button background
+        filenameHeader.backgroundSkin = null;
+        
+        filenameHeader.addEventListener(TriggerEvent.TRIGGER, (e) -> _sortColumnTriggered("filename"));
+        filenameHeaderGroup.addChild(filenameHeader);
+        
+        // Create hash column group with sort button
+        var hashHeaderGroup = new LayoutGroup();
+        hashHeaderGroup.width = FileEntryItem.HASH_WIDTH;
+        var hashHeaderLayout = new HorizontalLayout();
+        hashHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
+        hashHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
+        hashHeaderGroup.layout = hashHeaderLayout;
+        headerContainer.addChild(hashHeaderGroup);
+        
+        // Add hash sort button with bold text
+        var hashHeader = new Button();
+        hashHeader.text = "HASH" + (_currentSortColumn == "hash" ? (_currentSortAscending ? " ▲" : " ▼") : "");
+        // Use default button style instead of tiny
+        
+        // Apply bold white text formatting
+        var hashFormat = new openfl.text.TextFormat();
+        hashFormat.bold = true;
+        hashFormat.color = 0xFFFFFF; // White text
+        hashHeader.textFormat = hashFormat;
+        
+        // Remove button background
+        hashHeader.backgroundSkin = null;
+        
+        hashHeader.addEventListener(TriggerEvent.TRIGGER, (e) -> _sortColumnTriggered("hash"));
+        hashHeaderGroup.addChild(hashHeader);
+        
+        // Create role column group with sort button
+        var roleHeaderGroup = new LayoutGroup();
+        roleHeaderGroup.width = FileEntryItem.ROLE_WIDTH;
+        var roleHeaderLayout = new HorizontalLayout();
+        roleHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
+        roleHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
+        roleHeaderGroup.layout = roleHeaderLayout;
+        headerContainer.addChild(roleHeaderGroup);
+        
+        // Add role sort button with bold text
+        var roleHeader = new Button();
+        roleHeader.text = "ROLE" + (_currentSortColumn == "role" ? (_currentSortAscending ? " ▲" : " ▼") : "");
+        // Use default button style instead of tiny
+        
+        // Apply bold white text formatting
+        var roleFormat = new openfl.text.TextFormat();
+        roleFormat.bold = true;
+        roleFormat.color = 0xFFFFFF; // White text
+        roleHeader.textFormat = roleFormat;
+        
+        // Remove button background
+        roleHeader.backgroundSkin = null;
+        
+        roleHeader.addEventListener(TriggerEvent.TRIGGER, (e) -> _sortColumnTriggered("role"));
+        roleHeaderGroup.addChild(roleHeader);
+        
+        // Create type column group with sort button
+        var typeHeaderGroup = new LayoutGroup();
+        typeHeaderGroup.width = FileEntryItem.TYPE_WIDTH;
+        var typeHeaderLayout = new HorizontalLayout();
+        typeHeaderLayout.paddingRight = GenesisApplicationTheme.GRID;
+        typeHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
+        typeHeaderGroup.layout = typeHeaderLayout;
+        headerContainer.addChild(typeHeaderGroup);
+        
+        // Add type sort button with bold text
+        var typeHeader = new Button();
+        typeHeader.text = "TYPE" + (_currentSortColumn == "type" ? (_currentSortAscending ? " ▲" : " ▼") : "");
+        // Use default button style instead of tiny
+        
+        // Apply bold white text formatting
+        var typeFormat = new openfl.text.TextFormat();
+        typeFormat.bold = true;
+        typeFormat.color = 0xFFFFFF; // White text
+        typeHeader.textFormat = typeFormat;
+        
+        // Remove button background
+        typeHeader.backgroundSkin = null;
+        
+        typeHeader.addEventListener(TriggerEvent.TRIGGER, (e) -> _sortColumnTriggered("type"));
+        typeHeaderGroup.addChild(typeHeader);
+        
+        // Create version column group with sort button
+        var versionHeaderGroup = new LayoutGroup();
+        versionHeaderGroup.width = FileEntryItem.VERSION_WIDTH;
+        var versionHeaderLayout = new HorizontalLayout();
+        versionHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
+        versionHeaderGroup.layout = versionHeaderLayout;
+        headerContainer.addChild(versionHeaderGroup);
+        
+        // Add version sort button with bold text
+        var versionHeader = new Button();
+        versionHeader.text = "VERSION" + (_currentSortColumn == "version" ? (_currentSortAscending ? " ▲" : " ▼") : "");
+        // Use default button style instead of tiny
+        
+        // Apply bold white text formatting
+        var versionFormat = new openfl.text.TextFormat();
+        versionFormat.bold = true;
+        versionFormat.color = 0xFFFFFF; // White text
+        versionHeader.textFormat = versionFormat;
+        
+        // Remove button background
+        versionHeader.backgroundSkin = null;
+        
+        versionHeader.addEventListener(TriggerEvent.TRIGGER, (e) -> _sortColumnTriggered("version"));
+        versionHeaderGroup.addChild(versionHeader);
+        
+        return headerContainer;
+    }
+    
+    /**
+     * Method to sort the file collection based on the current sort settings
+     */
+    private function sortFiles():Void {
+        if (_fileCollection == null || _fileCollection.length == 0) return;
+        
+        // Sort the file collection based on the current sort column and direction
+        _fileCollection.sort((a, b) -> {
+            var result:Int = 0;
+            
+            // Compare based on the selected column
+            switch (_currentSortColumn) {
+                case "filename":
+                    result = a.originalFilename.toLowerCase() < b.originalFilename.toLowerCase() ? -1 : 1;
+                
+                case "hash":
+                    result = a.hash < b.hash ? -1 : 1;
+                
+                case "role":
+                    // Handle potential null values
+                    var roleA = a.role != null ? a.role.toLowerCase() : "";
+                    var roleB = b.role != null ? b.role.toLowerCase() : "";
+                    result = roleA < roleB ? -1 : 1;
+                
+                case "type":
+                    // Handle potential null values
+                    var typeA = a.type != null ? a.type.toLowerCase() : "";
+                    var typeB = b.type != null ? b.type.toLowerCase() : "";
+                    result = typeA < typeB ? -1 : 1;
+                
+                case "version":
+                    // Extract version for comparison
+                    var versionA = "";
+                    var versionB = "";
+                    
+                    if (a.version != null && a.version.fullVersion != null) {
+                        versionA = a.version.fullVersion;
+                    }
+                    
+                    if (b.version != null && b.version.fullVersion != null) {
+                        versionB = b.version.fullVersion;
+                    }
+                    
+                    result = versionA < versionB ? -1 : 1;
+            }
+            
+            // Reverse the result if sorting in descending order
+            return _currentSortAscending ? result : -result;
+        });
+    }
+    
+    /**
+     * Handle column header click for sorting
+     */
+    private function _sortColumnTriggered(column:String):Void {
+        // If clicking the same column, toggle sort direction
+        if (_currentSortColumn == column) {
+            _currentSortAscending = !_currentSortAscending;
+        } else {
+            // New column, set it as the current sort column and default to ascending
+            _currentSortColumn = column;
+            _currentSortAscending = true;
+        }
+        
+        // Refresh the list with the new sorting
+        refreshFileList();
+    }
+    
+    /**
+     * Refresh the file list with current sorting
+     */
+    private function refreshFileList():Void {
+        // Sort the file collection based on current sort settings
+        sortFiles();
+        
+        // Remove all items including the header row
+        while (_listGroup.numChildren > 0) {
+            _listGroup.removeChildAt(_listGroup.numChildren - 1);
+        }
+        
+        // Recreate the header row with updated sort indicators
+        _listGroup.addChild(createSortableHeaders());
+        
+        // Create file item components for each sorted entry
+        for (i in 0..._fileCollection.length) {
+            var file = _fileCollection[i];
+            
+            // Create file entry item
+            var item = new FileEntryItem(file, i % 2 == 0);
+            item.parentPage = this; // Set parent page reference
+            _listGroup.addChild(item);
+            
+            // Add separator line
+            if (i < _fileCollection.length - 1) {
+                var line = new HLine();
+                line.layoutData = new VerticalLayoutData(100);
+                line.alpha = 0.5;
+                _listGroup.addChild(line);
+            }
+        }
+        
+        // Update UI state
+        updateUI();
+    }
+    
+    /**
      * Load cached files from the registry
      */
     public function loadCachedFiles():Void {
-        // Remove existing file items from the list group
-        while (_listGroup.numChildren > 1) {
+        // Remove all items including the header row
+        while (_listGroup.numChildren > 0) {
             _listGroup.removeChildAt(_listGroup.numChildren - 1);
         }
+        
+        // Recreate the header row with updated sort indicators
+        _listGroup.addChild(createSortableHeaders());
         
         // Reset selection
         _selectedFileItem = null;
@@ -986,11 +1159,11 @@ class FileEntryItem extends LayoutGroup {
     private static final COLOR_SELECTED:Int = 0x004080;
     
     // Column widths - made public so they can be accessed from HashManagerPage
-    public static final FILENAME_WIDTH:Float = GenesisApplicationTheme.GRID * 40; // Reduced width for filename
-    public static final HASH_WIDTH:Float = GenesisApplicationTheme.GRID * 30; // Added width for hash
-    public static final ROLE_WIDTH:Float = GenesisApplicationTheme.GRID * 15;
-    public static final TYPE_WIDTH:Float = GenesisApplicationTheme.GRID * 15;
-    public static final VERSION_WIDTH:Float = GenesisApplicationTheme.GRID * 20;
+    public static final FILENAME_WIDTH:Float = GenesisApplicationTheme.GRID * 55;
+    public static final HASH_WIDTH:Float = GenesisApplicationTheme.GRID * 25;
+    public static final ROLE_WIDTH:Float = GenesisApplicationTheme.GRID * 20;
+    public static final TYPE_WIDTH:Float = GenesisApplicationTheme.GRID * 12;
+    public static final VERSION_WIDTH:Float = GenesisApplicationTheme.GRID * 18;
     
     public function new(file:SuperHumanCachedFile, isEven:Bool) {
         super();
@@ -1086,27 +1259,109 @@ class FileEntryItem extends LayoutGroup {
         updateLabels();
     }
     
+    // Status icon buttons
+    private var _warningIconButton:Button;
+    private var _statusIconButton:Button;
+    
     /**
      * Update labels with file data
      */
     private function updateLabels():Void {
-        // Create status indicator text
-        var statusText = cachedFile.exists ? " ✓" : " ⚠";
-        var statusColor = cachedFile.exists ? 0x44aa44 : 0xaa4444;
-        
         // Format filename
         var filenameText = cachedFile.originalFilename;
         
-        // Check if the filename appears to be a placeholder (unknown.unknown)
-        if (filenameText == "unknown.unknown" || filenameText.indexOf("unknown.unknown") >= 0) {
-            filenameText = "No file in cache";
-        } else if (filenameText.length > 30) {
-            // Truncate long filenames
-            filenameText = filenameText.substr(0, 27) + "...";
+        // Check if we need to show warning icon
+        var isUnknownFile = filenameText == "unknown.unknown" || filenameText.indexOf("unknown.unknown") >= 0;
+        
+        // Create warning icon button if needed and not already created
+        if (isUnknownFile && _warningIconButton == null) {
+            _warningIconButton = new Button();
+            _warningIconButton.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
+            _warningIconButton.variant = GenesisApplicationTheme.BUTTON_TINY;
+            
+            // Reduce padding around icon to make button more compact
+            _warningIconButton.paddingLeft = 0;
+            _warningIconButton.paddingRight = 0;
+            _warningIconButton.paddingTop = 0;
+            _warningIconButton.paddingBottom = 0;
+            _warningIconButton.gap = 0;
+            
+            // Remove button background
+            _warningIconButton.backgroundSkin = null;
+            
+            // Add event listener for future functionality
+            _warningIconButton.addEventListener(TriggerEvent.TRIGGER, (e) -> {
+                // This is where the user can add their future functionality
+                // For now, we'll just prevent event propagation to avoid
+                // triggering the row selection when clicking the button
+                e.stopPropagation();
+            });
+            
+            // Insert at beginning of filename group
+            _filenameGroup.addChildAt(_warningIconButton, 0);
         }
         
-        // Display filename with status indicator
-        _filenameLabel.text = filenameText + statusText;
+        // Create status icon button if not already created
+        if (!isUnknownFile && _statusIconButton == null) {
+            _statusIconButton = new Button();
+            // Icon will be set based on existence
+            _statusIconButton.variant = GenesisApplicationTheme.BUTTON_TINY;
+            
+            // Reduce padding around icon to make button more compact
+            _statusIconButton.paddingLeft = 0;
+            _statusIconButton.paddingRight = 0;
+            _statusIconButton.paddingTop = 0;
+            _statusIconButton.paddingBottom = 0;
+            _statusIconButton.gap = 0;
+            
+            // Remove button background
+            _statusIconButton.backgroundSkin = null;
+            
+            // Add event listener for future functionality
+            _statusIconButton.addEventListener(TriggerEvent.TRIGGER, (e) -> {
+                // This is where the user can add their future functionality
+                e.stopPropagation();
+            });
+            
+            // Insert at beginning of filename group
+            _filenameGroup.addChildAt(_statusIconButton, 0);
+        }
+        
+        // Check if the filename appears to be a placeholder (unknown.unknown)
+        if (isUnknownFile) {
+            filenameText = "No file in cache";
+            
+            // Make sure warning icon is visible and status icon is hidden
+            if (_warningIconButton != null) {
+                _warningIconButton.visible = true;
+            }
+            if (_statusIconButton != null) {
+                _statusIconButton.visible = false;
+            }
+        } else {
+            // Hide warning icon and show status icon
+            if (_warningIconButton != null) {
+                _warningIconButton.visible = false;
+            }
+            
+            // Update status icon based on file existence
+            if (_statusIconButton != null) {
+                _statusIconButton.visible = true;
+                if (cachedFile.exists) {
+                    _statusIconButton.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_OK);
+                } else {
+                    _statusIconButton.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
+                }
+            }
+            
+            if (filenameText.length > 45) {
+                // Truncate long filenames - showing more characters before ellipsis
+                filenameText = filenameText.substr(0, 42) + "...";
+            }
+        }
+        
+        // Display filename (without the status indicators since we use icons now)
+        _filenameLabel.text = filenameText;
         
         // Create tooltip with all details
         _filenameLabel.toolTip = "Filename: " + 
