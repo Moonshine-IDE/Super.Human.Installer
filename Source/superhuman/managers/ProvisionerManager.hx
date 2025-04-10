@@ -63,6 +63,7 @@ import prominic.sys.io.Executor;
 import openfl.events.IEventDispatcher;
 import superhuman.events.SuperHumanApplicationEvent;
 import sys.io.Process;
+import sys.thread.Thread; // Added for background task
 import yaml.Yaml;
 import yaml.util.ObjectMap;
 import genesis.application.managers.ToastManager;
@@ -1659,119 +1660,146 @@ class ProvisionerManager {
         }
         
         var context:Dynamic = executor.extraParams[0];
+        var eventDispatcher:IEventDispatcher = context.eventDispatcher; // Get dispatcher early
+
+        if (executor.exitCode == 0) {
+            // Git clone successful, launch post-clone steps in background thread
+            Logger.info('Git clone successful. Launching post-clone steps in background thread.');
+            // Pass the context object to the background thread function
+            Thread.runWithEventLoop(_executePostCloneSteps.bind(context)); 
+        } else {
+            // Git clone failed, dispatch failure event immediately
+            var message = 'Failed to clone GitHub repository ${context.organization}/${context.repository}. Exit code: ${executor.exitCode}. Check logs for details.';
+            Logger.error(message);
+
+            if (eventDispatcher != null) {
+                var failEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+                failEvent.importSuccess = false;
+                failEvent.importMessage = message;
+                eventDispatcher.dispatchEvent(failEvent);
+                Logger.info('Dispatched PROVISIONER_IMPORT_COMPLETE event (Failure). Message: ${failEvent.importMessage}');
+            } else {
+                 Logger.error('Cannot dispatch completion event: eventDispatcher is null.');
+            }
+        }
+
+        // --- Dispose Executor (Simulating finally) ---
+        // Dispose the executor here, regardless of success or failure of the clone itself
+        // The background thread will handle its own lifecycle and event dispatching
+        executor.dispose();
+    }
+
+    /**
+     * Executes the synchronous post-clone steps (find root, import, cleanup) in a background thread.
+     * Dispatches the final completion event.
+     */
+    static private function _executePostCloneSteps(context:Dynamic):Void {
+        Logger.info('Executing post-clone steps in background thread...');
+
         var tempDir:String = context.tempDir;
         var repoDir:String = context.repoDir; // Where the repo content actually is
         var organization:String = context.organization;
         var repository:String = context.repository;
         var eventDispatcher:IEventDispatcher = context.eventDispatcher;
-        
+
         var overallSuccess = false;
         var message = "";
-        
+        var cleanupError:Null<String> = null;
+
         try {
-            if (executor.exitCode == 0) {
-                Logger.info('Git clone successful. Searching for provisioner in: ${repoDir}');
-                
-                // Ensure repoDir exists before proceeding
-                if (!FileSystem.exists(repoDir) || !FileSystem.isDirectory(repoDir)) {
-                     throw new haxe.Exception('Cloned repository directory not found at ${repoDir}');
-                }
+            Logger.info('Searching for provisioner in: ${repoDir}');
 
-                // List directory contents for debugging
-                try {
-                    var items = FileSystem.readDirectory(repoDir);
-                    Logger.info('Cloned repository directory contents (${repoDir}):');
-                    for (item in items) {
-                        var isDir = FileSystem.isDirectory(Path.addTrailingSlash(repoDir) + item);
-                        Logger.info('  - ${item} (isDirectory: ${isDir})');
-                    }
-                } catch (e) {
-                    Logger.error('Error listing cloned repository contents: ${e}');
-                }
+            // Ensure repoDir exists before proceeding
+            if (!FileSystem.exists(repoDir) || !FileSystem.isDirectory(repoDir)) {
+                 throw new haxe.Exception('Cloned repository directory not found at ${repoDir}');
+            }
 
-                var provisionerPath = _findProvisionerRoot(repoDir, repository);
-                
-                if (provisionerPath == null) {
-                    message = 'Could not find valid provisioner structure in the repository ${organization}/${repository}.';
-                    Logger.error(message);
-                    overallSuccess = false;
-                } else {
-                    Logger.info('Found provisioner structure at: ${provisionerPath}');
-                    
-                    var isCollection = FileSystem.exists(Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME);
-                    var importSuccess = false;
-                    
-                    if (isCollection) {
-                        Logger.info('Importing GitHub repository as a provisioner collection');
-                        importSuccess = importProvisioner(provisionerPath);
-                        message = importSuccess ? 
-                            'Provisioner collection imported successfully from ${organization}/${repository}.' :
-                            'Failed to import provisioner collection from ${organization}/${repository}. Check logs for details.';
-                    } else {
-                        Logger.info('Importing GitHub repository as a provisioner version');
-                        importSuccess = importProvisionerVersion(provisionerPath);
-                         message = importSuccess ? 
-                            'Provisioner version imported successfully from ${organization}/${repository}.' :
-                            'Failed to import provisioner version from ${organization}/${repository}. Check logs for details.';
-                    }
-                    overallSuccess = importSuccess;
+            // List directory contents for debugging
+            try {
+                var items = FileSystem.readDirectory(repoDir);
+                Logger.info('Cloned repository directory contents (${repoDir}):');
+                for (item in items) {
+                    var isDir = FileSystem.isDirectory(Path.addTrailingSlash(repoDir) + item);
+                    Logger.info('  - ${item} (isDirectory: ${isDir})');
                 }
-            } else {
-                message = 'Failed to clone GitHub repository ${organization}/${repository}. Exit code: ${executor.exitCode}. Check logs for details.';
+            } catch (e) {
+                Logger.error('Error listing cloned repository contents: ${e}');
+            }
+
+            var provisionerPath = _findProvisionerRoot(repoDir, repository);
+
+            if (provisionerPath == null) {
+                message = 'Could not find valid provisioner structure in the repository ${organization}/${repository}.';
                 Logger.error(message);
                 overallSuccess = false;
+            } else {
+                Logger.info('Found provisioner structure at: ${provisionerPath}');
+
+                var isCollection = FileSystem.exists(Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME);
+                var importSuccess = false;
+
+                if (isCollection) {
+                    Logger.info('Importing GitHub repository as a provisioner collection');
+                    importSuccess = importProvisioner(provisionerPath);
+                    message = importSuccess ?
+                        'Provisioner collection imported successfully from ${organization}/${repository}.' :
+                        'Failed to import provisioner collection from ${organization}/${repository}. Check logs for details.';
+                } else {
+                    Logger.info('Importing GitHub repository as a provisioner version');
+                    importSuccess = importProvisionerVersion(provisionerPath);
+                     message = importSuccess ?
+                        'Provisioner version imported successfully from ${organization}/${repository}.' :
+                        'Failed to import provisioner version from ${organization}/${repository}. Check logs for details.';
+                }
+                overallSuccess = importSuccess;
             }
         } catch (e) {
             message = 'Error during provisioner import process: ${e.message}. Check logs for details.';
             Logger.error(message);
             overallSuccess = false;
-        }
+        } 
         
-        // --- Cleanup (Simulating finally) ---
+        // --- Cleanup (Moved outside try...catch, as Haxe has no finally) ---
         Logger.info('Cleaning up temporary directory after import attempt: ${tempDir}');
-        var cleanupError:Null<String> = null;
         if (tempDir != null) {
-            try {
-                if (FileSystem.exists(tempDir)) {
-                    if (Sys.systemName() == "Windows") {
-                        _forceCleanupWindowsRepoDir(tempDir); // Special Windows cleanup
+                try {
+                    if (FileSystem.exists(tempDir)) {
+                        if (Sys.systemName() == "Windows") {
+                            _forceCleanupWindowsRepoDir(tempDir); // Special Windows cleanup
+                        } else {
+                            _safeDeleteDirectory(tempDir); // Standard cleanup for Mac/Linux
+                        }
                     } else {
-                        _safeDeleteDirectory(tempDir); // Standard cleanup for Mac/Linux
+                        Logger.info('Temporary directory does not exist, no cleanup needed: ${tempDir}');
                     }
-                } else {
-                    Logger.info('Temporary directory does not exist, no cleanup needed: ${tempDir}');
+                } catch (e) {
+                    Logger.warning('Failed to clean up temporary directory ${tempDir}: ${e}');
+                    cleanupError = '(Warning: Failed to clean up temporary directory ${tempDir})';
                 }
-            } catch (e) {
-                Logger.warning('Failed to clean up temporary directory ${tempDir}: ${e}');
-                Logger.warning('Failed to clean up temporary directory ${tempDir}: ${e}');
-                cleanupError = '(Warning: Failed to clean up temporary directory ${tempDir})';
-            }
-        }
-
-        // --- Dispatch Completion Event (Simulating finally) ---
-        if (eventDispatcher != null) {
-            var finalMessage = message;
-            // Append cleanup error message if one occurred and the main message isn't already an error
-            if (cleanupError != null) {
-                 if (message == "" || overallSuccess) { // Append if main process succeeded or had no message
-                     finalMessage += " " + cleanupError;
-                 } else { // Prepend if main process failed, so cleanup warning isn't lost
-                     finalMessage = cleanupError + " " + finalMessage;
-                 }
             }
 
-            var completeEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
-            completeEvent.importSuccess = overallSuccess; // Reflects the success of the core import logic
-            completeEvent.importMessage = StringTools.trim(finalMessage); // Use combined message
-            eventDispatcher.dispatchEvent(completeEvent);
-            Logger.info('Dispatched PROVISIONER_IMPORT_COMPLETE event. Success: ${overallSuccess}, Message: ${completeEvent.importMessage}');
-        } else {
-             Logger.error('Cannot dispatch completion event: eventDispatcher is null.');
-        }
+            // --- Dispatch Completion Event ---
+            if (eventDispatcher != null) {
+                var finalMessage = message;
+                // Append cleanup error message if one occurred and the main message isn't already an error
+                if (cleanupError != null) {
+                     if (message == "" || overallSuccess) { // Append if main process succeeded or had no message
+                         finalMessage += " " + cleanupError;
+                     } else { // Prepend if main process failed, so cleanup warning isn't lost
+                         finalMessage = cleanupError + " " + finalMessage;
+                     }
+                }
 
-        // --- Dispose Executor (Simulating finally) ---
-        executor.dispose();
+                var completeEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+                completeEvent.importSuccess = overallSuccess; // Reflects the success of the core import logic
+                completeEvent.importMessage = StringTools.trim(finalMessage); // Use combined message
+                eventDispatcher.dispatchEvent(completeEvent);
+                Logger.info('Dispatched PROVISIONER_IMPORT_COMPLETE event from background thread. Success: ${overallSuccess}, Message: ${completeEvent.importMessage}');
+            } else {
+                 Logger.error('Cannot dispatch completion event from background thread: eventDispatcher is null.');
+            }
     }
+
 
     /**
      * Check if a directory is writable by attempting to create a test file

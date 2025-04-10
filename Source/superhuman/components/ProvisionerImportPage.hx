@@ -74,6 +74,8 @@ import feathers.skins.RectangleSkin;
 import openfl.text.TextFormat;
 import superhuman.config.SuperHumanGlobals;
 import prominic.sys.io.AbstractExecutor; // Added for async import
+import openfl.Lib; // Added for next frame dispatch
+import genesis.application.components.ProgressIndicator; // Added for spinner
 
 /**
  * A page that provides the user with different methods to import provisioners
@@ -127,6 +129,7 @@ class ProvisionerImportPage extends Page {
     
     // State for async import
     var _isImporting:Bool = false;
+    var _spinner:ProgressIndicator; // Added spinner instance
 
     public function new() {
         super();
@@ -584,6 +587,17 @@ class ProvisionerImportPage extends Page {
         _buttonGroup.addChild(_buttonImport);
         _buttonGroup.addChild(_buttonCancel);
         this.addChild(_buttonGroup);
+
+        // Initialize spinner (hidden initially)
+        _spinner = new ProgressIndicator(24, 16, 0xCCCCCC);
+        _spinner.visible = false;
+        _spinner.includeInLayout = false;
+        // Add layout data to center it if the page layout supports it (assuming VerticalLayout)
+        // Note: horizontalAlign is set on the VerticalLayout itself, not the layout data.
+        // We assume the page's main VerticalLayout already has horizontalAlign set to CENTER.
+        var spinnerLayoutData = new VerticalLayoutData(); 
+        _spinner.layoutData = spinnerLayoutData; 
+        this.addChild(_spinner); // Add spinner after the button group
         
         // Load Git tokens from secrets
         _loadGitTokens();
@@ -854,6 +868,9 @@ class ProvisionerImportPage extends Page {
             // Start the import process
             _isImporting = true;
             _buttonImport.enabled = false; // Disable button
+            _spinner.visible = true; // Show spinner
+            _spinner.includeInLayout = true;
+            _spinner.start(); // Start spinner animation
             ToastManager.getInstance().showToast("Starting GitHub import...");
             
             // Execute the clone process
@@ -872,6 +889,11 @@ class ProvisionerImportPage extends Page {
         // Remove the listener immediately
         this.removeEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerImportComplete);
         
+        // Stop and hide spinner
+        _spinner.stop();
+        _spinner.visible = false;
+        _spinner.includeInLayout = false;
+
         // Re-enable UI
         _isImporting = false;
         _buttonImport.enabled = true;
@@ -880,12 +902,28 @@ class ProvisionerImportPage extends Page {
         ToastManager.getInstance().showToast(event.importMessage);
         
         if (event.importSuccess) {
-            // Dispatch the original event to update lists etc.
-            var successEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
-            this.dispatchEvent(successEvent);
-            
-            // Close the page on success
-            _closeImportPage();
+            // Defer the potentially heavy event dispatch and page closing to the next frame
+            // to allow the current UI updates (button enable, toast) to render first.
+            var stageRef = this.stage; // Capture stage reference
+            if (stageRef != null) {
+                var handler = null;
+                handler = function(e:Event):Void {
+                    stageRef.removeEventListener(Event.ENTER_FRAME, handler); // Remove listener immediately
+                    
+                    // Dispatch the original event to update lists etc.
+                    var successEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
+                    this.dispatchEvent(successEvent);
+                    
+                    // Close the page on success
+                    _closeImportPage();
+                };
+                stageRef.addEventListener(Event.ENTER_FRAME, handler, false, 0, true);
+            } else {
+                // Fallback if stage is somehow null (shouldn't happen but good practice)
+                var successEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
+                this.dispatchEvent(successEvent);
+                _closeImportPage();
+            }
         }
         // On failure, the page stays open for the user to correct input or try again.
     }
