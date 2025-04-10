@@ -33,9 +33,14 @@ package superhuman.server.provisioners;
 import champaign.core.logging.Logger;
 import genesis.application.managers.LanguageManager;
 import haxe.Exception;
+import haxe.io.Bytes;
+import haxe.io.BytesOutput;
 import haxe.io.Path;
+import haxe.zip.Entry;
+import haxe.zip.Writer;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
+import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
@@ -57,6 +62,191 @@ class CustomProvisioner extends StandaloneProvisioner {
      * Override copyFiles to ensure we use the correct source path for custom provisioners
      * Always using the zip/unzip method for consistent file transfer and long path handling
      */
+    /**
+     * Create a single zip file from a directory, handling Windows long path issues
+     * This creates a structured zip with proper directory entries and paths for reliable extraction
+     * @param directory Path to the directory to zip
+     * @return Bytes The complete zip file as bytes
+     */
+    private function _zipWholeDirectory(directory:String):Bytes {
+        Logger.info('${this}: Creating structured zip from directory: ${directory}');
+        
+        // Create a new empty zip archive with improved handling for deep structures
+        var entries = new List<Entry>();
+        var platformDir = _getPlatformPath(directory);
+        
+        try {
+            // Add a directory entry for the root directory
+            var rootEntry:Entry = {
+                fileName: "./",
+                fileSize: 0,
+                fileTime: Date.now(),
+                compressed: false,
+                dataSize: 0,
+                data: Bytes.alloc(0),
+                crc32: 0
+            };
+            entries.add(rootEntry);
+            
+            // Keep track of directories we've added to prevent duplicates
+            var addedDirs = new Map<String, Bool>();
+            addedDirs.set("./", true);
+            
+            // Get the source directory structure using platform-specific paths
+            var filesToProcess = _collectAllFiles(platformDir);
+            Logger.info('${this}: Found ${filesToProcess.length} files to process for zip creation');
+            
+            // First, make sure all parent directories exist in the zip
+            for (filePath in filesToProcess) {
+                try {
+                    // Create relative path for the zip entry
+                    var relPath = filePath.substr(platformDir.length + 1);
+                    relPath = StringTools.replace(relPath, "\\", "/");
+                    
+                    // Add directory entries for all parent directories
+                    var dirParts = relPath.split("/");
+                    var currentPath = "";
+                    
+                    // Skip the last part (which is the file)
+                    for (i in 0...dirParts.length - 1) {
+                        currentPath += dirParts[i] + "/";
+                        
+                        // Skip if we already added this directory
+                        if (addedDirs.exists(currentPath)) {
+                            continue;
+                        }
+                        
+                        // Add directory entry
+                        var dirEntry:Entry = {
+                            fileName: currentPath,
+                            fileSize: 0,
+                            fileTime: Date.now(),
+                            compressed: false,
+                            dataSize: 0,
+                            data: Bytes.alloc(0),
+                            crc32: 0
+                        };
+                        
+                        entries.add(dirEntry);
+                        addedDirs.set(currentPath, true);
+                        Logger.verbose('${this}: Added directory entry to zip: ${currentPath}');
+                    }
+                } catch (e) {
+                    Logger.warning('${this}: Error processing directories for file: ${filePath} - ${e}');
+                }
+            }
+            
+            // Now add all files
+            for (filePath in filesToProcess) {
+                // Create relative path for the zip entry
+                var relPath = filePath.substr(platformDir.length + 1);
+                relPath = StringTools.replace(relPath, "\\", "/");
+                
+                try {
+                    // Get the platform path for the file
+                    var platformFilePath = _getPlatformPath(filePath);
+                    
+                    // Get the file data with platform-specific path handling
+                    var data = File.getBytes(platformFilePath);
+                    
+                    // Create an uncompressed entry
+                    var entry:Entry = {
+                        fileName: relPath,
+                        fileSize: data.length,
+                        fileTime: FileSystem.stat(platformFilePath).mtime,
+                        compressed: false,
+                        dataSize: data.length,
+                        data: data,
+                        crc32: haxe.crypto.Crc32.make(data)
+                    };
+                    
+                    entries.add(entry);
+                    Logger.verbose('${this}: Added file to zip: ${relPath}');
+                } catch (e) {
+                    Logger.warning('${this}: Could not add file to zip: ${relPath} - ${e}');
+                }
+            }
+            
+            // Write all entries to a zip file
+            var out = new BytesOutput();
+            var writer = new Writer(out);
+            writer.write(entries);
+            
+            return out.getBytes();
+        } catch (e) {
+            Logger.error('${this}: Error creating zip from directory: ${e}');
+            throw e;
+        }
+    }
+    
+    /**
+     * Recursively collect all files from a directory and its subdirectories
+     * Enhanced to handle very deep Windows paths reliably
+     * @param directory The directory to collect files from
+     * @return Array<String> All file paths found
+     */
+    private function _collectAllFiles(directory:String):Array<String> {
+        var result:Array<String> = [];
+        
+        try {
+            // Ensure we're using platform-specific path handling
+            var platformDir = _getPlatformPath(directory);
+            
+            if (!FileSystem.exists(platformDir)) {
+                Logger.error('${this}: Directory does not exist: ${directory}');
+                return result;
+            }
+            
+            if (!FileSystem.isDirectory(platformDir)) {
+                Logger.error('${this}: Path is not a directory: ${directory}');
+                return result;
+            }
+            
+            try {
+                var items = FileSystem.readDirectory(platformDir);
+                Logger.verbose('${this}: Found ${items.length} items in directory: ${directory}');
+                
+                for (item in items) {
+                    // Construct paths correctly with proper trailing slashes
+                    var fullPath = Path.addTrailingSlash(directory) + item;
+                    var platformPath = _getPlatformPath(fullPath);
+                    
+                    try {
+                        if (FileSystem.isDirectory(platformPath)) {
+                            // Add all files from subdirectories
+                            var subFiles = _collectAllFiles(fullPath);
+                            if (subFiles.length > 0) {
+                                Logger.verbose('${this}: Adding ${subFiles.length} files from subdirectory: ${item}');
+                                result = result.concat(subFiles);
+                            } else {
+                                Logger.verbose('${this}: No files found in subdirectory: ${item}');
+                            }
+                        } else {
+                            // Add this file to the result
+                            result.push(fullPath);
+                        }
+                    } catch (fileErr) {
+                        // Log but continue processing other files
+                        Logger.warning('${this}: Error processing item ${item} in directory ${directory}: ${fileErr}');
+                    }
+                }
+            } catch (readErr) {
+                Logger.error('${this}: Could not read directory ${directory}: ${readErr}');
+                
+                #if windows
+                // Add specific info for Windows to help with debugging
+                var dirLength = directory.length;
+                Logger.error('${this}: Path length: ${dirLength}, possibly exceeding Windows limits even with long path support');
+                Logger.error('${this}: Platform path used: ${platformDir}');
+                #end
+            }
+        } catch (e) {
+            Logger.error('${this}: Error collecting files from directory ${directory}: ${e}');
+        }
+        
+        return result;
+    }
+
     override public function copyFiles(?callback:()->Void) {
         if (exists) {
             if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, "(not required, skipping)"));
@@ -85,39 +275,47 @@ class CustomProvisioner extends StandaloneProvisioner {
         // Create target directory if it doesn't exist
         createTargetDirectory();
 
-        Logger.info('${this}: Copying custom provisioner files to ${_targetPath} using zip/unzip method');
+        Logger.info('${this}: Copying custom provisioner files to ${_targetPath} using enhanced zip/unzip method');
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.copyvagrantfiles', _targetPath, ""));
         
         try {
-            // First zip the entire source directory to handle potential long paths
+            #if windows
+            // Log the status of Windows registry setting for long paths
+            Logger.info('${this}: Current environment on Windows with long path support');
+            Logger.info('${this}: Source path length: ${sourcePath.length}, Target path length: ${_targetPath.length}');
+            #end
+            
+            // Use our enhanced directory zipping method to better handle long paths
             Logger.info('${this}: Zipping source directory: ${sourcePath}');
-            var zipBytes = _zipDirectory(sourcePath);
+            var zipBytes = _zipWholeDirectory(sourcePath);
             
             // Then unzip to the target directory
             Logger.info('${this}: Unzipping to target directory: ${_targetPath}');
             _unzipToDirectory(zipBytes, _targetPath);
             
-            Logger.info('${this}: Successfully copied files using zip/unzip method');
+            Logger.info('${this}: Successfully copied files using enhanced zip/unzip method');
+            
+            // Verify some key files were copied correctly
+            try {
+                var targetHostsFilePath = Path.addTrailingSlash(_targetPath) + "templates";
+                if (FileSystem.exists(_getPlatformPath(targetHostsFilePath))) {
+                    Logger.info('${this}: Successfully verified templates directory exists in target');
+                } else {
+                    Logger.warning('${this}: Templates directory may not have been copied correctly');
+                }
+            } catch (verifyErr) {
+                Logger.warning('${this}: Error verifying copied files: ${verifyErr}');
+            }
+            
             if (callback != null) callback();
             
         } catch (e) {
+            // No fallback - just report the error and continue
             Logger.error('${this}: Error copying files using zip/unzip: ${e}');
             if (console != null) console.appendText('Error copying provisioner files: ${e}', true);
             
-            // Fall back to parent implementation as a last resort
-            Logger.info('${this}: Falling back to parent implementation');
-            
-            // Temporarily store the original _sourcePath
-            var originalSource = _sourcePath;
-            
-            // Set the source path to the correct one
-            _sourcePath = sourcePath;
-            
-            // Call the parent implementation
-            super.copyFiles(callback);
-            
-            // Restore the original source path
-            _sourcePath = originalSource;
+            // Call the callback even if we failed
+            if (callback != null) callback();
         }
     }
 
@@ -157,7 +355,6 @@ class CustomProvisioner extends StandaloneProvisioner {
         
         // Create a map of roles from the metadata
         var roles = new Map<String, RoleData>();
-        Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Found ${provisionerDefinition.metadata.roles.length} roles in metadata');
         
         for (roleInfo in provisionerDefinition.metadata.roles) {
             var defaultEnabled = roleInfo.defaultEnabled == true;
@@ -181,7 +378,6 @@ class CustomProvisioner extends StandaloneProvisioner {
             };
             
             roles.set(roleInfo.name, roleData);
-            Logger.info('CustomProvisioner.getDefaultProvisionerRoles: Added role ${roleInfo.name}, enabled=${defaultEnabled}');
         }
         
         return roles;
@@ -290,24 +486,17 @@ private function _initializeServerMetadata() {
     // Check both userData and customProperties for the provisioner definition
     if (_server.userData != null && Reflect.hasField(_server.userData, "provisionerDefinition")) {
         provisionerDefinition = Reflect.field(_server.userData, "provisionerDefinition");
-        Logger.info('${this}: Found provisioner definition in server userData');
         
         // Copy from userData to customProperties to ensure consistency
         Reflect.setField(_server.customProperties, "provisionerDefinition", provisionerDefinition);
     } else if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
         provisionerDefinition = Reflect.field(_server.customProperties, "provisionerDefinition");
-        Logger.info('${this}: Found provisioner definition in server customProperties');
     }
     
     // Create dynamicCustomProperties if it doesn't exist
     if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
         Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
-        Logger.info('${this}: Created dynamicCustomProperties container');
     }
-    
-    // Ensure we don't add any duplicate metadata fields - they can be referenced directly
-    // from the provisioner definition when needed
-    Logger.info('${this}: Using provisionerDefinition as the single source of truth for metadata');
 }
 
 /**
@@ -322,7 +511,6 @@ override public function get_data():ProvisionerData {
     
     // Create a baseline data object
     var baseData = super.get_data();
-    Logger.info('${this}: Getting data with base type: ${baseData.type}');
     
     // Use consistent type comparison
     var isStandalone = (Std.string(baseData.type) == Std.string(ProvisionerType.StandaloneProvisioner));
@@ -339,8 +527,6 @@ override public function get_data():ProvisionerData {
         _server.serverProvisionerId.value != "0.0.0") {
         
         var versionStr = _server.serverProvisionerId.value;
-        Logger.info('${this}: Using serverProvisionerId for version: ${versionStr}');
-
         return { 
             type: originalType,
             version: champaign.core.primitives.VersionInfo.fromString(versionStr)
@@ -354,7 +540,6 @@ override public function get_data():ProvisionerData {
             if (provDef != null && Reflect.hasField(provDef, "data")) {
                 if (Reflect.hasField(provDef.data, "version")) {
                     var versionInfo = Reflect.field(provDef.data, "version");
-                    Logger.info('${this}: Using provisionerDefinition for version: ${versionInfo}');
                     
                     // Preserve the original type to ensure consistency
                     return {
@@ -362,18 +547,11 @@ override public function get_data():ProvisionerData {
                         version: versionInfo
                     };
                 }
-                
-                if (Reflect.hasField(provDef.data, "type")) {
-                    // Only log the type information for debugging
-                    var typeInfo = Reflect.field(provDef.data, "type");
-                    Logger.info('${this}: Found provisionerDefinition type: ${typeInfo}, using original type: ${originalType}');
-                }
             }
         }
     }
     
     // Fallback to the base version while preserving the original type
-    Logger.error('${this}: Using fallback with original type: ${originalType}');
     return {
         type: originalType,
         version: baseData.version
@@ -441,7 +619,6 @@ override public function generateHostsFileContent():String {
                 if (rolesList != null) {
                     // Cast the dynamic rolesList to Array<Dynamic> or iterate using indices
                     var rolesArray:Array<Dynamic> = cast(rolesList, Array<Dynamic>);
-                    Logger.info('${this}: Initializing variables for ${rolesArray.length} roles from provisioner metadata');
                     
                     for (i in 0...rolesArray.length) {
                         var roleInfo = rolesArray[i];
@@ -455,8 +632,6 @@ override public function generateHostsFileContent():String {
                             
                             // Set role enablement to false by default
                             content = _replaceVariable(content, roleName, "false");
-                            
-                            Logger.verbose('${this}: Initialized variables for role ${roleName}');
                         }
                     }
                 }
@@ -761,6 +936,56 @@ override public function generateHostsFileContent():String {
     }
     
 /**
+ * Override clearTargetDirectory to use Windows long path handling
+ * This ensures that custom provisioners with deeply nested directories work properly on Windows
+ */
+override public function clearTargetDirectory() {
+    try {
+        // Get platform-specific path
+        var platformTargetPath = _getPlatformPath(_targetPath);
+        
+        // Check if directory exists first
+        if (FileSystem.exists(platformTargetPath)) {
+            Logger.info('${this}: Clearing target directory: ${_targetPath}');
+            
+            if (!FileSystem.isDirectory(platformTargetPath)) {
+                Logger.error('${this}: Target path exists but is not a directory: ${_targetPath}');
+                return;
+            }
+            
+            // Attempt to delete the directory and its contents
+            try {
+                FileTools.deleteDirectory(platformTargetPath);
+                Logger.info('${this}: Successfully deleted target directory');
+            } catch (deleteErr) {
+                Logger.error('${this}: Error deleting target directory: ${deleteErr}');
+                
+                #if windows
+                // Log additional info for Windows
+                Logger.error('${this}: On Windows, this could be related to path length issues');
+                Logger.error('${this}: Path length: ${_targetPath.length}, Platform path: ${platformTargetPath}');
+                #end
+                
+                // Rethrow to maintain existing behavior
+                throw deleteErr;
+            }
+        }
+        
+        // Create the target directory
+        try {
+            FileSystem.createDirectory(platformTargetPath);
+            Logger.info('${this}: Successfully created target directory');
+        } catch (createErr) {
+            Logger.error('${this}: Error creating target directory: ${createErr}');
+            throw createErr;
+        }
+    } catch (e) {
+        Logger.error('${this}: Error clearing target directory: ${e}');
+        throw e;
+    }
+}
+
+/**
  * Override saveSafeId to prevent copying SafeID for custom provisioners
  * @param safeid The path to the SafeID file
  * @return Always returns true for custom provisioners
@@ -899,11 +1124,7 @@ override public function saveHostsFile() {
             }
         }
         
-        // Log if no replacements were made
-        if (!replaced) {
-            Logger.verbose('${this}: Variable ${name} not found in template with any case variation');
-        }
-        
+
         return result;
     }
     

@@ -369,6 +369,15 @@ class AdvancedConfigPage extends Page {
     }
 
     function _updateForm() {
+        // Check if server or UI components are null to prevent crashes
+        if (_server == null || _cbDisableBridgeAdapter == null || 
+            _dropdownNetworkInterface == null || _cbDHCP == null || 
+            _inputNetworkIP == null || _inputGatewayIP == null || 
+            _inputNetmaskIP == null || _inputNameServer == null || 
+            _inputNameServer2 == null) {
+            champaign.core.logging.Logger.warning('${this}: Cannot update form - server or UI components are null');
+            return;
+        }
 
         var canChangeBridgeAdapter:Bool = !_server.disableBridgeAdapter.locked;
         _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
@@ -378,14 +387,13 @@ class AdvancedConfigPage extends Page {
         _cbDisableBridgeAdapter.invalidate();
 
         var canChangeNetworkValues:Bool = !_server.disableBridgeAdapter.locked && !_server.disableBridgeAdapter.value;
-        _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
+        _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.networkBridge.locked;
         _cbDHCP.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
         _inputNetworkIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputGatewayIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputNetmaskIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputNameServer.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputNameServer2.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
-
     }
 
     function _cbDHCP_Or_cbDisableBridgeAdapterChanged( ?e:Event ) {

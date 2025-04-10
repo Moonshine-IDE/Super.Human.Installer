@@ -39,6 +39,10 @@
 	<assets rename="assets/bin" path="Assets/bin/linux" include="*" if="linux"/>
 
 	<template path="Templates"/>
+	
+	<section if="windows">
+		<template path="Templates/windows/app.manifest" rename="${appfile}.exe.manifest"/>
+	</section>
 
 	<section if="neko">
 		<app path="${exportdir}/neko-macos" if="mac"/>

@@ -102,6 +102,9 @@ class BrowserData {
 				this.downloadUrl = "https://www.mozilla.org/en-US/firefox/new/";
 		}
 		
-		this.exists = FileSystem.exists(this.executablePath);
+		// Only check existence automatically if it wasn't explicitly set in constructor
+		if (!this.exists) {
+			this.exists = FileSystem.exists(this.executablePath);
+		}
 	}
 }

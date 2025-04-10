@@ -130,26 +130,21 @@ class Server {
         if (data.provisioner == null) {
             // Default to StandaloneProvisioner for null provisioner
             sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc);
-            Logger.info('${sc}: Created StandaloneProvisioner (null provisioner case)');
         } else {
             // Look up the provisioner definition based on the effective type
             var provisioner = ProvisionerManager.getProvisionerDefinition(effectiveProvisionerType, data.provisioner.version);
-            Logger.info('${sc}: Looked up provisioner definition: ${provisioner != null ? provisioner.name : "null"}');
 
             if (provisioner != null) {
                 // Create the appropriate provisioner based on the effective type
                 if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.StandaloneProvisioner)) {
                     // Standalone provisioner
                     sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, provisioner.root, sc._serverDir, sc);
-                    Logger.info('${sc}: Created StandaloneProvisioner with root: ${provisioner.root}');
                 } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
                     // Additional provisioner - create the proper AdditionalProvisioner instance, not StandaloneProvisioner
                     sc._provisioner = new superhuman.server.provisioners.AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, provisioner.root, sc._serverDir, sc);
-                    Logger.info('${sc}: Created AdditionalProvisioner with root: ${provisioner.root}');
                 } else {
                     // Custom provisioner
                     sc._provisioner = new CustomProvisioner(effectiveProvisionerType, provisioner.root, sc._serverDir, sc);
-                    Logger.info('${sc}: Created CustomProvisioner of type ${effectiveProvisionerType} with root: ${provisioner.root}');
                 }
             } else {
                 // Fallback - the server already exists BUT the provisioner version is not supported
@@ -228,9 +223,6 @@ class Server {
                 var dynamicProps = Reflect.field(customProperties, "dynamicCustomProperties");
                 if (dynamicProps != null && Reflect.hasField(dynamicProps, "DOMAIN")) {
                     domain = Reflect.field(dynamicProps, "DOMAIN");
-                    if (domain != null && domain != "") {
-                        Logger.info('Using DOMAIN from dynamicCustomProperties: ${domain}');
-                    }
                 }
             }
             
@@ -242,7 +234,6 @@ class Server {
                 result.domainName = domain;
                 result.path = ""; // No path for custom provisioners
                 
-                Logger.info('Custom provisioner URL: ${result.hostname}.${result.domainName}');
                 return result;
             }
         }
@@ -1850,8 +1841,6 @@ class Server {
                 }
             }
 
-            Logger.info('${this}: destroyed');
-
             // Safely delete provisioning proof file
             if (_provisioner != null) {
                 try {
@@ -2287,22 +2276,18 @@ class Server {
     }
 
     function _virtualMachineStarted( executor:AbstractExecutor ) {
-
         Logger.info( '${this}: Refreshed Virtual Machine started ' + executor.id );
     }
     
     function _virtualMachineStopped( executor:AbstractExecutor ) {
-
         Logger.info( '${this}: Refreshed Virtual Machine stopped ' + executor.id );
     }
     
     function _virtualMachineStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         Logger.info( '${this}: Refreshed Virtual Machine standard output: ${data}');
     }
     
     function _virtualMachineStandardErrorData( executor:AbstractExecutor, data:String ) {
-
     	Logger.info( '${this}: Refreshed Virtual Machine error: ${data}');
     }
     

@@ -51,7 +51,6 @@ import sys.io.File;
 
 class AbstractProvisioner {
 
-    // Use root directory for scripts to support different repository structures
     static final _SCRIPTS_ROOT:String = "";
     static final _TEMPLATES_ROOT:String = "templates/";
     static final _CORE_ROOT:String = "core/";
@@ -140,6 +139,7 @@ class AbstractProvisioner {
 
     public function clearTargetDirectory() {
 
+        Logger.info('${this}: Deleting target directory: ${_targetPath}');
         FileTools.deleteDirectory( _targetPath );
         FileSystem.createDirectory( _targetPath );
 
@@ -358,8 +358,7 @@ class AbstractProvisioner {
     }
 
     public function getFileContentFromSourceScriptsDirectory( path:String ):String {
-        // Updated to look directly in the version root directory instead of a scripts subdirectory
-        // This supports both traditional directory structures and GitHub nested directory structures
+    // This supports both traditional directory structures and GitHub nested directory structures
         var fullPath = Path.addTrailingSlash( _sourcePath ) + path;
         
         // First try the direct path (for root-level files)
@@ -371,17 +370,6 @@ class AbstractProvisioner {
             }
         }
         
-        // If that fails, try looking in a "scripts" subdirectory (for backward compatibility)
-        var scriptsPath = Path.addTrailingSlash( _sourcePath ) + "scripts/" + path;
-        if ( FileSystem.exists( _getPlatformPath(scriptsPath) ) ) {
-            try {
-                return File.getContent( _getPlatformPath(scriptsPath) );
-            } catch( e ) {
-                Logger.error('Error reading file from scripts directory at ${scriptsPath}: ${e}');
-            }
-        }
-        
-        Logger.verbose('File not found at either ${fullPath} or ${scriptsPath}');
         return null;
     }
 

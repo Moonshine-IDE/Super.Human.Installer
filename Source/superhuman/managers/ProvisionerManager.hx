@@ -1294,11 +1294,9 @@ class ProvisionerManager {
                     // Create the destination version directory
                     FileSystem.createDirectory(versionDestPath);
                     
-                    // Zip the entire version directory
-                    var zipBytes = _zipDirectory(versionSourcePath);
-                    
-                    // Unzip to the destination
-                    _unzipToDirectory(zipBytes, versionDestPath);
+                    // Copy the directory directly using Windows long path support
+                    Logger.info('Copying version directory ${versionDir} using direct file copy');
+                    _copyDirectoryRecursive(versionSourcePath, versionDestPath);
                     
                     importedCount++;
                     Logger.info('Successfully imported version: ${versionDir}');
@@ -1452,11 +1450,9 @@ class ProvisionerManager {
             // Create the destination version directory
             FileSystem.createDirectory(versionDestPath);
             
-            // Zip the entire version directory to handle nested files
-            var zipBytes = _zipDirectory(sourcePath);
-            
-            // Unzip to the destination
-            _unzipToDirectory(zipBytes, versionDestPath);
+            // Use direct file copying with Windows long path support
+            Logger.info('Copying version directory using direct file copy');
+            _copyDirectoryRecursive(sourcePath, versionDestPath);
             
             Logger.info('Successfully imported version ${versionId} into collection ${versionMetadata.type}');
             
@@ -1510,20 +1506,9 @@ class ProvisionerManager {
     ):Bool {
         Logger.info('Importing provisioner from GitHub: ${organization}/${repository} branch ${branch}');
         
-        // Create a temporary directory for the download
-        var tempDir = Path.addTrailingSlash(getProvisionersDirectory()) + ".temp_" + organization + "_" + repository + "_" + Date.now().getTime();
-        Logger.info('Created temporary directory at: ${tempDir}');
-        if (!FileSystem.exists(tempDir)) {
-            try {
-                FileSystem.createDirectory(tempDir);
-            } catch (e) {
-                Logger.error('Failed to create temporary directory: ${e}');
-                return false;
-            }
-        }
-        
         var success = false;
-        var repoDir = tempDir; // Default location
+        var shortTempDirPath = null; // For Windows, this will be C:/Users/Username/repo/
+        var repoDir = null; // Directory where we'll find the repository contents
         
         try {
             // Find GitHub token if specified
@@ -1544,20 +1529,66 @@ class ProvisionerManager {
                 }
             }
             
-            // Download the repository
-            if (useGit) {
-                var gitCloneDir = Path.addTrailingSlash(tempDir) + "git_clone";
-                Logger.info('Using git clone with recursive submodules and longpaths support');
-                success = _downloadWithGit(organization, repository, branch, tempDir, token);
-                repoDir = gitCloneDir; // With git, the repo is in the git_clone subdirectory
+            // Set up temporary paths for cloning
+            if (Sys.systemName() == "Windows") {
+                var username = Sys.getEnv("USERNAME");
+                if (username != null && username != "") {
+                    // Always use C:/Users/Username/repo on Windows
+                    shortTempDirPath = 'C:/Users/${username}/repo/';
+                    
+                    // Make sure it exists
+                    if (!FileSystem.exists(shortTempDirPath)) {
+                        try {
+                            FileSystem.createDirectory(shortTempDirPath);
+                        } catch (e) {
+                            Logger.error('Failed to create repo directory at ${shortTempDirPath}: ${e}');
+                            return false;
+                        }
+                    }
+                } else {
+                    Logger.error('Could not determine Windows username for repo path');
+                    return false;
+                }
             } else {
-                success = _downloadWithHttp(organization, repository, branch, tempDir, token);
-                repoDir = Path.addTrailingSlash(tempDir) + "extracted"; // With HTTP, the repo is in the extracted subdirectory
+                // For non-Windows, create a temporary directory in the system temp
+                var timestamp = Date.now().getTime();
+                shortTempDirPath = Path.addTrailingSlash(System.applicationStorageDirectory) + 
+                                   "temp_" + repository + "_" + timestamp + "/";
+                try {
+                    if (!FileSystem.exists(shortTempDirPath)) {
+                        FileSystem.createDirectory(shortTempDirPath);
+                    }
+                } catch (e) {
+                    Logger.error('Failed to create temporary directory: ${e}');
+                    return false;
+                }
+            }
+            
+            // Download the repository directly to the temporary directory
+            if (useGit) {
+                Logger.info('Using git clone with recursive submodules and longpaths support');
+                var gitResult = _downloadWithGit(organization, repository, branch, shortTempDirPath, token);
+                success = gitResult.success;
+                
+                // For Git clone, the repo is directly in the shortTempDirPath
+                repoDir = shortTempDirPath;
+            } else {
+                // Create an extracted subdirectory for HTTP download
+                var extractDir = Path.addTrailingSlash(shortTempDirPath) + "extracted";
+                if (!FileSystem.exists(extractDir)) {
+                    FileSystem.createDirectory(extractDir);
+                }
+                
+                success = _downloadWithHttp(organization, repository, branch, shortTempDirPath, token);
+                repoDir = Path.addTrailingSlash(shortTempDirPath) + "extracted"; // With HTTP, the repo is in the extracted subdirectory
             }
             
             if (!success) {
                 Logger.error('Failed to download GitHub repository');
-                _cleanupTempDir(tempDir);
+                if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
+                    Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
+                    _safeDeleteDirectory(shortTempDirPath);
+                }
                 return false;
             }
             
@@ -1580,9 +1611,11 @@ class ProvisionerManager {
             var provisionerPath = _findProvisionerRoot(repoDir, repository);
             if (provisionerPath == null) {
                 Logger.error('Could not find valid provisioner structure in the repository');
-                _cleanupTempDir(tempDir);
+                if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
+                    Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
+                    _safeDeleteDirectory(shortTempDirPath);
+                }
                 return false;
-            
             }
             
             Logger.info('Found provisioner structure at: ${provisionerPath}');
@@ -1601,12 +1634,32 @@ class ProvisionerManager {
             }
             
             // Clean up temporary files
-            _cleanupTempDir(tempDir);
+            Logger.info('Cleaning up temporary directories after import');
+            if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
+                try {
+                    Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
+                    _safeDeleteDirectory(shortTempDirPath);
+                    
+                    // Also clean up the short temp path repo directory if it exists (for non-Windows)
+                    if (Sys.systemName() != "Windows") {
+                        var shortTempRepoDir = Path.addTrailingSlash(shortTempDirPath) + "repo";
+                        if (FileSystem.exists(shortTempRepoDir)) {
+                            Logger.info('Cleaning up short temp repo directory: ${shortTempRepoDir}');
+                            _deleteDirectory(shortTempRepoDir);
+                        }
+                    }
+                } catch (e) {
+                    Logger.warning('Failed to clean up temporary directories: ${e}');
+                }
+            }
             
             return success;
         } catch (e) {
             Logger.error('Error importing from GitHub: ${e}');
-            _cleanupTempDir(tempDir);
+            if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
+                Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
+                _safeDeleteDirectory(shortTempDirPath);
+            }
             return false;
         }
     }
@@ -1789,6 +1842,7 @@ class ProvisionerManager {
     /**
      * Download a GitHub repository using git clone with support for recursive submodules
      * and a shorter path to handle Windows path length limitations
+     * @return {success:Bool, shortTempPath:String} Returns both success status and the short temp path used
      */
     static private function _downloadWithGit(
         organization:String, 
@@ -1796,75 +1850,52 @@ class ProvisionerManager {
         branch:String, 
         destinationDir:String,
         token:String = null
-    ):Bool {
+    ):{success:Bool, shortTempPath:String} {
         Logger.info('Downloading GitHub repository via git clone: ${organization}/${repository} branch ${branch}');
         
-        // Create a shorter temporary directory for initial clone
-        // Try several potential short temp paths in order
+        // Define variables for temporary paths
         var shortTempDir = null;
+        var shortTempRepoDir = null;
         
-        // Initialize temp options array
-        var tempOptions:Array<String> = [];
-        
-        // For Windows, use the user profile directory to get much shorter paths
+        // CRITICAL: On Windows, we ONLY use C:/Users/Username/repo - no other paths, no subdirectories, no fallbacks
+        // This is mandatory to handle Windows path length limitations - DO NOT MODIFY THIS BEHAVIOR
         if (Sys.systemName() == "Windows") {
-            // Get user home directory (typically C:\Users\<username>\)
-            var userHome = Sys.getEnv("USERPROFILE");
-            if (userHome != null && userHome != "" && FileSystem.exists(userHome)) {
-                tempOptions.push(Path.addTrailingSlash(userHome));
-            } else {
-                // Fallback to "C:\Users\<username>\" by getting username from environment
-                var username = Sys.getEnv("USERNAME");
-                if (username != null && username != "") {
-                    tempOptions.push('C:/Users/${username}/');
+            // Get username from environment
+            var username = Sys.getEnv("USERNAME");
+            if (username != null && username != "") {
+                // Create ONLY C:/Users/Username/repo - exactly this path and nothing else, this is  critical to ONLY use this path, we CANNOT use ANYTHING ELSE EVER!!!
+                shortTempDir = 'C:/Users/${username}/repo/';
+                
+                // Create repo directory if it doesn't exist
+                try {
+                    if (!FileSystem.exists(shortTempDir)) {
+                        FileSystem.createDirectory(shortTempDir);
+                    }
+                } catch(e) {
+                    Logger.error('Failed to create directory at ${shortTempDir}: ${e}');
+                    return {success: false, shortTempPath: null};
                 }
-            }
-            
-            // Add other Windows-specific fallbacks
-            tempOptions.push("C:/Temp");
-            var envTemp = Sys.getEnv("TEMP");
-            if (envTemp != null && envTemp != "") {
-                tempOptions.push(envTemp);
+            } else {
+                Logger.error('Could not determine Windows username');
+                return {success: false, shortTempPath: null};
             }
         } else {
-            // For Mac/Linux, ONLY use application storage directory - they don't have path length limitations like Windows
-            tempOptions.push(System.applicationStorageDirectory);
-        }
-        
-        // Find first writable location with shortest path
-        for (option in tempOptions) {
-            var path = StringTools.trim(option);
-            if (path != "" && FileSystem.exists(path) && _canWriteToDirectory(path)) {
-                shortTempDir = Path.addTrailingSlash(path) + "temp";
-                break;
+            // For Mac/Linux, use application storage directory
+            var timestamp = Date.now().getTime();
+            shortTempDir = Path.addTrailingSlash(System.applicationStorageDirectory) + repository + "_" + timestamp + "/";
+            
+            try {
+                if (!FileSystem.exists(shortTempDir)) {
+                    FileSystem.createDirectory(shortTempDir);
+                    Logger.info('Created temporary directory: ${shortTempDir}');
+                }
+            } catch(e) {
+                Logger.error('Failed to create directory at ${shortTempDir}: ${e}');
+                return {success: false, shortTempPath: null};
             }
         }
-        
-        // If all else fails, use the original destination directory
-        if (shortTempDir == null) {
-            shortTempDir = Path.addTrailingSlash(destinationDir) + "temp";
-        }
-        
-        var cloneDir = Path.addTrailingSlash(destinationDir) + "git_clone";
         
         try {
-            // Create short temporary directory if it doesn't exist (or clear it if it does)
-            if (FileSystem.exists(shortTempDir)) {
-                try {
-                    _deleteDirectory(shortTempDir);
-                } catch (e) {
-                    Logger.warning('Failed to clean up existing temp directory: ${e}');
-                }
-            }
-            
-            Logger.info('Creating temporary directory with shorter path: ${shortTempDir}');
-            FileSystem.createDirectory(shortTempDir);
-            
-            // Create final clone directory if it doesn't exist
-            if (!FileSystem.exists(cloneDir)) {
-                FileSystem.createDirectory(cloneDir);
-            }
-            
             // Build the clone URL
             var cloneUrl = "";
             if (token != null) {
@@ -1882,91 +1913,67 @@ class ProvisionerManager {
             // Single command for cloning with recursive submodules and longpaths enabled
             Logger.info('Performing git clone with recursive submodules to shorter path');
             
-            // For Windows, use a more robust approach with multiple specific git commands
+            // For Windows, use a single command approach with better error handling
             if (Sys.systemName() == "Windows") {
-                // First ensure directory exists
-                if (!FileSystem.exists('${shortTempDir}/repo')) {
-                    FileSystem.createDirectory('${shortTempDir}/repo');
+                // On Windows: Ensure the path is properly formatted with backslashes and no trailing slash
+                var windowsSafePath = StringTools.replace(shortTempDir, "/", "\\");
+                windowsSafePath = StringTools.trim(windowsSafePath); // Remove any trailing whitespace
+                if (StringTools.endsWith(windowsSafePath, "\\")) {
+                    windowsSafePath = windowsSafePath.substr(0, windowsSafePath.length - 1); // Remove trailing backslash
                 }
                 
-                // Create a function to run git commands with output capture and logging
-                function runGitCommand(command:String, description:String):Bool {
-                    Logger.info('${description}: ${command}');
-                    
-                    // Use Process instead of Sys.command to capture output
-                    var process = new sys.io.Process(command);
-                    var exitCode = process.exitCode();
-                    
-                    // Capture and log stdout
-                    var output = process.stdout.readAll().toString();
-                    if (output != null && output.length > 0) {
-                        var lines = output.split("\n");
-                        for (line in lines) {
-                            if (StringTools.trim(line).length > 0) {
-                                Logger.info('Git output: ${line}');
-                            }
+                var cloneCmd = 'git -c core.longpaths=true clone --depth 1 --recursive --branch ${branch} ${cloneUrl} "${windowsSafePath}"';
+                Logger.info('Executing single git clone command for Windows: ${cloneCmd}');
+                
+                // Use Process instead of Sys.command to capture output
+                var process = new sys.io.Process(cloneCmd);
+                var exitCode = process.exitCode();
+                
+                // Capture and log stdout
+                var output = process.stdout.readAll().toString();
+                if (output != null && output.length > 0) {
+                    var lines = output.split("\n");
+                    for (line in lines) {
+                        if (StringTools.trim(line).length > 0) {
+                            Logger.info('Git output: ${line}');
                         }
                     }
-                    
-                    // Capture and log stderr
-                    var error = process.stderr.readAll().toString();
-                    if (error != null && error.length > 0) {
-                        var lines = error.split("\n");
-                        for (line in lines) {
-                            if (StringTools.trim(line).length > 0) {
-                                Logger.warning('Git error: ${line}');
-                            }
+                }
+                
+                // Capture and log stderr
+                var error = process.stderr.readAll().toString();
+                if (error != null && error.length > 0) {
+                    var lines = error.split("\n");
+                    for (line in lines) {
+                        if (StringTools.trim(line).length > 0) {
+                            Logger.info('Git: ${line}');
                         }
                     }
+                }
+                
+                // Close the process
+                process.close();
+                
+                if (exitCode != 0) {
+                    Logger.error('Failed to clone GitHub repository, exit code: ${exitCode}');
                     
-                    // Close the process
-                    process.close();
-                    
-                    // Log the result
-                    if (exitCode != 0) {
-                        Logger.warning('${description} exited with code ${exitCode}');
-                    } else {
-                        Logger.info('${description} completed successfully');
+                    // For Windows, we just try to clean up and call again - no fancy uniqueName handling since we always use C:/Users/Username/repo
+                    if (error != null && error.indexOf("destination path") >= 0 && error.indexOf("already exists") >= 0) {
+                        Logger.warning('Detected "destination path already exists" error. Directory appears to exist to Git but may not be visible to standard APIs.');
+                        
+                        // Clean up the repo directory if possible before retrying
+                        try {
+                            _deleteDirectory(shortTempDir);
+                            Logger.info('Cleared repo directory, retrying the git clone operation');
+                        } catch (e) {
+                            Logger.warning('Could not clean up repo directory: ${e}');
+                        }
+                        
+                        // Try again with the same directory - it should be clean now
+                        return _downloadWithGit(organization, repository, branch, destinationDir, token);
                     }
                     
-                    return exitCode == 0;
-                }
-                
-                // Run multiple commands to ensure proper cloning with submodules
-                Logger.info('Using multi-step git clone approach for Windows with long path support');
-                
-                // Step 1: Initialize git repository
-                var initSuccess = runGitCommand('git -c core.longpaths=true init ${shortTempDir}/repo', 
-                                           "Initializing git repo");
-                
-                // Step 2: Add remote
-                var remoteSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true remote add origin ${cloneUrl}', 
-                                             "Adding remote");
-                
-                // Step 3: Fetch the specified branch
-                var fetchSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true fetch --depth 1 origin ${branch}', 
-                                            "Fetching branch");
-                if (!fetchSuccess) {
-                    Logger.error('Failed to fetch branch ${branch}');
-                    return false;
-                }
-                
-                // Step 4: Checkout the branch
-                var checkoutSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true checkout FETCH_HEAD', 
-                                               "Checking out branch");
-                if (!checkoutSuccess) {
-                    Logger.error('Failed to checkout branch');
-                    return false;
-                }
-                
-                // Step 5: Initialize and update submodules
-                Logger.info('Initializing submodules with long path support');
-                var submoduleSuccess = runGitCommand('cd ${shortTempDir}/repo && git -c core.longpaths=true submodule update --init --recursive', 
-                                                "Initializing submodules");
-                
-                // Continue even if submodules had issues - we'll work with whatever we got
-                if (!submoduleSuccess) {
-                    Logger.warning('Submodule initialization had issues, but continuing with available files');
+                    return {success: false, shortTempPath: shortTempDir};
                 }
             } else {
                 // For macOS/Linux, a single command approach with output logging
@@ -2012,40 +2019,20 @@ class ProvisionerManager {
                         Logger.warning('Failed to clean up temporary directory: ${e}');
                     }
                     
-                    return false;
+                    return {success: false, shortTempPath: shortTempDir};
                 }
             }
             
-            // Now that we have cloned to a shorter path, move contents to the destination using zip/unzip
-            Logger.info('Clone successful. Moving files from ${shortTempDir}/repo to ${cloneDir}');
+            // The repo has been successfully cloned to the shortTempDir, 
+            // no need to move it again since it will be processed by importProvisioner/importProvisionerVersion
+            Logger.info('Clone successful. Repository is available at ${shortTempDir}');
             
-            try {
-                // Use zip/unzip functionality to handle potential long paths
-                Logger.info('Using zip/unzip to handle potentially long paths');
-                
-                // Zip the entire source directory
-                var zipBytes = _zipDirectory('${shortTempDir}/repo');
-                Logger.info('Repository directory zipped successfully');
-                
-                // Unzip to the destination
-                _unzipToDirectory(zipBytes, cloneDir);
-                Logger.info('Repository directory unzipped to destination successfully');
-                
-                // Clean up the temporary directory
-                try {
-                    _deleteDirectory(shortTempDir);
-                } catch (e) {
-                    Logger.warning('Failed to clean up temporary directory: ${e}');
-                }
-                
-                return true;
-            } catch (e) {
-                Logger.error('Error copying files to destination: ${e}');
-                return false;
-            }
+            // We don't need to zip/unzip here as that will be handled 
+            // during the actual import operation if needed
+            return {success: true, shortTempPath: shortTempDir};
         } catch (e) {
             Logger.error('Error during git clone: ${e}');
-            return false;
+            return {success: false, shortTempPath: null};
         }
     }
     
@@ -2070,26 +2057,64 @@ class ProvisionerManager {
     }
     
     /**
-     * Copy a directory and all its contents recursively
+     * Copy a directory and all its contents with Windows long path support
+     * This uses OpenFL's File.copyTo to copy entire directory trees at once
      * @param source Source directory path
      * @param destination Destination directory path
      */
-    static private function _copyDirectory(source:String, destination:String):Void {
-        if (!FileSystem.exists(destination)) {
-            FileSystem.createDirectory(destination);
+    static private function _copyDirectoryRecursive(source:String, destination:String):Void {
+        // Source validation
+        if (!FileSystem.exists(source)) {
+            Logger.error('Source directory does not exist: ${source}');
+            throw new haxe.Exception('Source directory does not exist: ${source}');
         }
         
-        var items = FileSystem.readDirectory(source);
-        for (item in items) {
-            var sourcePath = Path.addTrailingSlash(source) + item;
-            var destPath = Path.addTrailingSlash(destination) + item;
-            
-            if (FileSystem.isDirectory(sourcePath)) {
-                _copyDirectory(sourcePath, destPath);
-            } else {
-                File.copy(sourcePath, destPath);
+        if (!FileSystem.isDirectory(source)) {
+            Logger.error('Source path is not a directory: ${source}');
+            throw new haxe.Exception('Source path is not a directory: ${source}');
+        }
+        
+        // Ensure destination parent directory exists
+        var destParent = Path.directory(destination);
+        if (!FileSystem.exists(destParent)) {
+            try {
+                // Use platform path for directory creation
+                var platformDestParent = _getPlatformPath(destParent);
+                Logger.info('Creating destination parent directory: ${destParent}');
+                _createDirectoryRecursiveWithPlatformPath(platformDestParent);
+            } catch (e) {
+                Logger.error('Failed to create destination parent directory: ${destParent} - ${e}');
+                throw e;
             }
         }
+        
+        // Copy the entire directory at once using OpenFL's File.copyTo method
+        try {
+            Logger.info('Copying directory ${source} to ${destination} using OpenFL File.copyTo');
+            
+            // Create OpenFL File objects for source and destination
+            var sourceDir = new openfl.filesystem.File(source);
+            var destDir = new openfl.filesystem.File(destination);
+            
+            // Copy the entire directory tree in one operation
+            sourceDir.copyTo(destDir, true); // true to overwrite if destination exists
+            
+            Logger.info('Directory copy completed successfully');
+        } catch (e) {
+            Logger.error('Error during directory copy operation: ${e}');
+            throw e;
+        }
+    }
+    
+    /**
+     * Copy a directory and all its contents using direct file copy with Windows long path support
+     * This method is kept for backward compatibility, but now uses direct file copying instead of zip/unzip
+     * @param source Source directory path
+     * @param destination Destination directory path
+     */
+    static private function _copyDirectoryViaZip(source:String, destination:String):Void {
+        Logger.info('Copying directory ${source} to ${destination} (using direct file copy)');
+        _copyDirectoryRecursive(source, destination);
     }
     
     /**
@@ -2308,6 +2333,47 @@ class ProvisionerManager {
         
         FileSystem.deleteDirectory(dirPath);
     }
+
+    /**
+     * Safely delete a directory by checking if it's a valid temporary directory first
+     * This helps prevent accidental deletion of important system directories
+     * @param dirPath Path to the directory to delete
+     */
+    static private function _safeDeleteDirectory(dirPath:String):Void {
+        // Safety checks to prevent deleting important directories
+        if (dirPath == null || dirPath == "" || dirPath.length < 10) {
+            Logger.error('Refusing to delete potentially important directory: ${dirPath}');
+            return;
+        }
+        
+        // Only delete directories with our expected patterns - on Windows, we only use the repo directory
+        var isValidTemp = false;
+        
+        if (Sys.systemName() == "Windows") {
+            // On Windows, we ONLY use the C:/Users/Username/repo path
+            if (dirPath.indexOf("/repo") >= 0 || dirPath.indexOf("\\repo") >= 0) {
+                isValidTemp = true;
+            }
+        } else {
+            // On non-Windows, we use paths in the application storage directory
+            if (dirPath.indexOf(System.applicationStorageDirectory) >= 0) {
+                isValidTemp = true;
+            }
+        }
+        
+        if (!isValidTemp) {
+            Logger.error('Refusing to delete directory that does not match expected patterns: ${dirPath}');
+            return;
+        }
+        
+        // Safe to delete
+        try {
+            _deleteDirectory(dirPath);
+            Logger.info('Successfully deleted temporary directory: ${dirPath}');
+        } catch (e) {
+            Logger.warning('Error deleting directory ${dirPath}: ${e}');
+        }
+    }
     
     /**
      * Get valid version directories from a provisioner directory
@@ -2383,23 +2449,85 @@ class ProvisionerManager {
      * @return The platform-appropriate path
      */
     static private function _getPlatformPath(path:String):String {
+        // Basic path validation
+        if (path == null || path == "") {
+            Logger.error('Cannot convert null or empty path');
+            return path;
+        }
+        
         #if windows
-        return _getWindowsLongPath(path);
+        // For Windows, add special handling
+        try {
+            // Normalize path separators before conversion - make all forward slashes into backslashes
+            var normalizedPath = StringTools.replace(path, "/", "\\");
+            
+            // Log the conversion for debugging
+            var result = _getWindowsLongPath(normalizedPath);
+            
+            // Log the conversion to help diagnose path issues
+            if (path != result) {
+                Logger.info('Windows path conversion: "' + path + '" -> "' + result + '"');
+            }
+            
+            // Return the converted path
+            return result;
+        } catch (e) {
+            Logger.error('Error in Windows path conversion for "' + path + '": ' + e);
+            return path; // Return original path as fallback
+        }
         #else
+        // On non-Windows platforms, simply return the original path
         return path;
         #end
     }
     
     static private function _zipDirectory(directory:String):Bytes {
         Logger.info('Zipping directory: ${directory}');
+        
+        // Add validation before proceeding
+        if (directory == null || directory == "") {
+            Logger.error('Cannot zip null or empty directory path');
+            throw new haxe.Exception('Invalid directory path: null or empty');
+        }
+        
+        // Log the existence of the directory
+        var directoryExists = FileSystem.exists(directory);
+        var isDirectory = directoryExists && FileSystem.isDirectory(directory);
+        Logger.info('Directory exists: ${directoryExists}, Is directory: ${isDirectory}');
+        
+        if (!directoryExists) {
+            Logger.error('Cannot zip non-existent directory: ${directory}');
+            throw new haxe.Exception('Invalid directory path: directory does not exist');
+        }
+        
+        if (!isDirectory) {
+            Logger.error('Cannot zip non-directory path: ${directory}');
+            throw new haxe.Exception('Invalid directory path: not a directory');
+        }
+        
+        // Try to list contents for diagnostic purposes
+        try {
+            var items = FileSystem.readDirectory(directory);
+            Logger.info('Directory contains ${items.length} items at top level');
+        } catch (e) {
+            Logger.error('Error listing directory contents: ${e}');
+            // Continue anyway, as the deeper function will handle this error
+        }
+        
         var entries:List<Entry> = new List<Entry>();
-        _addDirectoryToZip(directory, "", entries);
         
-        var out = new BytesOutput();
-        var writer = new Writer(out);
-        writer.write(entries);
-        
-        return out.getBytes();
+        try {
+            _addDirectoryToZip(directory, "", entries);
+            
+            var out = new BytesOutput();
+            var writer = new Writer(out);
+            writer.write(entries);
+            
+            return out.getBytes();
+        } catch (e) {
+            Logger.error('Error during directory zipping: ${e}');
+            throw e; // Re-throw to be handled by caller
+        }
     }
     
     /**
@@ -2410,17 +2538,111 @@ class ProvisionerManager {
      * @param entries The list of zip entries
      */
     static private function _addDirectoryToZip(directory:String, path:String, entries:List<Entry>):Void {
+        // Enhanced validation of input directory parameter
+        if (directory == null || directory == "") {
+            var errorMsg = "Cannot process null or empty directory";
+            Logger.error(errorMsg);
+            throw new haxe.Exception(errorMsg);
+        }
+
+        // Check if directory exists and is actually a directory
+        var directoryExists = FileSystem.exists(directory);
+        if (!directoryExists) {
+            var errorMsg = 'Directory does not exist: ${directory}';
+            Logger.error(errorMsg);
+            throw new haxe.Exception(errorMsg);
+        }
+
+        var isDirectory = FileSystem.isDirectory(directory);
+        if (!isDirectory) {
+            var errorMsg = 'Path exists but is not a directory: ${directory}';
+            Logger.error(errorMsg);
+            throw new haxe.Exception(errorMsg);
+        }
+
+        Logger.info('_addDirectoryToZip processing directory: ${directory} (path within zip: ${path})');
+        
         try {
             // Use platform-specific path for directory operations
             var platformDirectory = _getPlatformPath(directory);
-            var items = FileSystem.readDirectory(platformDirectory);
+            Logger.info('Using platform directory: ${platformDirectory}');
             
+            // Check if platform directory exists (in case conversion changed something)
+            var platformDirExists = FileSystem.exists(platformDirectory);
+            if (!platformDirExists) {
+                var errorMsg = 'Platform-specific directory path does not exist: ${platformDirectory}';
+                Logger.error(errorMsg);
+                throw new haxe.Exception(errorMsg);
+            }
+            
+            // Read directory contents with detailed logging and more robust error handling
+            var items = [];
+            try {
+                // Try to read the directory with the platform path first
+                items = FileSystem.readDirectory(platformDirectory);
+                Logger.info('Directory contains ${items.length} items');
+            } catch (e) {
+                // Handle the specific "Invalid directory" error
+                var errorMsg = Std.string(e);
+                if (errorMsg.indexOf("Invalid directory") >= 0) {
+                    Logger.error('Directory exists but cannot be read with long path (Invalid directory error): ${platformDirectory}');
+                    Logger.error('This may be due to permission issues or path encoding problems');
+                    
+                    // Additional diagnostics for Windows
+                    if (Sys.systemName() == "Windows") {
+                        Logger.error('Windows path details:');
+                        Logger.error('  Original path: ${directory}');
+                        Logger.error('  Platform path: ${platformDirectory}');
+                    }
+                    
+                    // Try with the original directory as fallback
+                    try {
+                        items = FileSystem.readDirectory(directory);
+                        Logger.info('Successfully read directory using original path: ${items.length} items');
+                    } catch (e2) {
+                        Logger.error('Failed to read directory using original path: ${e2}');
+                        throw new haxe.Exception('Cannot read directory content: ${e2.message}');
+                    }
+                } else {
+                    Logger.error('Error reading directory contents: ${e}');
+                    throw e;
+                }
+            }
+            
+            // Process the directory contents
             for (item in items) {
                 var itemPath = Path.addTrailingSlash(directory) + item;
                 var platformItemPath = _getPlatformPath(itemPath);
                 var zipPath = path.length > 0 ? path + "/" + item : item;
                 
-                if (FileSystem.isDirectory(platformItemPath)) {
+                // Verify the item exists using the appropriate path
+                var itemPathToUse = platformItemPath;
+                var itemExists = FileSystem.exists(platformItemPath);
+                
+                if (!itemExists) {
+                    Logger.warning('Item does not exist with platform path: ${platformItemPath}, trying original path');
+                    itemExists = FileSystem.exists(itemPath);
+                    if (itemExists) {
+                        itemPathToUse = itemPath;
+                        Logger.info('Item exists with original path: ${itemPath}');
+                    } else {
+                        Logger.warning('Item does not exist at all, skipping: ${item}');
+                        continue;
+                    }
+                }
+                
+                var isItemDirectory = false;
+                // Try to determine if it's a directory
+                try {
+                    isItemDirectory = FileSystem.isDirectory(itemPathToUse);
+                } catch (e) {
+                    Logger.warning('Error checking if item is directory: ${e}, skipping: ${item}');
+                    continue;
+                }
+                
+                Logger.verbose('Processing ${isItemDirectory ? "directory" : "file"}: ${item}');
+                
+                if (isItemDirectory) {
                     // Add directory entry
                     var entry:Entry = {
                         fileName: zipPath + "/",
@@ -2434,35 +2656,88 @@ class ProvisionerManager {
                     entries.add(entry);
                     
                     // Recursively add directory contents
-                    _addDirectoryToZip(itemPath, zipPath, entries);
+                    try {
+                        _addDirectoryToZip(itemPath, zipPath, entries);
+                    } catch (e) {
+                        Logger.warning('Error adding subdirectory ${itemPath} to zip: ${e}, continuing with other items');
+                    }
                 } else {
                     // Add file entry without compression
                     try {
-                        var data = File.getBytes(platformItemPath);
+                        var data = File.getBytes(itemPathToUse);
                         var entry:Entry = {
                             fileName: zipPath,
                             fileSize: data.length,
-                            fileTime: FileSystem.stat(platformItemPath).mtime,
+                            fileTime: Date.now(), // Use current time if stat fails
                             compressed: false, // No compression
                             dataSize: data.length,
                             data: data,
                             crc32: haxe.crypto.Crc32.make(data)
                         };
+                        
+                        // Try to get the actual file time using stat
+                        try {
+                            entry.fileTime = FileSystem.stat(itemPathToUse).mtime;
+                        } catch (statErr) {
+                            Logger.verbose('Could not get file time for ${itemPath}, using current time');
+                        }
+                        
                         // Skip compression completely
                         entries.add(entry);
+                        Logger.verbose('Added file to zip: ${zipPath} (${data.length} bytes)');
                     } catch (e) {
                         Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
                     }
                 }
             }
         } catch (e) {
-            Logger.error('Error reading directory: ${directory} - ${e}');
+            Logger.error('Error processing directory for zip: ${directory} - ${e}');
             throw e;
         }
     }
     
     /**
-     * Unzip bytes to a directory
+     * Create a directory using a platform path that has already been processed for long path support
+     * This version takes an already formatted platform path and handles creating parent directories
+     * @param platformDir A directory path that has already been processed with _getPlatformPath
+     */
+    static private function _createDirectoryRecursiveWithPlatformPath(platformDir:String):Void {
+        if (platformDir == null || platformDir == "") {
+            return;
+        }
+        
+        if (FileSystem.exists(platformDir)) {
+            return;
+        }
+        
+        // Get the parent directory - we need to convert back from platform path to get the directory
+        var standardPath = #if windows 
+            StringTools.startsWith(platformDir, "\\\\?\\") ? 
+                (StringTools.startsWith(platformDir, "\\\\?\\UNC\\") ? 
+                    "\\\\" + platformDir.substr(8) : // Convert back from UNC
+                    platformDir.substr(4)) : // Convert back from local drive
+                platformDir
+        #else 
+            platformDir 
+        #end;
+        
+        var parentDir = Path.directory(standardPath);
+        var platformParentDir = _getPlatformPath(parentDir);
+        
+        // Recursively create parent directories first
+        _createDirectoryRecursiveWithPlatformPath(platformParentDir);
+        
+        try {
+            // Create this directory with the platform path
+            FileSystem.createDirectory(platformDir);
+        } catch (e) {
+            Logger.error('Failed to create directory with platform path: ${platformDir} - ${e}');
+            throw e;
+        }
+    }
+
+    /**
+     * Unzip bytes to a directory with enhanced Windows long path handling
      * @param zipBytes The zipped content
      * @param directory The directory to unzip to
      */
@@ -2470,19 +2745,19 @@ class ProvisionerManager {
         Logger.info('Unzipping to directory: ${directory}');
         var entries = Reader.readZip(new BytesInput(zipBytes));
         
-        // Ensure the root extraction directory exists
+        // Ensure the root extraction directory exists using platform path
         var platformDirectory = _getPlatformPath(directory);
         if (!FileSystem.exists(platformDirectory)) {
             try {
-                Logger.info('Creating root extraction directory: ${directory}');
-                FileSystem.createDirectory(platformDirectory);
+                Logger.info('Creating root extraction directory: ${platformDirectory}');
+                _createDirectoryRecursiveWithPlatformPath(platformDirectory);
             } catch (e) {
                 Logger.error('Failed to create root extraction directory: ${directory} - ${e}');
                 throw new haxe.Exception('Could not create extraction directory: ${e.message}');
             }
         }
         
-        // Process all entries
+        // Process all entries with enhanced Windows path handling
         for (entry in entries) {
             var fileName = entry.fileName;
             
@@ -2495,40 +2770,56 @@ class ProvisionerManager {
             // Normalize path separators to avoid issues
             fileName = StringTools.replace(fileName, "\\", "/");
             
-            // Skip directory entries
+            // Process directory entries
             if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
                 try {
-                    var dirPath = Path.addTrailingSlash(directory) + fileName;
-                    _createDirectoryRecursive(dirPath);
+                    // Create full platform path for directory
+                    var fullDirPath = Path.addTrailingSlash(directory) + fileName;
+                    var platformDirPath = _getPlatformPath(fullDirPath);
+                    
+                    // Log the path for debugging
+                    Logger.verbose('Creating directory: ${platformDirPath}');
+                    
+                    // Use platform-specific method for directory creation
+                    _createDirectoryRecursiveWithPlatformPath(platformDirPath);
                 } catch (e) {
                     Logger.warning('Could not create directory: ${fileName} - ${e}');
                 }
                 continue;
             }
             
-            // Process file entry
+            // Process file entries with enhanced path handling
             try {
-                // Create parent directories if needed
-                var filePath = Path.addTrailingSlash(directory) + fileName;
-                var parentDir = Path.directory(filePath);
+                // Create absolute paths for file and its parent directory
+                var fullFilePath = Path.addTrailingSlash(directory) + fileName;
+                var platformFilePath = _getPlatformPath(fullFilePath);
                 
-                if (parentDir != null && parentDir != "") {
-                    try {
-                        _createDirectoryRecursive(parentDir);
-                    } catch (e) {
-                        Logger.error('Failed to create parent directory ${parentDir}: ${e}');
-                        continue; // Skip this file if parent directory creation fails
-                    }
+                // Get parent directory and create it with platform path handling
+                var parentDir = Path.directory(fullFilePath);
+                var platformParentDir = _getPlatformPath(parentDir);
+                
+                try {
+                    // Create parent directories first
+                    _createDirectoryRecursiveWithPlatformPath(platformParentDir);
+                } catch (e) {
+                    Logger.warning('Could not create parent directory ${platformParentDir}: ${e}');
+                    continue; // Skip this file if we can't create its parent directory
                 }
                 
-                // Uncompress if needed
+                // Uncompress the file if needed
                 if (entry.compressed) {
                     Tools.uncompress(entry);
                 }
                 
-                // Save file with platform-specific path handling
-                var platformFilePath = _getPlatformPath(filePath);
-                File.saveBytes(platformFilePath, entry.data);
+                // Log the file path for debugging
+                Logger.verbose('Saving file: ${platformFilePath}');
+                
+                // Save the file using platform path handling for Windows long paths
+                try {
+                    File.saveBytes(platformFilePath, entry.data);
+                } catch (e) {
+                    Logger.warning('Could not save file ${platformFilePath}: ${e}');
+                }
             } catch (e) {
                 Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
             }
@@ -2538,6 +2829,7 @@ class ProvisionerManager {
     
     /**
      * Create a directory and all parent directories if they don't exist
+     * Legacy method kept for backwards compatibility, now uses _createDirectoryRecursiveWithPlatformPath
      * @param directory The directory path to create
      */
     static private function _createDirectoryRecursive(directory:String):Void {
@@ -2550,8 +2842,18 @@ class ProvisionerManager {
             return;
         }
         
-        _createDirectoryRecursive(Path.directory(directory));
-        FileSystem.createDirectory(platformDir);
+        // Get parent directory and create it first
+        var parentDir = Path.directory(directory);
+        var platformParentDir = _getPlatformPath(parentDir);
+        _createDirectoryRecursiveWithPlatformPath(platformParentDir);
+        
+        try {
+            // Create this directory
+            FileSystem.createDirectory(platformDir);
+        } catch (e) {
+            Logger.error('Failed to create directory: ${directory} - ${e}');
+            throw e;
+        }
     }
 
 }

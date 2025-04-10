@@ -235,14 +235,12 @@ class DynamicAdvancedConfigPage extends Page {
         
         // If we have a pending provisioner definition, apply it now
         if (_pendingProvisionerDefinition != null) {
-            Logger.info('${this}: Applying pending provisioner definition after initialization');
             setProvisionerDefinition(_pendingProvisionerDefinition);
             _pendingProvisionerDefinition = null;
         }
         
         // If we have a pending updateContent call, process it now
         if (_pendingUpdateContent) {
-            Logger.info('${this}: Processing pending updateContent call');
             _pendingUpdateContent = false;
             updateContent(true);
         }
@@ -253,22 +251,18 @@ class DynamicAdvancedConfigPage extends Page {
      * This ensures all UI components are fully initialized
      */
     private function _onAddedToStage(e:openfl.events.Event):Void {
-        Logger.info('${this}: Added to stage, ensuring UI is ready');
-        
         // Remove the listener as we only need it once
         this.removeEventListener(openfl.events.Event.ADDED_TO_STAGE, _onAddedToStage);
         
         // Process immediately when added to stage
         // If we have a pending provisioner definition, apply it now
         if (_pendingProvisionerDefinition != null) {
-            Logger.info('${this}: Applying pending provisioner definition after added to stage');
             setProvisionerDefinition(_pendingProvisionerDefinition);
             _pendingProvisionerDefinition = null;
         }
         
         // If we have a pending updateContent call, process it now
         if (_pendingUpdateContent) {
-            Logger.info('${this}: Processing pending updateContent call after added to stage');
             _pendingUpdateContent = false;
             updateContent(true);
         }
@@ -309,7 +303,6 @@ class DynamicAdvancedConfigPage extends Page {
         
         // Store the server reference first, then load custom properties
         // This ensures we have the server reference before trying to load properties
-        Logger.info('${this}: Set server for advanced config page, server ID: ${_server.id}');
         
         // Force an update of the UI after server is set
         // This will ensure fields are populated after they're created
@@ -324,21 +317,16 @@ class DynamicAdvancedConfigPage extends Page {
         // If the component is not initialized yet, store the definition for later
         if (!_formInitialized || _form == null) {
             _pendingProvisionerDefinition = definition;
-            Logger.info('${this}: Component not initialized yet, storing provisioner definition for later');
             return;
         }
         
         _provisionerDefinition = definition;
-        
-        // Log the provisioner definition to help with debugging
-        Logger.info('${this}: Setting provisioner definition for advanced config: ${definition.name}, type: ${definition.data.type}, version: ${definition.data.version}');
         
         // Initialize server properties for all fields in the provisioner definition
         if (_server != null && definition.metadata != null && 
             definition.metadata.configuration != null && 
             definition.metadata.configuration.advancedFields != null) {
             
-            Logger.info('${this}: Initializing server properties for advanced fields');
             
             // Create properties for each field in the advanced configuration
             for (field in definition.metadata.configuration.advancedFields) {
@@ -347,15 +335,11 @@ class DynamicAdvancedConfigPage extends Page {
         }
         
         if (definition.metadata != null) {
-            Logger.info('Provisioner metadata: name=${definition.metadata.name}, type=${definition.metadata.type}');
-            
             if (definition.metadata.configuration != null) {
                 var basicFieldCount = definition.metadata.configuration.basicFields != null ? 
                     definition.metadata.configuration.basicFields.length : 0;
                 var advancedFieldCount = definition.metadata.configuration.advancedFields != null ? 
                     definition.metadata.configuration.advancedFields.length : 0;
-                
-                Logger.info('Configuration fields: basic=${basicFieldCount}, advanced=${advancedFieldCount}');
             } else {
                 Logger.warning('No configuration found in provisioner metadata');
             }
@@ -388,7 +372,6 @@ class DynamicAdvancedConfigPage extends Page {
             for (field in _provisionerDefinition.metadata.configuration.advancedFields) {
                 if (field.name == "networkBridge" || field.name == "networkInterface") {
                     needsNetworkInterface = true;
-                    Logger.info('${this}: Found network interface field in provisioner: ${field.name}');
                     break;
                 }
             }
@@ -397,9 +380,6 @@ class DynamicAdvancedConfigPage extends Page {
         // Add the network interface field if needed
         if (needsNetworkInterface && _form != null && _rowNetworkInterface != null) {
             _form.addChild(_rowNetworkInterface);
-            Logger.info('${this}: Added network interface dropdown to form');
-        } else {
-            Logger.info('${this}: Network interface field not needed for this provisioner');
         }
         
         // Create dynamic fields based on the provisioner configuration
@@ -408,13 +388,9 @@ class DynamicAdvancedConfigPage extends Page {
         
         // ONLY use version-specific metadata from the provisioner definition
         if (_provisionerDefinition != null && _provisionerDefinition.metadata != null) {
-            Logger.info('${this}: Checking provisioner version metadata for configuration');
-            
             if (_provisionerDefinition.metadata.configuration != null && 
                 _provisionerDefinition.metadata.configuration.advancedFields != null) {
-                
                 advancedFields = cast _provisionerDefinition.metadata.configuration.advancedFields;
-                Logger.info('${this}: Found ${advancedFields.length} advanced fields in provisioner version metadata');
                 configFound = true;
             } else {
                 Logger.warning('${this}: No configuration or advancedFields found in provisioner version metadata');
@@ -423,9 +399,6 @@ class DynamicAdvancedConfigPage extends Page {
                 if (_provisionerDefinition.root != null) {
                     var versionPath = _provisionerDefinition.root;
                     var versionMetadataPath = Path.addTrailingSlash(versionPath) + "provisioner.yml";
-                    
-                    Logger.info('${this}: Checking for version-specific metadata at ${versionMetadataPath}');
-                    
                     if (FileSystem.exists(versionMetadataPath)) {
                         try {
                             // Use the specific function for version metadata
@@ -435,7 +408,6 @@ class DynamicAdvancedConfigPage extends Page {
                                 versionMetadata.configuration.advancedFields != null) {
                                 
                                 advancedFields = cast versionMetadata.configuration.advancedFields;
-                                Logger.info('${this}: Found ${advancedFields.length} advanced fields in version-specific metadata');
                                 configFound = true;
                                 
                                 // Store this metadata for future use
@@ -494,13 +466,11 @@ class DynamicAdvancedConfigPage extends Page {
             
             configFound = true;
             needsNetworkInterface = true;
-            Logger.info('${this}: Added minimal network configuration field');
         }
         
         // Add the network interface field if needed
         if (needsNetworkInterface && _form != null && _rowNetworkInterface != null) {
             _form.addChild(_rowNetworkInterface);
-            Logger.info('${this}: Added network interface dropdown to form');
         }
         
         // If config was found, add the fields
@@ -512,7 +482,6 @@ class DynamicAdvancedConfigPage extends Page {
                     continue;
                 }
                 
-                Logger.info('${this}: Adding advanced field to form: ${field.name}, type: ${field.type}, label: ${field.label}');
                 _addDynamicField(field);
             }
         } else {
@@ -535,10 +504,8 @@ class DynamicAdvancedConfigPage extends Page {
         // Special handling for CONSOLE_PORT field - set default to server ID
         var isConsolePortField = (fieldName == "CONSOLE_PORT");
         if (isConsolePortField) {
-            Logger.info('${this}: Setting CONSOLE_PORT default value to match server ID: ${_server.id}');
             field.defaultValue = _server.id;
         }
-        Logger.info('${this}: Initializing server property: ${fieldName}, type: ${field.type}');
         
         // Check if the property already exists on the server - checking multiple ways
         var directExists = Reflect.hasField(_server, fieldName);
@@ -547,7 +514,6 @@ class DynamicAdvancedConfigPage extends Page {
         var propertyExists = directExists || underscoreExists || getterExists;
         
         if (!propertyExists) {
-            Logger.info('${this}: Creating custom property: ${fieldName}');
             
             // Create the property based on the field type
             switch (field.type) {
@@ -556,7 +522,6 @@ class DynamicAdvancedConfigPage extends Page {
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
                     var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
-                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "number":
                     // Create a numeric property
@@ -573,7 +538,6 @@ class DynamicAdvancedConfigPage extends Page {
                     }
                     var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
-                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "checkbox":
                     // Create a boolean property
@@ -583,14 +547,12 @@ class DynamicAdvancedConfigPage extends Page {
                     }
                     var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
-                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 case "dropdown":
                     // Create a string property for dropdown
                     var defaultValue = field.defaultValue != null ? Std.string(field.defaultValue) : "";
                     var prop = new champaign.core.primitives.Property<String>(defaultValue);
                     _customProperties.set(fieldName, prop);
-                    Logger.info('${this}: Created custom property ${fieldName} in local storage');
                     
                 default:
                     Logger.warning('${this}: Unknown field type for property initialization: ${field.type}');
@@ -606,7 +568,6 @@ class DynamicAdvancedConfigPage extends Page {
                 }
             }
         } else {
-            Logger.info('${this}: Property already exists on server: ${fieldName}');
             
             // Add property change listener to existing server properties
             var prop = Reflect.getProperty(_server, fieldName);
@@ -636,7 +597,6 @@ class DynamicAdvancedConfigPage extends Page {
         if (Reflect.hasField(field, "hidden")) {
             var hiddenValue = Reflect.field(field, "hidden");
             isHidden = (hiddenValue == true || Std.string(hiddenValue).toLowerCase() == "true");
-            Logger.info('${this}: Field ${field.name} has hidden=${hiddenValue}, isHidden=${isHidden}, type=${Type.typeof(hiddenValue)}');
         } else {
             Logger.info('${this}: Field ${field.name} has no hidden property defined');
         }
@@ -651,7 +611,6 @@ class DynamicAdvancedConfigPage extends Page {
                 hidden: true,
                 value: defaultValue
             });
-            Logger.info('${this}: Created hidden field ${field.name} with value: ${defaultValue}');
             return;
         }
         
@@ -716,7 +675,6 @@ class DynamicAdvancedConfigPage extends Page {
                     if (isIntegerField || field.name == "memory") {
                         // Set step property directly on the NumericStepper instance
                         stepper.step = 1.0;
-                        Logger.info('${this}: Set step size to 1.0 for field ${field.name}');
                     }
                     
                     stepper.toolTip = field.tooltip != null ? field.tooltip : "";
@@ -726,9 +684,6 @@ class DynamicAdvancedConfigPage extends Page {
                 
                     // Store the stepper in the dynamic fields map
                     _dynamicFields.set(field.name, stepper);
-                    
-                    // Log the created field
-                    Logger.info('${this}: Created numeric field ${field.name} with default=${defaultValue}, min=${minValue}, max=${maxValue}, isInteger=${isIntegerField}');
                 
             case "checkbox":
                 // Create checkbox with default value of false
@@ -853,12 +808,9 @@ class DynamicAdvancedConfigPage extends Page {
 
         // If the form is not initialized yet, store the update request for later
         if (!_formInitialized || _form == null || _server == null) {
-            Logger.info('${this}: Form not initialized yet, storing updateContent request for later');
             _pendingUpdateContent = true;
             return;
         }
-        
-        Logger.info('${this}: Updating content (forced=${forced})');
         
         if (_form != null && _server != null && _dropdownNetworkInterface != null) {
             _label.text = LanguageManager.getInstance().getString('serveradvancedconfigpage.title', Std.string(_server.id));
@@ -877,39 +829,29 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Load custom properties from server.customProperties if they haven't been loaded yet
             if (_server.customProperties != null && Lambda.count(_customProperties) == 0) {
-                Logger.info('${this}: Loading custom properties from server customProperties');
-                
                 // Check for dynamicAdvancedCustomProperties
                 if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
                     var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
                     if (customPropsObj != null) {
                         var fields = Reflect.fields(customPropsObj);
-                        Logger.info('${this}: Found ${fields.length} custom properties to load from dynamicAdvancedCustomProperties');
-                        
                         for (field in fields) {
                             var value = Reflect.field(customPropsObj, field);
-                            Logger.info('${this}: Found custom property in customProperties: ${field} = ${value}');
-                            
                             // Create a property based on the value type if it doesn't already exist
                             if (!_customProperties.exists(field)) {
                                 var prop = null;
                                 
                                 if (Std.isOfType(value, String)) {
                                     prop = new champaign.core.primitives.Property<String>(value);
-                                    Logger.info('${this}: Created String property for ${field} with value ${value}');
                                 } else if (Std.isOfType(value, Float) || Std.isOfType(value, Int)) {
                                     prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                                    Logger.info('${this}: Created numeric property for ${field} with value ${value}');
                                 } else if (Std.isOfType(value, Bool)) {
                                     // Convert Boolean to String for consistency
                                     var boolValue:Bool = cast value;
                                     var boolStr = boolValue ? "true" : "false";
                                     prop = new champaign.core.primitives.Property<String>(boolStr);
-                                    Logger.info('${this}: Created Boolean property for ${field} with value ${boolValue} (${boolStr})');
                                 } else {
                                     // Handle other types by converting to string
                                     prop = new champaign.core.primitives.Property<String>(Std.string(value));
-                                    Logger.info('${this}: Created String property for unknown type ${field} with value ${value}');
                                 }
                                 
                                 if (prop != null) {
@@ -934,48 +876,20 @@ class DynamicAdvancedConfigPage extends Page {
                 }
             }
             
-            // Log information about available dynamic fields
-            Logger.info('${this}: Updating ${Lambda.count(_dynamicFields)} dynamic fields with server or custom property values');
-            
             // Look for dynamic custom properties in server.customProperties if they exist
             var customPropValues = new Map<String, Dynamic>();
             if (_server.customProperties != null) {
-                Logger.info('${this}: Server has customProperties object');
-                
                 // Check for dynamicAdvancedCustomProperties
                 if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
                     var customPropsObj = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
                     if (customPropsObj != null) {
                         var fields = Reflect.fields(customPropsObj);
-                        Logger.info('${this}: Found ${fields.length} fields in dynamicAdvancedCustomProperties');
-                        
                         for (field in fields) {
                             var value = Reflect.field(customPropsObj, field);
                             customPropValues.set(field, value);
-                            Logger.info('${this}: Found custom property in dynamicAdvancedCustomProperties: ${field} = ${value}');
                         }
                     } else {
                         Logger.warning('${this}: dynamicAdvancedCustomProperties object is null');
-                    }
-                } else {
-                    Logger.info('${this}: No dynamicAdvancedCustomProperties found in server.customProperties');
-                    
-                    // As a fallback, check if there are any properties in dynamicCustomProperties that match our field names
-                    if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-                        var basicPropsObj = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-                        if (basicPropsObj != null) {
-                            var fields = Reflect.fields(basicPropsObj);
-                            Logger.error('${this}: Checking ${fields.length} fields in dynamicCustomProperties as fallback');
-                            
-                            // Only check for fields that we have in our dynamic fields
-                            for (fieldName in _dynamicFields.keys()) {
-                                if (Reflect.hasField(basicPropsObj, fieldName)) {
-                                    var value = Reflect.field(basicPropsObj, fieldName);
-                                    customPropValues.set(fieldName, value);
-                                    Logger.error('${this}: Found matching field in dynamicCustomProperties as fallback: ${fieldName} = ${value}');
-                                }
-                            }
-                        }
                     }
                 }
             } else {
@@ -988,12 +902,9 @@ class DynamicAdvancedConfigPage extends Page {
                 var valueField = null;
                 var valueSource = "none";
                 
-                Logger.info('${this}: Processing field ${fieldName}');
-                
                 // First check if it's in the customPropValues map (direct from customProperties)
                 if (customPropValues.exists(fieldName)) {
                     valueField = customPropValues.get(fieldName);
-                    Logger.info('${this}: Using value from customProperties for ${fieldName}: ${valueField}');
                     valueSource = "customProperties";
                 }
                 // Then check if it's a custom property in our local map
@@ -1002,7 +913,6 @@ class DynamicAdvancedConfigPage extends Page {
                     if (value != null && Reflect.hasField(value, "value")) {
                         valueField = Reflect.field(value, "value");
                     }
-                    Logger.info('${this}: Using value from _customProperties for ${fieldName}: ${valueField}');
                     valueSource = "customPropertiesMap";
                 } 
                 // If not, try to get it from the server
@@ -1014,7 +924,6 @@ class DynamicAdvancedConfigPage extends Page {
                         } else {
                             valueField = value;
                         }
-                        Logger.info('${this}: Using value from server property for ${fieldName}: ${valueField}');
                         valueSource = "serverProperty";
                     } catch (e) {
                         // Try with underscore prefix
@@ -1025,7 +934,6 @@ class DynamicAdvancedConfigPage extends Page {
                             } else {
                                 valueField = value;
                             }
-                            Logger.info('${this}: Using value from server property with underscore for ${fieldName}: ${valueField}');
                             valueSource = "serverPropertyUnderscore";
                         } catch (e2) {
                             // Property doesn't exist on server
@@ -1038,7 +946,6 @@ class DynamicAdvancedConfigPage extends Page {
                 if ((valueField == null && value == null) && _server.customProperties != null) {
                     if (Reflect.hasField(_server.customProperties, fieldName)) {
                         valueField = Reflect.field(_server.customProperties, fieldName);
-                        Logger.info('${this}: Found direct property in customProperties: ${fieldName} = ${valueField}');
                         valueSource = "directCustomProperty";
                     }
                 }
@@ -1062,7 +969,6 @@ class DynamicAdvancedConfigPage extends Page {
                         }
                         
                         input.text = displayValue;
-                        Logger.info('${this}: Set text input ${fieldName} to "${displayValue}" (source: ${valueSource})');
                         
                     } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                         var stepper:GenesisFormNumericStepper = cast field;
@@ -1084,7 +990,6 @@ class DynamicAdvancedConfigPage extends Page {
                                         defaultValue = Std.parseFloat(Std.string(defField.defaultValue));
                                         if (!Math.isNaN(defaultValue)) {
                                             hasDefaultValue = true;
-                                            Logger.info('${this}: Found default value for ${fieldName}: ${defaultValue}');
                                         }
                                     } catch (e) {
                                         Logger.warning('${this}: Error parsing default value for ${fieldName}: ${e}');
@@ -1099,7 +1004,6 @@ class DynamicAdvancedConfigPage extends Page {
                                 numValue = Std.parseFloat(Std.string(valueField));
                                 if (Math.isNaN(numValue) && hasDefaultValue) {
                                     numValue = defaultValue;
-                                    Logger.info('${this}: Using default value ${defaultValue} for ${fieldName} since value is NaN');
                                 }
                             } catch (e) {
                                 Logger.warning('${this}: Error parsing value for ${fieldName}: ${e}, using default: ${hasDefaultValue ? defaultValue : 0}');
@@ -1110,7 +1014,6 @@ class DynamicAdvancedConfigPage extends Page {
                                 numValue = Std.parseFloat(Std.string(value));
                                 if (Math.isNaN(numValue) && hasDefaultValue) {
                                     numValue = defaultValue;
-                                    Logger.info('${this}: Using default value ${defaultValue} for ${fieldName} since value is NaN');
                                 }
                             } catch (e) {
                                 Logger.warning('${this}: Error parsing value for ${fieldName}: ${e}, using default: ${hasDefaultValue ? defaultValue : 0}');
@@ -1119,7 +1022,6 @@ class DynamicAdvancedConfigPage extends Page {
                         } else if (hasDefaultValue) {
                             // No value found, use the default from provisioner definition
                             numValue = defaultValue;
-                            Logger.info('${this}: No value found for ${fieldName}, using default: ${defaultValue}');
                         }
                         
                         // Special handling for integer fields to ensure they're whole numbers
@@ -1144,7 +1046,6 @@ class DynamicAdvancedConfigPage extends Page {
                         }
                         
                         stepper.value = numValue;
-                        Logger.info('${this}: Set numeric stepper ${fieldName} to ${numValue} (source: ${valueSource})');
                         
                     } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                         var checkbox:GenesisFormCheckBox = cast field;
@@ -1169,7 +1070,6 @@ class DynamicAdvancedConfigPage extends Page {
                         }
                         
                         checkbox.selected = boolValue;
-                        Logger.info('${this}: Set checkbox ${fieldName} to ${boolValue} (source: ${valueSource})');
                         
                     } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                         var dropdown:GenesisFormPupUpListView = cast field;
@@ -1177,17 +1077,14 @@ class DynamicAdvancedConfigPage extends Page {
                             var selectedValue = valueField != null ? valueField : value;
                             var foundMatch = false;
                             
-                            Logger.info('${this}: Looking for dropdown match for ${fieldName} with value ${selectedValue}');
                             
                             for (i in 0...dropdown.dataProvider.length) {
                                 var option = dropdown.dataProvider.get(i);
                                 if (option != null && option.length > 0) {
-                                    Logger.info('${this}: Checking dropdown option ${i}: ${option[0]} == ${selectedValue}');
                                     
                                     if (option[0] == selectedValue) {
                                         dropdown.selectedIndex = i;
                                         foundMatch = true;
-                                        Logger.info('${this}: Set dropdown ${fieldName} to index ${i} (${option[1]}) (source: ${valueSource})');
                                         break;
                                     }
                                 }
@@ -1226,7 +1123,6 @@ class DynamicAdvancedConfigPage extends Page {
             // Check that provisioner exists before accessing type to avoid null reference
             if (_server.provisioner != null) {
                 evt.provisionerType = _server.provisioner.type;
-                Logger.info('${this}: Canceling dynamic advanced config with provisioner type: ${evt.provisionerType}');
             } else {
                 Logger.warning('${this}: Server has no provisioner, cannot determine type');
             }
@@ -1240,8 +1136,6 @@ class DynamicAdvancedConfigPage extends Page {
     }
     
     function _saveButtonTriggered(e:TriggerEvent) {
-        Logger.info('${this}: Save button triggered, form valid: ${_form.isValid()}, server: ${_server != null}');
-        
         // Verify form validation before saving
         if (!_form.isValid()) {
             Logger.warning('${this}: Form validation failed, cannot save configuration');
@@ -1279,7 +1173,6 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Set the value in the server object
             _server.networkBridge.value = selectedInterface;
-            Logger.info('${this}: Set network bridge to "${selectedInterface}"');
         }
         
         // Update server properties from dynamic fields
@@ -1291,25 +1184,20 @@ class DynamicAdvancedConfigPage extends Page {
                 // For hidden fields, use the defaultValue directly
                 if (Reflect.hasField(field, "value")) {
                     value = Std.string(Reflect.field(field, "value"));
-                    Logger.info('${this}: Using default value for hidden field ${fieldName}: ${value}');
                 }
             } else if (Std.isOfType(field, GenesisFormTextInput)) {
                 var input:GenesisFormTextInput = cast field;
                 value = StringTools.trim(input.text);
-                Logger.info('${this}: Saving text field ${fieldName} with value: ${value}');
             } else if (Std.isOfType(field, GenesisFormNumericStepper)) {
                 var stepper:GenesisFormNumericStepper = cast field;
                 value = Std.string(stepper.value);
-                Logger.info('${this}: Saving numeric field ${fieldName} with value: ${value}');
             } else if (Std.isOfType(field, GenesisFormCheckBox)) {
                 var checkbox:GenesisFormCheckBox = cast field;
                 value = checkbox.selected ? "true" : "false";
-                Logger.info('${this}: Saving checkbox field ${fieldName} with value: ${value}');
             } else if (Std.isOfType(field, GenesisFormPupUpListView)) {
                 var dropdown:GenesisFormPupUpListView = cast field;
                 var selectedItem = dropdown.selectedItem;
                 value = selectedItem != null && selectedItem.length > 0 ? Std.string(selectedItem[0]) : null;
-                Logger.info('${this}: Saving dropdown field ${fieldName} with value: ${value}');
             }
             
             if (value != null) {
@@ -1317,54 +1205,42 @@ class DynamicAdvancedConfigPage extends Page {
                 if (fieldName == "numCPUs") {
                     // Set CPU count via Property object
                     _server.numCPUs.value = Std.parseInt(value);
-                    Logger.info('${this}: Set resources CPU to ${value}');
                 } else if (fieldName == "memory") {
                     // Set memory via Property object
                     _server.memory.value = Std.parseFloat(value);
-                    Logger.info('${this}: Set resources RAM to ${value}');
                 } else if (fieldName == "networkAddress") {
                     // Set network address via Property object
                     _server.networkAddress.value = value;
-                    Logger.info('${this}: Set network address to ${value}');
                 } else if (fieldName == "networkNetmask") {
                     // Set network netmask via Property object
                     _server.networkNetmask.value = value;
-                    Logger.info('${this}: Set network netmask to ${value}');
                 } else if (fieldName == "networkGateway") {
                     // Set network gateway via Property object
                     _server.networkGateway.value = value;
-                    Logger.info('${this}: Set network gateway to ${value}');
                 } else if (fieldName == "nameServer1") {
                     // Set DNS server 1 via Property object
                     _server.nameServer1.value = value;
-                    Logger.info('${this}: Set DNS server 1 to ${value}');
                 } else if (fieldName == "nameServer2") {
                     // Set DNS server 2 via Property object
                     _server.nameServer2.value = value;
-                    Logger.info('${this}: Set DNS server 2 to ${value}');
                 } else if (fieldName == "networkBridge") {
                     // Set network bridge via Property object
                     _server.networkBridge.value = value;
-                    Logger.info('${this}: Set network bridge to ${value}');
                 } else if (fieldName == "dhcp4") {
                     // Set DHCP flag via Property object
                     var boolValue = value.toLowerCase() == "true";
                     _server.dhcp4.value = boolValue;
-                    Logger.info('${this}: Set DHCP flag to ${value}');
                 } else if (fieldName == "disableBridgeAdapter") {
                     // Set disable bridge adapter flag via Property object
                     var boolValue = value.toLowerCase() == "true";
                     _server.disableBridgeAdapter.value = boolValue;
-                    Logger.info('${this}: Set disable bridge adapter to ${value}');
                 } else if (fieldName == "setupWait") {
                     // Set setup wait time via Property object
                     _server.setupWait.value = Std.parseInt(value);
-                    Logger.info('${this}: Set setup wait to ${value}');
                 } else if (fieldName == "CONSOLE_PORT") {
                     // Ensure CONSOLE_PORT is always stored as an integer
                     var intValue = Std.parseInt(value);
                     value = Std.string(intValue); // Ensure it's a valid integer string
-                    Logger.info('${this}: Set CONSOLE_PORT to integer value ${intValue}');
                 } else if (_customProperties.exists(fieldName)) {
                     // Update custom property
                     var prop = _customProperties.get(fieldName);
@@ -1408,7 +1284,6 @@ class DynamicAdvancedConfigPage extends Page {
                     
                     // Only store in dynamicAdvancedCustomProperties to avoid duplication
                     Reflect.setField(customPropsObj, fieldName, value);
-                    Logger.info('${this}: Stored custom property ${fieldName} with value ${value} in dynamicAdvancedCustomProperties');
                     
                     // Also create a custom property for change tracking
                     var prop = new champaign.core.primitives.Property<String>(value);
@@ -1462,7 +1337,6 @@ class DynamicAdvancedConfigPage extends Page {
                 
                 if (value != null) {
                     Reflect.setField(customPropsObj, fieldName, value);
-                    Logger.info('${this}: Saved field ${fieldName} with value: ${value} to customProperties');
                 }
             }
             
@@ -1475,16 +1349,13 @@ class DynamicAdvancedConfigPage extends Page {
             
             // Force an immediate save of server data to avoid race conditions
             _server.saveData();
-            Logger.info('${this}: Saved all custom properties to server data');
         }
 
         // Explicitly save hosts file to ensure it's created for custom provisioners
         _server.saveHostsFile();
-        Logger.info('${this}: Explicitly saving hosts file for custom provisioner after advanced configuration');
         
         // Initialize server files if this is a provisional server
         if (_server.provisional) {
-            Logger.info('${this}: Initializing server files for provisional server');
             _server.initializeServerFiles();
         }
         
