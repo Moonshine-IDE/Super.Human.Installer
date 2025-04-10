@@ -112,6 +112,25 @@ class Git extends AbstractApp {
 
     }
 
+    /**
+     * Returns the full path to the git executable.
+     * Ensures the application is initialized first.
+     * @return String The full path or null if not initialized/found.
+     */
+    public function getExecutablePath():String {
+        if (!_initialized) {
+            Logger.warning('${this}: Attempted to get executable path before initialization.');
+            // Optionally trigger initialization here if desired
+            // initialize(); 
+            return null; 
+        }
+        if (_path == null || _executable == null) {
+             Logger.warning('${this}: Path or executable name is null.');
+             return null;
+        }
+        return this.path + this._executable;
+    }
+
     public override function toString():String {
 
         return '[Git]';

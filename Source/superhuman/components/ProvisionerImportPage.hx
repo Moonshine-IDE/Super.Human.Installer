@@ -73,6 +73,7 @@ import feathers.graphics.LineStyle;
 import feathers.skins.RectangleSkin;
 import openfl.text.TextFormat;
 import superhuman.config.SuperHumanGlobals;
+import prominic.sys.io.AbstractExecutor; // Added for async import
 
 /**
  * A page that provides the user with different methods to import provisioners
@@ -123,6 +124,9 @@ class ProvisionerImportPage extends Page {
     
     // File dialog reference
     var _fd:FileDialog;
+    
+    // State for async import
+    var _isImporting:Bool = false;
 
     public function new() {
         super();
@@ -803,9 +807,15 @@ class ProvisionerImportPage extends Page {
     }
 
     /**
-     * Import a provisioner from GitHub
+     * Import a provisioner from GitHub (now asynchronous)
      */
     private function _importFromGitHub() {
+        // Prevent multiple imports at once
+        if (_isImporting) {
+            ToastManager.getInstance().showToast("Import already in progress...");
+            return;
+        }
+        
         var org = _githubOrgInput.text;
         var repo = _githubRepoInput.text;
         var branch = _githubBranchInput.text;
@@ -826,21 +836,58 @@ class ProvisionerImportPage extends Page {
             branch = "main";
         }
         
-        // Use the new GitHub import method which we'll add to ProvisionerManager
-        var success = ProvisionerManager.importProvisionerFromGitHub(org, repo, branch, useGit, _selectedTokenName);
-        
-        if (success) {
-            ToastManager.getInstance().showToast("Provisioner imported successfully from GitHub");
-            
-            // Dispatch event to notify the application that a provisioner was imported
-            var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
-            this.dispatchEvent(event);
-            
-            // Close the page
-            _closeImportPage();
-        } else {
-            ToastManager.getInstance().showToast("Failed to import provisioner from GitHub. Check that the repository exists and contains a valid provisioner structure.");
+        // Only Git clone is supported for async currently
+        if (!useGit) {
+            ToastManager.getInstance().showToast("Async import requires using the 'Git Clone' download method. Please enable it.");
+            return;
         }
+        
+        // Add listener for the completion event *before* starting
+        this.addEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerImportComplete);
+        
+        // Call the asynchronous import function
+        var executor:AbstractExecutor = ProvisionerManager.importProvisionerFromGitHubAsync(
+            org, repo, branch, useGit, _selectedTokenName, this
+        );
+        
+        if (executor != null) {
+            // Start the import process
+            _isImporting = true;
+            _buttonImport.enabled = false; // Disable button
+            ToastManager.getInstance().showToast("Starting GitHub import...");
+            
+            // Execute the clone process
+            executor.execute();
+        } else {
+            // Setup failed, remove listener
+            this.removeEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerImportComplete);
+            // Error toast is shown by the manager in this case
+        }
+    }
+    
+    /**
+     * Handles the completion event from the asynchronous provisioner import.
+     */
+    private function _onProvisionerImportComplete(event:SuperHumanApplicationEvent):Void {
+        // Remove the listener immediately
+        this.removeEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerImportComplete);
+        
+        // Re-enable UI
+        _isImporting = false;
+        _buttonImport.enabled = true;
+        
+        // Show result message
+        ToastManager.getInstance().showToast(event.importMessage);
+        
+        if (event.importSuccess) {
+            // Dispatch the original event to update lists etc.
+            var successEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
+            this.dispatchEvent(successEvent);
+            
+            // Close the page on success
+            _closeImportPage();
+        }
+        // On failure, the page stays open for the user to correct input or try again.
     }
 
     /**
@@ -858,6 +905,8 @@ class ProvisionerImportPage extends Page {
         // Remove event listeners
         this.removeEventListener(Event.ADDED_TO_STAGE, _onAddedToStage);
         this.removeEventListener(SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _onAppConfigurationSaved);
+        // Ensure the import complete listener is removed if the page is closed prematurely
+        this.removeEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerImportComplete);
         
         super.dispose();
     }

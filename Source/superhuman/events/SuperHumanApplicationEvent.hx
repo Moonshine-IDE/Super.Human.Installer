@@ -89,6 +89,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_EXTERNAL_URL:String = "openExternalUrl";
     public static final OPEN_PROVISIONER_IMPORT_PAGE:String = "openProvisionerImportPage";
     public static final CLOSE_PROVISIONER_IMPORT_PAGE:String = "closeProvisionerImportPage";
+    public static final PROVISIONER_IMPORT_COMPLETE:String = "provisionerImportComplete"; // Added for async import
 
     public var console:Console;
     public var data:String;
@@ -100,6 +101,8 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var appData:ApplicationData;
     public var serviceTypeData:ServiceTypeData;
     public var url:String;
+    public var importSuccess:Bool = false; // Added for async import
+    public var importMessage:String = ""; // Added for async import
     
     public function new( type:String ) {
 

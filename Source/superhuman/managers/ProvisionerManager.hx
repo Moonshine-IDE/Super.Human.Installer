@@ -46,6 +46,7 @@ import openfl.net.URLLoaderDataFormat;
 import openfl.net.URLRequest;
 import openfl.net.URLRequestHeader;
 import openfl.utils.ByteArray;
+import prominic.sys.io.AbstractExecutor;
 import haxe.io.Path;
 import haxe.zip.Entry;
 import haxe.zip.Reader;
@@ -57,6 +58,10 @@ import superhuman.server.definitions.ProvisionerDefinition;
 import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
+import prominic.sys.applications.git.Git;
+import prominic.sys.io.Executor;
+import openfl.events.IEventDispatcher;
+import superhuman.events.SuperHumanApplicationEvent;
 import sys.io.Process;
 import yaml.Yaml;
 import yaml.util.ObjectMap;
@@ -1496,24 +1501,35 @@ class ProvisionerManager {
      * @param branch Branch name (defaults to "main")
      * @param useGit Whether to use git clone instead of HTTP download
      * @param tokenName Name of GitHub token to use from secrets (optional)
-     * @return Bool Success or failure
+     * @param eventDispatcher Dispatcher to send completion event to
+     * @return AbstractExecutor The executor for the git clone process, or null if setup fails
      */
-    static public function importProvisionerFromGitHub(
+    static public function importProvisionerFromGitHubAsync(
         organization:String, 
         repository:String, 
         branch:String = "main", 
-        useGit:Bool = false,
-        tokenName:String = null
-    ):Bool {
-        Logger.info('Importing provisioner from GitHub: ${organization}/${repository} branch ${branch}');
+        useGit:Bool = false, // Note: Currently only Git path is async
+        tokenName:String = null,
+        eventDispatcher:IEventDispatcher
+    ):AbstractExecutor {
+        Logger.info('Starting async import from GitHub: ${organization}/${repository} branch ${branch}');
         
-        var success = false;
-        var shortTempDirPath = null; // For Windows, this will be C:/Users/Username/repo/
-        var repoDir = null; // Directory where we'll find the repository contents
+        // Only the Git path is supported for async currently
+        if (!useGit) {
+            Logger.error('Asynchronous import currently only supports the Git clone method.');
+            // Dispatch immediate failure event
+            var failEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+            failEvent.importSuccess = false;
+            failEvent.importMessage = "Async import requires using the 'Git Clone' download method.";
+            eventDispatcher.dispatchEvent(failEvent);
+            return null;
+        }
+        
+        var shortTempDirPath:String = null;
+        var token:String = null;
         
         try {
             // Find GitHub token if specified
-            var token:String = null;
             if (tokenName != null && tokenName != "") {
                 var secrets = SuperHumanInstaller.getInstance().config.secrets;
                 if (secrets != null && secrets.git_api_keys != null) {
@@ -1524,530 +1540,239 @@ class ProvisionerManager {
                         }
                     }
                 }
-                
                 if (token == null) {
                     Logger.warning('Specified GitHub token "${tokenName}" not found in secrets');
                 }
             }
             
-            // Set up temporary paths for cloning
+            // Determine temporary path for cloning (DO NOT CREATE IT YET)
             if (Sys.systemName() == "Windows") {
                 var username = Sys.getEnv("USERNAME");
                 if (username != null && username != "") {
-                    // Always use C:/Users/Username/repo on Windows
-                    shortTempDirPath = 'C:/Users/${username}/repo/';
-                    
-                    // Make sure it exists
-                    if (!FileSystem.exists(shortTempDirPath)) {
-                        try {
-                            FileSystem.createDirectory(shortTempDirPath);
-                        } catch (e) {
-                            Logger.error('Failed to create repo directory at ${shortTempDirPath}: ${e}');
-                            return false;
-                        }
-                    }
+                    shortTempDirPath = 'C:/Users/${username}/repo/'; // Windows uses a fixed path
                 } else {
-                    Logger.error('Could not determine Windows username for repo path');
-                    return false;
+                    throw new haxe.Exception('Could not determine Windows username for repo path');
                 }
             } else {
-                // For non-Windows, create a temporary directory in the system temp
                 var timestamp = Date.now().getTime();
                 shortTempDirPath = Path.addTrailingSlash(System.applicationStorageDirectory) + 
                                    "temp_" + repository + "_" + timestamp + "/";
-                try {
-                    if (!FileSystem.exists(shortTempDirPath)) {
-                        FileSystem.createDirectory(shortTempDirPath);
-                    }
-                } catch (e) {
-                    Logger.error('Failed to create temporary directory: ${e}');
-                    return false;
-                }
             }
             
-            // Download the repository directly to the temporary directory
-            if (useGit) {
-                Logger.info('Using git clone with recursive submodules and longpaths support');
-                var gitResult = _downloadWithGit(organization, repository, branch, shortTempDirPath, token);
-                success = gitResult.success;
-                
-                // For Git clone, the repo is directly in the shortTempDirPath
-                repoDir = shortTempDirPath;
-            } else {
-                // Create an extracted subdirectory for HTTP download
-                var extractDir = Path.addTrailingSlash(shortTempDirPath) + "extracted";
-                if (!FileSystem.exists(extractDir)) {
-                    FileSystem.createDirectory(extractDir);
-                }
-                
-                success = _downloadWithHttp(organization, repository, branch, shortTempDirPath, token);
-                repoDir = Path.addTrailingSlash(shortTempDirPath) + "extracted"; // With HTTP, the repo is in the extracted subdirectory
-            }
+            // --- Prepare Git Clone Executor ---
             
-            if (!success) {
-                Logger.error('Failed to download GitHub repository');
-                if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
-                    Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
-                    _safeDeleteDirectory(shortTempDirPath);
-                }
-                return false;
-            }
-            
-            Logger.info('Repository downloaded, searching for provisioner in: ${repoDir}');
-            
-            // Check the repository structure using the actual repository name for better matching
-                // List directory contents for debugging
-            try {
-                var items = FileSystem.readDirectory(repoDir);
-                Logger.info('Repository directory contents:');
-                for (item in items) {
-                    var isDir = FileSystem.isDirectory(Path.addTrailingSlash(repoDir) + item);
-                    Logger.info('  - ${item} (isDirectory: ${isDir})');
-                }
-            } catch (e) {
-                Logger.error('Error listing repository contents: ${e}');
-            }
-            
-            Logger.info('Searching for provisioner root structure in cloned repository...');
-            var provisionerPath = _findProvisionerRoot(repoDir, repository);
-            if (provisionerPath == null) {
-                Logger.error('Could not find valid provisioner structure in the repository');
-                if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
-                    Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
-                    _safeDeleteDirectory(shortTempDirPath);
-                }
-                return false;
-            }
-            
-            Logger.info('Found provisioner structure at: ${provisionerPath}');
-            
-            // Determine if this is a collection or a single version
-            var isCollection = FileSystem.exists(Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME);
-            
-            if (isCollection) {
-                // Import as a collection
-                Logger.info('Importing GitHub repository as a provisioner collection');
-                success = importProvisioner(provisionerPath);
-            } else {
-                // Import as a version
-                Logger.info('Importing GitHub repository as a provisioner version');
-                success = importProvisionerVersion(provisionerPath);
-            }
-            
-            // Clean up temporary files - ensure this happens regardless of the import success
-            Logger.info('Cleaning up temporary directories after import');
-            if (shortTempDirPath != null) {
-                try {
-                    if (FileSystem.exists(shortTempDirPath)) {
-                        Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
-                        
-                        // On Windows, the repo directory is specifically at C:/Users/Username/repo
-                        // We need to take special care with cleanup in this case
-                        if (Sys.systemName() == "Windows") {
-                            // Force cleanup of Windows repo directory - this is important!
-                            _forceCleanupWindowsRepoDir(shortTempDirPath);
-                        } else {
-                            // For non-Windows, use the standard cleanup
-                            _safeDeleteDirectory(shortTempDirPath);
-                            
-                            // Also clean up any nested repo directory
-                            var shortTempRepoDir = Path.addTrailingSlash(shortTempDirPath) + "repo";
-                            if (FileSystem.exists(shortTempRepoDir)) {
-                                Logger.info('Cleaning up short temp repo directory: ${shortTempRepoDir}');
-                                _deleteDirectory(shortTempRepoDir);
-                            }
-                        }
-                    } else {
-                        Logger.info('Temporary directory does not exist, no cleanup needed: ${shortTempDirPath}');
-                    }
-                } catch (e) {
-                    Logger.warning('Failed to clean up temporary directories: ${e}');
-                }
-            }
-            
-            return success;
-        } catch (e) {
-            Logger.error('Error importing from GitHub: ${e}');
-            if (shortTempDirPath != null && FileSystem.exists(shortTempDirPath)) {
-                Logger.info('Cleaning up temporary directory: ${shortTempDirPath}');
-                _safeDeleteDirectory(shortTempDirPath);
-            }
-            return false;
-        }
-    }
-    
-    /**
-     * Download a GitHub repository using HTTP (ZIP download)
-     * Uses OpenFL's URLLoader with a synchronous wait
-     */
-    static private function _downloadWithHttp(
-        organization:String, 
-        repository:String, 
-        branch:String, 
-        destinationDir:String,
-        token:String = null
-    ):Bool {
-        // Create URL for the ZIP download
-        var url = 'https://github.com/${organization}/${repository}/archive/refs/heads/${branch}.zip';
-        Logger.info('Downloading GitHub repository via HTTP: ${organization}/${repository} branch ${branch}');
-        Logger.info('Download URL: ${url}');
-        
-        var zipPath = Path.addTrailingSlash(destinationDir) + "repo.zip";
-        var extractDir = Path.addTrailingSlash(destinationDir) + "extracted";
-        if (!FileSystem.exists(extractDir)) {
-            FileSystem.createDirectory(extractDir);
-        }
-        
-        // Status flags
-        var success = false;
-        var done = false;
-        var downloadError = null;
-        
-        try {
-            // Create URL request with optional auth header
-            var request = new URLRequest(url);
-            if (token != null && token.length > 0) {
-                Logger.info('Using GitHub token for authentication');
-                request.requestHeaders = [
-                    new URLRequestHeader("Authorization", 'token ${token}')
-                ];
-            }
-            
-            // Set up loader and event handlers
-            var loader = new URLLoader();
-            loader.dataFormat = URLLoaderDataFormat.BINARY;
-            
-            loader.addEventListener(Event.COMPLETE, function(e:Event) {
-                try {
-                    Logger.info('Download complete, saving to ${zipPath}');
-                    var data:ByteArray = cast(loader.data, ByteArray);
-                    var bytes = Bytes.ofData(data);
-                    File.saveBytes(zipPath, bytes);
-                    success = true;
-                } catch (e) {
-                    Logger.error('Error saving downloaded file: ${e}');
-                    success = false;
-                }
-                done = true;
-            });
-            
-            loader.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent) {
-                Logger.error('Error downloading file: ${e.text}');
-                downloadError = e.text;
-                success = false;
-                done = true;
-            });
-            
-            loader.addEventListener(ProgressEvent.PROGRESS, function(e:ProgressEvent) {
-                if (e.bytesTotal > 0) {
-                    var percent = Math.round((e.bytesLoaded / e.bytesTotal) * 100);
-                    Logger.info('Download progress: ${percent}% (${e.bytesLoaded}/${e.bytesTotal} bytes)');
-                }
-            });
-            
-            // Start the download
-            Logger.info('Starting download from ${url}');
-            loader.load(request);
-            
-            // Wait for download to complete with timeout
-            var startTime = Date.now().getTime();
-            var timeout = 10 * 60 * 1000; // 10 minutes
-            
-            // Simple blocking wait
-            while (!done) {
-                Sys.sleep(0.2); // Sleep for 200ms
-                
-                var currentTime = Date.now().getTime();
-                if (currentTime - startTime > timeout) {
-                    Logger.error('Download timed out after ${timeout/1000} seconds');
-                    return false;
-                }
-            }
-            
-            // Check if download completed successfully
-            if (!success) {
-                Logger.error('Download failed: ${downloadError != null ? downloadError : "Unknown error"}');
-                return false;
-            }
-            
-            // Extract zip file
-            if (!FileSystem.exists(zipPath)) {
-                Logger.error('ZIP file not found after download: ${zipPath}');
-                return false;
-            }
-            
-            // Read and extract the ZIP file
-            Logger.info('Extracting ZIP file to ${extractDir}');
-            try {
-                var zipBytes = File.getBytes(zipPath);
-                var zipEntries = Reader.readZip(new BytesInput(zipBytes));
-                
-                Logger.info('ZIP file contains ${zipEntries.length} entries');
-                
-                // Extract all files
-                var extractedCount = 0;
-                for (entry in zipEntries) {
-                    // Skip directories
-                    if (StringTools.endsWith(entry.fileName, "/")) {
-                        var dirPath = Path.addTrailingSlash(extractDir) + entry.fileName;
-                        _createDirectoryRecursive(dirPath);
-                        continue;
-                    }
-                    
-                    // Create parent directories if needed
-                    var filePath = Path.addTrailingSlash(extractDir) + entry.fileName;
-                    var parentDir = Path.directory(filePath);
-                    _createDirectoryRecursive(parentDir);
-                    
-                    // Extract the file
-                    try {
-                        if (entry.compressed) {
-                            haxe.zip.Tools.uncompress(entry);
-                        }
-                        File.saveBytes(filePath, entry.data);
-                        extractedCount++;
-                    } catch (e) {
-                        Logger.warning('Failed to extract file ${entry.fileName}: ${e}');
-                    }
-                }
-                
-                Logger.info('Successfully extracted ${extractedCount} files');
-                
-                // Verify the extraction was successful
-                if (extractedCount > 0) {
-                    // Try to find the extracted repository directory - usually in {repository}-{branch} format
-                    try {
-                        var files = FileSystem.readDirectory(extractDir);
-                        var repoFound = false;
-                        
-                        for (file in files) {
-                            var filePath = Path.addTrailingSlash(extractDir) + file;
-                            if (FileSystem.isDirectory(filePath) && file.indexOf(repository) >= 0) {
-                                Logger.info('Found extracted repository directory: ${file}');
-                                repoFound = true;
-                                break;
-                            }
-                        }
-                        
-                        if (!repoFound) {
-                            Logger.warning('Could not find repository directory in extracted files - proceeding anyway');
-                        }
-                    } catch (e) {
-                        Logger.warning('Error checking extracted directory: ${e} - proceeding anyway');
-                    }
-                    
-                    return true;
-                } else {
-                    Logger.error('No files were extracted from the ZIP');
-                    return false;
-                }
-            } catch (e) {
-                Logger.error('Error extracting ZIP file: ${e}');
-                return false;
-            }
-        } catch (e) {
-            Logger.error('Error during HTTP download: ${e}');
-            return false;
-        }
-    }
-    
-    /**
-     * Download a GitHub repository using git clone with support for recursive submodules
-     * and a shorter path to handle Windows path length limitations
-     * @return {success:Bool, shortTempPath:String} Returns both success status and the short temp path used
-     */
-    static private function _downloadWithGit(
-        organization:String, 
-        repository:String, 
-        branch:String, 
-        destinationDir:String,
-        token:String = null
-    ):{success:Bool, shortTempPath:String} {
-        Logger.info('Downloading GitHub repository via git clone: ${organization}/${repository} branch ${branch}');
-        
-        // Define variables for temporary paths
-        var shortTempDir = null;
-        var shortTempRepoDir = null;
-        
-        // CRITICAL: On Windows, we ONLY use C:/Users/Username/repo - no other paths, no subdirectories, no fallbacks
-        // This is mandatory to handle Windows path length limitations - DO NOT MODIFY THIS BEHAVIOR
-        if (Sys.systemName() == "Windows") {
-            // Get username from environment
-            var username = Sys.getEnv("USERNAME");
-            if (username != null && username != "") {
-                // Create ONLY C:/Users/Username/repo - exactly this path and nothing else, this is  critical to ONLY use this path, we CANNOT use ANYTHING ELSE EVER!!!
-                shortTempDir = 'C:/Users/${username}/repo/';
-                
-                // Create repo directory if it doesn't exist
-                try {
-                    if (!FileSystem.exists(shortTempDir)) {
-                        FileSystem.createDirectory(shortTempDir);
-                    }
-                } catch(e) {
-                    Logger.error('Failed to create directory at ${shortTempDir}: ${e}');
-                    return {success: false, shortTempPath: null};
-                }
-            } else {
-                Logger.error('Could not determine Windows username');
-                return {success: false, shortTempPath: null};
-            }
-        } else {
-            // For Mac/Linux, use application storage directory
-            var timestamp = Date.now().getTime();
-            shortTempDir = Path.addTrailingSlash(System.applicationStorageDirectory) + repository + "_" + timestamp + "/";
-            
-            try {
-                if (!FileSystem.exists(shortTempDir)) {
-                    FileSystem.createDirectory(shortTempDir);
-                    Logger.info('Created temporary directory: ${shortTempDir}');
-                }
-            } catch(e) {
-                Logger.error('Failed to create directory at ${shortTempDir}: ${e}');
-                return {success: false, shortTempPath: null};
-            }
-        }
-        
-        try {
             // Build the clone URL
             var cloneUrl = "";
             if (token != null) {
-                // Use HTTPS with token for authentication
                 cloneUrl = 'https://${token}@github.com/${organization}/${repository}.git';
             } else {
-                // Use plain HTTPS for public repos
                 cloneUrl = 'https://github.com/${organization}/${repository}.git';
             }
             
-            // Enable long paths in git for Windows to avoid path length limitations
-            Logger.info('Configuring git for long paths');
-            Sys.command('git config --global core.longpaths true');
-            
-            // Single command for cloning with recursive submodules and longpaths enabled
-            Logger.info('Performing git clone with recursive submodules to shorter path');
-            
-            // For Windows, use a single command approach with better error handling
-            if (Sys.systemName() == "Windows") {
-                // On Windows: Ensure the path is properly formatted with backslashes and no trailing slash
-                var windowsSafePath = StringTools.replace(shortTempDir, "/", "\\");
-                windowsSafePath = StringTools.trim(windowsSafePath); // Remove any trailing whitespace
-                if (StringTools.endsWith(windowsSafePath, "\\")) {
-                    windowsSafePath = windowsSafePath.substr(0, windowsSafePath.length - 1); // Remove trailing backslash
-                }
-                
-                var cloneCmd = 'git -c core.longpaths=true clone --depth 1 --recursive --branch ${branch} ${cloneUrl} "${windowsSafePath}"';
-                Logger.info('Executing single git clone command for Windows: ${cloneCmd}');
-                
-                // Use Process instead of Sys.command to capture output
-                var process = new sys.io.Process(cloneCmd);
-                var exitCode = process.exitCode();
-                
-                // Capture and log stdout
-                var output = process.stdout.readAll().toString();
-                if (output != null && output.length > 0) {
-                    var lines = output.split("\n");
-                    for (line in lines) {
-                        if (StringTools.trim(line).length > 0) {
-                            Logger.info('Git output: ${line}');
-                        }
-                    }
-                }
-                
-                // Capture and log stderr
-                var error = process.stderr.readAll().toString();
-                if (error != null && error.length > 0) {
-                    var lines = error.split("\n");
-                    for (line in lines) {
-                        if (StringTools.trim(line).length > 0) {
-                            Logger.info('Git: ${line}');
-                        }
-                    }
-                }
-                
-                // Close the process
-                process.close();
-                
-                if (exitCode != 0) {
-                    Logger.error('Failed to clone GitHub repository, exit code: ${exitCode}');
-                    
-                    // For Windows, we just try to clean up and call again - no fancy uniqueName handling since we always use C:/Users/Username/repo
-                    if (error != null && error.indexOf("destination path") >= 0 && error.indexOf("already exists") >= 0) {
-                        Logger.warning('Detected "destination path already exists" error. Directory appears to exist to Git but may not be visible to standard APIs.');
-                        
-                        // Clean up the repo directory if possible before retrying
-                        try {
-                            _deleteDirectory(shortTempDir);
-                            Logger.info('Cleared repo directory, retrying the git clone operation');
-                        } catch (e) {
-                            Logger.warning('Could not clean up repo directory: ${e}');
-                        }
-                        
-                        // Try again with the same directory - it should be clean now
-                        return _downloadWithGit(organization, repository, branch, destinationDir, token);
-                    }
-                    
-                    return {success: false, shortTempPath: shortTempDir};
-                }
-            } else {
-                // For macOS/Linux, a single command approach with output logging
-                var cloneCmd = 'git clone --depth 1 --recursive --branch ${branch} ${cloneUrl} ${shortTempDir}/repo';
-                Logger.info('Executing git clone command: ${cloneCmd}');
-                
-                // Use Process instead of Sys.command to capture output
-                var process = new sys.io.Process(cloneCmd);
-                var exitCode = process.exitCode();
-                
-                // Capture and log stdout
-                var output = process.stdout.readAll().toString();
-                if (output != null && output.length > 0) {
-                    var lines = output.split("\n");
-                    for (line in lines) {
-                        if (StringTools.trim(line).length > 0) {
-                            Logger.info('Git output: ${line}');
-                        }
-                    }
-                }
-                
-                // Capture and log stderr
-                var error = process.stderr.readAll().toString();
-                if (error != null && error.length > 0) {
-                    var lines = error.split("\n");
-                    for (line in lines) {
-                            if (StringTools.trim(line).length > 0) {
-                                Logger.warning('Git error: ${line}');
-                        }
-                    }
-                }
-                
-                // Close the process
-                process.close();
-                
-                if (exitCode != 0) {
-                    Logger.error('Failed to clone GitHub repository, exit code: ${exitCode}');
-                    
-                    // Clean up the temporary directory
-                    try {
-                        _deleteDirectory(shortTempDir);
-                    } catch (e) {
-                        Logger.warning('Failed to clean up temporary directory: ${e}');
-                    }
-                    
-                    return {success: false, shortTempPath: shortTempDir};
-                }
+            // Get Git executable path
+            var gitInstance = Git.getInstance();
+            var gitCommand = gitInstance.getExecutablePath(); 
+            if (gitCommand == null) {
+                 throw new haxe.Exception('Could not get Git executable path. Ensure Git is initialized.');
             }
             
-            // The repo has been successfully cloned to the shortTempDir, 
-            // no need to move it again since it will be processed by importProvisioner/importProvisionerVersion
-            Logger.info('Clone successful. Repository is available at ${shortTempDir}');
+            // Prepare arguments
+            var gitArgs:Array<String> = [];
+            var cloneTargetDir:String = "";
             
-            // We don't need to zip/unzip here as that will be handled 
-            // during the actual import operation if needed
-            return {success: true, shortTempPath: shortTempDir};
+            if (Sys.systemName() == "Windows") {
+                // Configure longpaths via -c argument
+                gitArgs.push("-c");
+                gitArgs.push("core.longpaths=true");
+                gitArgs.push("clone");
+                gitArgs.push("--depth"); gitArgs.push("1");
+                gitArgs.push("--recursive");
+                gitArgs.push("--branch"); gitArgs.push(branch);
+                gitArgs.push(cloneUrl);
+                
+                // Format target path for Windows command line
+                var windowsSafePath = StringTools.replace(shortTempDirPath, "/", "\\");
+                windowsSafePath = StringTools.trim(windowsSafePath);
+                if (StringTools.endsWith(windowsSafePath, "\\")) {
+                    windowsSafePath = windowsSafePath.substr(0, windowsSafePath.length - 1);
+                }
+                gitArgs.push(windowsSafePath);
+                cloneTargetDir = shortTempDirPath; // Use the original path for context
+                
+            } else {
+                // macOS/Linux
+                gitArgs.push("clone");
+                gitArgs.push("--depth"); gitArgs.push("1");
+                gitArgs.push("--recursive");
+                gitArgs.push("--branch"); gitArgs.push(branch);
+                gitArgs.push(cloneUrl);
+                // Clone into a 'repo' subdirectory within the temp dir for non-Windows
+                cloneTargetDir = Path.addTrailingSlash(shortTempDirPath) + "repo"; 
+                gitArgs.push(cloneTargetDir); 
+            }
+            
+            // Store context needed in the completion handler
+            var context = {
+                tempDir: shortTempDirPath, // The base temp directory
+                repoDir: cloneTargetDir,   // The actual directory where the repo content will be
+                organization: organization,
+                repository: repository,
+                branch: branch,
+                eventDispatcher: eventDispatcher
+            };
+            
+            // Create the Executor
+            // Note: We don't set a workingDirectory for the executor itself, 
+            // as the target directory is part of the clone command arguments.
+            var executor = new Executor(gitCommand, gitArgs, null, null, 0, [context]); 
+            
+            // Attach the completion handler
+            executor.onStop.add(_onGitCloneComplete);
+            
+            Logger.info('Prepared git clone executor for ${organization}/${repository}');
+            return executor;
+            
         } catch (e) {
-            Logger.error('Error during git clone: ${e}');
-            return {success: false, shortTempPath: null};
+            Logger.error('Error setting up GitHub import executor: ${e}');
+            // Dispatch immediate failure event
+            var failEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+            failEvent.importSuccess = false;
+            failEvent.importMessage = 'Error preparing import: ${e.message}';
+            eventDispatcher.dispatchEvent(failEvent);
+            return null;
         }
     }
-    
+
+    /**
+     * Completion handler for the git clone executor.
+     * Performs post-clone steps (find root, import, cleanup) and dispatches completion event.
+     */
+    static private function _onGitCloneComplete(executor:AbstractExecutor):Void {
+        Logger.info('Git clone executor completed with exit code: ${executor.exitCode}');
+        
+        // Retrieve context
+        if (executor.extraParams == null || executor.extraParams.length == 0) {
+            Logger.error('Missing context in git clone executor completion handler');
+            // Cannot dispatch event without dispatcher
+            executor.dispose();
+            return;
+        }
+        
+        var context:Dynamic = executor.extraParams[0];
+        var tempDir:String = context.tempDir;
+        var repoDir:String = context.repoDir; // Where the repo content actually is
+        var organization:String = context.organization;
+        var repository:String = context.repository;
+        var eventDispatcher:IEventDispatcher = context.eventDispatcher;
+        
+        var overallSuccess = false;
+        var message = "";
+        
+        try {
+            if (executor.exitCode == 0) {
+                Logger.info('Git clone successful. Searching for provisioner in: ${repoDir}');
+                
+                // Ensure repoDir exists before proceeding
+                if (!FileSystem.exists(repoDir) || !FileSystem.isDirectory(repoDir)) {
+                     throw new haxe.Exception('Cloned repository directory not found at ${repoDir}');
+                }
+
+                // List directory contents for debugging
+                try {
+                    var items = FileSystem.readDirectory(repoDir);
+                    Logger.info('Cloned repository directory contents (${repoDir}):');
+                    for (item in items) {
+                        var isDir = FileSystem.isDirectory(Path.addTrailingSlash(repoDir) + item);
+                        Logger.info('  - ${item} (isDirectory: ${isDir})');
+                    }
+                } catch (e) {
+                    Logger.error('Error listing cloned repository contents: ${e}');
+                }
+
+                var provisionerPath = _findProvisionerRoot(repoDir, repository);
+                
+                if (provisionerPath == null) {
+                    message = 'Could not find valid provisioner structure in the repository ${organization}/${repository}.';
+                    Logger.error(message);
+                    overallSuccess = false;
+                } else {
+                    Logger.info('Found provisioner structure at: ${provisionerPath}');
+                    
+                    var isCollection = FileSystem.exists(Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME);
+                    var importSuccess = false;
+                    
+                    if (isCollection) {
+                        Logger.info('Importing GitHub repository as a provisioner collection');
+                        importSuccess = importProvisioner(provisionerPath);
+                        message = importSuccess ? 
+                            'Provisioner collection imported successfully from ${organization}/${repository}.' :
+                            'Failed to import provisioner collection from ${organization}/${repository}. Check logs for details.';
+                    } else {
+                        Logger.info('Importing GitHub repository as a provisioner version');
+                        importSuccess = importProvisionerVersion(provisionerPath);
+                         message = importSuccess ? 
+                            'Provisioner version imported successfully from ${organization}/${repository}.' :
+                            'Failed to import provisioner version from ${organization}/${repository}. Check logs for details.';
+                    }
+                    overallSuccess = importSuccess;
+                }
+            } else {
+                message = 'Failed to clone GitHub repository ${organization}/${repository}. Exit code: ${executor.exitCode}. Check logs for details.';
+                Logger.error(message);
+                overallSuccess = false;
+            }
+        } catch (e) {
+            message = 'Error during provisioner import process: ${e.message}. Check logs for details.';
+            Logger.error(message);
+            overallSuccess = false;
+        }
+        
+        // --- Cleanup (Simulating finally) ---
+        Logger.info('Cleaning up temporary directory after import attempt: ${tempDir}');
+        var cleanupError:Null<String> = null;
+        if (tempDir != null) {
+            try {
+                if (FileSystem.exists(tempDir)) {
+                    if (Sys.systemName() == "Windows") {
+                        _forceCleanupWindowsRepoDir(tempDir); // Special Windows cleanup
+                    } else {
+                        _safeDeleteDirectory(tempDir); // Standard cleanup for Mac/Linux
+                    }
+                } else {
+                    Logger.info('Temporary directory does not exist, no cleanup needed: ${tempDir}');
+                }
+            } catch (e) {
+                Logger.warning('Failed to clean up temporary directory ${tempDir}: ${e}');
+                Logger.warning('Failed to clean up temporary directory ${tempDir}: ${e}');
+                cleanupError = '(Warning: Failed to clean up temporary directory ${tempDir})';
+            }
+        }
+
+        // --- Dispatch Completion Event (Simulating finally) ---
+        if (eventDispatcher != null) {
+            var finalMessage = message;
+            // Append cleanup error message if one occurred and the main message isn't already an error
+            if (cleanupError != null) {
+                 if (message == "" || overallSuccess) { // Append if main process succeeded or had no message
+                     finalMessage += " " + cleanupError;
+                 } else { // Prepend if main process failed, so cleanup warning isn't lost
+                     finalMessage = cleanupError + " " + finalMessage;
+                 }
+            }
+
+            var completeEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+            completeEvent.importSuccess = overallSuccess; // Reflects the success of the core import logic
+            completeEvent.importMessage = StringTools.trim(finalMessage); // Use combined message
+            eventDispatcher.dispatchEvent(completeEvent);
+            Logger.info('Dispatched PROVISIONER_IMPORT_COMPLETE event. Success: ${overallSuccess}, Message: ${completeEvent.importMessage}');
+        } else {
+             Logger.error('Cannot dispatch completion event: eventDispatcher is null.');
+        }
+
+        // --- Dispose Executor (Simulating finally) ---
+        executor.dispose();
+    }
+
     /**
      * Check if a directory is writable by attempting to create a test file
      * @param directory Directory to check
@@ -2824,96 +2549,10 @@ class ProvisionerManager {
         }
     }
 
-    /**
-     * Unzip bytes to a directory with enhanced Windows long path handling
-     * @param zipBytes The zipped content
-     * @param directory The directory to unzip to
-     */
-    static private function _unzipToDirectory(zipBytes:Bytes, directory:String):Void {
-        Logger.info('Unzipping to directory: ${directory}');
-        var entries = Reader.readZip(new BytesInput(zipBytes));
-        
-        // Ensure the root extraction directory exists using platform path
-        var platformDirectory = _getPlatformPath(directory);
-        if (!FileSystem.exists(platformDirectory)) {
-            try {
-                Logger.info('Creating root extraction directory: ${platformDirectory}');
-                _createDirectoryRecursiveWithPlatformPath(platformDirectory);
-            } catch (e) {
-                Logger.error('Failed to create root extraction directory: ${directory} - ${e}');
-                throw new haxe.Exception('Could not create extraction directory: ${e.message}');
-            }
-        }
-        
-        // Process all entries with enhanced Windows path handling
-        for (entry in entries) {
-            var fileName = entry.fileName;
-            
-            // Skip invalid entries
-            if (fileName == null || fileName == "") {
-                Logger.warning('Skipping entry with empty filename');
-                continue;
-            }
-            
-            // Normalize path separators to avoid issues
-            fileName = StringTools.replace(fileName, "\\", "/");
-            
-            // Process directory entries
-            if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
-                try {
-                    // Create full platform path for directory
-                    var fullDirPath = Path.addTrailingSlash(directory) + fileName;
-                    var platformDirPath = _getPlatformPath(fullDirPath);
-                    
-                    // Log the path for debugging
-                    Logger.verbose('Creating directory: ${platformDirPath}');
-                    
-                    // Use platform-specific method for directory creation
-                    _createDirectoryRecursiveWithPlatformPath(platformDirPath);
-                } catch (e) {
-                    Logger.warning('Could not create directory: ${fileName} - ${e}');
-                }
-                continue;
-            }
-            
-            // Process file entries with enhanced path handling
-            try {
-                // Create absolute paths for file and its parent directory
-                var fullFilePath = Path.addTrailingSlash(directory) + fileName;
-                var platformFilePath = _getPlatformPath(fullFilePath);
-                
-                // Get parent directory and create it with platform path handling
-                var parentDir = Path.directory(fullFilePath);
-                var platformParentDir = _getPlatformPath(parentDir);
-                
-                try {
-                    // Create parent directories first
-                    _createDirectoryRecursiveWithPlatformPath(platformParentDir);
-                } catch (e) {
-                    Logger.warning('Could not create parent directory ${platformParentDir}: ${e}');
-                    continue; // Skip this file if we can't create its parent directory
-                }
-                
-                // Uncompress the file if needed
-                if (entry.compressed) {
-                    Tools.uncompress(entry);
-                }
-                
-                // Log the file path for debugging
-                Logger.verbose('Saving file: ${platformFilePath}');
-                
-                // Save the file using platform path handling for Windows long paths
-                try {
-                    File.saveBytes(platformFilePath, entry.data);
-                } catch (e) {
-                    Logger.warning('Could not save file ${platformFilePath}: ${e}');
-                }
-            } catch (e) {
-                Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
-            }
-        }
-        Logger.info('Unzip completed');
-    }
+    // Removed _downloadWithHttp as it's not used by the async flow
+    // Removed _downloadWithGit as it's replaced by the Executor approach
+    // Removed _zipDirectory and _addDirectoryToZip as they are not needed for Git clone
+    // Removed _unzipToDirectory as it's not needed for Git clone
     
     /**
      * Create a directory and all parent directories if they don't exist
