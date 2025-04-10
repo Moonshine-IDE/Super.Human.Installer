@@ -101,6 +101,7 @@ import superhuman.application.ApplicationData;
 import superhuman.application.Applications;
 import superhuman.server.data.ServerUIType;
 import superhuman.server.definitions.ProvisionerDefinition;
+import sys.io.Process;
 using champaign.core.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
@@ -1803,13 +1804,63 @@ class SuperHumanInstaller extends GenesisApplication {
 			_pendingDeleteServer = null;
 			_pendingDeleteFiles = false;
 			
-			// Now complete the server deletion
-			server.dispose();
-			ServerManager.getInstance().servers.remove(server);
-			
-			if (deleteFiles) {
-				FileTools.deleteDirectory(server.path.value);
+		// Now complete the server deletion
+		server.dispose();
+		ServerManager.getInstance().servers.remove(server);
+		
+		if (deleteFiles) {
+			#if windows
+			// On Windows, use rd /s /q command to handle long paths better
+			try {
+				var serverPath = server.path.value;
+				
+				// Convert path to Windows format with backslashes
+				var windowsPath = StringTools.replace(serverPath, "/", "\\");
+				var command = 'rd /s /q "' + windowsPath + '"';
+				
+				Logger.info('${this}: Using Windows rd command to delete directory: ${command}');
+				
+				// Execute the command
+				var process = new Process(command);
+				var exitCode = process.exitCode();
+				var error = process.stderr.readAll().toString();
+				process.close();
+				
+				if (exitCode == 0) {
+					Logger.info('${this}: Successfully deleted server directory using rd command');
+				} else {
+					Logger.warning('${this}: rd command returned non-zero exit code: ${exitCode}');
+					if (error.length > 0) {
+						Logger.warning('${this}: rd error output: ${error}');
+					}
+					
+					// Fall back to FileTools if rd fails
+					try {
+						FileTools.deleteDirectory(serverPath);
+						Logger.info('${this}: Deleted server directory using FileTools fallback');
+					} catch (ftError) {
+						Logger.error('${this}: Error deleting server directory with FileTools: ${ftError}');
+					}
+				}
+			} catch (e) {
+				Logger.error('${this}: Error using rd command: ${e}');
+				
+				// Fall back to FileTools on error
+				try {
+					FileTools.deleteDirectory(server.path.value);
+				} catch (ftError) {
+					Logger.error('${this}: Error deleting server directory: ${ftError}');
+				}
 			}
+			#else
+			// Use standard FileTools on non-Windows platforms
+			try {
+				FileTools.deleteDirectory(server.path.value);
+			} catch (e) {
+				Logger.error('${this}: Error deleting server directory: ${e}');
+			}
+			#end
+		}
 
 			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdeleted'));
 			_saveConfig();
