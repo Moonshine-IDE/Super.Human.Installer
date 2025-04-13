@@ -330,6 +330,19 @@ class HashManagerPage extends Page {
         _inputFullVersion = new TextInput();
         fullVersionRow.content.addChild(_inputFullVersion);
         
+        // Hash display row - will be visible only in edit mode
+        var hashRow = new GenesisFormRow();
+        hashRow.text = "File Hash";
+        _addEditForm.addChild(hashRow);
+        
+        var hashLabel = new Label();
+        hashLabel.variant = GenesisApplicationTheme.LABEL_SMALL;
+        hashRow.content.addChild(hashLabel);
+        
+        // Store reference to hash row and label for toggling visibility
+        var _hashRow = hashRow;
+        var _hashLabel = hashLabel;
+        
         // Add/Edit form buttons
         var addEditButtonGroup = new LayoutGroup();
         addEditButtonGroup.layoutData = new VerticalLayoutData(100); // Make sure it takes full width
@@ -926,11 +939,14 @@ class HashManagerPage extends Page {
         // Show/hide replace button based on file existence
         _rowReplaceFile.visible = _rowReplaceFile.includeInLayout = !_editingFile.exists;
         
-        // Show the file path when editing
-        if (_filePathLabel != null && _filePathContainer != null) {
+        // Show the file path and hash when editing
+        if (_filePathLabel != null && _filePathContainer != null && _hashLabel != null) {
             // Set path text and make container visible
             _filePathLabel.text = _editingFile.path;
             _filePathContainer.visible = _filePathContainer.includeInLayout = true;
+            
+            // Set hash value
+            _hashLabel.text = _editingFile.hash;
         }
         
         // Show the add/edit form

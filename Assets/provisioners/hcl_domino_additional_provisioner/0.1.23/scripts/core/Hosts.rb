@@ -20,7 +20,6 @@ class Hosts
 
     # Main loop to configure VM
     settings['hosts'].each_with_index do |host, index|
-      configure_plugins(host)
 
       ENV['VAGRANT_NO_PARALLEL'] = 'yes'
       if host['settings'].has_key?('parallel') && host['settings']['parallel']
@@ -635,65 +634,6 @@ class Hosts
   def self.rsync_version_low?
     return false unless Vagrant::Util::Platform.darwin?
     `rsync --version`.include?('2.6.9') || `rsync --version` < '2.6.9'
-  end
-
-  def self.configure_plugins(host)
-    return unless ARGV[0] == 'up' # Only configure plugins during 'vagrant up'
-    
-    plugins = host['plugins'] || {}
-    install_plugins = Array(plugins['install'])
-    remove_plugins = Array(plugins['remove'])
-    needs_reload = false
-    
-    # Track plugin update states
-    @@plugin_states ||= {}
-  
-    # Remove plugins
-    remove_plugins.each do |plugin|
-      if Vagrant.has_plugin?(plugin['name'])
-        system("vagrant", "plugin", "uninstall", plugin['name'])
-        needs_reload = true
-      end
-    end
-  
-    # Install and update plugins
-    install_plugins.each do |plugin|
-      if Vagrant.has_plugin?(plugin['name'])
-        # Only update plugins marked as 'latest'
-        if plugin['version'] == 'latest'
-          puts "Checking for updates to #{plugin['name']}..."
-          output = %x(vagrant plugin update #{plugin['name']})
-          if output.include?("Updated '#{plugin['name']}'")
-            needs_reload = true
-          end
-        elsif plugin['version'] != 'latest'
-          # For specific version, check if version matches
-          current_version = %x(vagrant plugin list | grep #{plugin['name']}).split('(').last.split(')').first.split(',').first.strip
-          if current_version != plugin['version']
-            puts "Version mismatch: current=#{current_version}, wanted=#{plugin['version']}"
-            system("vagrant", "plugin", "uninstall", plugin['name'])
-            system("vagrant", "plugin", "install", plugin['name'], "--plugin-version", plugin['version'])
-            needs_reload = true
-          else
-            puts "Plugin #{plugin['name']} is already at version #{plugin['version']}"
-          end
-        end
-      else
-        # Install missing plugin
-        install_args = ["vagrant", "plugin", "install", plugin['name']]
-        install_args.push("--plugin-version", plugin['version']) unless plugin['version'] == 'latest'
-        system(*install_args)
-        needs_reload = true
-      end
-    end
-
-    # If any plugins were updated/installed/removed, reload Vagrant
-    if needs_reload
-      puts "Plugin changes detected - reloading Vagrant environment"
-      # Get just the command (up, halt, etc) without any plugin arguments
-      command = ARGV[0] || "up"
-      exec("vagrant", command)
-    end
   end
 
   def self.delete_files(trigger, files_to_delete)
