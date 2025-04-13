@@ -93,6 +93,9 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_HASH_MANAGER_PAGE:String = "openHashManagerPage";
     public static final CLOSE_HASH_MANAGER_PAGE:String = "closeHashManagerPage";
     public static final OPEN_FILE_CACHE_DIRECTORY:String = "openFileCacheDirectory";
+    public static final DOWNLOAD_FILE_STARTED:String = "downloadFileStarted";
+    public static final DOWNLOAD_FILE_COMPLETED:String = "downloadFileCompleted";
+    public static final DOWNLOAD_FILE_ERROR:String = "downloadFileError";
 
     public var console:Console;
     public var data:String;

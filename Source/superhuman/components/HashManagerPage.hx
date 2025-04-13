@@ -49,6 +49,7 @@ import feathers.layout.VerticalLayout;
 import feathers.layout.VerticalLayoutData;
 import feathers.skins.RectangleSkin;
 import feathers.graphics.FillStyle;
+import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.events.MouseEvent;
 import genesis.application.components.GenesisForm;
@@ -63,6 +64,8 @@ import haxe.io.Path;
 import lime.ui.FileDialog;
 import lime.ui.FileDialogType;
 import prominic.sys.io.FileTools;
+import superhuman.components.DownloadDialog;
+import superhuman.downloaders.HCLDownloader;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.cache.SuperHumanCachedFile;
 import superhuman.server.cache.SuperHumanFileCache;
@@ -74,7 +77,7 @@ import sys.FileSystem;
  */
 class HashManagerPage extends Page {
     // Constants
-    final _width:Float = GenesisApplicationTheme.GRID * 140; // Increased width like SecretsPage
+    final _width:Float = GenesisApplicationTheme.GRID * 154; // Increased width by 10%
     
     // Form elements
     private var _buttonCancel:GenesisFormButton;
@@ -144,7 +147,7 @@ class HashManagerPage extends Page {
         super.initialize();
         
         _content.width = _width;
-        _content.maxWidth = GenesisApplicationTheme.GRID * 150;
+        _content.maxWidth = GenesisApplicationTheme.GRID * 165; // Increased to match new page width
         
         // Create title group
         _titleGroup = new LayoutGroup();
@@ -948,8 +951,9 @@ class HashManagerPage extends Page {
             _filePathLabel.text = _editingFile.path;
             _filePathContainer.visible = _filePathContainer.includeInLayout = true;
             
-            // Set hash value
-            _hashLabel.text = _editingFile.hash;
+        // Only display SHA256 hash, no fallback to MD5
+        _hashLabel.text = Reflect.hasField(_editingFile, "sha256") && _editingFile.sha256 != null ? 
+                          _editingFile.sha256 : "SHA256 not available";
         }
         
         // Show the add/edit form
@@ -1178,8 +1182,8 @@ class FileEntryItem extends LayoutGroup {
     private static final COLOR_SELECTED:Int = 0x004080;
     
     // Column widths - made public so they can be accessed from HashManagerPage
-    public static final FILENAME_WIDTH:Float = GenesisApplicationTheme.GRID * 55;
-    public static final HASH_WIDTH:Float = GenesisApplicationTheme.GRID * 25;
+    public static final FILENAME_WIDTH:Float = GenesisApplicationTheme.GRID * 66; // Redistributed some width to hash column
+    public static final HASH_WIDTH:Float = GenesisApplicationTheme.GRID * 28; // Increased by 3 grid units
     public static final ROLE_WIDTH:Float = GenesisApplicationTheme.GRID * 20;
     public static final TYPE_WIDTH:Float = GenesisApplicationTheme.GRID * 12;
     public static final VERSION_WIDTH:Float = GenesisApplicationTheme.GRID * 18;
@@ -1233,7 +1237,10 @@ class FileEntryItem extends LayoutGroup {
         
         var hashLabel = new Label();
         hashLabel.wordWrap = false;
-        hashLabel.text = cachedFile.hash.substr(0, 15) + "..."; // Show abbreviated hash
+        // Only display SHA256 hash, no fallback to MD5
+        var hashToDisplay = Reflect.hasField(cachedFile, "sha256") && cachedFile.sha256 != null ? 
+                            cachedFile.sha256 : "SHA256 not available";
+        hashLabel.text = hashToDisplay.length > 15 ? hashToDisplay.substr(0, 15) + "..." : hashToDisplay; // Show abbreviated hash if needed
         hashGroup.addChild(hashLabel);
         
         // Create role column with fixed width
@@ -1289,31 +1296,25 @@ class FileEntryItem extends LayoutGroup {
         // Format filename
         var filenameText = cachedFile.originalFilename;
         
-        // Check if we need to show warning icon
-        var isUnknownFile = filenameText == "unknown.unknown" || filenameText.indexOf("unknown.unknown") >= 0;
+        // Check if the file exists in the cache
+        var fileMissing = !cachedFile.exists;
         
         // Create warning icon button if needed and not already created
-        if (isUnknownFile && _warningIconButton == null) {
+        if (fileMissing && _warningIconButton == null) {
             _warningIconButton = new Button();
             _warningIconButton.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WARNING);
-            _warningIconButton.variant = GenesisApplicationTheme.BUTTON_TINY;
+            _warningIconButton.variant = GenesisApplicationTheme.BUTTON_ICON_NO_PADDING;
             
-            // Reduce padding around icon to make button more compact
-            _warningIconButton.paddingLeft = 0;
-            _warningIconButton.paddingRight = 0;
-            _warningIconButton.paddingTop = 0;
-            _warningIconButton.paddingBottom = 0;
-            _warningIconButton.gap = 0;
-            
-            // Remove button background
-            _warningIconButton.backgroundSkin = null;
-            
-            // Add event listener for future functionality
+            // Add event listener to show download dialog for missing files
             _warningIconButton.addEventListener(TriggerEvent.TRIGGER, (e) -> {
-                // This is where the user can add their future functionality
-                // For now, we'll just prevent event propagation to avoid
-                // triggering the row selection when clicking the button
+                // Stop propagation to avoid triggering row selection
                 e.stopPropagation();
+                
+                // Only proceed if it's a missing file (which it should be for unknown files)
+                if (!cachedFile.exists) {
+                    Logger.error('UNKNOWN FILE CLICK: Showing download dialog for ${cachedFile.originalFilename}');
+                    _showDownloadDialog(cachedFile);
+                }
             });
             
             // Insert at beginning of filename group
@@ -1321,34 +1322,40 @@ class FileEntryItem extends LayoutGroup {
         }
         
         // Create status icon button if not already created
-        if (!isUnknownFile && _statusIconButton == null) {
+        if (!fileMissing && _statusIconButton == null) {
             _statusIconButton = new Button();
             // Icon will be set based on existence
-            _statusIconButton.variant = GenesisApplicationTheme.BUTTON_TINY;
+            _statusIconButton.variant = GenesisApplicationTheme.BUTTON_ICON_NO_PADDING;
             
-            // Reduce padding around icon to make button more compact
-            _statusIconButton.paddingLeft = 0;
-            _statusIconButton.paddingRight = 0;
-            _statusIconButton.paddingTop = 0;
-            _statusIconButton.paddingBottom = 0;
-            _statusIconButton.gap = 0;
-            
-            // Remove button background
-            _statusIconButton.backgroundSkin = null;
-            
-            // Add event listener for future functionality
-            _statusIconButton.addEventListener(TriggerEvent.TRIGGER, (e) -> {
-                // This is where the user can add their future functionality
-                e.stopPropagation();
-            });
+            // Add download functionality when clicking status icon
+            _statusIconButton.addEventListener(TriggerEvent.TRIGGER, _statusIconButtonTriggered);
             
             // Insert at beginning of filename group
             _filenameGroup.addChildAt(_statusIconButton, 0);
         }
         
-        // Check if the filename appears to be a placeholder (unknown.unknown)
-        if (isUnknownFile) {
-            filenameText = "No file in cache";
+        // Check if the file is missing from cache
+        if (fileMissing) {
+            // Try to get expected filename from registry if the file is missing
+            var expectedFilename = cachedFile.originalFilename;
+            
+            // Check if originalFilename is usable (not "unknown.unknown")
+            if (expectedFilename != null && expectedFilename != "unknown.unknown") {
+                filenameText = expectedFilename;
+            } else {
+                // Try to find filename in initial registry
+                var registryEntry = superhuman.config.SuperHumanHashes.findHashEntry(cachedFile.hash);
+                if (registryEntry != null && Reflect.hasField(registryEntry, "fileName")) {
+                    var fileName = Reflect.field(registryEntry, "fileName");
+                    if (fileName != null && fileName != "unknown.unknown") {
+                        filenameText = fileName;
+                    } else {
+                        filenameText = "No file in cache";
+                    }
+                } else {
+                    filenameText = "No file in cache";
+                }
+            }
             
             // Make sure warning icon is visible and status icon is hidden
             if (_warningIconButton != null) {
@@ -1356,7 +1363,7 @@ class FileEntryItem extends LayoutGroup {
             }
             if (_statusIconButton != null) {
                 _statusIconButton.visible = false;
-            }
+            } 
         } else {
             // Hide warning icon and show status icon
             if (_warningIconButton != null) {
@@ -1383,11 +1390,13 @@ class FileEntryItem extends LayoutGroup {
         _filenameLabel.text = filenameText;
         
         // Create tooltip with all details
+        var hashInfo = Reflect.hasField(cachedFile, "sha256") && cachedFile.sha256 != null ? 
+                       "SHA256: " + cachedFile.sha256 : 
+                       "SHA256 not available";
+        
         _filenameLabel.toolTip = "Filename: " + 
-                                (cachedFile.originalFilename == "unknown.unknown" || 
-                                 cachedFile.originalFilename.indexOf("unknown.unknown") >= 0 ? 
-                                 "No file in cache" : cachedFile.originalFilename) + 
-                                "\nHash: " + cachedFile.hash +
+                                (fileMissing ? "No file in cache" : cachedFile.originalFilename) + 
+                                "\n" + hashInfo +
                                 (cachedFile.exists ? "" : "\nWarning: File is missing from cache");
                                 
         Logger.verbose('FileEntryItem: Displaying file with original name "${cachedFile.originalFilename}" as "${filenameText}"');
@@ -1453,9 +1462,270 @@ class FileEntryItem extends LayoutGroup {
         return _selected;
     }
     
+    /**
+     * Handle status icon button click
+     */
+    private function _statusIconButtonTriggered(e:TriggerEvent):Void {
+        // Prevent event propagation to avoid triggering row selection
+        e.stopPropagation();
+        
+        // Only handle clicks for missing files
+        if (cachedFile.exists) return;
+        
+        // Log critical point - this confirms the click handler is being executed
+        Logger.error('CLICK DETECTED: Attempting to show download dialog for missing file: ${cachedFile.originalFilename}');
+        
+        try {
+            // Get token information before showing dialog
+            var hclDownloader = HCLDownloader.getInstance();
+            if (hclDownloader == null) {
+                Logger.error('HCLDownloader instance is null');
+                return;
+            }
+            
+            // Explicitly log token information
+            var hclTokens = hclDownloader.getAvailableHCLTokens();
+            var customResources = hclDownloader.getAvailableCustomResources();
+            
+            Logger.error('Available HCL tokens: ${hclTokens.length}, Custom resources: ${customResources.length}');
+            
+            if (hclTokens.length > 0) {
+                Logger.error('First HCL token name: ${hclTokens[0].name}');
+            }
+            
+            // Store the parent sprite to help with positioning
+            var parentSprite = this.stage != null ? cast(this.stage.root, Sprite) : null;
+            
+            // Show download dialog with explicit error logging
+            Logger.error('About to create DownloadDialog');
+            var dialog = DownloadDialog.show(
+                cachedFile,
+                "Download Missing File",
+                (state) -> {
+                    Logger.error('Download dialog result: index=${state.index}');
+                    
+                    if (state.index == 1) { // Download button clicked
+                        // Get token name and source type from dialog
+                        var tokenName = ""; 
+                        var isHCLSource = true;
+                        
+                        try {
+                            if (Reflect.hasField(state, "userData")) {
+                                var userData = Reflect.field(state, "userData");
+                                Logger.error('UserData received: ${userData != null}');
+                                
+                                if (userData != null && Reflect.hasField(userData, "tokenName")) {
+                                    tokenName = Std.string(Reflect.field(userData, "tokenName"));
+                                    isHCLSource = Reflect.field(userData, "isHCLSource");
+                                    Logger.error('Using token: ${tokenName}, HCL source: ${isHCLSource}');
+                                } else {
+                                    Logger.error('UserData missing tokenName field');
+                                }
+                            } else {
+                                Logger.error('State object missing userData field');
+                            }
+                        } catch (e:Dynamic) {
+                            Logger.error('Error extracting userData: ${e}');
+                        }
+                    
+                    if (tokenName != null && tokenName.length > 0) {
+                        // Get direct access to HCLDownloader
+                        var downloader = superhuman.downloaders.HCLDownloader.getInstance();
+                        
+                        // Add event listeners for download
+                        downloader.onDownloadStart.add(_onDownloadStart);
+                        downloader.onDownloadProgress.add(_onDownloadProgress);
+                        downloader.onDownloadComplete.add(_onDownloadComplete);
+                        downloader.onDownloadError.add(_onDownloadError);
+                        
+                        // Start download with appropriate method
+                        if (isHCLSource) {
+                            downloader.downloadFileWithHCLToken(cachedFile, tokenName);
+                        } else {
+                            downloader.downloadFileWithCustomResource(cachedFile, tokenName);
+                        }
+                    }
+                } else if (state.index == 2) { // Secrets button clicked
+                    // Navigate to secrets page
+                    parentPage.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_SECRETS_PAGE));
+                }
+            });
+        } catch (e:Dynamic) {
+            Logger.error('Error showing download dialog: ${e}');
+        }
+    }
+    
+    /**
+     * Handle download start event
+     */
+    private function _onDownloadStart(downloader:superhuman.downloaders.HCLDownloader, file:SuperHumanCachedFile):Void {
+        // Show progress or notification
+        if (parentPage != null) {
+            genesis.application.managers.ToastManager.getInstance().showToast('Downloading ${file.originalFilename}...');
+        }
+    }
+    
+    /**
+     * Handle download progress event
+     */
+    private function _onDownloadProgress(downloader:superhuman.downloaders.HCLDownloader, file:SuperHumanCachedFile, progress:Float):Void {
+        // Update progress if needed
+    }
+    
+    /**
+     * Handle download complete event
+     */
+    private function _onDownloadComplete(downloader:superhuman.downloaders.HCLDownloader, file:SuperHumanCachedFile, success:Bool):Void {
+        // Clean up event listeners
+        downloader.onDownloadStart.remove(_onDownloadStart);
+        downloader.onDownloadProgress.remove(_onDownloadProgress);
+        downloader.onDownloadComplete.remove(_onDownloadComplete);
+        downloader.onDownloadError.remove(_onDownloadError);
+        
+        if (success) {
+            if (parentPage != null) {
+                genesis.application.managers.ToastManager.getInstance().showToast('Downloaded ${file.originalFilename} successfully');
+                parentPage.loadCachedFiles(); // Refresh file list
+            }
+            
+            // Update icon to show file exists
+            if (_statusIconButton != null) {
+                _statusIconButton.icon = genesis.application.theme.GenesisApplicationTheme.getCommonIcon(genesis.application.theme.GenesisApplicationTheme.ICON_OK);
+            }
+        }
+    }
+    
+    /**
+     * Handle download error event
+     */
+    private function _onDownloadError(downloader:superhuman.downloaders.HCLDownloader, file:SuperHumanCachedFile, error:String):Void {
+        // Clean up event listeners
+        downloader.onDownloadStart.remove(_onDownloadStart);
+        downloader.onDownloadProgress.remove(_onDownloadProgress);
+        downloader.onDownloadComplete.remove(_onDownloadComplete);
+        downloader.onDownloadError.remove(_onDownloadError);
+        
+        if (parentPage != null) {
+            genesis.application.managers.ToastManager.getInstance().showToast('Error downloading ${file.originalFilename}: ${error}');
+        }
+    }
+    
     override function layoutGroup_removedFromStageHandler(event:Event) {
         // Clean up event listeners
         this.removeEventListener(MouseEvent.CLICK, _onClick);
         super.layoutGroup_removedFromStageHandler(event);
+    }
+    
+    /**
+     * Show download dialog for a cached file
+     * @param file The file to download
+     */
+    private function _showDownloadDialog(file:SuperHumanCachedFile):Void {
+        if (file == null) {
+            Logger.error('Cannot show download dialog for null file');
+            return;
+        }
+        
+        try {
+            // Get token information before showing dialog
+            var hclDownloader = HCLDownloader.getInstance();
+            if (hclDownloader == null) {
+                Logger.error('HCLDownloader instance is null');
+                return;
+            }
+            
+            // Explicitly log token information
+            var hclTokens = hclDownloader.getAvailableHCLTokens();
+            var customResources = hclDownloader.getAvailableCustomResources();
+            
+            if (hclTokens == null) {
+                hclTokens = [];
+                Logger.error('HCL tokens array is null, using empty array');
+            }
+            
+            if (customResources == null) {
+                customResources = [];
+                Logger.error('Custom resources array is null, using empty array');
+            }
+            
+            Logger.error('Available HCL tokens: ${hclTokens.length}, Custom resources: ${customResources.length}');
+            
+            if (hclTokens.length > 0) {
+                Logger.error('First HCL token name: ${hclTokens[0].name}');
+            }
+            
+            // Store the parent sprite to help with positioning
+            var parentSprite = this.stage != null ? cast(this.stage.root, Sprite) : null;
+            
+            // Show download dialog with explicit error logging
+            Logger.error('Creating DownloadDialog for ${file.originalFilename}');
+            var dialog = DownloadDialog.show(
+                file,
+                "Download Missing File",
+                (state) -> {
+                    if (state == null) {
+                        Logger.error('Dialog callback received null state');
+                        return;
+                    }
+                    
+                    Logger.error('Download dialog result: index=${state.index}');
+                    
+                    if (state.index == 1) { // Download button clicked
+                        // Get token name and source type from dialog
+                        var tokenName = ""; 
+                        var isHCLSource = true;
+                        
+                        try {
+                            if (Reflect.hasField(state, "userData")) {
+                                var userData = Reflect.field(state, "userData");
+                                Logger.error('UserData received: ${userData != null}');
+                                
+                                if (userData != null && Reflect.hasField(userData, "tokenName")) {
+                                    tokenName = Std.string(Reflect.field(userData, "tokenName"));
+                                    isHCLSource = Reflect.field(userData, "isHCLSource");
+                                    Logger.error('Using token: ${tokenName}, HCL source: ${isHCLSource}');
+                                } else {
+                                    Logger.error('UserData missing tokenName field');
+                                }
+                            } else {
+                                Logger.error('State object missing userData field');
+                            }
+                        } catch (e:Dynamic) {
+                            Logger.error('Error extracting userData: ${e}');
+                        }
+                        
+                        if (tokenName != null && tokenName.length > 0) {
+                            // Get direct access to HCLDownloader
+                            var downloader = superhuman.downloaders.HCLDownloader.getInstance();
+                            
+                            // Add event listeners for download
+                            downloader.onDownloadStart.add(_onDownloadStart);
+                            downloader.onDownloadProgress.add(_onDownloadProgress);
+                            downloader.onDownloadComplete.add(_onDownloadComplete);
+                            downloader.onDownloadError.add(_onDownloadError);
+                            
+                            // Start download with appropriate method
+                            if (isHCLSource) {
+                                Logger.error('Starting HCL download with token: ${tokenName}');
+                                downloader.downloadFileWithHCLToken(file, tokenName);
+                            } else {
+                                Logger.error('Starting custom download with resource: ${tokenName}');
+                                downloader.downloadFileWithCustomResource(file, tokenName);
+                            }
+                        }
+                    } else if (state.index == 2) { // Secrets button clicked
+                        // Navigate to secrets page
+                        if (parentPage != null) {
+                            parentPage.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_SECRETS_PAGE));
+                        } else {
+                            Logger.error('Cannot navigate to secrets page: parentPage is null');
+                        }
+                    }
+                },
+                parentSprite
+            );
+        } catch (e:Dynamic) {
+            Logger.error('Error showing download dialog: ${e}');
+        }
     }
 }

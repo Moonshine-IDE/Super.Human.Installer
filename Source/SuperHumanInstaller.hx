@@ -196,6 +196,10 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info( '${this}: Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
+		// Initialize the hash registry after Logger is set up
+		SuperHumanHashes.initialize();
+		Logger.info( '${this}: Hash registry initialized' );
+
 		ServerManager.getInstance().serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
 		_defaultRoles = superhuman.server.provisioners.StandaloneProvisioner.getDefaultProvisionerRoles();

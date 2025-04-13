@@ -293,8 +293,18 @@ class SuperHumanFileCache extends EventDispatcher {
                         continue;
                     }
                     
-                    // Use originalFilename without hash prefix
+                    // Get filename from the hash entry or use default
                     var originalFilename = "unknown.unknown"; // Default filename
+                    if (Reflect.hasField(entry, "fileName")) {
+                        originalFilename = Reflect.field(entry, "fileName");
+                    } else {
+                        // Check if we can find the filename in the initial registry
+                        var foundEntry = SuperHumanHashes.findHashEntry(hash);
+                        if (foundEntry != null && Reflect.hasField(foundEntry, "fileName")) {
+                            originalFilename = Reflect.field(foundEntry, "fileName");
+                            Logger.info('Found filename in hash registry for ${hash}: ${originalFilename}');
+                        }
+                    }
                     
                     // Create a version object if not null
                     var versionObj = null;
@@ -302,11 +312,18 @@ class SuperHumanFileCache extends EventDispatcher {
                         versionObj = Reflect.field(entry, "version");
                     }
                     
+                    // Check if this entry has sha256 hash
+                    var sha256Hash:String = null;
+                    if (Reflect.hasField(entry, "sha256")) {
+                        sha256Hash = Reflect.field(entry, "sha256");
+                    }
+                    
                     // Create a cached file entry with default values - use original filename for the path
                     var cachedFile:SuperHumanCachedFile = {
                         path: Path.join([_cacheDirectory, role, type, originalFilename]),
                         originalFilename: originalFilename, // Clean filename without hash prefix
                         hash: hash,
+                        sha256: sha256Hash, // Include SHA256 hash if available
                         exists: false, // File doesn't physically exist yet
                         version: versionObj,
                         type: type,
@@ -496,26 +513,43 @@ class SuperHumanFileCache extends EventDispatcher {
             return null;
         }
         
-        // Create cached file entry with clean original filename (not including hash)
-        var cachedFile:SuperHumanCachedFile = {
+        // Initialize cached file with MD5 hash, SHA256 will be added asynchronously
+        var initialCachedFile:SuperHumanCachedFile = {
             path: targetPath,
             originalFilename: originalFilename,  // Store the actual filename without hash prefix
             hash: hash,
+            sha256: null, // Will be populated asynchronously
             exists: true,
             version: version,
             type: type,
             role: role
         };
         
-        Logger.info('Added file to cache: ${originalFilename} with hash ${hash}');
-        
         // Add to registry
-        addToRegistry(cachedFile);
+        addToRegistry(initialCachedFile);
+        
+        // Calculate SHA256 hash asynchronously in the background
+        SuperHumanHashes.calculateSHA256Async(targetPath, function(sha256Hash:String) {
+            if (sha256Hash != null) {
+                Logger.info('SHA256 hash calculated: ${sha256Hash} for ${targetPath}');
+                
+                // Update the file entry with SHA256 hash
+                var updatedFile = getFileByHash(hash);
+                if (updatedFile != null) {
+                    updatedFile.sha256 = sha256Hash;
+                    updateFileMetadata(updatedFile);
+                    Logger.info('Updated file cache entry with SHA256 hash');
+                }
+            } else {
+                Logger.warning('Failed to calculate SHA256 hash for ${targetPath}');
+            }
+        });
         
         // Save registry
         saveRegistry();
         
-        return cachedFile;
+        // Return the cached file object
+        return initialCachedFile;
     }
     
     /**

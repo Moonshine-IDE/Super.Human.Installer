@@ -1,62 +1,131 @@
 package superhuman.config;
 
+import champaign.core.logging.Logger;
+import haxe.Json;
+import openfl.Assets;
+import sys.FileSystem;
+import sys.io.File;
+
 class SuperHumanHashes
 {
-	public static final validHashes:Map<String, Map<String, Array<{}>>> = [
+	/**
+	 * Map of valid hashes with the following structure:
+	 * - Key is product role (domino, leap, nomadweb, etc.)
+	 * - Value is a map where:
+	 *   - Key is file type (installers, hotfixes, fixpacks)
+	 *   - Value is an array of hash entries with the following fields:
+	 *     - hash: MD5 hash (for backward compatibility)
+	 *     - sha256: SHA256 hash (more secure)
+	 *     - fileName: Expected file name
+	 *     - version: Version information object
+	 */
+	public static var validHashes:Map<String, Map<String, Array<{}>>>;
+	
+	// Path to the registry JSON file in application storage directory
+	private static final REGISTRY_FILE_PATH =  "assets/config/initial-registry.json";
+	
+	// Public initializer that should be called after Logger is set up
+	public static function initialize() {
+		loadHashRegistry();
+	}
+	
+	/**
+	 * Load hash registry from JSON file
+	 * Will initialize the validHashes map
+	 */
+	private static function loadHashRegistry():Void {
+		// Initialize map
+		validHashes = new Map<String, Map<String, Array<{}>>>();
 		
-
-
-		"domino" => [ "installers" => [{ hash: "5aaecfc4dbbe3c610aa47833c13e8d0a", version: {majorVersion: "14", minorVersion: "5", patchVersion: "0", fullVersion: "14.5.0"}},
-									   { hash: "89a59f845d120055859a2c638809a75c", version: {majorVersion: "14", minorVersion: "0", patchVersion: "0", fullVersion: "14.0.0"}}, 
-									   { hash: "4153dfbb571b1284ac424824aa0e25e4", version: {majorVersion: "12", minorVersion: "0", patchVersion: "2", fullVersion: "12.0.2"}},
-									   { hash: "ee9dd49653d4e4352cf23d0ae59936c8", version: {majorVersion: "12", minorVersion: "0", patchVersion: "1", fullVersion: "12.0.1"}} ], 
-					  "hotfixes" => [ { hash: "4acf939b24acf16e1f4a2858f950f00b", version: { fullVersion: "HF16",}},
-									   { hash: "f051f31a41caed8b211c26d4334e58c3", version: { fullVersion: "HF8",}},],
-					  "fixpacks" => [{hash: "6bd5e7d65939f6ebc189bef118ee06f5", version: { fullVersion: "FP1",}},
-					  				 {hash: "255cf7862db4b6bd9c0d3a4444bd064d", version: { fullVersion: "FP3",}},
-									 {hash: "30803d849e3eb46f35242a72372548fd", version: { fullVersion: "FP1"}},
-									  {hash: "f7753e4a0d80c64ecf15f781e8ea920a", version: { fullVersion: "FP2"}},
-									  {hash: "0d19fdaa92716e3f097014e6800102ff", version: { fullVersion: "FP4"}},
-									  {hash: "80c10504b267069006cc706b375c18ec", version: { fullVersion: "FP5"}},
-									  {hash: "83541dddac43ddd2caee5091ba835bcc", version: { fullVersion: "FP6"}}]],
-		"leap" => [ "installers" => [ { hash: "080235c0f0cce7cc3446e01ffccf0046", version: { majorVersion: "1", minorVersion: "0", patch: "5", fullVersion: "1.0.5" } },
-									{ hash: "8952d633ff19ad7833936edccee9fd01", version: { majorVersion: "1", minorVersion: "1", patch: "1", fullVersion: "1.1.1" } },
-									{ hash: "f5690e736c54a6106d4f28aaea8c849f", version: { majorVersion: "1", minorVersion: "0", patch: "17", fullVersion: "1.0.17" } },
-									 ]],
-		"nomadweb" => [ "installers" => [ { hash: "044c7a71598f41cd3ddb88c5b4c9b403" }, 
-										 { hash: "8f3e42f4f5105467c99cfd56b8b4a755", version: { majorVersion: "1", minorVersion: "0", patch: "6", fullVersion: "1.0.6"} }, 
-										 { hash: "fe2dd37e6d05ea832d8ecc4f0e1dbe80", version: { majorVersion: "1", minorVersion: "0", patch: "8", fullVersion: "1.0.8"} },
-										 { hash: "378880b838aeeb4db513ebf05a8a7285", version: { majorVersion: "1", minorVersion: "0", patch: "9", fullVersion: "1.0.9"} },
-										 { hash: "697d89eb78fa6c1512e0ee199fa0c97c", version: { majorVersion: "1", minorVersion: "0", patch: "10", fullVersion: "1.0.10"} },
-										{ hash: "5908ea3a43571ec55f380908dfd5b69f", version: { majorVersion: "1", minorVersion: "0", patch: "12", fullVersion: "1.0.12"} },
-										{ hash: "fb86ec43be9c8e7c9fa7928f5b592ed1", version: { majorVersion: "1", minorVersion: "0", patch: "13", fullVersion: "1.0.13"} },
-										{ hash: "cb1b19e36e644bc7e782470624ada2cd", version: { majorVersion: "1", minorVersion: "0", patch: "14", fullVersion: "1.0.14"} },
-									    { hash: "9b9f38b544052cccf2611c5308714153", version: { majorVersion: "1", minorVersion: "0", patch: "15", fullVersion: "1.0.15"} }, ],
-						"hotfixes" => [ { hash: "1b4dc7ddd8a04bde0f69963e3eb4c675", version: { fullVersion: "IF1",}},
-										  { hash: "cf6f922910190f42baecbb4f1fca3bb4", version: { fullVersion: "HF1"}}]],
-		"traveler" => [ "installers" => [ { hash: "4a195e3282536de175a2979def40527d" }, 
-										 { hash: "4118ee30d590289070f2d29ecf1b34cb", version: { majorVersion: "12", minorVersion: "0", patch: "2", fullVersion: "12.0.2" }}, 
-										 { hash: "216807509d96f65c7a76b878fc4c4bd5", version: { majorVersion: "12", minorVersion: "0", patch: "2", fixPackVersion: "FP1", fullVersion: "12.0.2"} },
-										 { hash: "fc262f2b9cc334604cb830b371043468", version: { majorVersion: "14", minorVersion: "0", patch: "0", fullVersion: "14.0.0"} },
-										{ hash: "58f8bfab4165246a3b12490a4e661f69", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP1", fullVersion: "14.0.0"} },
-										{ hash: "aa381965a8b71c69ae2770c6c74f03fb", version: { majorVersion: "14", minorVersion: "0", patch: "0", fixPackVersion: "FP2", fullVersion: "14.0.0"} } ],
-						"fixpacks" => []
-										],
-		"verse" => [ "installers" => [  { hash: "4f9622f8c16ac4a450b9551a19491994", version: { majorVersion: "3", minorVersion: "1", patch: "0", fullVersion: "3.1.0" } },
-										 { hash: "843eecf546fdb7c986cff66990b16dcb", version: { majorVersion: "3", minorVersion: "2", patch: "0", fullVersion: "3.2.0" } },
-										 { hash: "21a13b648fdaac3b516ac9880c106041", version: { majorVersion: "3", minorVersion: "2", patch: "2", fullVersion: "3.2.2" }},
-										 { hash: "c961a0347f83690cbb32df04f0a869ef", version: { majorVersion: "3", minorVersion: "2", patch: "3", fullVersion: "3.2.3" } },
-										 { hash: "dfad6854171e964427550454c5f006ee", version: { majorVersion: "3", minorVersion: "0", patch: "0", fullVersion: "3.0.0" } },
-									 ]],
-		"domino-rest-api" => [ "installers" => [ { hash: "fa990f9bac800726f917cd0ca857f220", version: { majorVersion: "1", minorVersion: "0", patch: "0", fullVersion: "1.0.0" } },
-											     { hash: "3c4e3718343d4ba35631a51c905484b8", version: { majorVersion: "1", minorVersion: "1", patch: "2_R14", fullVersion: "1.1.2_R14" } },
-												 { hash: "25ee35f5c58fcf1d716d5fdb5774f8ef", version: { majorVersion: "1", minorVersion: "1", patch: "2_R12", fullVersion: "1.1.2_R12" } } ] ]
-	];
+		Logger.info('===== REGISTRY LOADING PROCESS =====');
+		Logger.info('Current working directory: ${Sys.getCwd()}');
+		Logger.info('Absolute path to registry file: ${sys.FileSystem.absolutePath(REGISTRY_FILE_PATH)}');
+		Logger.info('Does Assets directory exist? ${FileSystem.exists("Assets")}');
+		Logger.info('Does Assets/config directory exist? ${FileSystem.exists("Assets/config")}');
+		Logger.info('Application storage directory: ${lime.system.System.applicationStorageDirectory}');
+		Logger.info('Attempting to load hash registry from application storage: ${REGISTRY_FILE_PATH}');
+		
+		try {
+			// Read the JSON file
+			Logger.info('Reading registry file content from: ${REGISTRY_FILE_PATH}');
+			var jsonContent = File.getContent(REGISTRY_FILE_PATH);
+			Logger.info('Registry file content length: ${jsonContent.length} bytes');
+			
+			// Parse the JSON
+			Logger.info('Parsing registry JSON content');
+			var data:Dynamic = Json.parse(jsonContent);
+			
+			var totalEntries = 0;
+			var roleCount = 0;
+			
+			// Convert the parsed data to our map structure
+			Logger.info('Processing registry data structure');
+			for (roleName in Reflect.fields(data)) {
+				roleCount++;
+				var roleMap = new Map<String, Array<{}>>();
+				var roleData:Dynamic = Reflect.field(data, roleName);
+				var roleEntries = 0;
+				
+				for (typeName in Reflect.fields(roleData)) {
+					var entries:Array<Dynamic> = Reflect.field(roleData, typeName);
+					var hashEntries:Array<{}> = [];
+					
+					// Convert each entry to a dynamic object
+					for (entry in entries) {
+						hashEntries.push(entry);
+						roleEntries++;
+						totalEntries++;
+					}
+					
+					roleMap.set(typeName, hashEntries);
+				}
+				
+				Logger.info('Loaded ${roleEntries} entries for role: ${roleName}');
+				validHashes.set(roleName, roleMap);
+			}
+			
+			Logger.info('Successfully loaded hash registry from ${REGISTRY_FILE_PATH}');
+			Logger.info('Registry contains ${roleCount} roles and ${totalEntries} total entries');
+			Logger.info('===== REGISTRY LOADING COMPLETE =====');
+		} catch (e:Dynamic) {
+			Logger.error('Failed to load hash registry: ${e}');
+			
+			// Initialize an empty registry if loading fails
+			validHashes = new Map<String, Map<String, Array<{}>>>();
+		}
+	}
 	
 	public static function getInstallersHashes(installerType:String):Array<String> 
 	{
-		var installersHashes:Array<{}> = validHashes.get(installerType).get( "installers" );
-		var hashes:Array<String> = installersHashes.map(function(item:Dynamic):String {
+		var hashes:Array<String> = [];
+		
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if "installers" exists in the role map
+		if (roleMap == null || !roleMap.exists("installers")) {
+			Logger.warning('No "installers" entry found for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		var installersHashes:Array<Dynamic> = roleMap.get("installers");
+		
+		// Check if installersHashes is null
+		if (installersHashes == null) {
+			Logger.warning('Null installers array for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		// Extract hash values
+		hashes = installersHashes.map(function(item:Dynamic):String {
+			if (item == null || !Reflect.hasField(item, "hash")) {
+				return "unknown";
+			}
 			return item.hash;
 		});
 		
@@ -65,8 +134,35 @@ class SuperHumanHashes
 	
 	public static function getHotFixesHashes(installerType:String):Array<String> 
 	{
-		var installersHashes:Array<{}> = validHashes.get(installerType).get( "hotfixes" );
-		var hashes:Array<String> = installersHashes.map(function(item:Dynamic):String {
+		var hashes:Array<String> = [];
+		
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if "hotfixes" exists in the role map
+		if (roleMap == null || !roleMap.exists("hotfixes")) {
+			Logger.warning('No "hotfixes" entry found for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		var installersHashes:Array<Dynamic> = roleMap.get("hotfixes");
+		
+		// Check if installersHashes is null
+		if (installersHashes == null) {
+			Logger.warning('Null hotfixes array for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		// Extract hash values
+		hashes = installersHashes.map(function(item:Dynamic):String {
+			if (item == null || !Reflect.hasField(item, "hash")) {
+				return "unknown";
+			}
 			return item.hash;
 		});
 		
@@ -75,8 +171,35 @@ class SuperHumanHashes
 	
 	public static function getFixPacksHashes(installerType:String):Array<String> 
 	{
-		var installersHashes:Array<{}> = validHashes.get(installerType).get( "fixpacks" );
-		var hashes:Array<String> = installersHashes.map(function(item:Dynamic):String {
+		var hashes:Array<String> = [];
+		
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if "fixpacks" exists in the role map
+		if (roleMap == null || !roleMap.exists("fixpacks")) {
+			Logger.warning('No "fixpacks" entry found for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		var installersHashes:Array<Dynamic> = roleMap.get("fixpacks");
+		
+		// Check if installersHashes is null
+		if (installersHashes == null) {
+			Logger.warning('Null fixpacks array for installer type: ${installerType}');
+			return hashes;
+		}
+		
+		// Extract hash values
+		hashes = installersHashes.map(function(item:Dynamic):String {
+			if (item == null || !Reflect.hasField(item, "hash")) {
+				return "unknown";
+			}
 			return item.hash;
 		});
 		
@@ -85,39 +208,124 @@ class SuperHumanHashes
 	
 	public static function getInstallerVersion(installerType:String, hash:String):{}
 	{
-		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "installers" );
-		var version:{} = getVersion(installersHashes, hash);
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return null;
+		}
 		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if "installers" exists in the role map
+		if (roleMap == null || !roleMap.exists("installers")) {
+			Logger.warning('No "installers" entry found for installer type: ${installerType}');
+			return null;
+		}
+		
+		var installersHashes:Array<Dynamic> = roleMap.get("installers");
+		
+		// Check if installersHashes is null
+		if (installersHashes == null) {
+			Logger.warning('Null installers array for installer type: ${installerType}');
+			return null;
+		}
+		
+		var version:{} = getVersion(installersHashes, hash);
 		return version;
 	}
 	
 	public static function getHotfixesVersion(installerType:String, hash:String):{}
 	{
-		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "hotfixes" );
-		var version:{} = getVersion(installersHashes, hash);
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return null;
+		}
 		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if "hotfixes" exists in the role map
+		if (roleMap == null || !roleMap.exists("hotfixes")) {
+			Logger.warning('No "hotfixes" entry found for installer type: ${installerType}');
+			return null;
+		}
+		
+		var installersHashes:Array<Dynamic> = roleMap.get("hotfixes");
+		
+		// Check if installersHashes is null
+		if (installersHashes == null) {
+			Logger.warning('Null hotfixes array for installer type: ${installerType}');
+			return null;
+		}
+		
+		var version:{} = getVersion(installersHashes, hash);
 		return version;
 	}
 	
 	public static function getFixpacksVersion(installerType:String, hash:String):{}
 	{
-		var installersHashes:Array<Dynamic> = validHashes.get(installerType).get( "fixpacks" );
-		var version:{} = getVersion(installersHashes, hash);
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return null;
+		}
 		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if "fixpacks" exists in the role map
+		if (roleMap == null || !roleMap.exists("fixpacks")) {
+			Logger.warning('No "fixpacks" entry found for installer type: ${installerType}');
+			return null;
+		}
+		
+		var installersHashes:Array<Dynamic> = roleMap.get("fixpacks");
+		
+		// Check if installersHashes is null
+		if (installersHashes == null) {
+			Logger.warning('Null fixpacks array for installer type: ${installerType}');
+			return null;
+		}
+		
+		var version:{} = getVersion(installersHashes, hash);
 		return version;
 	}
 	
 	public static function getHash(installerType:String, hashType:String, fullVersion:String):String
 	{
-		var installers:Array<Dynamic> = validHashes.get(installerType).get( hashType );
+		// Check if installerType exists in validHashes
+		if (validHashes == null || !validHashes.exists(installerType)) {
+			Logger.warning('No valid hashes found for installer type: ${installerType}');
+			return "";
+		}
+		
+		var roleMap = validHashes.get(installerType);
+		
+		// Check if hashType exists in the role map
+		if (roleMap == null || !roleMap.exists(hashType)) {
+			Logger.warning('No "${hashType}" entry found for installer type: ${installerType}');
+			return "";
+		}
+		
+		var installers:Array<Dynamic> = roleMap.get(hashType);
+		
+		// Check if installers is null
+		if (installers == null) {
+			Logger.warning('Null ${hashType} array for installer type: ${installerType}');
+			return "";
+		}
 		
 		var filteredHashes:Array<Dynamic> = installers.filter(function(item:Dynamic):Bool {
-			return item.fullVersion == fullVersion;
+			return item != null && 
+			       Reflect.hasField(item, "version") && 
+			       Reflect.hasField(item.version, "fullVersion") && 
+			       item.version.fullVersion == fullVersion;
 		});
 		
-		if (filteredHashes != null && filteredHashes.length > 0)
-		{
-			return filteredHashes.shift();
+		if (filteredHashes != null && filteredHashes.length > 0) {
+			var result = filteredHashes[0];
+			if (result != null && Reflect.hasField(result, "hash")) {
+				return result.hash;
+			}
 		}
 		
 		return "";
@@ -127,16 +335,103 @@ class SuperHumanHashes
 	{
 		var version:{} = null;
 		
+		// Handle null/empty inputs
+		if (installerHashes == null || hash == null || hash.length == 0) {
+			Logger.warning('getVersion called with invalid parameters: installerHashes=${installerHashes != null}, hash=${hash}');
+			return null;
+		}
+		
+		// Safely filter, checking for null items and hash field existence
 		var filteredHashes:Array<Dynamic> = installerHashes.filter(function(item:Dynamic):Bool {
-			return item.hash == hash;
+			return item != null && Reflect.hasField(item, "hash") && item.hash == hash;
 		});
 		
-		if (filteredHashes.length > 0)
+		if (filteredHashes != null && filteredHashes.length > 0)
 		{
-			version = filteredHashes[0].version;
+			var firstItem = filteredHashes[0];
+			// Check if the version field exists
+			if (Reflect.hasField(firstItem, "version")) {
+				version = firstItem.version;
+			} else {
+				Logger.warning('Found item with hash ${hash} but it has no version field');
+			}
 		}
 		
 		return version;
+	}
+	
+	/**
+	 * Find the matching entry in the hash registry
+	 * @param hash MD5 or SHA256 hash to look up
+	 * @param role Optional role to search in
+	 * @param type Optional type to search in
+	 * @return The matching entry if found, or null if not found
+	 */
+	public static function findHashEntry(hash:String, ?role:String, ?type:String):Dynamic {
+		if (hash == null || hash.length == 0) return null;
+		
+		// If role and type are specified, search only in that role and type
+		if (role != null && type != null) {
+			if (validHashes.exists(role)) {
+				var roleMap = validHashes.get(role);
+				if (roleMap.exists(type)) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return entry;
+						}
+					}
+				}
+			}
+		}
+		// If only role is specified, search in all types for that role
+		else if (role != null) {
+			if (validHashes.exists(role)) {
+				var roleMap = validHashes.get(role);
+				for (type in roleMap.keys()) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return entry;
+						}
+					}
+				}
+			}
+		}
+		// If only type is specified, search in all roles for that type
+		else if (type != null) {
+			for (role in validHashes.keys()) {
+				var roleMap = validHashes.get(role);
+				if (roleMap.exists(type)) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return entry;
+						}
+					}
+				}
+			}
+		}
+		// If neither role nor type is specified, search in all roles and types
+		else {
+			for (role in validHashes.keys()) {
+				var roleMap = validHashes.get(role);
+				for (type in roleMap.keys()) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return entry;
+						}
+					}
+				}
+			}
+		}
+		
+		return null;
 	}
 	
 	/**
@@ -173,6 +468,161 @@ class SuperHumanHashes
 			champaign.core.logging.Logger.error('Failed to calculate MD5 hash: ${e}');
 			return null;
 		}
+	}
+	
+	/**
+	 * Calculate SHA256 hash for a file asynchronously
+	 * @param filePath Path to the file
+	 * @param callback Function to call with the calculated hash (or null if failed)
+	 */
+	public static function calculateSHA256Async(filePath:String, callback:(hash:String) -> Void):Void {
+		if (!sys.FileSystem.exists(filePath)) {
+			callback(null);
+			return;
+		}
+		
+		try {
+			var command:String;
+			var args:Array<String>;
+			
+			// Prepare command based on platform
+			#if windows
+			command = "certutil.exe";
+			args = ["-hashfile", filePath, "SHA256"];
+			champaign.core.logging.Logger.info('[Shell]: Checking SHA256 with command: certutil -hashfile "${filePath}" SHA256');
+			#elseif mac
+			command = "shasum";
+			args = ["-a", "256", filePath];
+			champaign.core.logging.Logger.info('[Shell]: Checking SHA256 with command: shasum -a 256 "${filePath}"');
+			#else
+			command = "sha256sum";
+			args = [filePath];
+			champaign.core.logging.Logger.info('[Shell]: Checking SHA256 with command: sha256sum "${filePath}"');
+			#end
+			
+			// Create executor for the appropriate command
+			var executor = new prominic.sys.io.Executor(command, args);
+			
+			// Set up output buffer
+			var outputBuffer = new StringBuf();
+			
+			// Set up event handlers
+			executor.onStdOut.add(function(e, data) {
+				if (data != null) {
+					outputBuffer.add(data);
+				}
+			});
+			
+			executor.onStop.add(function(e) {
+				// Parse output based on platform
+				var hash:String = null;
+				var output = outputBuffer.toString();
+				
+				if (output != null && output.length > 0) {
+					#if windows
+					// Parse Windows certutil output
+					var lines = output.split("\n");
+					if (lines.length >= 2) {
+						hash = StringTools.trim(lines[1]).toLowerCase();
+					}
+					#else
+					// Parse Mac/Linux output (both have similar formats)
+					var parts = output.split(" ");
+					if (parts.length > 0) {
+						hash = StringTools.trim(parts[0]).toLowerCase();
+					}
+					#end
+				}
+				
+				if (hash != null) {
+					champaign.core.logging.Logger.info('SHA256 hash calculated successfully: ${hash}');
+					callback(hash);
+				} else {
+					champaign.core.logging.Logger.error('SHA256 calculation returned null');
+					callback(null);
+				}
+			});
+			
+			// Start the process
+			executor.execute();
+		} catch (e) {
+			champaign.core.logging.Logger.error('Failed to calculate SHA256 hash: ${e}');
+			callback(null);
+		}
+	}
+	
+	/**
+	 * Get fileName for a given hash
+	 * @param hash The hash to look up
+	 * @param role Optional role to limit search
+	 * @param type Optional type to limit search
+	 * @return The fileName if found, null otherwise
+	 */
+	public static function getFileNameForHash(hash:String, ?role:String, ?type:String):String {
+		// Search by both MD5 and SHA256 hashes
+		
+		// If role and type are specified, search only in that role and type
+		if (role != null && type != null) {
+			if (validHashes.exists(role)) {
+				var roleMap = validHashes.get(role);
+				if (roleMap.exists(type)) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return Reflect.hasField(entry, "fileName") ? Reflect.field(entry, "fileName") : null;
+						}
+					}
+				}
+			}
+		}
+		// If only role is specified, search in all types for that role
+		else if (role != null) {
+			if (validHashes.exists(role)) {
+				var roleMap = validHashes.get(role);
+				for (type in roleMap.keys()) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return Reflect.hasField(entry, "fileName") ? Reflect.field(entry, "fileName") : null;
+						}
+					}
+				}
+			}
+		}
+		// If only type is specified, search in all roles for that type
+		else if (type != null) {
+			for (role in validHashes.keys()) {
+				var roleMap = validHashes.get(role);
+				if (roleMap.exists(type)) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return Reflect.hasField(entry, "fileName") ? Reflect.field(entry, "fileName") : null;
+						}
+					}
+				}
+			}
+		}
+		// If neither role nor type is specified, search in all roles and types
+		else {
+			for (role in validHashes.keys()) {
+				var roleMap = validHashes.get(role);
+				for (type in roleMap.keys()) {
+					var entries:Array<Dynamic> = roleMap.get(type);
+					for (entry in entries) {
+						if ((entry.hash != null && entry.hash == hash) || 
+							(Reflect.hasField(entry, "sha256") && Reflect.field(entry, "sha256") == hash)) {
+							return Reflect.hasField(entry, "fileName") ? Reflect.field(entry, "fileName") : null;
+						}
+					}
+				}
+			}
+		}
+		
+		return null;
 	}
 	
 	// Chunking method removed - we now only use the system commands via FileTools

@@ -94,6 +94,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_SELECT_FILE:String = "button-select-file";
     public static final BUTTON_SMALL:String = "button-small";
     public static final BUTTON_TINY:String = "button-tiny";
+    public static final BUTTON_ICON_NO_PADDING:String = "button-icon-no-padding";
     public static final BUTTON_WARNING:String = "button-warning";
     public static final BUTTON_BROWSER_WARNING:String = "button-browser-warning";
     public static final BUTTON_SERVER_LIST:String = "button-server-list";
@@ -285,6 +286,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Button, BUTTON_SELECT_FILE, _setButtonSelectFileStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_SMALL, _setButtonSmallStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_TINY, _setButtonTinyStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_ICON_NO_PADDING, _setButtonIconNoPaddingStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_WARNING, _setButtonWarningStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_BROWSER_WARNING, _setButtonNoBackgrounIconStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_SERVER_LIST, _setButtonServerListStyles );
@@ -491,6 +493,24 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         button.disabledTextFormat = _themeTypography.Pale;
         button.disabledAlpha = .5;
 
+    }
+    
+    function _setButtonIconNoPaddingStyles( button:Button ) {
+        // Clear all padding completely
+        button.setPadding(0);
+        button.paddingLeft = 0;
+        button.paddingRight = 0;
+        button.paddingTop = 0;
+        button.paddingBottom = 0;
+        button.gap = 0;
+        
+        // Remove button background
+        var transparentSkin = new RectangleSkin(FillStyle.SolidColor(_themeColors.Btn, 0));
+        button.backgroundSkin = transparentSkin;
+        
+        // Set transparent hover state as well
+        var transparentHoverSkin = new RectangleSkin(FillStyle.SolidColor(_themeColors.BtnHover, 0));
+        button.setSkinForState(ButtonState.HOVER, transparentHoverSkin);
     }
     
     function _setButtonServerListStyles( button:Button ) {

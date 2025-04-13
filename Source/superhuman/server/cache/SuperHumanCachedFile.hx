@@ -50,6 +50,11 @@ typedef SuperHumanCachedFile = {
     hash: String,
     
     /**
+     * SHA256 hash of the file (more secure)
+     */
+    ?sha256: String,
+    
+    /**
      * Whether the file exists in the cache directory
      */
     exists: Bool,
