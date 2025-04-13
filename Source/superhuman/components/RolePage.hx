@@ -578,6 +578,11 @@ class RolePickerItem extends LayoutGroup {
     var _fd:FileDialog;
     var _cachedFiles:Array<SuperHumanCachedFile>;
     var _allFilesGroup:LayoutGroup;
+    
+    // Installer selection buttons (replacing dropdown + browse button)
+    var _installerSelectButton:Button;
+    var _fixpackSelectButton:Button;
+    var _hotfixSelectButton:Button;
 
     public var role( get, never ):RoleData;
     function get_role() return _roleImpl.role;
@@ -662,86 +667,61 @@ class RolePickerItem extends LayoutGroup {
         spacer.layoutData = new HorizontalLayoutData( 100 );
         _labelGroup.addChild( spacer );
 
-        // Create a container for all dropdowns and browse buttons
+        // Create a container for file selection buttons
         _allFilesGroup = new LayoutGroup();
-        var allFilesLayout = new VerticalLayout();
-        allFilesLayout.gap = GenesisApplicationTheme.GRID;
+        var allFilesLayout = new HorizontalLayout(); // Changed to horizontal layout
+        allFilesLayout.gap = GenesisApplicationTheme.GRID * 2; // Increased spacing between buttons
+        allFilesLayout.verticalAlign = VerticalAlign.MIDDLE;
         _allFilesGroup.layout = allFilesLayout;
         _allFilesGroup.layoutData = new HorizontalLayoutData();
         _labelGroup.addChild(_allFilesGroup);
         
-        // === INSTALLER ROW ===
-        // Create installer dropdown group
-        _installerDropdownGroup = new LayoutGroup();
-        var dropdownLayout = new HorizontalLayout();
-        dropdownLayout.gap = GenesisApplicationTheme.GRID;
-        dropdownLayout.verticalAlign = VerticalAlign.MIDDLE;
-        _installerDropdownGroup.layout = dropdownLayout;
+        // Create installer selection button with plus icon
+        _installerSelectButton = new Button("+ Installer"); // Added plus to indicate add action
+        _installerSelectButton.addEventListener(TriggerEvent.TRIGGER, _showInstallerDialog);
+        _installerSelectButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        _allFilesGroup.addChild(_installerSelectButton);
         
-        // Create installer dropdown
+        // Create fixpack selection button with plus icon
+        _fixpackSelectButton = new Button("+ Fixpack"); // Added plus to indicate add action
+        _fixpackSelectButton.addEventListener(TriggerEvent.TRIGGER, _showFixpackDialog);
+        _fixpackSelectButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        _allFilesGroup.addChild(_fixpackSelectButton);
+        
+        // Create hotfix selection button with plus icon
+        _hotfixSelectButton = new Button("+ Hotfix"); // Added plus to indicate add action
+        _hotfixSelectButton.addEventListener(TriggerEvent.TRIGGER, _showHotfixDialog);
+        _hotfixSelectButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        _allFilesGroup.addChild(_hotfixSelectButton);
+        
+        // Create the dropdowns for use in the dialogs - they won't be added to the display directly
         _installerDropdown = new PopUpListView();
         _installerDropdown.prompt = "Select installer...";
         _installerDropdown.addEventListener(Event.CHANGE, _installerDropdownChanged);
         _installerDropdown.width = GenesisApplicationTheme.GRID * 30;
-        _installerDropdown.layoutData = new HorizontalLayoutData(100); // Make dropdown take full width
-        _installerDropdownGroup.addChild(_installerDropdown);
         
-        // Add browse button next to dropdown
-        _installerButton = new Button("Browse...");
-        _installerButton.addEventListener(TriggerEvent.TRIGGER, _installerButtonTriggered);
-        _installerButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-        _installerDropdownGroup.addChild(_installerButton);
-        
-        // Add the installer group to the files container
-        _allFilesGroup.addChild(_installerDropdownGroup);
-        
-        // === FIXPACK ROW ===
-        // Create fixpack dropdown group
-        _fixpackGroup = new LayoutGroup();
-        _fixpackGroup.layout = new HorizontalLayout();
-        cast(_fixpackGroup.layout, HorizontalLayout).gap = GenesisApplicationTheme.GRID;
-        cast(_fixpackGroup.layout, HorizontalLayout).verticalAlign = VerticalAlign.MIDDLE;
-        
-        // Create fixpack dropdown
         _fixpackDropdown = new PopUpListView();
         _fixpackDropdown.prompt = "Select fixpack...";
         _fixpackDropdown.addEventListener(Event.CHANGE, _fixpackDropdownChanged);
         _fixpackDropdown.width = GenesisApplicationTheme.GRID * 30;
-        _fixpackDropdown.layoutData = new HorizontalLayoutData(100);
-        _fixpackGroup.addChild(_fixpackDropdown);
         
-        // Add fixpack browse button
-        _fixpackButton = new Button("Browse...");
-        _fixpackButton.addEventListener(TriggerEvent.TRIGGER, _fixpackButtonTriggered);
-        _fixpackButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-        _fixpackGroup.addChild(_fixpackButton);
-        
-        // Add fixpack group to files container
-        _allFilesGroup.addChild(_fixpackGroup);
-        
-        // === HOTFIX ROW ===
-        // Create hotfix dropdown group
-        _hotfixGroup = new LayoutGroup();
-        _hotfixGroup.layout = new HorizontalLayout();
-        cast(_hotfixGroup.layout, HorizontalLayout).gap = GenesisApplicationTheme.GRID;
-        cast(_hotfixGroup.layout, HorizontalLayout).verticalAlign = VerticalAlign.MIDDLE;
-        
-        // Create hotfix dropdown
         _hotfixDropdown = new PopUpListView();
         _hotfixDropdown.prompt = "Select hotfix...";
         _hotfixDropdown.addEventListener(Event.CHANGE, _hotfixDropdownChanged);
         _hotfixDropdown.width = GenesisApplicationTheme.GRID * 30;
-        _hotfixDropdown.layoutData = new HorizontalLayoutData(100);
-        _hotfixGroup.addChild(_hotfixDropdown);
         
-        // Add hotfix browse button
+        // Create the browse buttons for use in the dialogs
+        _installerButton = new Button("Browse...");
+        _installerButton.addEventListener(TriggerEvent.TRIGGER, _installerButtonTriggered);
+        _installerButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        
+        _fixpackButton = new Button("Browse...");
+        _fixpackButton.addEventListener(TriggerEvent.TRIGGER, _fixpackButtonTriggered);
+        _fixpackButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
+        
         _hotfixButton = new Button("Browse...");
         _hotfixButton.addEventListener(TriggerEvent.TRIGGER, _hotfixButtonTriggered);
         _hotfixButton.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-        _hotfixGroup.addChild(_hotfixButton);
-        
-        // Add hotfix group to files container
-        _allFilesGroup.addChild(_hotfixGroup);
 
         _selectInstallerLabel = new Label( LanguageManager.getInstance().getString( 'rolepage.role.noinstaller', _roleImpl.fileHint ) );
         _selectInstallerLabel.includeInLayout = _selectInstallerLabel.visible = false;
@@ -785,31 +765,51 @@ class RolePickerItem extends LayoutGroup {
         _populateFixpackDropdown();
         _populateHotfixDropdown();
         
-        // Check if this is a custom role with installer settings
-        var showInstaller = true;
-        var showFixpack = true;
-        var showHotfix = true;
+        // Determine which buttons to show based on role type
+        var showInstaller = true; // Default to showing installer
+        var showFixpack = false;  // Default to hiding fixpack
+        var showHotfix = false;   // Default to hiding hotfix
         
-        // Check for custom installer settings
+        // Check if this is a custom role with explicit installer settings
         if (Reflect.hasField(_roleImpl.role, "showInstaller")) {
-            // Get installer settings from role configuration
+            // Get installer settings from role configuration (custom provisioners)
             showInstaller = Reflect.field(_roleImpl.role, "showInstaller");
             showFixpack = Reflect.field(_roleImpl.role, "showFixpack");
             showHotfix = Reflect.field(_roleImpl.role, "showHotfix");
             
-            // Log the settings for debugging
-            Logger.info('${this}: Role ${_roleImpl.role.value} settings: installer=${showInstaller}, fixpack=${showFixpack}, hotfix=${showHotfix}');
+            Logger.info('${this}: Custom role ${_roleImpl.role.value} settings: installer=${showInstaller}, fixpack=${showFixpack}, hotfix=${showHotfix}');
+        } else {
+            // For built-in roles, use Reflect to check for hashes since the fields are private
+            // Always show installer button for built-in roles
+            
+            // Use Reflect to access the private _fixpackHashes field
+            var fixpackHashes = Reflect.field(_roleImpl, "_fixpackHashes");
+            // Only check if the array exists, not whether it has elements
+            // This allows roles with empty arrays (like Traveler) to show the button
+            showFixpack = fixpackHashes != null && Std.isOfType(fixpackHashes, Array);
+            
+            // Use Reflect to access the private _hotfixHashes field
+            var hotfixHashes = Reflect.field(_roleImpl, "_hotfixHashes");
+            // Only check if the array exists, not whether it has elements
+            showHotfix = hotfixHashes != null && Std.isOfType(hotfixHashes, Array);
+            
+            Logger.info('${this}: Built-in role ${_roleImpl.role.value} settings: installer=true, fixpack=${showFixpack}, hotfix=${showHotfix}');
         }
         
-        // Show/hide all file selection groups based on role being enabled
+        // Show/hide all file selection buttons based on role being enabled
         _allFilesGroup.includeInLayout = _allFilesGroup.visible = _roleImpl.role.enabled;
         
-        // Show/hide each row based on settings
-        _installerDropdownGroup.includeInLayout = _installerDropdownGroup.visible = showInstaller; 
-        _fixpackGroup.includeInLayout = _fixpackGroup.visible = showFixpack;
-        _hotfixGroup.includeInLayout = _hotfixGroup.visible = showHotfix;
+        // Show/hide each selection button based on settings
+        _installerSelectButton.includeInLayout = _installerSelectButton.visible = showInstaller;
+        _fixpackSelectButton.includeInLayout = _fixpackSelectButton.visible = showFixpack;
+        _hotfixSelectButton.includeInLayout = _hotfixSelectButton.visible = showHotfix;
         
-        // All buttons should be enabled if the role is enabled (redundant but explicit)
+        // All buttons should be enabled if the role is enabled
+        _installerSelectButton.enabled = _roleImpl.role.enabled;
+        _fixpackSelectButton.enabled = _roleImpl.role.enabled;
+        _hotfixSelectButton.enabled = _roleImpl.role.enabled;
+        
+        // Also enable the browse buttons used in dialogs
         _installerButton.enabled = _roleImpl.role.enabled;
         _fixpackButton.enabled = _roleImpl.role.enabled;
         _hotfixButton.enabled = _roleImpl.role.enabled;
@@ -1591,6 +1591,359 @@ class RolePickerItem extends LayoutGroup {
      */
     function _fixpackButtonTriggered(e:TriggerEvent) {
         _showFileDialog("fixpacks");
+    }
+
+    /**
+     * Show the installer selection dialog
+     */
+    private function _showInstallerDialog(e:TriggerEvent) {
+        // Guard against multiple dialogs
+        if (_isFileDialogOpen) return;
+        
+        // Populate the dropdown with current data
+        _populateInstallerDropdown();
+        
+        // Determine what options are available for the user
+        var options = [];
+        var hasValidCachedFiles = false;
+        
+        if (_installerDropdown.dataProvider != null && _installerDropdown.dataProvider.length > 0) {
+            // Check if we have valid cached files (not just placeholder)
+            for (i in 0..._installerDropdown.dataProvider.length) {
+                var item = _installerDropdown.dataProvider.get(i);
+                if (item.file != null && !Reflect.hasField(item, "isPlaceholder")) {
+                    hasValidCachedFiles = true;
+                    break;
+                }
+            }
+        }
+        
+        // Add different option sets based on what's available
+        if (hasValidCachedFiles) {
+            options = [
+                "Select from cached files",
+                "Browse for file",
+                "Cancel"
+            ];
+        } else {
+            options = [
+                "Browse for file",
+                "Cancel"
+            ];
+        }
+        
+        // Show the alert with appropriate options
+        Alert.show(
+            "Choose how you want to select an installer file",
+            "Select Installer",
+            options,
+            (state) -> {
+                // Handle selection based on options presented
+                if (hasValidCachedFiles) {
+                    switch (state.index) {
+                        case 0: // Select from cached files
+                            _showInstallerDropdownSelection();
+                        case 1: // Browse for file
+                            _showFileDialog("installers");
+                        default: // Cancel - do nothing
+                    }
+                } else {
+                    switch (state.index) {
+                        case 0: // Browse for file
+                            _showFileDialog("installers");
+                        default: // Cancel - do nothing
+                    }
+                }
+            }
+        );
+    }
+    
+    /**
+     * Show a dialog to select from cached installer files
+     */
+    private function _showInstallerDropdownSelection() {
+        // Create an array of options for the alert from the dropdown items
+        var options = [];
+        var fileItems = [];
+        
+        if (_installerDropdown.dataProvider != null) {
+            for (i in 0..._installerDropdown.dataProvider.length) {
+                var item = _installerDropdown.dataProvider.get(i);
+                // Only include valid files, not placeholders
+                if (item.file != null && !Reflect.hasField(item, "isPlaceholder")) {
+                    options.push(item.label);
+                    fileItems.push(item);
+                }
+            }
+        }
+        
+        // Add a cancel option
+        options.push("Cancel");
+        
+        // Calculate cancel button index (last item)
+        var cancelIndex = options.length - 1;
+        
+        // Show the vertical options alert with file options
+        VerticalOptionsAlert.show(
+            "", // Remove message since title is now descriptive enough
+            "Select a Cached Installer",
+            options,
+            (state) -> {
+                // If the user selected a file (not cancel)
+                if (state.index < fileItems.length) {
+                    var selectedItem = fileItems[state.index];
+                    var selectedFile = selectedItem.file;
+                    
+                    if (selectedFile != null && selectedFile.exists) {
+                        _roleImpl.role.files.installer = selectedFile.path;
+                        _roleImpl.role.files.installerFileName = selectedFile.originalFilename;
+                        _roleImpl.role.files.installerHash = selectedFile.hash;
+                        _roleImpl.role.files.installerVersion = selectedFile.version;
+                        updateData();
+                    }
+                }
+                // No action needed for cancel
+            },
+            cast this,
+            false,
+            cancelIndex
+        );
+    }
+    
+    /**
+     * Show the fixpack selection dialog
+     */
+    private function _showFixpackDialog(e:TriggerEvent) {
+        // Guard against multiple dialogs
+        if (_isFileDialogOpen) return;
+        
+        // Populate the dropdown with current data
+        _populateFixpackDropdown();
+        
+        // Determine what options are available for the user
+        var options = [];
+        var hasValidCachedFiles = false;
+        
+        if (_fixpackDropdown.dataProvider != null && _fixpackDropdown.dataProvider.length > 0) {
+            // Check if we have valid cached files (not just placeholder)
+            for (i in 0..._fixpackDropdown.dataProvider.length) {
+                var item = _fixpackDropdown.dataProvider.get(i);
+                if (item.file != null && !Reflect.hasField(item, "isPlaceholder")) {
+                    hasValidCachedFiles = true;
+                    break;
+                }
+            }
+        }
+        
+        // Add different option sets based on what's available
+        if (hasValidCachedFiles) {
+            options = [
+                "Select from cached files",
+                "Browse for file",
+                "Cancel"
+            ];
+        } else {
+            options = [
+                "Browse for file",
+                "Cancel"
+            ];
+        }
+        
+        // Show the alert with appropriate options
+        Alert.show(
+            "Choose how you want to select a fixpack file",
+            "Select Fixpack",
+            options,
+            (state) -> {
+                // Handle selection based on options presented
+                if (hasValidCachedFiles) {
+                    switch (state.index) {
+                        case 0: // Select from cached files
+                            _showFixpackDropdownSelection();
+                        case 1: // Browse for file
+                            _showFileDialog("fixpacks");
+                        default: // Cancel - do nothing
+                    }
+                } else {
+                    switch (state.index) {
+                        case 0: // Browse for file
+                            _showFileDialog("fixpacks");
+                        default: // Cancel - do nothing
+                    }
+                }
+            }
+        );
+    }
+    
+    /**
+     * Show a dialog to select from cached fixpack files
+     */
+    private function _showFixpackDropdownSelection() {
+        // Create an array of options for the alert from the dropdown items
+        var options = [];
+        var fileItems = [];
+        
+        if (_fixpackDropdown.dataProvider != null) {
+            for (i in 0..._fixpackDropdown.dataProvider.length) {
+                var item = _fixpackDropdown.dataProvider.get(i);
+                // Only include valid files, not placeholders
+                if (item.file != null && !Reflect.hasField(item, "isPlaceholder")) {
+                    options.push(item.label);
+                    fileItems.push(item);
+                }
+            }
+        }
+        
+        // Add a cancel option
+        options.push("Cancel");
+        
+        // Calculate cancel button index (last item)
+        var cancelIndex = options.length - 1;
+        
+        // Show the vertical options alert with file options
+        VerticalOptionsAlert.show(
+            "", // Remove message since title is now descriptive enough
+            "Select a Cached Fixpack",
+            options,
+            (state) -> {
+                // If the user selected a file (not cancel)
+                if (state.index < fileItems.length) {
+                    var selectedItem = fileItems[state.index];
+                    var selectedFile = selectedItem.file;
+                    
+                    if (selectedFile != null && selectedFile.exists && 
+                        !_roleImpl.role.files.fixpacks.contains(selectedFile.path)) {
+                        
+                        _roleImpl.role.files.fixpacks.push(selectedFile.path);
+                        _roleImpl.role.files.installerFixpackHash = selectedFile.hash;
+                        _roleImpl.role.files.installerFixpackVersion = selectedFile.version;
+                        updateData();
+                    }
+                }
+                // No action needed for cancel
+            },
+            cast this,
+            false,
+            cancelIndex
+        );
+    }
+    
+    /**
+     * Show the hotfix selection dialog
+     */
+    private function _showHotfixDialog(e:TriggerEvent) {
+        // Guard against multiple dialogs
+        if (_isFileDialogOpen) return;
+        
+        // Populate the dropdown with current data
+        _populateHotfixDropdown();
+        
+        // Determine what options are available for the user
+        var options = [];
+        var hasValidCachedFiles = false;
+        
+        if (_hotfixDropdown.dataProvider != null && _hotfixDropdown.dataProvider.length > 0) {
+            // Check if we have valid cached files (not just placeholder)
+            for (i in 0..._hotfixDropdown.dataProvider.length) {
+                var item = _hotfixDropdown.dataProvider.get(i);
+                if (item.file != null && !Reflect.hasField(item, "isPlaceholder")) {
+                    hasValidCachedFiles = true;
+                    break;
+                }
+            }
+        }
+        
+        // Add different option sets based on what's available
+        if (hasValidCachedFiles) {
+            options = [
+                "Select from cached files",
+                "Browse for file",
+                "Cancel"
+            ];
+        } else {
+            options = [
+                "Browse for file",
+                "Cancel"
+            ];
+        }
+        
+        // Show the alert with appropriate options
+        Alert.show(
+            "Choose how you want to select a hotfix file",
+            "Select Hotfix",
+            options,
+            (state) -> {
+                // Handle selection based on options presented
+                if (hasValidCachedFiles) {
+                    switch (state.index) {
+                        case 0: // Select from cached files
+                            _showHotfixDropdownSelection();
+                        case 1: // Browse for file
+                            _showFileDialog("hotfixes");
+                        default: // Cancel - do nothing
+                    }
+                } else {
+                    switch (state.index) {
+                        case 0: // Browse for file
+                            _showFileDialog("hotfixes");
+                        default: // Cancel - do nothing
+                    }
+                }
+            }
+        );
+    }
+    
+    /**
+     * Show a dialog to select from cached hotfix files
+     */
+    private function _showHotfixDropdownSelection() {
+        // Create an array of options for the alert from the dropdown items
+        var options = [];
+        var fileItems = [];
+        
+        if (_hotfixDropdown.dataProvider != null) {
+            for (i in 0..._hotfixDropdown.dataProvider.length) {
+                var item = _hotfixDropdown.dataProvider.get(i);
+                // Only include valid files, not placeholders
+                if (item.file != null && !Reflect.hasField(item, "isPlaceholder")) {
+                    options.push(item.label);
+                    fileItems.push(item);
+                }
+            }
+        }
+        
+        // Add a cancel option
+        options.push("Cancel");
+        
+        // Calculate cancel button index (last item)
+        var cancelIndex = options.length - 1;
+        
+        // Show the vertical options alert with file options
+        VerticalOptionsAlert.show(
+            "", // Remove message since title is now descriptive enough
+            "Select a Cached Hotfix",
+            options,
+            (state) -> {
+                // If the user selected a file (not cancel)
+                if (state.index < fileItems.length) {
+                    var selectedItem = fileItems[state.index];
+                    var selectedFile = selectedItem.file;
+                    
+                    if (selectedFile != null && selectedFile.exists && 
+                        !_roleImpl.role.files.hotfixes.contains(selectedFile.path)) {
+                        
+                        _roleImpl.role.files.hotfixes.push(selectedFile.path);
+                        _roleImpl.role.files.installerHotFixHash = selectedFile.hash;
+                        _roleImpl.role.files.installerHotFixVersion = selectedFile.version;
+                        updateData();
+                    }
+                }
+                // No action needed for cancel
+            },
+            cast this,
+            false,
+            cancelIndex
+        );
     }
 
 }
