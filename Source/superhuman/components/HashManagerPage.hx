@@ -132,6 +132,10 @@ class HashManagerPage extends Page {
     private var _progressBar:ProgressBar;
     private var _progressLabel:Label;
     
+    // Hash display components
+    private var _hashRow:GenesisFormRow;
+    private var _hashLabel:Label;
+    
     public function new() {
         super();
     }
@@ -336,12 +340,11 @@ class HashManagerPage extends Page {
         _addEditForm.addChild(hashRow);
         
         var hashLabel = new Label();
-        hashLabel.variant = GenesisApplicationTheme.LABEL_SMALL;
         hashRow.content.addChild(hashLabel);
         
         // Store reference to hash row and label for toggling visibility
-        var _hashRow = hashRow;
-        var _hashLabel = hashLabel;
+        _hashRow = hashRow;
+        _hashLabel = hashLabel;
         
         // Add/Edit form buttons
         var addEditButtonGroup = new LayoutGroup();

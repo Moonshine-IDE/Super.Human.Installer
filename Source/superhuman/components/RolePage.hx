@@ -41,6 +41,7 @@ import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.controls.PopUpListView;
 import feathers.controls.ScrollContainer;
+import feathers.controls.TextCallout;
 import feathers.data.ArrayCollection;
 import feathers.events.TriggerEvent;
 import feathers.layout.HorizontalAlign;
@@ -62,6 +63,9 @@ import lime.system.System;
 import lime.ui.FileDialog;
 import lime.ui.FileDialogType;
 import openfl.events.Event;
+import openfl.events.MouseEvent;
+import openfl.net.URLRequest;
+import openfl.Lib;
 import prominic.sys.io.FileTools;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
@@ -73,7 +77,7 @@ import superhuman.theme.SuperHumanInstallerTheme;
 
 class RolePage extends Page {
 
-    final _w:Float = GenesisApplicationTheme.GRID * 100;
+    final _w:Float = GenesisApplicationTheme.GRID * 140;
 
     var _buttonGroup:LayoutGroup;
     var _buttonGroupLayout:HorizontalLayout;
@@ -86,6 +90,12 @@ class RolePage extends Page {
     public var _lastDefinitionName:String;
     var _fd:FileDialog;
     
+    // Header elements
+    var _titleGroup:LayoutGroup;
+    var _titleLabel:Label;
+    var _descriptionLabel:Label;
+    var _licenseLink:Label;
+    
     public function new() {
 
         super();
@@ -97,6 +107,35 @@ class RolePage extends Page {
         super.initialize();
 
         _content.width = _w;
+        _content.maxWidth = GenesisApplicationTheme.GRID * 150;
+        
+        // Create header section
+        _titleGroup = new LayoutGroup();
+        var titleGroupLayout = new VerticalLayout();
+        titleGroupLayout.horizontalAlign = HorizontalAlign.CENTER;
+        titleGroupLayout.gap = GenesisApplicationTheme.GRID;
+        _titleGroup.layout = titleGroupLayout;
+        _titleGroup.width = _w;
+        _titleGroup.layoutData = new VerticalLayoutData(100);
+        this.addChild(_titleGroup);
+        
+        // Add title label
+        _titleLabel = new Label();
+        _titleLabel.text = "ROLES";
+        _titleLabel.variant = GenesisApplicationTheme.LABEL_LARGE;
+        _titleGroup.addChild(_titleLabel);
+        
+        // Add description about what roles are for
+        _descriptionLabel = new Label();
+        _descriptionLabel.text = "Select the roles you want to enable for your server. Each role provides specific functionality and may require installation files.";
+        _descriptionLabel.wordWrap = true;
+        _descriptionLabel.width = _w;
+        _titleGroup.addChild(_descriptionLabel);
+        
+        // Add horizontal line separator
+        var line = new HLine();
+        line.width = _w;
+        this.addChild(line);
 
         // Create a scroll container for the list content
         var scrollContainer = new ScrollContainer();
@@ -483,6 +522,17 @@ class RolePage extends Page {
         }
     }
 
+    /**
+     * Handle clicks on the license link to open the purchase website
+     */
+    function _licenseLinkTriggered(e:MouseEvent) {
+        // Open the prominic.shop HCL Domino license page in the default browser
+        Lib.navigateToURL(new URLRequest("https://www.prominic.shop/category/hcl-domino"));
+        
+        // Show a confirmation callout
+        TextCallout.show("Opening HCL Domino license page in your browser", _licenseLink);
+    }
+    
     function _buttonCloseTriggered( e:TriggerEvent ) {
         // Set a flag indicating the user has completed role configuration
         if (_server != null) {
@@ -551,6 +601,42 @@ class RolePickerItem extends LayoutGroup {
         _layout = new VerticalLayout();
         _layout.gap = GenesisApplicationTheme.GRID * 2;
         this.layout = _layout;
+        
+        // Check if this is the Domino role to add license link
+        var isDominoRole = (_roleImpl.role.value != null && _roleImpl.role.value.toLowerCase() == "domino");
+        
+        // Add HCL Domino license link if this is the Domino role
+        if (isDominoRole) {
+            // Create license text container with horizontal layout
+            var licenseContainer = new LayoutGroup();
+            var licenseLayout = new HorizontalLayout();
+            licenseLayout.gap = 0;
+            licenseLayout.horizontalAlign = HorizontalAlign.LEFT;
+            licenseLayout.verticalAlign = VerticalAlign.MIDDLE;
+            licenseContainer.layout = licenseLayout;
+            licenseContainer.layoutData = new VerticalLayoutData(100);
+            
+            // Add regular text label
+            var licenseText = new Label();
+            licenseText.text = "Need a HCL Domino License? Get one now at ";
+            licenseContainer.addChild(licenseText);
+            
+            // Add clickable link for Prominic.shop
+            var licenseLink = new Label();
+            licenseLink.text = "Prominic.shop!";
+            licenseLink.variant = GenesisApplicationTheme.LABEL_LINK;
+            licenseLink.buttonMode = licenseLink.useHandCursor = true;
+            licenseLink.addEventListener(MouseEvent.CLICK, function(e:MouseEvent) {
+                // Open the prominic.shop HCL Domino license page in the default browser
+                Lib.navigateToURL(new URLRequest("https://www.prominic.shop/category/hcl-domino"));
+                
+                // Show a confirmation callout
+                TextCallout.show("Opening HCL Domino license page in your browser", licenseLink);
+            });
+            licenseContainer.addChild(licenseLink);
+            
+            this.addChild(licenseContainer);
+        }
 
         _labelGroup = new LayoutGroup();
         _labelGroup.layoutData = new VerticalLayoutData( 100 );
@@ -1000,7 +1086,6 @@ class RolePickerItem extends LayoutGroup {
     private function _fixpackDropdownChanged(e:Event) {
         // Guard against invalid selection
         if (_fixpackDropdown.selectedItem == null) return;
-        if (_fixpackDropdown.selectedIndex == -1) return;
         
         // Guard against selection events while a dialog is open
         if (_isFileDialogOpen) {
