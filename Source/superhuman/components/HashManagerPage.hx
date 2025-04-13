@@ -271,7 +271,7 @@ class HashManagerPage extends Page {
         // Create role dropdown
         _dropdownRole = new PopUpListView();
         _dropdownRole.dataProvider = new ArrayCollection<String>([
-            "domino", "appdevpack", "leap", "nomadweb", "traveler", "verse", "domino-rest-api"
+            "domino", "leap", "nomadweb", "traveler", "verse", "domino-rest-api"
         ]);
         _rowRole.content.addChild(_dropdownRole);
         

@@ -189,15 +189,6 @@ class AdditionalProvisionerHostsFileGenerator extends StandaloneProvisionerHosts
                 replace.ROLE_VERSE = replaceWith;
             }
 
-            if ( r.value == "appdevpack" ) {
-
-                //"- name: hcl_domino_appdevpack" : "- name: domino_appdevpack"
-                replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, r.value, r.enabled);
-            		
-                replace.APPDEVPACK_INSTALLER = installerName;
-                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_APPDEVPACK = replaceWith;
-            }
 
             if ( r.value == "domino-rest-api" ) {
 

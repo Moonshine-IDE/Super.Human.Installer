@@ -169,15 +169,6 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
                 replace.ROLE_VERSE = replaceWith;
             }
 
-            if ( r.value == "appdevpack" ) {
-
-                //"- name: hcl_domino_appdevpack" : "- name: domino_appdevpack"
-                replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, r.value, r.enabled);        
-            		
-                replace.APPDEVPACK_INSTALLER = installerName;
-                replace.APPDEVPACK_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
-                replace.ROLE_APPDEVPACK = replaceWith;
-            }
 
             if ( r.value == "domino-rest-api" ) {
 
@@ -314,10 +305,6 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             VERSE_INSTALLER: defaultProvisionerFieldValue,
             VERSE_INSTALLER_VERSION: defaultProvisionerFieldValue,
       		
-            //AppDev Web Pack Variables
-            APPDEVPACK_INSTALLER: defaultProvisionerFieldValue,
-            APPDEVPACK_INSTALLER_VERSION: defaultProvisionerFieldValue,
-            
             //Domino Rest API Variables
             DOMINO_REST_API_INSTALLER_VERSION: defaultProvisionerFieldValue,
             DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
@@ -328,7 +315,6 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             ROLE_TRAVELER: defaultRoleFieldValue,
             ROLE_TRAVELER_HTMO: defaultRoleFieldValue,
             ROLE_VERSE: defaultRoleFieldValue,
-            ROLE_APPDEVPACK: defaultRoleFieldValue,
             ROLE_RESTAPI: defaultRoleFieldValue,
             ROLE_DOMINO_RESTAPI: defaultRoleFieldValue,
             ROLE_VOLTMX: defaultRoleFieldValue,

@@ -209,7 +209,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		var travelerHashes:Array<String> = SuperHumanHashes.getInstallersHashes("traveler");
 		var travelerFixPacksHashes:Array<String> = SuperHumanHashes.getFixPacksHashes("traveler");
 		var verseHashes:Array<String> = SuperHumanHashes.getInstallersHashes("verse");
-		var appdevpackHashes:Array<String> = SuperHumanHashes.getInstallersHashes("appdevpack");
 		var restApiHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino-rest-api");
 		
 		_serverRolesCollection = [
@@ -219,7 +218,6 @@ class SuperHumanInstaller extends GenesisApplication {
 			new ServerRoleImpl( "Leap (formerly Volt)", LanguageManager.getInstance().getString( 'rolepage.roles.leap.desc' ), _defaultRoles.get( "leap" ), leapHashes, "(hcl.dleap-1.1.7.29.zip)" ),
 			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), travelerHashes, null, travelerFixPacksHashes, "(Traveler_14.0.0FP2_Linux_ML.tar.gz)" ),
 			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), verseHashes, "(HCL_Verse_3.0.0.zip)" ),
-			new ServerRoleImpl( "AppDev Pack for Node.js", LanguageManager.getInstance().getString( 'rolepage.roles.appdevpack.desc' ), _defaultRoles.get( "appdevpack" ), appdevpackHashes, "(domino-appdev-pack-1.0.15.tgz)" ),
 			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), restApiHashes, "(Domino_REST_API_V1_Installer.tar.gz)" ),
 
 		];

@@ -71,7 +71,7 @@ typedef SuperHumanCachedFile = {
     type: String,
     
     /**
-     * Role/product the file applies to (domino, appdevpack, etc.)
+     * Role/product the file applies to (domino, noamd, etc.)
      */
     role: String
 }

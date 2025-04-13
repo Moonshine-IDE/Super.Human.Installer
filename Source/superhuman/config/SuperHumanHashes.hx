@@ -19,7 +19,6 @@ class SuperHumanHashes
 									  {hash: "0d19fdaa92716e3f097014e6800102ff", version: { fullVersion: "FP4"}},
 									  {hash: "80c10504b267069006cc706b375c18ec", version: { fullVersion: "FP5"}},
 									  {hash: "83541dddac43ddd2caee5091ba835bcc", version: { fullVersion: "FP6"}}]],
-		"appdevpack" => [ "installers" => [ { hash: "b84248ae22a57efe19dac360bd2aafc2", version: { majorVersion: "1", minorVersion: "0", patch: "15", fullVersion: "1.0.15"} }]],
 		"leap" => [ "installers" => [ { hash: "080235c0f0cce7cc3446e01ffccf0046", version: { majorVersion: "1", minorVersion: "0", patch: "5", fullVersion: "1.0.5" } },
 									{ hash: "8952d633ff19ad7833936edccee9fd01", version: { majorVersion: "1", minorVersion: "1", patch: "1", fullVersion: "1.1.1" } },
 									{ hash: "f5690e736c54a6106d4f28aaea8c849f", version: { majorVersion: "1", minorVersion: "0", patch: "17", fullVersion: "1.0.17" } },

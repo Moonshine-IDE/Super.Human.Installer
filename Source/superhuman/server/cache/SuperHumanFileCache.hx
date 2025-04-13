@@ -412,7 +412,7 @@ class SuperHumanFileCache extends EventDispatcher {
     /**
      * Add a file to the cache
      * @param sourceFilePath Path to the source file
-     * @param role Role/product (domino, appdevpack, etc.)
+     * @param role Role/product (domino, nomad, etc.)
      * @param type File type (installer, hotfix, fixpack)
      * @param version Optional version info
      * @param originalHash Optional original hash for replacement
