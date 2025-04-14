@@ -62,6 +62,7 @@ class HCLDownloader {
     private static final MYHCL_PORTAL_URL:String = "https://my.hcltechsw.com";
     private static final MYHCL_API_URL:String = "https://api.hcltechsw.com";
     private static final MYHCL_TOKEN_URL:String = "https://api.hcltechsw.com/v1/apitokens/exchange";
+    private static final MYHCL_CATALOG_URL:String = "https://my.hcltechsw.com/files/domino";
     private static final MYHCL_DOWNLOAD_URL_PREFIX:String = "https://api.hcltechsw.com/v1/files/";
     private static final MYHCL_DOWNLOAD_URL_SUFFIX:String = "/download";
 
@@ -91,18 +92,9 @@ class HCLDownloader {
     // Is a download in progress
     var _isDownloading:Bool = false;
     
-    // Track whether we've tried alternative auth method
-    var _altAuthMethodTried:Bool = false;
-    
     // Current token being used
     var _currentToken:String;
     
-    // When was the access token cached (initialized to 0 to avoid null Float errors)
-    var _accessTokenCachedTime:Float = 0;
-    
-    // Access token cache duration in milliseconds (40 minutes to match domdownload.sh)
-    private static final ACCESS_TOKEN_CACHE_DURATION:Float = 40 * 60 * 1000;
-
     /**
      * Get the singleton instance
      */
@@ -178,9 +170,6 @@ class HCLDownloader {
         // Store current file
         _currentFile = file;
         
-        // Reset alternative auth flag
-        _altAuthMethodTried = false;
-        
         // Get token from secrets
         var token = getHCLToken(tokenName);
         if (token == null) {
@@ -188,7 +177,7 @@ class HCLDownloader {
             return;
         }
         
-        // Store token for alternative approach if needed
+        // Store the token
         _currentToken = token;
         
         // Notify download is starting
@@ -254,20 +243,8 @@ class HCLDownloader {
             return;
         }
         
-        // Check if we have a cached access token that isn't expired
-        var currentTime = Date.now().getTime();
-        if (_accessToken != null && _accessTokenCachedTime > 0) {
-            var tokenAge = currentTime - _accessTokenCachedTime;
-            if (tokenAge < ACCESS_TOKEN_CACHE_DURATION) {
-                Logger.debug('HCLDownloader: Using cached access token (age: ${Math.round(tokenAge/1000)}s)');
-                _isDownloading = true;
-                getDownloadUrl();
-                return;
-            } else {
-                Logger.debug('HCLDownloader: Cached access token expired (age: ${Math.round(tokenAge/1000)}s)');
-                _accessToken = null;
-            }
-        }
+        // Always get a fresh token
+        _accessToken = null;
         
         Logger.info('HCLDownloader: Getting access token from refresh token');
         Logger.debug('HCLDownloader: Token length: ${refreshToken != null ? refreshToken.length : 0}');
@@ -338,47 +315,14 @@ class HCLDownloader {
             
             Logger.info('HCLDownloader: Successfully obtained access token');
             _accessToken = accessToken;
-            _accessTokenCachedTime = Date.now().getTime();
             _isDownloading = true;
             
-            // Continue to next step
-            getDownloadUrl();
+            // Continue to next step - first get catalog to find file ID
+            fetchCatalog();
         };
         
         http.onError = function(error:String) {
             Logger.error('HCLDownloader: Token request failed with error: ${error}');
-            
-            // If this is our first attempt, try an alternative approach with form encoding
-            if (!_altAuthMethodTried) {
-                _altAuthMethodTried = true;
-                Logger.info('HCLDownloader: First auth attempt failed, trying form-encoded approach');
-                
-                try {
-                    // Create a new Http instance for the retry
-                    var altHttp = new haxe.Http(MYHCL_TOKEN_URL);
-                    
-                    // Use form encoding instead of JSON
-                    altHttp.setHeader("Content-Type", "application/x-www-form-urlencoded");
-                    altHttp.setHeader("Accept", "application/json");
-                    
-                    // Set the same callbacks
-                    altHttp.onData = http.onData;
-                    altHttp.onError = http.onError;
-                    altHttp.onStatus = http.onStatus;
-                    
-                    // Format data as standard OAuth parameters
-                    var formData = "grant_type=refresh_token&refresh_token=" + StringTools.urlEncode(_currentToken);
-                    Logger.debug('HCLDownloader: Alt request full data: ${formData}');
-                    
-                    altHttp.setPostData(formData);
-                    Logger.debug('HCLDownloader: Sending alt token request to ${MYHCL_TOKEN_URL}');
-                    altHttp.request(true);
-                    return;
-                } catch (e:Dynamic) {
-                    Logger.error('HCLDownloader: Alt auth method failed: ${e}');
-                }
-            }
-            
             triggerError('Failed to get access token: ${error}');
         };
         
@@ -471,8 +415,8 @@ class HCLDownloader {
         Logger.info('HCLDownloader: Successfully obtained access token');
         _accessToken = accessToken;
         
-        // Continue to next step
-        getDownloadUrl();
+        // Continue to next step - first look up file ID in catalog
+        fetchCatalog();
     }
     
     /**
@@ -498,48 +442,6 @@ class HCLDownloader {
             Logger.error('HCLDownloader: Error details: ${errorDetails}');
         }
         
-        // If this is our first attempt, try an alternative approach
-        if (!_altAuthMethodTried) {
-            _altAuthMethodTried = true;
-            Logger.info('HCLDownloader: First auth attempt failed, trying form-encoded approach');
-            
-            try {
-            // Create an alternative approach using URL-encoded form data like the bash script
-            var request = new URLRequest(MYHCL_TOKEN_URL);
-            request.method = URLRequestMethod.POST;
-            request.followRedirects = true;
-            
-            // Use form encoding instead of JSON (matching domdownload.sh fallback)
-            request.requestHeaders = [
-                new URLRequestHeader("Content-Type", "application/x-www-form-urlencoded"),
-                new URLRequestHeader("Accept", "application/json"),
-                new URLRequestHeader("User-Agent", "curl/7.68.0") // Consistent user agent
-            ];
-            
-            // Format data as standard OAuth parameters
-            var formData = "grant_type=refresh_token&refresh_token=" + StringTools.urlEncode(_currentToken);
-            Logger.debug('HCLDownloader: Alt request data: ${formData.substr(0, 15)}...');
-            request.data = formData;
-                
-                _tokenLoader = new URLLoader();
-                _tokenLoader.dataFormat = URLLoaderDataFormat.TEXT;
-                _tokenLoader.addEventListener(Event.COMPLETE, _accessTokenLoaderComplete);
-                _tokenLoader.addEventListener(IOErrorEvent.IO_ERROR, _accessTokenLoaderError);
-                _tokenLoader.addEventListener(Event.OPEN, function(e) {
-                    Logger.debug('HCLDownloader: Alt token request connection opened');
-                });
-                _tokenLoader.addEventListener(ProgressEvent.PROGRESS, function(e) {
-                    Logger.debug('HCLDownloader: Alt token request progress: ${e.bytesLoaded}/${e.bytesTotal}');
-                });
-                
-                Logger.debug('HCLDownloader: Sending alt token request to ${MYHCL_TOKEN_URL}');
-                _tokenLoader.load(request);
-                return;
-            } catch (e:Dynamic) {
-                Logger.error('HCLDownloader: Alt auth method failed: ${e}');
-            }
-        }
-        
         triggerError('Failed to get access token: ${e.text}');
     }
     
@@ -559,15 +461,14 @@ class HCLDownloader {
     /**
      * Step 2: Get download URL for the file
      */
-    private function getDownloadUrl():Void {
-        Logger.info('HCLDownloader: Getting download URL for file ID: ${_currentFile.hash}');
+    /**
+     * Fetch the file catalog to get correct file IDs
+     */
+    private function fetchCatalog():Void {
+        Logger.info('HCLDownloader: Fetching file catalog');
         
-        // Construct the download URL (using the file hash as the ID)
-        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.hash + MYHCL_DOWNLOAD_URL_SUFFIX;
-        Logger.debug('HCLDownloader: Requesting download URL from: ${downloadUrl}');
-        
-        // Use Haxe Http for consistency with token request
-        var http = new haxe.Http(downloadUrl);
+        // Use Haxe Http for consistency
+        var http = new haxe.Http(MYHCL_CATALOG_URL);
         
         // Add authorization header with bearer token
         http.setHeader("Authorization", "Bearer " + _accessToken);
@@ -576,69 +477,335 @@ class HCLDownloader {
         
         // Add callback for successful response
         http.onData = function(data:String) {
-            Logger.debug('HCLDownloader: Received download URL response: ${data}');
+            Logger.debug('HCLDownloader: Received catalog response');
             
             // Save response to a file for debugging
             try {
-                sys.io.File.saveContent("download_url_response.json", data);
-                Logger.debug('HCLDownloader: Saved download URL response to download_url_response.json');
+                sys.io.File.saveContent("catalog_response.json", data);
+                Logger.debug('HCLDownloader: Saved catalog response to catalog_response.json');
             } catch (e:Dynamic) {
-                Logger.error('HCLDownloader: Failed to save download URL response to file: ${e}');
+                Logger.error('HCLDownloader: Failed to save catalog response to file: ${e}');
             }
             
-            // Try to parse response as JSON (in case of error)
+            // Parse JSON
+            var catalogJson:Dynamic;
             try {
-                var responseJson = haxe.Json.parse(data);
-                
-                // If we got valid JSON, it's likely an error message
-                if (responseJson.summary != null) {
-                    triggerError('Failed to get download URL: ${responseJson.summary}');
-                    return;
-                }
+                catalogJson = haxe.Json.parse(data);
+                Logger.debug('HCLDownloader: Parsed catalog JSON successfully');
             } catch (e:Dynamic) {
-                // Not JSON, this is expected as we're looking for a redirect URL
-            }
-            
-            // The response should contain the download URL
-            _downloadUrl = StringTools.trim(data);
-            
-            if (_downloadUrl == null || _downloadUrl.length == 0) {
-                triggerError("Failed to get download URL: No redirect URL received");
+                triggerError('Failed to parse catalog: ${e}');
                 return;
             }
             
-            Logger.debug('HCLDownloader: Got download URL: ${_downloadUrl}');
-            
-            // Continue to next step
-            downloadFile();
+            // Find the file ID by name
+            var fileId = findFileIdByName(catalogJson, _currentFile.originalFilename);
+            if (fileId != null) {
+                Logger.info('HCLDownloader: Found file ID in catalog: ${fileId}');
+                _currentFile.hash = fileId; // Update hash to correct file ID
+                getDownloadUrl();
+            } else {
+                triggerError('Failed to find file ID for ${_currentFile.originalFilename} in catalog');
+            }
         };
         
         // Add callback for error
         http.onError = function(error:String) {
-            Logger.error('HCLDownloader: Download URL request failed with error: ${error}');
-            triggerError('Failed to get download URL: ${error}');
-        };
-        
-        // Add callback for HTTP status
-        http.onStatus = function(status:Int) {
-            Logger.debug('HCLDownloader: Download URL HTTP status code: ${status}');
+            Logger.error('HCLDownloader: Catalog request failed with error: ${error}');
+            triggerError('Failed to fetch catalog: ${error}');
         };
         
         // Send the request
         try {
-            Logger.debug('HCLDownloader: Sending download URL request to ${downloadUrl}');
+            Logger.debug('HCLDownloader: Sending catalog request to ${MYHCL_CATALOG_URL}');
             http.request(false); // false = GET request
         } catch (e:Dynamic) {
-            triggerError('Failed to send download URL request: ${e}');
+            Logger.error('HCLDownloader: Failed to send catalog request: ${e}');
+            triggerError('Failed to send catalog request: ${e}');
         }
+    }
+    
+    /**
+     * Find a file ID in the catalog by file name
+     * @param catalog The catalog JSON
+     * @param fileName The file name to look for
+     * @return The file ID if found, null otherwise
+     */
+    private function findFileIdByName(catalog:Dynamic, fileName:String):String {
+        Logger.debug('HCLDownloader: Searching for ${fileName} in catalog');
+        
+        var items:Array<Dynamic>;
+        
+        // Handle different possible catalog formats
+        if (Std.is(catalog, Array)) {
+            // Catalog is an array directly
+            items = cast(catalog, Array<Dynamic>);
+            Logger.debug('HCLDownloader: Catalog is a direct array with ${items.length} items');
+        } else if (Reflect.hasField(catalog, "items") && Std.is(catalog.items, Array)) {
+            // Catalog has an items field that's an array
+            items = cast(catalog.items, Array<Dynamic>);
+            Logger.debug('HCLDownloader: Catalog has an items array with ${items.length} items');
+        } else if (Reflect.hasField(catalog, "files") && Std.is(catalog.files, Array)) {
+            // Catalog has a files field that's an array (HCL format)
+            items = cast(catalog.files, Array<Dynamic>);
+            Logger.debug('HCLDownloader: Catalog has a files array with ${items.length} items');
+        } else {
+            // Try to iterate through the object's fields as a last resort
+            items = [];
+            var fields = Reflect.fields(catalog);
+            for (field in fields) {
+                var value = Reflect.field(catalog, field);
+                if (Std.is(value, Array)) {
+                    // Found an array field, check if it contains items with name and id
+                    var arrayValue:Array<Dynamic> = cast value;
+                    if (arrayValue.length > 0 && 
+                        Std.is(arrayValue[0], Dynamic) && 
+                        Reflect.hasField(arrayValue[0], "name") &&
+                        Reflect.hasField(arrayValue[0], "id")) {
+                        items = arrayValue;
+                        Logger.debug('HCLDownloader: Found array field "${field}" with ${items.length} catalog items');
+                        break;
+                    }
+                }
+                else if (Std.is(value, Dynamic) && Reflect.hasField(value, "name") && Reflect.hasField(value, "id")) {
+                    items.push(value);
+                }
+            }
+            
+            if (items.length > 0) {
+                Logger.debug('HCLDownloader: Extracted ${items.length} items from catalog object fields');
+            } else {
+                Logger.error('HCLDownloader: Invalid catalog format - could not extract items');
+                return null;
+            }
+        }
+        
+        // First, try exact match
+        for (item in items) {
+            if (Reflect.hasField(item, "name") && Reflect.hasField(item, "id")) {
+                var itemName:String = Reflect.field(item, "name");
+                if (itemName == fileName) {
+                    Logger.debug('HCLDownloader: Found exact match for ${fileName}');
+                    
+                    // Extract SHA256 hash if available (for catalog verification later)
+                    if (Reflect.hasField(item, "checksums") && 
+                        Reflect.hasField(Reflect.field(item, "checksums"), "sha256")) {
+                        var checksums = Reflect.field(item, "checksums");
+                        var sha256 = Reflect.field(checksums, "sha256");
+                        Logger.debug('HCLDownloader: Found SHA256 hash: ${sha256}');
+                        _currentFile.sha256 = sha256;
+                    }
+                    
+                    return Reflect.field(item, "id");
+                }
+            }
+        }
+        
+        // Next, try case-insensitive match
+        var lowerFileName = fileName.toLowerCase();
+        for (item in items) {
+            if (Reflect.hasField(item, "name") && Reflect.hasField(item, "id")) {
+                var itemName:String = Reflect.field(item, "name");
+                if (itemName.toLowerCase() == lowerFileName) {
+                    Logger.debug('HCLDownloader: Found case-insensitive match for ${fileName}');
+                    return Reflect.field(item, "id");
+                }
+            }
+        }
+        
+        // Finally, try partial match (if filename is contained in the item name)
+        for (item in items) {
+            if (Reflect.hasField(item, "name") && Reflect.hasField(item, "id")) {
+                var itemName:String = Reflect.field(item, "name");
+                if (itemName.toLowerCase().indexOf(lowerFileName) >= 0) {
+                    Logger.debug('HCLDownloader: Found partial match for ${fileName} in ${itemName}');
+                    return Reflect.field(item, "id");
+                }
+            }
+        }
+        
+        // No match found
+        Logger.error('HCLDownloader: No match found for ${fileName} in catalog');
+        return null;
+    }
+    
+    // Flag to indicate if we're in the process of following redirects
+    var _followingRedirects:Bool = false;
+    
+    // Store the final URL we found after redirects
+    var _finalRedirectUrl:String = null;
+    
+    /**
+     * Step 2: Get download URL for the file
+     */
+    private function getDownloadUrl():Void {
+        Logger.info('HCLDownloader: Getting download URL for file ID: ${_currentFile.hash}');
+        
+        // Reset redirect tracking
+        _followingRedirects = false;
+        _finalRedirectUrl = null;
+        
+        // Construct the download URL using the file ID
+        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.hash + MYHCL_DOWNLOAD_URL_SUFFIX;
+        Logger.debug('HCLDownloader: Requesting download URL from: ${downloadUrl}');
+        
+        // Start following redirects from this URL
+        _followingRedirects = true;
+        getUrlWithRedirects(downloadUrl);
+    }
+    
+    /**
+     * Follow HTTP redirects to get the final download URL
+     * This is a non-recursive implementation that handles one redirect at a time
+     * @param url The URL to request
+     */
+    private function getUrlWithRedirects(url:String):Void {
+        var maxRedirects = 5;
+        var redirectCount = 0;
+        var currentUrl = url;
+        
+        // Create a function that can be called to process the current URL
+        function processUrl():Void {
+            if (redirectCount > maxRedirects) {
+                Logger.error('HCLDownloader: Too many redirects (${redirectCount})');
+                triggerError('Failed to get download URL: Too many redirects');
+                _followingRedirects = false;
+                return;
+            }
+            
+            if (!_followingRedirects) {
+                // We've already processed a redirect that led to a download
+                Logger.debug('HCLDownloader: Redirect chain was interrupted, ignoring further processing');
+                return;
+            }
+            
+            var http = new haxe.Http(currentUrl);
+            
+            // Add authorization header with bearer token
+            http.setHeader("Authorization", "Bearer " + _accessToken);
+            http.setHeader("Accept", "application/json");
+            http.setHeader("User-Agent", "curl/7.68.0"); // Mimic curl's user agent
+            
+            http.onData = function(data:String) {
+                if (!_followingRedirects) return; // Chain was already completed
+                
+                Logger.debug('HCLDownloader: Received response from URL: ${currentUrl}');
+                
+                // Save response to a file for debugging
+                if (redirectCount == 0) { // Only save the first response
+                    try {
+                        sys.io.File.saveContent("download_url_response.json", data);
+                        Logger.debug('HCLDownloader: Saved download URL response to download_url_response.json');
+                    } catch (e:Dynamic) {
+                        Logger.error('HCLDownloader: Failed to save download URL response to file: ${e}');
+                    }
+                }
+                
+                // Check if this is an error response
+                try {
+                    var responseJson = haxe.Json.parse(data);
+                    
+                    // If we got valid JSON, it's likely an error message
+                    if (Reflect.hasField(responseJson, "summary")) {
+                        _followingRedirects = false;
+                        triggerError('Failed to get download URL: ${responseJson.summary}');
+                        return;
+                    }
+                } catch (e:Dynamic) {
+                    // Not JSON, might be text or binary data - continue
+                }
+                
+                // If we get actual data and no more redirects, use the response
+                var trimmedData = StringTools.trim(data);
+                if (trimmedData.length > 0 && StringTools.startsWith(trimmedData.toLowerCase(), "http")) {
+                    // Response contains a URL
+                    _finalRedirectUrl = trimmedData;
+                    Logger.debug('HCLDownloader: Got download URL from response: ${_finalRedirectUrl}');
+                    startDownload();
+                    return;
+                }
+                
+                // If we got here, but the response is empty or not a URL,
+                // assume the current URL is the final one
+                _finalRedirectUrl = currentUrl;
+                Logger.debug('HCLDownloader: Using current URL as download URL: ${_finalRedirectUrl}');
+                startDownload();
+            };
+
+            http.onStatus = function(status:Int) {
+                Logger.debug('HCLDownloader: HTTP Status for ${currentUrl}: ${status}');
+                
+                if (!_followingRedirects) return; // Chain was already completed
+                
+                if (status >= 300 && status < 400) {
+                    // Get the Location header for redirects
+                    var headers = http.responseHeaders;
+                    var location = null;
+                    
+                    // Find the Location header (case-insensitive)
+                    for (header in headers.keys()) {
+                        if (header.toLowerCase() == "location") {
+                            location = headers.get(header);
+                            break;
+                        }
+                    }
+                    
+                    if (location != null) {
+                        Logger.debug('HCLDownloader: Redirecting to: ${location}');
+                        // Update for next redirect
+                        currentUrl = location;
+                        redirectCount++;
+                        processUrl(); // Process the next URL in the chain
+                    } else {
+                        Logger.error('HCLDownloader: No Location header found for redirect status ${status}');
+                        _followingRedirects = false;
+                        triggerError('Failed to get download URL: No Location header in redirect response');
+                    }
+                }
+                // No special cases for other status codes like 403 - we MUST follow the redirects
+            };
+
+            http.onError = function(error:String) {
+                if (!_followingRedirects) return; // Chain was already completed
+                
+                Logger.error('HCLDownloader: Error requesting ${currentUrl}: ${error}');
+                
+                // Always treat errors as fatal - no fallbacks
+                _followingRedirects = false;
+                triggerError('Failed to get download URL: ${error}');
+            };
+
+            try {
+                Logger.debug('HCLDownloader: Making request to ${currentUrl} (redirect #${redirectCount})');
+                http.request(false); // false = GET request
+            } catch (e:Dynamic) {
+                Logger.error('HCLDownloader: Exception making request to ${currentUrl}: ${e}');
+                _followingRedirects = false;
+                triggerError('Failed to send download URL request: ${e}');
+            }
+        }
+        
+        // Start the chain
+        processUrl();
+    }
+    
+    /**
+     * Start the actual file download after redirect resolution
+     */
+    private function startDownload():Void {
+        if (!_followingRedirects) return; // Another download already started
+        
+        // Mark as no longer following redirects to avoid multiple downloads
+        _followingRedirects = false;
+        
+        // Set the download URL and start the download
+        _downloadUrl = _finalRedirectUrl;
+        downloadFile();
     }
 
     /**
      * Step 3: Download the file
      */
     private function downloadFile():Void {
-        Logger.info('HCLDownloader: Downloading file from URL: ${_downloadUrl}');
-        
         // Create a temp file path with .download extension (matching domdownload.sh)
         var cacheDir = SuperHumanFileCache.getCacheDirectory();
         _tempFilePath = cacheDir + "/" + _currentFile.originalFilename + ".download";
