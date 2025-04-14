@@ -49,12 +49,119 @@ import superhuman.config.SuperHumanHashes;
 import openfl.Lib;
 import sys.FileSystem;
 import sys.io.File;
+import sys.thread.Thread;
+import sys.thread.Mutex;
+import sys.thread.Deque;
+import openfl.events.Event;
+import openfl.events.EventDispatcher;
 
 /**
- * NetworkExecutor - A specialized executor for handling HTTP operations asynchronously
- * This allows HTTP operations to be scheduled like other async tasks
+ * ThreadMessage - Represents a message to be passed between threads
  */
-class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
+class ThreadMessage {
+    public var action:String;
+    public var data:Dynamic;
+    
+    public function new(action:String, data:Dynamic) {
+        this.action = action;
+        this.data = data;
+    }
+}
+
+/**
+ * ThreadCommunicator - Handles communication between threads
+ */
+class ThreadCommunicator extends EventDispatcher {
+    // Singleton instance
+    private static var _instance:ThreadCommunicator;
+    
+    // Message queue for communication between threads
+    private var _messageQueue:Deque<ThreadMessage>;
+    
+    // Update interval (ms)
+    private static inline var UPDATE_INTERVAL:Int = 50;
+    
+    // Active timer for processing messages
+    private var _timer:haxe.Timer;
+    
+    /**
+     * Get the singleton instance
+     */
+    public static function getInstance():ThreadCommunicator {
+        if (_instance == null) {
+            _instance = new ThreadCommunicator();
+        }
+        return _instance;
+    }
+    
+    /**
+     * Private constructor - use getInstance()
+     */
+    private function new() {
+        super();
+        _messageQueue = new Deque<ThreadMessage>();
+        startProcessing();
+    }
+    
+    /**
+     * Post a message from a worker thread to be processed on the main thread
+     */
+    public function postThreadMessage(action:String, data:Dynamic):Void {
+        _messageQueue.add(new ThreadMessage(action, data));
+    }
+    
+    /**
+     * Start processing messages
+     */
+    public function startProcessing():Void {
+        if (_timer != null) {
+            _timer.stop();
+        }
+        
+        _timer = new haxe.Timer(UPDATE_INTERVAL);
+        _timer.run = processMessages;
+    }
+    
+    /**
+     * Stop processing messages
+     */
+    public function stopProcessing():Void {
+        if (_timer != null) {
+            _timer.stop();
+            _timer = null;
+        }
+    }
+    
+    /**
+     * Process messages in the queue
+     */
+    private function processMessages():Void {
+        var message = _messageQueue.pop(false);
+        while (message != null) {
+            // Dispatch the message as an event
+            var event = new Event(message.action);
+            Reflect.setField(event, "data", message.data);
+            dispatchEvent(event);
+            
+            // Get next message
+            message = _messageQueue.pop(false);
+        }
+    }
+}
+
+/**
+ * ThreadedNetworkExecutor - A specialized executor for handling HTTP operations in a separate thread
+ * This prevents blocking the main UI thread during network operations
+ */
+class ThreadedNetworkExecutor extends prominic.sys.io.AbstractExecutor {
+    // ThreadCommunicator message action constants
+    private static inline final ACTION_COMPLETE = "network_complete";
+    private static inline final ACTION_ERROR = "network_error";
+    private static inline final ACTION_PROGRESS = "network_progress";
+    private static inline final ACTION_REDIRECT = "network_redirect";
+    
+    // Thread communicator for passing messages between threads
+    private static var _communicator:ThreadCommunicator;
     // The URL to request
     private var _url:String;
     // The method (GET or POST)
@@ -74,11 +181,16 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
     // Response headers
     private var _responseHeaders:Map<String, String>;
     // Progress handler for progress event
-    private var _onProgress:ChainedList<(NetworkExecutor, Float)->Void, NetworkExecutor>;
+    private var _onProgress:ChainedList<(ThreadedNetworkExecutor, Float)->Void, ThreadedNetworkExecutor>;
     // Tracks if a redirect is being followed
     private var _followRedirect:Bool = false;
     // Tracking for redirect chain 
     private var _redirectCount:Int = 0;
+    // Threading components
+    private var _thread:Thread;
+    private var _mutex:Mutex;
+    private var _progressMutex:Mutex;
+    private var _threadActive:Bool = false;
     
     /**
      * Create a new NetworkExecutor
@@ -99,9 +211,9 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
     }
     
     /**
-     * Event fired during progress
+     * Event triggered during progress
      */
-    public var onProgress(get, never):ChainedList<(NetworkExecutor, Float)->Void, NetworkExecutor>;
+    public var onProgress(get, never):ChainedList<(ThreadedNetworkExecutor, Float)->Void, ThreadedNetworkExecutor>;
     function get_onProgress() return _onProgress;
     
     /**
@@ -117,67 +229,155 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
     private function get_responseHeaders() return _responseHeaders;
     
     /**
-     * Execute the HTTP request asynchronously
+     * Execute the HTTP request in a separate thread
      */
-    public function execute(?extraArgs:Array<String>, ?workingDirectory:String):NetworkExecutor {
+    public function execute(?extraArgs:Array<String>, ?workingDirectory:String):ThreadedNetworkExecutor {
         // Don't start if already running
         if (_running) return this;
         
         _startTime = Sys.time();
         _running = true;
         _hasErrors = false;
+        _threadActive = true;
+        
+        // Initialize thread synchronization
+        _mutex = new Mutex();
+        _progressMutex = new Mutex();
+        
+        // Initialize thread communicator if needed
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+            
+            // Set up event handlers for thread messages
+            _communicator.addEventListener(ACTION_COMPLETE, function(e:Event) {
+                var data = Reflect.field(e, "data");
+                if (data != null && data.executor == this) {
+                    _finalizeExecution(data.exitCode);
+                }
+            });
+            
+            _communicator.addEventListener(ACTION_ERROR, function(e:Event) {
+                var data = Reflect.field(e, "data");
+                if (data != null && data.executor == this) {
+                    for (f in _onStdErr) f(this, data.message);
+                    _finalizeExecution(1);
+                }
+            });
+            
+            _communicator.addEventListener(ACTION_PROGRESS, function(e:Event) {
+                var data = Reflect.field(e, "data");
+                if (data != null && data.executor == this) {
+                    for (f in _onProgress) f(this, data.progress);
+                }
+            });
+            
+            _communicator.addEventListener(ACTION_REDIRECT, function(e:Event) {
+                var data = Reflect.field(e, "data");
+                if (data != null && data.executor == this) {
+                    _handleRedirect(data.headers);
+                }
+            });
+        }
         
         // Trigger start event
         for (f in _onStart) f(this);
         
-        // Use Timer.delay to ensure non-blocking operation
-        haxe.Timer.delay(function() {
-            // Perform the actual HTTP request
-            if (_binary) {
-                _executeBinaryRequest();
-            } else {
-                _executeTextRequest();
+        // Create and start a new thread for the network operation
+        _thread = Thread.create(function() {
+            // Run in a try/catch block to ensure we handle any exceptions
+            try {
+                // Perform the actual HTTP request based on type
+                if (_binary) {
+                    _executeBinaryRequestThreaded();
+                } else {
+                    _executeTextRequestThreaded();
+                }
+            } catch (e:Dynamic) {
+                // Acquire mutex before setting shared state
+                _mutex.acquire();
+                _hasErrors = true;
+                var errorMsg = 'Thread exception: ${e}';
+                _mutex.release();
+                
+                // Post the error back to the main thread via communicator
+                _communicator.postThreadMessage(ACTION_ERROR, {
+                    executor: this,
+                    message: errorMsg
+                });
             }
-        }, 50); // Short delay to allow UI updates
+        });
         
         return this;
     }
     
     /**
-     * Execute text-based HTTP request
+     * Legacy non-threaded text request method (kept for compatibility)
      */
     private function _executeTextRequest():Void {
+        // Just delegate to the threaded implementation
+        _executeTextRequestThreaded();
+    }
+    
+    /**
+     * Execute text-based HTTP request in a separate thread
+     * This prevents blocking the main UI thread
+     */
+    private function _executeTextRequestThreaded():Void {
         var http = new haxe.Http(_url);
         
-        // Set headers
+        // Set headers in the worker thread
         for (key in _headers.keys()) {
             http.setHeader(key, _headers.get(key));
         }
         
-        // Set callbacks
+        // Set callbacks that will run in the worker thread
         http.onData = function(data:String) {
+            // Thread-safe update of shared state using mutex
+            _mutex.acquire();
             _responseData = data;
-            _finalizeExecution(0);
+            _mutex.release();
+            
+            // Post the completion back to the main thread via communicator
+            _communicator.postThreadMessage(ACTION_COMPLETE, {
+                executor: this,
+                exitCode: 0
+            });
         };
         
         http.onError = function(error:String) {
+            // Thread-safe update of shared state using mutex
+            _mutex.acquire();
             _hasErrors = true;
-            for (f in _onStdErr) f(this, error);
-            _finalizeExecution(1);
+            var errorMessage = error; // Make local copy for closure
+            _mutex.release();
+            
+            // Post the error back to the main thread via communicator
+            _communicator.postThreadMessage(ACTION_ERROR, {
+                executor: this,
+                message: errorMessage
+            });
         };
         
         http.onStatus = function(status:Int) {
             if (status >= 300 && status < 400 && _followRedirect) {
-                // Handle redirects
-                _handleRedirect(http.responseHeaders);
+                // Store headers for redirect handling
+                var responseHeaders = http.responseHeaders;
+                
+                // Post redirect handling back to the main thread via communicator
+                _communicator.postThreadMessage(ACTION_REDIRECT, {
+                    executor: this,
+                    headers: responseHeaders
+                });
                 return;
             }
             
-            // Store response headers
+            // Thread-safe update of response headers using mutex
+            _mutex.acquire();
             _responseHeaders = http.responseHeaders;
+            _mutex.release();
         };
         
-        // Execute request
+        // Execute request in the worker thread
         try {
             if (_method == "POST" && _postData != null) {
                 http.setPostData(_postData);
@@ -186,16 +386,33 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
                 http.request(false);
             }
         } catch (e:Dynamic) {
+            // Thread-safe update of shared state using mutex
+            _mutex.acquire();
             _hasErrors = true;
-            for (f in _onStdErr) f(this, 'Exception: ${e}');
-            _finalizeExecution(1);
+            var errorMessage = 'Exception: ${e}'; // Make local copy for closure
+            _mutex.release();
+            
+            // Post the exception back to the main thread via communicator
+            _communicator.postThreadMessage(ACTION_ERROR, {
+                executor: this,
+                message: errorMessage
+            });
         }
     }
     
     /**
-     * Execute binary HTTP request
+     * Legacy non-threaded binary request method (kept for compatibility)
      */
     private function _executeBinaryRequest():Void {
+        // Just delegate to the threaded implementation
+        _executeBinaryRequestThreaded();
+    }
+    
+    /**
+     * Execute binary HTTP request in a separate thread
+     * This prevents blocking the main UI thread
+     */
+    private function _executeBinaryRequestThreaded():Void {
         var request = new openfl.net.URLRequest(_url);
         
         // Set method
@@ -217,19 +434,28 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
         var loader = new openfl.net.URLLoader();
         loader.dataFormat = openfl.net.URLLoaderDataFormat.BINARY;
         
-        // Set up event listeners
+        // Set up event listeners - these run in the worker thread but will post back to main thread
         loader.addEventListener(openfl.events.Event.COMPLETE, function(e) {
+            // Thread-safe update of shared state
+            _mutex.acquire();
             _responseData = loader.data;
+            _mutex.release();
             
-            // Clean up
+            // Clean up event listeners
             loader.removeEventListener(openfl.events.Event.COMPLETE, function(e) {});
             loader.removeEventListener(openfl.events.ProgressEvent.PROGRESS, function(e) {});
             loader.removeEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e) {});
             
-            _finalizeExecution(0);
+            // Post completion back to main thread via communicator
+            _communicator.postThreadMessage(ACTION_COMPLETE, {
+                executor: this,
+                exitCode: 0
+            });
         });
         
         loader.addEventListener(openfl.events.ProgressEvent.PROGRESS, function(e:openfl.events.ProgressEvent) {
+            // Thread-safe update of progress data
+            _progressMutex.acquire();
             _bytesLoaded = Std.int(e.bytesLoaded);
             _bytesTotal = Std.int(e.bytesTotal);
             
@@ -238,30 +464,49 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
             if (_bytesTotal > 0) {
                 progress = _bytesLoaded / _bytesTotal;
             }
+            _progressMutex.release();
             
-            // Trigger progress callbacks
-            for (f in _onProgress) f(this, progress);
+            // Post progress update back to main thread via communicator
+            _communicator.postThreadMessage(ACTION_PROGRESS, {
+                executor: this,
+                progress: (_bytesTotal > 0) ? (_bytesLoaded / _bytesTotal) : 0
+            });
         });
         
         loader.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent) {
+            // Thread-safe update of shared state
+            _mutex.acquire();
             _hasErrors = true;
-            for (f in _onStdErr) f(this, e.text);
+            var errorMessage = e.text; // Make local copy for closure
+            _mutex.release();
             
-            // Clean up
+            // Clean up event listeners
             loader.removeEventListener(openfl.events.Event.COMPLETE, function(e) {});
             loader.removeEventListener(openfl.events.ProgressEvent.PROGRESS, function(e) {});
             loader.removeEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e) {});
             
-            _finalizeExecution(1);
+            // Post error back to main thread via communicator
+            _communicator.postThreadMessage(ACTION_ERROR, {
+                executor: this,
+                message: errorMessage
+            });
         });
         
         // Execute request
         try {
             loader.load(request);
         } catch (e:Dynamic) {
+            // Thread-safe update of shared state
+            _mutex.acquire();
             _hasErrors = true;
-            for (f in _onStdErr) f(this, 'Exception: ${e}');
-            _finalizeExecution(1);
+            var errorMessage = 'Exception: ${e}'; // Make local copy for closure
+            _mutex.release();
+            
+            // Post exception back to main thread via communicator
+            _communicator.postThreadMessage(ACTION_ERROR, {
+                executor: this,
+                message: errorMessage
+            });
         }
     }
     
@@ -295,7 +540,7 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
         }
         
         // Create a new executor to follow the redirect
-        var redirectExecutor = new NetworkExecutor(location, _method, _headers, _postData, _binary);
+        var redirectExecutor = new ThreadedNetworkExecutor(location, _method, _headers, _postData, _binary);
         redirectExecutor._followRedirect = true;
         redirectExecutor._redirectCount = _redirectCount;
         
@@ -314,7 +559,7 @@ class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
         
         redirectExecutor.onStop.add(function(executor) {
             // Copy data from redirect executor - need to cast to access subclass fields
-            var networkExecutor:NetworkExecutor = cast executor;
+            var networkExecutor:ThreadedNetworkExecutor = cast executor;
             _responseData = networkExecutor._responseData; // Access private field directly in this case
             _responseHeaders = networkExecutor._responseHeaders; // Access private field directly in this case
             _hasErrors = executor.hasErrors;

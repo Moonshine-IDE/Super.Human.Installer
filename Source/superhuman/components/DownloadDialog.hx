@@ -643,15 +643,18 @@ class DownloadDialog {
         // since internally it uses percentWidth which expects 0-100
         _progressBar.percentage = progress * 100;
         
-        // Force layout update to ensure progress bar renders correctly
-        _progressBar.validateNow();
-        
-        // Update progress text
-        var progressPercent = Math.round(progress * 100);
-        _progressLabel.text = progressPercent + "%";
-        
-        // Update status text based on current step
-        var currentStep = downloader.currentStep;
+                // Force layout update to ensure progress bar renders correctly
+                _progressBar.validateNow();
+                
+                // Update progress text
+                var progressPercent = Math.round(progress * 100);
+                _progressLabel.text = progressPercent + "%";
+                
+                // Update status text based on current step
+                var currentStep = downloader.currentStep;
+                
+                // Since we're now using threaded network operations, we need to ensure
+                // the UI updates are responsive even during intensive download operations
         
         // More descriptive status based on exactly which step we're in
         switch (currentStep) {
