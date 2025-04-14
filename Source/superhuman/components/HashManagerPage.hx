@@ -71,6 +71,7 @@ import superhuman.server.cache.SuperHumanCachedFile;
 import superhuman.server.cache.SuperHumanFileCache;
 import superhuman.theme.SuperHumanInstallerTheme;
 import sys.FileSystem;
+import openfl.Lib;
 
 /**
  * Page for managing the file hash cache
@@ -145,6 +146,12 @@ class HashManagerPage extends Page {
     
     override function initialize() {
         super.initialize();
+        
+        // Add event listener for REFRESH_HASH_MANAGER event
+        if (Lib.current != null) {
+            Lib.current.stage.addEventListener(SuperHumanApplicationEvent.REFRESH_HASH_MANAGER, onRefreshHashManager);
+            Logger.info('HashManagerPage: Added listener for REFRESH_HASH_MANAGER event');
+        }
         
         _content.width = _width;
         _content.maxWidth = GenesisApplicationTheme.GRID * 165; // Increased to match new page width
@@ -1148,6 +1155,15 @@ class HashManagerPage extends Page {
     private function _openCacheDirButtonTriggered(e:TriggerEvent):Void {
         var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_FILE_CACHE_DIRECTORY);
         this.dispatchEvent(event);
+    }
+    
+    /**
+     * Handle REFRESH_HASH_MANAGER event from other components
+     * This allows external components (like DownloadDialog) to trigger a refresh
+     */
+    private function onRefreshHashManager(e:Event):Void {
+        Logger.info('HashManagerPage: Received REFRESH_HASH_MANAGER event, refreshing file list');
+        loadCachedFiles();
     }
 }
 

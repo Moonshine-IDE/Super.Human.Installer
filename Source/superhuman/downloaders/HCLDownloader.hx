@@ -604,9 +604,32 @@ class HCLDownloader {
         // Notify download is starting
         for (f in _onDownloadStart) f(this, file);
         
-        // Create temp file path
-        var cacheDir = SuperHumanFileCache.getCacheDirectory();
-        _tempFilePath = cacheDir + "/" + file.originalFilename + ".download";
+        // Get target path from file cache
+        var targetPath = file.path;
+        
+        // Check if file already exists at the target path
+        if (FileSystem.exists(targetPath)) {
+            // File exists - use temporary path with .download extension
+            var cacheDir = SuperHumanFileCache.getCacheDirectory();
+            _tempFilePath = cacheDir + "/" + file.originalFilename + ".download";
+            Logger.info('HCLDownloader: File already exists at target path, using temp file: ${_tempFilePath}');
+        } else {
+            // File does not exist - download directly to target path
+            _tempFilePath = targetPath;
+            
+            // Ensure target directory exists
+            var targetDir = haxe.io.Path.directory(targetPath);
+            if (!FileSystem.exists(targetDir)) {
+                try {
+                    FileSystem.createDirectory(targetDir);
+                } catch (e:Dynamic) {
+                    triggerError('Failed to create target directory: ${e}');
+                    return;
+                }
+            }
+            
+            Logger.info('HCLDownloader: File missing, downloading directly to: ${_tempFilePath}');
+        }
         
         // Start the download process by getting access token
         getAccessToken(token);
@@ -664,8 +687,8 @@ class HCLDownloader {
             return;
         }
         
-        // Update current step
-        _currentStep = HCLDownloadStep.GettingAccessToken;
+        // Update current step with progress reporting
+        updateStep(HCLDownloadStep.GettingAccessToken);
         
         // Always get a fresh token - never use cached token
         _accessToken = null;
@@ -689,23 +712,17 @@ class HCLDownloader {
         
         // Add callbacks to process the response
         http.onData = function(data:String) {
-            Logger.debug('HCLDownloader: Received token response: ${data}');
-            
-            // Save response to a file for debugging
-            try {
-                sys.io.File.saveContent("token_request.json", data);
-                Logger.debug('HCLDownloader: Saved token response to token_request.json');
-            } catch (e:Dynamic) {
-                Logger.error('HCLDownloader: Failed to save token response to file: ${e}');
-            }
+            updateStep(HCLDownloadStep.ReceivedTokenResponse);
+            Logger.debug('HCLDownloader: Received token response');
             
             // Process response - similar to _accessTokenLoaderComplete
             var responseJson:Dynamic;
             try {
                 responseJson = haxe.Json.parse(data);
+                updateStep(HCLDownloadStep.ParsingTokenJSON);
                 Logger.debug('HCLDownloader: Parsed JSON response successfully');
             } catch (e:Dynamic) {
-                triggerError('Failed to parse token response: ${e}: ${data}');
+                triggerError('Failed to parse token response: ${e}');
                 return;
             }
             
@@ -728,11 +745,13 @@ class HCLDownloader {
             // Try standard OAuth field first
             if (Reflect.hasField(responseJson, "access_token")) {
                 accessToken = Reflect.field(responseJson, "access_token");
+                updateStep(HCLDownloadStep.FoundAccessToken);
                 Logger.debug('HCLDownloader: Found access_token field in response');
             } 
             // Try HCL specific field if standard not found
             else if (Reflect.hasField(responseJson, "accessToken")) {
                 accessToken = Reflect.field(responseJson, "accessToken");
+                updateStep(HCLDownloadStep.FoundAccessToken);
                 Logger.debug('HCLDownloader: Found accessToken field in response');
             }
             
@@ -747,18 +766,19 @@ class HCLDownloader {
                     errorMessage = Reflect.field(responseJson, "summary");
                 }
                 
-                // Log the full response for debugging
-                Logger.error('HCLDownloader: Full response: ${data}');
+                // Log for debugging
+                Logger.error('HCLDownloader: Token error: ${errorMessage}');
                 triggerError('Failed to get access token: ${errorMessage}');
                 return;
             }
             
-        Logger.info('HCLDownloader: Successfully obtained fresh access token');
-        _accessToken = accessToken;
-        _isDownloading = true;
-        
-        // Continue to next step - first get catalog to find file ID
-        fetchCatalog();
+            Logger.info('HCLDownloader: Successfully obtained fresh access token');
+            updateStep(HCLDownloadStep.ObtainedAccessToken);
+            _accessToken = accessToken;
+            _isDownloading = true;
+            
+            // Continue to next step - first get catalog to find file ID
+            fetchCatalog();
         };
         
         http.onError = function(error:String) {
@@ -773,15 +793,8 @@ class HCLDownloader {
         // Format data as JSON exactly as in the bash script
         var payload = { refreshToken: refreshToken };
         var jsonPayload = haxe.Json.stringify(payload);
-        Logger.debug('HCLDownloader: Full request data: ${jsonPayload}');
         
-        // Save request to a file for debugging
-        try {
-            sys.io.File.saveContent("token_request.json", jsonPayload);
-            Logger.debug('HCLDownloader: Saved token request payload to token_request.json');
-        } catch (e:Dynamic) {
-            Logger.error('HCLDownloader: Failed to save token request to file: ${e}');
-        }
+        updateStep(HCLDownloadStep.SendingTokenRequest);
         
         // Send the request
         try {
@@ -1495,7 +1508,7 @@ class HCLDownloader {
      */
     private function finalizeDownload():Void {
         // Update current step
-        _currentStep = HCLDownloadStep.MovingFile;
+        updateStep(HCLDownloadStep.MovingFile);
         
         // Get target path from file cache
         var targetPath = _currentFile.path;
@@ -1528,8 +1541,11 @@ class HCLDownloader {
         // Update file exists flag
         _currentFile.exists = true;
         
+        // Clean up temporary JSON files
+        cleanupJsonFiles();
+        
         // Set current step to complete
-        _currentStep = HCLDownloadStep.Complete;
+        updateStep(HCLDownloadStep.Complete);
         
         // Trigger download complete
         for (f in _onDownloadComplete) f(this, _currentFile, true);
@@ -1581,19 +1597,56 @@ class HCLDownloader {
     }
 
     /**
+     * Clean up temporary JSON files created during download
+     */
+    private function cleanupJsonFiles():Void {
+        // Define the list of temporary JSON files to clean up
+        var jsonFiles = [
+            "token_request.json",
+            "catalog_response.json",
+            "download_url_response.json"
+        ];
+        
+        // Iterate through each file and delete if it exists
+        for (jsonFile in jsonFiles) {
+            if (FileSystem.exists(jsonFile)) {
+                try {
+                    Logger.debug('HCLDownloader: Cleaning up temporary JSON file: ${jsonFile}');
+                    FileSystem.deleteFile(jsonFile);
+                } catch (e:Dynamic) {
+                    Logger.warning('Failed to delete temporary JSON file ${jsonFile}: ${e}');
+                }
+            }
+        }
+    }
+    
+    /**
      * Trigger error event
      */
     private function triggerError(message:String):Void {
         // Update current step
         _currentStep = HCLDownloadStep.Error;
         
-        Logger.error('HCLDownloader: ${message}');
+        // Check for specific error conditions and provide helpful messages
+        var enhancedMessage = message;
+        
+        // Check for 403 errors and add EULA warning
+        if (message.toLowerCase().indexOf("403") >= 0 || 
+            message.toLowerCase().indexOf("forbidden") >= 0 ||
+            message.toLowerCase().indexOf("not authorized") >= 0) {
+            
+            enhancedMessage = message + "\n\nYou may need to accept the EULA in the HCL Software Portal." +
+                              "\nPlease visit: https://my.hcltechsw.com/ and log in to accept the license agreement.";
+        }
+        
+        Logger.error('HCLDownloader: ${enhancedMessage}');
         
         // Store current file before cleanup for event
         var currentFile = _currentFile;
         
         // Clean up resources
         cleanupTempFiles();
+        cleanupJsonFiles(); // Clean up temporary JSON files
         _cleanupTokenLoader();
         _cleanupDownloadLoader();
         
@@ -1607,7 +1660,7 @@ class HCLDownloader {
         // for other downloads
         
         // Notify listeners
-        for (f in _onDownloadError) f(this, currentFile, message);
+        for (f in _onDownloadError) f(this, currentFile, enhancedMessage);
     }
 
     /**
@@ -1656,9 +1709,32 @@ class HCLDownloader {
         // Notify download is starting
         for (f in _onDownloadStart) f(this, file);
         
-        // Create temp file path
-        var cacheDir = SuperHumanFileCache.getCacheDirectory();
-        _tempFilePath = cacheDir + "/" + file.originalFilename + ".download";
+        // Get target path from file cache
+        var targetPath = file.path;
+        
+        // Check if file already exists at the target path
+        if (FileSystem.exists(targetPath)) {
+            // File exists - use temporary path with .download extension
+            var cacheDir = SuperHumanFileCache.getCacheDirectory();
+            _tempFilePath = cacheDir + "/" + file.originalFilename + ".download";
+            Logger.info('HCLDownloader: File already exists at target path, using temp file: ${_tempFilePath}');
+        } else {
+            // File does not exist - download directly to target path
+            _tempFilePath = targetPath;
+            
+            // Ensure target directory exists
+            var targetDir = haxe.io.Path.directory(targetPath);
+            if (!FileSystem.exists(targetDir)) {
+                try {
+                    FileSystem.createDirectory(targetDir);
+                } catch (e:Dynamic) {
+                    triggerError('Failed to create target directory: ${e}');
+                    return;
+                }
+            }
+            
+            Logger.info('HCLDownloader: File missing, downloading directly to: ${_tempFilePath}');
+        }
         
         // Start download
         downloadFileFromCustomUrl(resource);
@@ -1855,50 +1931,43 @@ enum abstract HCLDownloadStep(String) to String {
 }
 
 /**
- * Progress mapping to convert steps to percentage ranges
+ * Progress mapping to map steps to specific percentages
  */
 class ProgressRangeMap {
-    // Maps download steps to percentage ranges
+    // Maps download steps to exact percentage points
     private static final ranges = [
-        // Steps 1-8: 0-10%
-        HCLDownloadStep.GettingAccessToken => { min: 0.0, max: 1.25 },
-        HCLDownloadStep.SavingTokenRequest => { min: 1.25, max: 2.5 },
-        HCLDownloadStep.SendingTokenRequest => { min: 2.5, max: 3.75 },
-        HCLDownloadStep.ReceivedTokenResponse => { min: 3.75, max: 5.0 },
-        HCLDownloadStep.SavingTokenResponse => { min: 5.0, max: 6.25 },
-        HCLDownloadStep.ParsingTokenJSON => { min: 6.25, max: 7.5 },
-        HCLDownloadStep.FoundAccessToken => { min: 7.5, max: 8.75 },
-        HCLDownloadStep.ObtainedAccessToken => { min: 8.75, max: 10.0 },
+        // Initial steps: 1-19%
+        HCLDownloadStep.GettingAccessToken => { min: 1.0, max: 1.0 },
+        HCLDownloadStep.SavingTokenRequest => { min: 2.0, max: 2.0 },
+        HCLDownloadStep.SendingTokenRequest => { min: 3.0, max: 3.0 },
+        HCLDownloadStep.ReceivedTokenResponse => { min: 4.0, max: 4.0 },
+        HCLDownloadStep.SavingTokenResponse => { min: 5.0, max: 5.0 },
+        HCLDownloadStep.ParsingTokenJSON => { min: 6.0, max: 6.0 },
+        HCLDownloadStep.FoundAccessToken => { min: 7.0, max: 7.0 },
+        HCLDownloadStep.ObtainedAccessToken => { min: 8.0, max: 8.0 },
         
-        // Steps 9-13: 10-20%
-        HCLDownloadStep.FetchingCatalog => { min: 10.0, max: 12.0 },
-        HCLDownloadStep.SendingCatalogRequest => { min: 12.0, max: 14.0 },
-        HCLDownloadStep.ReceivedCatalogResponse => { min: 14.0, max: 16.0 },
-        HCLDownloadStep.SavingCatalogResponse => { min: 16.0, max: 18.0 },
-        HCLDownloadStep.ParsingCatalogJSON => { min: 18.0, max: 20.0 },
+        HCLDownloadStep.FetchingCatalog => { min: 9.0, max: 9.0 },
+        HCLDownloadStep.SendingCatalogRequest => { min: 10.0, max: 10.0 },
+        HCLDownloadStep.ReceivedCatalogResponse => { min: 11.0, max: 11.0 },
+        HCLDownloadStep.SavingCatalogResponse => { min: 12.0, max: 12.0 },
+        HCLDownloadStep.ParsingCatalogJSON => { min: 13.0, max: 13.0 },
         
-        // Steps 14-17: 20-30%
-        HCLDownloadStep.SearchingFile => { min: 20.0, max: 22.5 },
-        HCLDownloadStep.CatalogParsed => { min: 22.5, max: 25.0 },
-        HCLDownloadStep.FindingFile => { min: 25.0, max: 27.5 },
-        HCLDownloadStep.FoundFileID => { min: 27.5, max: 30.0 },
+        HCLDownloadStep.SearchingFile => { min: 14.0, max: 14.0 },
+        HCLDownloadStep.CatalogParsed => { min: 15.0, max: 15.0 },
+        HCLDownloadStep.FindingFile => { min: 16.0, max: 16.0 },
+        HCLDownloadStep.FoundFileID => { min: 17.0, max: 17.0 },
         
-        // Steps 18-19: 30-40%
-        HCLDownloadStep.GettingDownloadURL => { min: 30.0, max: 35.0 },
-        HCLDownloadStep.RequestingDownloadURL => { min: 35.0, max: 40.0 },
+        HCLDownloadStep.GettingDownloadURL => { min: 18.0, max: 18.0 },
+        HCLDownloadStep.RequestingDownloadURL => { min: 19.0, max: 19.0 },
         
-        // Step 20-74: 40-75% (download progress)
-        HCLDownloadStep.Downloading => { min: 40.0, max: 75.0 },
+        // Download progress (20-75%)
+        HCLDownloadStep.Downloading => { min: 20.0, max: 75.0 },
         
-        // Steps 75-89: 75-90%
+        // Final steps
         HCLDownloadStep.WritingFile => { min: 75.0, max: 90.0 },
-        
-        // Steps 90-94: 90-95%
         HCLDownloadStep.VerifyingHash => { min: 90.0, max: 95.0 },
-        
-        // Steps 95-100: 95-100%
         HCLDownloadStep.MovingFile => { min: 95.0, max: 99.0 },
-        HCLDownloadStep.Complete => { min: 99.0, max: 100.0 }
+        HCLDownloadStep.Complete => { min: 100.0, max: 100.0 }
     ];
     
     /**
@@ -1928,8 +1997,16 @@ class ProgressRangeMap {
             return 0.0;
         }
         
-        // Calculate percentage within the range
-        return range.min + (range.max - range.min) * subProgress;
+        // Special case for downloading: subProgress represents actual download progress
+        // which we want to scale over the 20%-75% range
+        if (step == HCLDownloadStep.Downloading) {
+            // Scale from 20 to 75 percent (55% of the bar)
+            return 20.0 + (subProgress * 55.0);
+        }
+        
+        // For all other steps, just use the exact percentage defined
+        // Each step represents a specific percentage point in the progress
+        return range.min;
     }
 }
 
