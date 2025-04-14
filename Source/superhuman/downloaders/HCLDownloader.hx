@@ -383,6 +383,27 @@ class HCLDownloader {
 
     // Singleton instance
     static var _instance:HCLDownloader;
+    
+    /**
+     * Update the current step and report progress
+     * @param step The new download step
+     * @param subProgress Optional progress within the step (0-1)
+     */
+    private function updateStep(step:HCLDownloadStep, ?subProgress:Float = 1.0):Void {
+        _currentStep = step;
+        reportProgress(subProgress);
+    }
+    
+    /**
+     * Report progress based on current step and sub-progress
+     * @param subProgress Optional progress within the current step (0-1)
+     */
+    private function reportProgress(?subProgress:Float = 1.0):Void {
+        if (_currentFile == null) return;
+        
+        var percentage = ProgressRangeMap.calculateProgress(_currentStep, subProgress);
+        for (f in _onDownloadProgress) f(this, _currentFile, percentage / 100);
+    }
 
     // Constants for URL and endpoints
     private static final MYHCL_PORTAL_URL:String = "https://my.hcltechsw.com";
@@ -421,6 +442,73 @@ class HCLDownloader {
     // Current token being used
     var _currentToken:String;
     
+    // Current token name being used
+    var _currentTokenName:String;
+    
+    /**
+     * Save the configuration to persist token changes
+     * This calls into SuperHumanInstaller to save the entire config
+     */
+    private function _saveConfig():Void {
+        try {
+            // Get the SuperHumanInstaller instance
+            var installer = SuperHumanInstaller.getInstance();
+            
+            // Cast to Dynamic to allow calling internal methods if available
+            var dynamicInstaller:Dynamic = installer;
+            
+            // Check if installer has a public saveConfig method
+            if (Reflect.hasField(installer, "saveConfig") && Reflect.isFunction(Reflect.field(installer, "saveConfig"))) {
+                // Call the public saveConfig method if it exists
+                Reflect.callMethod(installer, Reflect.field(installer, "saveConfig"), []);
+                Logger.debug('HCLDownloader: Called public saveConfig method');
+                return;
+            }
+            
+            // Try to trigger saving through other means - dispatch an event
+            var saveEvent = new superhuman.events.SuperHumanApplicationEvent(
+                superhuman.events.SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION);
+            Lib.current.dispatchEvent(saveEvent);
+            Logger.debug('HCLDownloader: Dispatched SAVE_APP_CONFIGURATION event');
+        } catch (e:Dynamic) {
+            Logger.error('HCLDownloader: Failed to save config: ${e}');
+        }
+    }
+    
+    /**
+     * Update an HCL token in secrets
+     * @param tokenName The name of the token to update
+     * @param newToken The new token value
+     */
+    private function updateHCLToken(tokenName:String, newToken:String):Void {
+        var secrets = SuperHumanInstaller.getInstance().config.secrets;
+        if (secrets == null || secrets.hcl_download_portal_api_keys == null) {
+            Logger.error('HCLDownloader: Cannot update token - no secrets found');
+            return;
+        }
+        
+        var keys:Array<Dynamic> = cast(secrets.hcl_download_portal_api_keys, Array<Dynamic>);
+        for (i in 0...keys.length) {
+            var key = keys[i];
+            if (Reflect.field(key, "name") == tokenName) {
+                // Update the token
+                Reflect.setField(key, "key", newToken);
+                
+                // Save the entire configuration to persist token changes
+                // We can't call save() directly on secrets since it's just a typedef
+                _saveConfig();
+                
+                Logger.info('HCLDownloader: Updated token [${tokenName}] with new rotated value');
+                return;
+            }
+        }
+        
+        Logger.error('HCLDownloader: Could not find token [${tokenName}] to update');
+    }
+    
+    // Current download step
+    var _currentStep:HCLDownloadStep = HCLDownloadStep.None;
+    
     /**
      * Get the singleton instance
      */
@@ -458,6 +546,12 @@ class HCLDownloader {
      */
     public var currentFile(get, never):SuperHumanCachedFile;
     function get_currentFile() return _currentFile;
+    
+    /**
+     * Current step in the download process
+     */
+    public var currentStep(get, never):HCLDownloadStep;
+    function get_currentStep() return _currentStep;
     
     /**
      * Private constructor for singleton pattern
@@ -503,8 +597,9 @@ class HCLDownloader {
             return;
         }
         
-        // Store the token
+        // Store the token and token name
         _currentToken = token;
+        _currentTokenName = tokenName;
         
         // Notify download is starting
         for (f in _onDownloadStart) f(this, file);
@@ -569,8 +664,14 @@ class HCLDownloader {
             return;
         }
         
-        // Always get a fresh token
+        // Update current step
+        _currentStep = HCLDownloadStep.GettingAccessToken;
+        
+        // Always get a fresh token - never use cached token
         _accessToken = null;
+        
+        // Note: Previously we would check for a cached token file and use it if available
+        // This was causing 403 errors, so now we always get a fresh token
         
         Logger.info('HCLDownloader: Getting access token from refresh token');
         Logger.debug('HCLDownloader: Token length: ${refreshToken != null ? refreshToken.length : 0}');
@@ -608,6 +709,19 @@ class HCLDownloader {
                 return;
             }
             
+            // Extract refresh token first - this is CRITICAL as the refresh token is rotated on each use
+            var newRefreshToken:String = null;
+            if (Reflect.hasField(responseJson, "refreshToken")) {
+                newRefreshToken = Reflect.field(responseJson, "refreshToken");
+                Logger.debug('HCLDownloader: Found new rotated refresh token in response');
+                
+                // Save the new refresh token back to SuperHumanSecrets
+                if (newRefreshToken != null && newRefreshToken != refreshToken) {
+                    updateHCLToken(_currentTokenName, newRefreshToken);
+                    Logger.info('HCLDownloader: Updated rotated refresh token in secrets');
+                }
+            }
+            
             // Extract access token - standard OAuth responses use "access_token" field
             var accessToken:String = null;
             
@@ -639,12 +753,12 @@ class HCLDownloader {
                 return;
             }
             
-            Logger.info('HCLDownloader: Successfully obtained access token');
-            _accessToken = accessToken;
-            _isDownloading = true;
-            
-            // Continue to next step - first get catalog to find file ID
-            fetchCatalog();
+        Logger.info('HCLDownloader: Successfully obtained fresh access token');
+        _accessToken = accessToken;
+        _isDownloading = true;
+        
+        // Continue to next step - first get catalog to find file ID
+        fetchCatalog();
         };
         
         http.onError = function(error:String) {
@@ -738,7 +852,7 @@ class HCLDownloader {
             return;
         }
         
-        Logger.info('HCLDownloader: Successfully obtained access token');
+        Logger.info('HCLDownloader: Successfully obtained fresh access token');
         _accessToken = accessToken;
         
         // Continue to next step - first look up file ID in catalog
@@ -791,6 +905,9 @@ class HCLDownloader {
      * Fetch the file catalog to get correct file IDs
      */
     private function fetchCatalog():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.FetchingCatalog;
+        
         Logger.info('HCLDownloader: Fetching file catalog');
         
         // Use Haxe Http for consistency
@@ -858,6 +975,9 @@ class HCLDownloader {
      * @return The file ID if found, null otherwise
      */
     private function findFileIdByName(catalog:Dynamic, fileName:String):String {
+        // Update current step
+        _currentStep = HCLDownloadStep.FindingFile;
+        
         Logger.debug('HCLDownloader: Searching for ${fileName} in catalog');
         
         var items:Array<Dynamic>;
@@ -965,6 +1085,9 @@ class HCLDownloader {
      * Step 2: Get download URL for the file
      */
     private function getDownloadUrl():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.GettingDownloadURL;
+        
         Logger.info('HCLDownloader: Getting download URL for file ID: ${_currentFile.hash}');
         
         // Reset redirect tracking
@@ -1142,6 +1265,9 @@ class HCLDownloader {
      * Step 3: Download the file using URLStream for efficient streaming download
      */
     private function downloadFile():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.Downloading;
+        
         // Create a temp file path with .download extension (matching domdownload.sh)
         var cacheDir = SuperHumanFileCache.getCacheDirectory();
         _tempFilePath = cacheDir + "/" + _currentFile.originalFilename + ".download";
@@ -1189,7 +1315,10 @@ class HCLDownloader {
             });
             
             _urlStream.addEventListener(Event.COMPLETE, function(e:Event):Void {
-                Logger.info('HCLDownloader: Download complete');
+                Logger.info('HCLDownloader: Download stream complete');
+                
+                // Update step to writing file now that download is complete
+                updateStep(HCLDownloadStep.WritingFile);
                 
                 // Process any remaining bytes in the stream
                 processAvailableBytes();
@@ -1207,7 +1336,7 @@ class HCLDownloader {
                 // Clean up stream
                 cleanupUrlStream();
                 
-                // Verify the downloaded file
+                // Verify the downloaded file - this will move to the next step
                 verifyFileHash();
             });
             
@@ -1314,6 +1443,9 @@ class HCLDownloader {
      * Step 4: Verify the file hash
      */
     private function verifyFileHash():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.VerifyingHash;
+        
         Logger.info('HCLDownloader: Verifying file hash');
         
         try {
@@ -1362,6 +1494,9 @@ class HCLDownloader {
      * Final step: Move file to cache
      */
     private function finalizeDownload():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.MovingFile;
+        
         // Get target path from file cache
         var targetPath = _currentFile.path;
         
@@ -1392,6 +1527,9 @@ class HCLDownloader {
         
         // Update file exists flag
         _currentFile.exists = true;
+        
+        // Set current step to complete
+        _currentStep = HCLDownloadStep.Complete;
         
         // Trigger download complete
         for (f in _onDownloadComplete) f(this, _currentFile, true);
@@ -1446,6 +1584,9 @@ class HCLDownloader {
      * Trigger error event
      */
     private function triggerError(message:String):Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.Error;
+        
         Logger.error('HCLDownloader: ${message}');
         
         // Store current file before cleanup for event
@@ -1663,10 +1804,141 @@ class HCLDownloader {
 }
 
 /**
+ * Download step indicators for improved progress reporting with percentage ranges
+ */
+enum abstract HCLDownloadStep(String) to String {
+    // Initialization steps
+    var None = "None";
+    
+    // Steps 1-8 (0-10%)
+    var GettingAccessToken = "Getting access token from refresh token"; // 1
+    var SavingTokenRequest = "Saved token request payload"; // 2
+    var SendingTokenRequest = "Sending token request"; // 3
+    var ReceivedTokenResponse = "Received token response"; // 4
+    var SavingTokenResponse = "Saved token response"; // 5
+    var ParsingTokenJSON = "Parsed JSON response successfully"; // 6
+    var FoundAccessToken = "Found accessToken field in response"; // 7
+    var ObtainedAccessToken = "Successfully obtained access token"; // 8
+    
+    // Steps 9-13 (10-20%)
+    var FetchingCatalog = "Fetching file catalog"; // 9
+    var SendingCatalogRequest = "Sending catalog request"; // 10
+    var ReceivedCatalogResponse = "Received catalog response"; // 11
+    var SavingCatalogResponse = "Saved catalog response"; // 12
+    var ParsingCatalogJSON = "Parsed catalog JSON successfully"; // 13
+    
+    // Steps 14-17 (20-30%)
+    var SearchingFile = "Searching for file in catalog"; // 14
+    var CatalogParsed = "Catalog parsed successfully"; // 15
+    var FindingFile = "Finding file in catalog"; // 16
+    var FoundFileID = "Found file ID in catalog"; // 17
+    
+    // Steps 18-19 (30-40%)
+    var GettingDownloadURL = "Getting download URL for file ID"; // 18
+    var RequestingDownloadURL = "Requesting download URL"; // 19
+    
+    // Step 20-74 (40-75%)
+    var Downloading = "Downloading file"; // 20-74 (download progress)
+    
+    // Steps 75-89 (75-90%)
+    var WritingFile = "Writing file to disk"; // 75-89
+    
+    // Steps 90-94 (90-95%)
+    var VerifyingHash = "Verifying file checksum"; // 90-94
+    
+    // Steps 95-100 (95-100%)
+    var MovingFile = "Moving file to cache"; // 95-99
+    var Complete = "Download complete"; // 100
+    
+    // Error state
+    var Error = "Error";
+}
+
+/**
+ * Progress mapping to convert steps to percentage ranges
+ */
+class ProgressRangeMap {
+    // Maps download steps to percentage ranges
+    private static final ranges = [
+        // Steps 1-8: 0-10%
+        HCLDownloadStep.GettingAccessToken => { min: 0.0, max: 1.25 },
+        HCLDownloadStep.SavingTokenRequest => { min: 1.25, max: 2.5 },
+        HCLDownloadStep.SendingTokenRequest => { min: 2.5, max: 3.75 },
+        HCLDownloadStep.ReceivedTokenResponse => { min: 3.75, max: 5.0 },
+        HCLDownloadStep.SavingTokenResponse => { min: 5.0, max: 6.25 },
+        HCLDownloadStep.ParsingTokenJSON => { min: 6.25, max: 7.5 },
+        HCLDownloadStep.FoundAccessToken => { min: 7.5, max: 8.75 },
+        HCLDownloadStep.ObtainedAccessToken => { min: 8.75, max: 10.0 },
+        
+        // Steps 9-13: 10-20%
+        HCLDownloadStep.FetchingCatalog => { min: 10.0, max: 12.0 },
+        HCLDownloadStep.SendingCatalogRequest => { min: 12.0, max: 14.0 },
+        HCLDownloadStep.ReceivedCatalogResponse => { min: 14.0, max: 16.0 },
+        HCLDownloadStep.SavingCatalogResponse => { min: 16.0, max: 18.0 },
+        HCLDownloadStep.ParsingCatalogJSON => { min: 18.0, max: 20.0 },
+        
+        // Steps 14-17: 20-30%
+        HCLDownloadStep.SearchingFile => { min: 20.0, max: 22.5 },
+        HCLDownloadStep.CatalogParsed => { min: 22.5, max: 25.0 },
+        HCLDownloadStep.FindingFile => { min: 25.0, max: 27.5 },
+        HCLDownloadStep.FoundFileID => { min: 27.5, max: 30.0 },
+        
+        // Steps 18-19: 30-40%
+        HCLDownloadStep.GettingDownloadURL => { min: 30.0, max: 35.0 },
+        HCLDownloadStep.RequestingDownloadURL => { min: 35.0, max: 40.0 },
+        
+        // Step 20-74: 40-75% (download progress)
+        HCLDownloadStep.Downloading => { min: 40.0, max: 75.0 },
+        
+        // Steps 75-89: 75-90%
+        HCLDownloadStep.WritingFile => { min: 75.0, max: 90.0 },
+        
+        // Steps 90-94: 90-95%
+        HCLDownloadStep.VerifyingHash => { min: 90.0, max: 95.0 },
+        
+        // Steps 95-100: 95-100%
+        HCLDownloadStep.MovingFile => { min: 95.0, max: 99.0 },
+        HCLDownloadStep.Complete => { min: 99.0, max: 100.0 }
+    ];
+    
+    /**
+     * Calculate progress percentage based on current step and optional sub-progress
+     * @param step The current download step
+     * @param subProgress Optional progress within the current step (0.0-1.0)
+     * @return Float percentage (0-100)
+     */
+    public static function calculateProgress(step:HCLDownloadStep, ?subProgress:Float = 1.0):Float {
+        // If we're in error state or none state, return 0
+        if (step == HCLDownloadStep.Error || step == HCLDownloadStep.None) {
+            return 0.0;
+        }
+        
+        // If we're complete, return 100%
+        if (step == HCLDownloadStep.Complete) {
+            return 100.0;
+        }
+        
+        // Ensure subProgress is between 0 and 1
+        subProgress = Math.max(0.0, Math.min(1.0, subProgress));
+        
+        // Get the range for this step
+        var range = ranges[step];
+        if (range == null) {
+            // If no range is defined for this step, return min progress
+            return 0.0;
+        }
+        
+        // Calculate percentage within the range
+        return range.min + (range.max - range.min) * subProgress;
+    }
+}
+
+/**
  * Executor context identifiers for HCLDownloader
  */
 enum abstract HCLDownloaderContext(String) to String {
     var GetAccessToken = "HCLDownloader_GetAccessToken";
+    var GetCatalog = "HCLDownloader_GetCatalog";
     var GetDownloadURL = "HCLDownloader_GetDownloadURL";
     var DownloadFile = "HCLDownloader_DownloadFile";
     var VerifyHash = "HCLDownloader_VerifyHash";

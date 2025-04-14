@@ -489,6 +489,12 @@ class DownloadDialog {
      * Handle download button click
      */
     private function onDownloadClicked(e:TriggerEvent):Void {
+        // Prevent multiple downloads
+        if (_downloadInProgress) {
+            Logger.warning("Download already in progress");
+            return;
+        }
+        
         // Get the selected token name and source type
         var tokenName = getSelectedTokenName();
         var isHCLSource = isHCLSourceSelected();
@@ -498,17 +504,20 @@ class DownloadDialog {
             return;
         }
         
+        // Set download in progress flag FIRST to prevent race conditions
+        _downloadInProgress = true;
+        
         // Show progress UI and hide selection controls
         showProgressUI();
+        
+        // Clean up any existing listeners first to ensure we don't have duplicates
+        cleanupDownloadListeners();
         
         // Set up event listeners for download progress
         _downloader.onDownloadStart.add(onDownloadStart);
         _downloader.onDownloadProgress.add(onDownloadProgress);
         _downloader.onDownloadComplete.add(onDownloadComplete);
         _downloader.onDownloadError.add(onDownloadError);
-        
-        // Set download in progress flag
-        _downloadInProgress = true;
         
         // Start the download with appropriate method
         if (isHCLSource) {
@@ -543,6 +552,29 @@ class DownloadDialog {
         // Show progress UI
         _progressGroup.visible = _progressGroup.includeInLayout = true;
         
+        // Ensure progress bar takes full available width
+        if (_progressBar != null) {
+            // Get the width from the dialog/content
+            var dialogWidth:Float = (_content != null) ? _content.width : 500;
+            
+            // Set the progress bar width to a percentage of the dialog width
+            _progressBar.width = dialogWidth * 0.85;
+            
+            // Ensure it has horizontal layout data for proper sizing
+            _progressBar.layoutData = new VerticalLayoutData(100);
+            
+            // Reset to zero
+            _progressBar.percentage = 0;
+            
+            // Force immediate layout update
+            _progressBar.validateNow();
+        }
+        
+        // Reset the progress label
+        if (_progressLabel != null) {
+            _progressLabel.text = "0%";
+        }
+        
         // Disable buttons during download
         _downloadButton.enabled = false;
         _cancelButton.enabled = true;
@@ -550,13 +582,21 @@ class DownloadDialog {
         if (_secretsButton != null) {
             _secretsButton.visible = _secretsButton.includeInLayout = false;
         }
+        
+        // Force validation of the entire layout to ensure proper sizing
+        if (_progressGroup != null) {
+            _progressGroup.validateNow();
+        }
+        if (_content != null) {
+            _content.validateNow();
+        }
     }
     
     /**
      * Handle download start event
      */
     private function onDownloadStart(downloader:HCLDownloader, file:SuperHumanCachedFile):Void {
-        _statusLabel.text = "Download started: " + file.originalFilename;
+        _statusLabel.text = "Starting download: " + file.originalFilename;
         _progressBar.percentage = 0;
         _progressLabel.text = "0%";
     }
@@ -566,12 +606,30 @@ class DownloadDialog {
      */
     private function onDownloadProgress(downloader:HCLDownloader, file:SuperHumanCachedFile, progress:Float):Void {
         // Update progress bar and label
-        _progressBar.percentage = progress;
-        _progressLabel.text = Math.round(progress * 100) + "%";
+        // Ensure percentage is properly set (0-1 range)
+        _progressBar.percentage = Math.min(1.0, Math.max(0.0, progress));
         
-        // Update status text
-        if (progress > 0) {
-            _statusLabel.text = "Downloading " + file.originalFilename + "...";
+        // Update progress text
+        var progressPercent = Math.round(progress * 100);
+        _progressLabel.text = progressPercent + "%";
+        
+        // Update status text based on current step
+        var currentStep = downloader.currentStep;
+        
+        if (currentStep == HCLDownloadStep.Downloading) {
+            // Only show percentage during actual download
+            _statusLabel.text = "Downloading " + file.originalFilename + "... " + progressPercent + "%";
+        } else if (currentStep == HCLDownloadStep.WritingFile) {
+            _statusLabel.text = "Writing file to disk... " + progressPercent + "%";
+        } else if (currentStep == HCLDownloadStep.VerifyingHash) {
+            _statusLabel.text = "Validating checksum... " + progressPercent + "%";
+        } else if (currentStep == HCLDownloadStep.MovingFile) {
+            _statusLabel.text = "Finalizing download... " + progressPercent + "%";
+        } else if (currentStep == HCLDownloadStep.Complete) {
+            _statusLabel.text = "Download complete!";
+        } else {
+            // For other steps, show the step name with percentage
+            _statusLabel.text = currentStep + "... " + progressPercent + "%";
         }
     }
     
@@ -579,6 +637,9 @@ class DownloadDialog {
      * Handle download complete event
      */
     private function onDownloadComplete(downloader:HCLDownloader, file:SuperHumanCachedFile, success:Bool):Void {
+        // Set download in progress to false FIRST to prevent race conditions
+        _downloadInProgress = false;
+        
         // Remove event listeners
         cleanupDownloadListeners();
         
@@ -587,18 +648,26 @@ class DownloadDialog {
             _progressBar.percentage = 1.0;
             _progressLabel.text = "100%";
             
+            // Disable download button completely to prevent re-clicking
+            _downloadButton.enabled = false;
+            
+            // Create a local variable to track if we've already closed
+            var dialogClosed = false;
+            
             // Close dialog after a short delay
             haxe.Timer.delay(function() {
-                closeDialog(RESULT_DOWNLOAD);
+                // Only close if not already closed
+                if (!dialogClosed) {
+                    dialogClosed = true;
+                    closeDialog(RESULT_DOWNLOAD);
+                }
             }, 1000);
         } else {
             _statusLabel.text = "Download failed.";
             
-            // Re-enable download button
+            // Re-enable download button for retry
             _downloadButton.enabled = true;
         }
-        
-        _downloadInProgress = false;
     }
     
     /**
@@ -651,27 +720,67 @@ class DownloadDialog {
      * Close the dialog with a result
      */
     private function closeDialog(result:Int):Void {
+        // Set download in progress to false first to prevent race conditions
+        _downloadInProgress = false;
+        
         // Clean up any event listeners
-        if (_downloadInProgress) {
-            cleanupDownloadListeners();
+        cleanupDownloadListeners();
+        
+        // Remove button event listeners to prevent accidental triggering
+        if (_downloadButton != null) {
+            _downloadButton.removeEventListener(TriggerEvent.TRIGGER, onDownloadClicked);
+            _downloadButton = null;
         }
+        
+        if (_cancelButton != null) {
+            _cancelButton.removeEventListener(TriggerEvent.TRIGGER, onCancelClicked);
+            _cancelButton = null;
+        }
+        
+        if (_secretsButton != null) {
+            _secretsButton.removeEventListener(TriggerEvent.TRIGGER, onSecretsClicked);
+            _secretsButton = null;
+        }
+        
+        if (_hclSourceCheck != null) {
+            _hclSourceCheck.removeEventListener(TriggerEvent.TRIGGER, onSourceChanged);
+            _hclSourceCheck = null;
+        }
+        
+        // Store local reference to callback before nulling instance variable
+        var callback = _callback;
+        
+        // Clear all references for garbage collection
+        _callback = null;
+        _file = null;
+        _alert = null;
+        _content = null;
+        _sourceGroup = null;
+        _tokenDropdown = null;
+        _customSourceCheck = null;
+        _progressGroup = null;
+        _progressBar = null;
+        _progressLabel = null;
+        _statusLabel = null;
         
         // Close the alert using PopUpManager
         try {
-            PopUpManager.removePopUp(_alert);
+            if (_alert != null) {
+                PopUpManager.removePopUp(_alert);
+            }
         } catch (e:Dynamic) {
-            // Silently ignore any errors closing the alert
+            Logger.error('DownloadDialog: Error closing dialog: ${e}');
         }
         
         // Add token information to callback when download is selected
-        if (_callback != null) {
+        if (callback != null) {
             if (result == RESULT_DOWNLOAD) {
                 // Include token name and source type in userData
                 var tokenName = getSelectedTokenName();
                 var isHCLSource = isHCLSourceSelected();
                 
                 // Create userData object with token info
-                _callback({
+                callback({
                     index: result,
                     userData: {
                         tokenName: tokenName,
@@ -680,7 +789,7 @@ class DownloadDialog {
                 });
             } else {
                 // For other results just pass the index
-                _callback({index: result});
+                callback({index: result});
             }
         }
     }
