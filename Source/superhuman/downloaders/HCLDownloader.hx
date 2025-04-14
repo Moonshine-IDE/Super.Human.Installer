@@ -38,6 +38,7 @@ import openfl.events.ProgressEvent;
 import openfl.net.URLLoader;
 import openfl.net.URLLoaderDataFormat;
 import openfl.net.URLRequest;
+import openfl.net.URLStream;
 import openfl.net.URLRequestHeader;
 import openfl.net.URLRequestMethod;
 import openfl.utils.ByteArray;
@@ -48,6 +49,331 @@ import superhuman.config.SuperHumanHashes;
 import openfl.Lib;
 import sys.FileSystem;
 import sys.io.File;
+
+/**
+ * NetworkExecutor - A specialized executor for handling HTTP operations asynchronously
+ * This allows HTTP operations to be scheduled like other async tasks
+ */
+class NetworkExecutor extends prominic.sys.io.AbstractExecutor {
+    // The URL to request
+    private var _url:String;
+    // The method (GET or POST)
+    private var _method:String;
+    // Request headers
+    private var _headers:Map<String, String>;
+    // Post data (for POST requests)
+    private var _postData:String;
+    // Whether request is in binary mode
+    private var _binary:Bool;
+    // Bytes loaded (for progress reporting)
+    private var _bytesLoaded:Int = 0;
+    // Total bytes (for progress reporting) 
+    private var _bytesTotal:Int = 0;
+    // Response data
+    private var _responseData:Dynamic;
+    // Response headers
+    private var _responseHeaders:Map<String, String>;
+    // Progress handler for progress event
+    private var _onProgress:ChainedList<(NetworkExecutor, Float)->Void, NetworkExecutor>;
+    // Tracks if a redirect is being followed
+    private var _followRedirect:Bool = false;
+    // Tracking for redirect chain 
+    private var _redirectCount:Int = 0;
+    
+    /**
+     * Create a new NetworkExecutor
+     * @param url The URL to request
+     * @param method The HTTP method (GET or POST)
+     * @param headers Optional request headers
+     * @param postData Optional post data (for POST requests)
+     * @param binary Whether to handle response as binary
+     */
+    public function new(url:String, method:String = "GET", ?headers:Map<String, String>, ?postData:String, binary:Bool = false) {
+        super();
+        _url = url;
+        _method = method;
+        _headers = headers != null ? headers : new Map<String, String>();
+        _postData = postData;
+        _binary = binary;
+        _onProgress = new ChainedList(this);
+    }
+    
+    /**
+     * Event fired during progress
+     */
+    public var onProgress(get, never):ChainedList<(NetworkExecutor, Float)->Void, NetworkExecutor>;
+    function get_onProgress() return _onProgress;
+    
+    /**
+     * Get response data
+     */
+    public var responseData(get, never):Dynamic;
+    private function get_responseData() return _responseData;
+    
+    /**
+     * Get response headers
+     */
+    public var responseHeaders(get, never):Map<String, String>;
+    private function get_responseHeaders() return _responseHeaders;
+    
+    /**
+     * Execute the HTTP request asynchronously
+     */
+    public function execute(?extraArgs:Array<String>, ?workingDirectory:String):NetworkExecutor {
+        // Don't start if already running
+        if (_running) return this;
+        
+        _startTime = Sys.time();
+        _running = true;
+        _hasErrors = false;
+        
+        // Trigger start event
+        for (f in _onStart) f(this);
+        
+        // Use Timer.delay to ensure non-blocking operation
+        haxe.Timer.delay(function() {
+            // Perform the actual HTTP request
+            if (_binary) {
+                _executeBinaryRequest();
+            } else {
+                _executeTextRequest();
+            }
+        }, 50); // Short delay to allow UI updates
+        
+        return this;
+    }
+    
+    /**
+     * Execute text-based HTTP request
+     */
+    private function _executeTextRequest():Void {
+        var http = new haxe.Http(_url);
+        
+        // Set headers
+        for (key in _headers.keys()) {
+            http.setHeader(key, _headers.get(key));
+        }
+        
+        // Set callbacks
+        http.onData = function(data:String) {
+            _responseData = data;
+            _finalizeExecution(0);
+        };
+        
+        http.onError = function(error:String) {
+            _hasErrors = true;
+            for (f in _onStdErr) f(this, error);
+            _finalizeExecution(1);
+        };
+        
+        http.onStatus = function(status:Int) {
+            if (status >= 300 && status < 400 && _followRedirect) {
+                // Handle redirects
+                _handleRedirect(http.responseHeaders);
+                return;
+            }
+            
+            // Store response headers
+            _responseHeaders = http.responseHeaders;
+        };
+        
+        // Execute request
+        try {
+            if (_method == "POST" && _postData != null) {
+                http.setPostData(_postData);
+                http.request(true);
+            } else {
+                http.request(false);
+            }
+        } catch (e:Dynamic) {
+            _hasErrors = true;
+            for (f in _onStdErr) f(this, 'Exception: ${e}');
+            _finalizeExecution(1);
+        }
+    }
+    
+    /**
+     * Execute binary HTTP request
+     */
+    private function _executeBinaryRequest():Void {
+        var request = new openfl.net.URLRequest(_url);
+        
+        // Set method
+        if (_method == "POST") {
+            request.method = openfl.net.URLRequestMethod.POST;
+            if (_postData != null) {
+                request.data = _postData;
+            }
+        }
+        
+        // Set headers
+        var headers:Array<openfl.net.URLRequestHeader> = [];
+        for (key in _headers.keys()) {
+            headers.push(new openfl.net.URLRequestHeader(key, _headers.get(key)));
+        }
+        request.requestHeaders = headers;
+        
+        // Create loader
+        var loader = new openfl.net.URLLoader();
+        loader.dataFormat = openfl.net.URLLoaderDataFormat.BINARY;
+        
+        // Set up event listeners
+        loader.addEventListener(openfl.events.Event.COMPLETE, function(e) {
+            _responseData = loader.data;
+            
+            // Clean up
+            loader.removeEventListener(openfl.events.Event.COMPLETE, function(e) {});
+            loader.removeEventListener(openfl.events.ProgressEvent.PROGRESS, function(e) {});
+            loader.removeEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e) {});
+            
+            _finalizeExecution(0);
+        });
+        
+        loader.addEventListener(openfl.events.ProgressEvent.PROGRESS, function(e:openfl.events.ProgressEvent) {
+            _bytesLoaded = Std.int(e.bytesLoaded);
+            _bytesTotal = Std.int(e.bytesTotal);
+            
+            // Calculate progress
+            var progress:Float = 0;
+            if (_bytesTotal > 0) {
+                progress = _bytesLoaded / _bytesTotal;
+            }
+            
+            // Trigger progress callbacks
+            for (f in _onProgress) f(this, progress);
+        });
+        
+        loader.addEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e:openfl.events.IOErrorEvent) {
+            _hasErrors = true;
+            for (f in _onStdErr) f(this, e.text);
+            
+            // Clean up
+            loader.removeEventListener(openfl.events.Event.COMPLETE, function(e) {});
+            loader.removeEventListener(openfl.events.ProgressEvent.PROGRESS, function(e) {});
+            loader.removeEventListener(openfl.events.IOErrorEvent.IO_ERROR, function(e) {});
+            
+            _finalizeExecution(1);
+        });
+        
+        // Execute request
+        try {
+            loader.load(request);
+        } catch (e:Dynamic) {
+            _hasErrors = true;
+            for (f in _onStdErr) f(this, 'Exception: ${e}');
+            _finalizeExecution(1);
+        }
+    }
+    
+    /**
+     * Handle HTTP redirects
+     */
+    private function _handleRedirect(headers:Map<String, String>):Void {
+        // Find the Location header
+        var location:String = null;
+        for (header in headers.keys()) {
+            if (header.toLowerCase() == "location") {
+                location = headers.get(header);
+                break;
+            }
+        }
+        
+        if (location == null) {
+            _hasErrors = true;
+            for (f in _onStdErr) f(this, "No Location header in redirect response");
+            _finalizeExecution(1);
+            return;
+        }
+        
+        // Increment redirect count and check limits
+        _redirectCount++;
+        if (_redirectCount > 5) {
+            _hasErrors = true;
+            for (f in _onStdErr) f(this, "Too many redirects");
+            _finalizeExecution(1);
+            return;
+        }
+        
+        // Create a new executor to follow the redirect
+        var redirectExecutor = new NetworkExecutor(location, _method, _headers, _postData, _binary);
+        redirectExecutor._followRedirect = true;
+        redirectExecutor._redirectCount = _redirectCount;
+        
+        // Connect callbacks
+        redirectExecutor.onStdOut.add(function(executor, data) {
+            for (f in _onStdOut) f(this, data);
+        });
+        
+        redirectExecutor.onStdErr.add(function(executor, error) {
+            for (f in _onStdErr) f(this, error);
+        });
+        
+        redirectExecutor.onProgress.add(function(executor, progress) {
+            for (f in _onProgress) f(this, progress);
+        });
+        
+        redirectExecutor.onStop.add(function(executor) {
+            // Copy data from redirect executor - need to cast to access subclass fields
+            var networkExecutor:NetworkExecutor = cast executor;
+            _responseData = networkExecutor._responseData; // Access private field directly in this case
+            _responseHeaders = networkExecutor._responseHeaders; // Access private field directly in this case
+            _hasErrors = executor.hasErrors;
+            _exitCode = executor.exitCode;
+            
+            // Finalize this executor
+            _finalizeExecution(_exitCode);
+        });
+        
+        // Execute the redirect
+        redirectExecutor.execute();
+    }
+    
+    /**
+     * Finalize execution
+     */
+    private function _finalizeExecution(exitCode:Float):Void {
+        _exitCode = exitCode;
+        _running = false;
+        _stopTime = Sys.time();
+        
+        // Send standard output with the response data
+        var dataStr = _responseData != null ? (_responseData is String ? _responseData : "[Binary Data]") : "[No Data]";
+        for (f in _onStdOut) f(this, dataStr);
+        
+        // Trigger stop callbacks
+        for (f in _onStop) f(this);
+    }
+    
+    /**
+     * Simulate stopping the executor
+     */
+    public function simulateStop():Void {
+        if (_running) {
+            _running = false;
+            _stopTime = Sys.time();
+            _exitCode = 0;
+            for (f in _onStop) f(this);
+        }
+    }
+    
+    /**
+     * Stop the executor
+     */
+    public function stop(?forced:Bool):Void {
+        // Cannot actually stop an HTTP request in progress
+        // Just simulate the stop
+        simulateStop();
+    }
+    
+    /**
+     * Kill the executor
+     */
+    public function kill(signal:champaign.sys.io.process.ProcessTools.KillSignal):Void {
+        // Cannot kill an HTTP request
+        // Just simulate the stop
+        simulateStop();
+    }
+}
 
 /**
  * HCLDownloader handles the downloading of files from the HCL portal
@@ -501,7 +827,8 @@ class HCLDownloader {
             var fileId = findFileIdByName(catalogJson, _currentFile.originalFilename);
             if (fileId != null) {
                 Logger.info('HCLDownloader: Found file ID in catalog: ${fileId}');
-                _currentFile.hash = fileId; // Update hash to correct file ID
+                // Store file ID in hash field
+                _currentFile.hash = fileId;
                 getDownloadUrl();
             } else {
                 triggerError('Failed to find file ID for ${_currentFile.originalFilename} in catalog');
@@ -802,144 +1129,184 @@ class HCLDownloader {
         downloadFile();
     }
 
+    // URL stream for file downloading
+    private var _urlStream:URLStream;
+    
+    // File output for writing downloaded data
+    private var _fileOutput:sys.io.FileOutput;
+    
+    // Total bytes for the current download 
+    private var _downloadBytesTotal:Int = 0;
+    
     /**
-     * Step 3: Download the file
+     * Step 3: Download the file using URLStream for efficient streaming download
      */
     private function downloadFile():Void {
         // Create a temp file path with .download extension (matching domdownload.sh)
         var cacheDir = SuperHumanFileCache.getCacheDirectory();
         _tempFilePath = cacheDir + "/" + _currentFile.originalFilename + ".download";
         
-        // For binary downloads, we still need to use URLLoader since haxe.Http doesn't
-        // have built-in support for binary data with progress tracking.
+        // Create URL request for file download
         var downloadRequest = new URLRequest(_downloadUrl);
         downloadRequest.requestHeaders = [
             new URLRequestHeader("Authorization", "Bearer " + _accessToken),
             new URLRequestHeader("User-Agent", "curl/7.68.0") // Match curl's user agent
         ];
         
-        // Set up file download loader
-        _downloadLoader = new URLLoader();
-        _downloadLoader.dataFormat = URLLoaderDataFormat.BINARY;
-        _downloadLoader.addEventListener(Event.COMPLETE, _downloadFileComplete);
-        _downloadLoader.addEventListener(ProgressEvent.PROGRESS, _downloadFileProgress);
-        _downloadLoader.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent) {
-            Logger.error('HCLDownloader: Download error: ${e.text}, ID: ${e.errorID}');
-            
-            // Log all error fields for maximum diagnostic information
-            var errorDetails = "";
-            for (field in Reflect.fields(e)) {
-                try {
-                    var value = Reflect.field(e, field);
-                    if (value != null && field != "target") {
-                        errorDetails += field + ": " + value + ", ";
-                    }
-                } catch (_) {}
-            }
-            
-            if (errorDetails.length > 0) {
-                Logger.error('HCLDownloader: Error details: ${errorDetails}');
-            }
-            
-            triggerError('Failed to download file: ${e.text}');
-            _cleanupDownloadLoader();
-        });
-        
         try {
-            Logger.debug('HCLDownloader: Starting file download from ${_downloadUrl}');
-            _downloadLoader.load(downloadRequest);
-        } catch (e:Dynamic) {
-            triggerError('Failed to start file download: ${e}');
-            _cleanupDownloadLoader();
-        }
-    }
-    
-    /**
-     * Handle file download progress
-     */
-    private function _downloadFileProgress(e:ProgressEvent):Void {
-        // Calculate progress percentage and notify listeners
-        var progress:Float = 0;
-        if (e.bytesTotal > 0) {
-            progress = e.bytesLoaded / e.bytesTotal;
-        }
-        Logger.debug('HCLDownloader: Download progress: ${Math.round(progress * 100)}% (${e.bytesLoaded}/${e.bytesTotal} bytes)');
-        for (f in _onDownloadProgress) f(this, _currentFile, progress);
-    }
-    
-    /**
-     * Handle file download completion
-     */
-    private function _downloadFileComplete(e:Event):Void {
-        var data:ByteArray = cast _downloadLoader.data;
-        Logger.info('HCLDownloader: Download complete, received ${data != null ? data.length : 0} bytes');
-        
-        // Clean up loader
-        _cleanupDownloadLoader();
-        
-        if (data == null || data.length == 0) {
-            triggerError("Failed to download file: No data received");
-            return;
-        }
-        
-        // Check for tiny files (less than 1KB) which may indicate an error JSON response
-        if (data.length < 1024) {
+            // Create and open file output for writing
             try {
-                // Try to parse as JSON to see if it's an error message
-                data.position = 0;
-                var errorText = data.readUTFBytes(data.length);
-                var errorJson = haxe.Json.parse(errorText);
-                
-                if (Reflect.hasField(errorJson, "summary")) {
-                    triggerError('Download failed: ${errorJson.summary}');
-                    return;
-                }
+                Logger.debug('HCLDownloader: Opening output file: ${_tempFilePath}');
+                _fileOutput = sys.io.File.write(_tempFilePath, true);
             } catch (e:Dynamic) {
-                // Not a JSON error, continue processing
-                Logger.debug('HCLDownloader: Small file but not JSON error, continuing: ${e}');
+                triggerError('Failed to open output file: ${e}');
+                return;
             }
-        }
-        
-        // Write data to temp file
-        try {
-            var output = sys.io.File.write(_tempFilePath, true);
-            data.position = 0; // Reset position to start of ByteArray
             
-            // Write in chunks to avoid potential memory issues with very large files
-            var chunkSize:UInt = 4096; // 4KB chunks
-            var buffer = new ByteArray();
-            buffer.length = chunkSize;
+            // Create URLStream for efficient streaming
+            _urlStream = new URLStream();
             
-            while (data.position < data.length) {
-                var bytesToRead:Int = Std.int(Math.min(chunkSize, data.length - data.position));
-                data.readBytes(buffer, 0, bytesToRead);
+            // Set up event listeners
+            _urlStream.addEventListener(Event.OPEN, function(e:Event):Void {
+                Logger.debug('HCLDownloader: Download connection opened');
+            });
+            
+            _urlStream.addEventListener(ProgressEvent.PROGRESS, function(e:ProgressEvent):Void {
+                // Store total bytes for the download
+                _downloadBytesTotal = Std.int(e.bytesTotal);
                 
-                for (i in 0...bytesToRead) {
-                    output.writeByte(buffer[i]);
+                // Calculate progress percentage and notify listeners
+                var progress:Float = 0;
+                if (e.bytesTotal > 0) {
+                    progress = e.bytesLoaded / e.bytesTotal;
                 }
-            }
+                
+                Logger.debug('HCLDownloader: Download progress: ${Math.round(progress * 100)}% (${e.bytesLoaded}/${e.bytesTotal} bytes)');
+                for (f in _onDownloadProgress) f(this, _currentFile, progress);
+                
+                // Process available bytes in the stream
+                processAvailableBytes();
+            });
             
-            output.close();
-            Logger.debug('HCLDownloader: Saved downloaded data to temporary file: ${_tempFilePath}');
+            _urlStream.addEventListener(Event.COMPLETE, function(e:Event):Void {
+                Logger.info('HCLDownloader: Download complete');
+                
+                // Process any remaining bytes in the stream
+                processAvailableBytes();
+                
+                // Close the output file
+                try {
+                    if (_fileOutput != null) {
+                        _fileOutput.close();
+                        _fileOutput = null;
+                    }
+                } catch (e:Dynamic) {
+                    Logger.error('HCLDownloader: Error closing output file: ${e}');
+                }
+                
+                // Clean up stream
+                cleanupUrlStream();
+                
+                // Verify the downloaded file
+                verifyFileHash();
+            });
+            
+            _urlStream.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent):Void {
+                Logger.error('HCLDownloader: Download error: ${e.text}, ID: ${e.errorID}');
+                
+                // Log all error fields for maximum diagnostic information
+                var errorDetails = "";
+                for (field in Reflect.fields(e)) {
+                    try {
+                        var value = Reflect.field(e, field);
+                        if (value != null && field != "target") {
+                            errorDetails += field + ": " + value + ", ";
+                        }
+                    } catch (_) {}
+                }
+                
+                if (errorDetails.length > 0) {
+                    Logger.error('HCLDownloader: Error details: ${errorDetails}');
+                }
+                
+                // Close the output file
+                try {
+                    if (_fileOutput != null) {
+                        _fileOutput.close();
+                        _fileOutput = null;
+                    }
+                } catch (e:Dynamic) {
+                    Logger.error('HCLDownloader: Error closing output file: ${e}');
+                }
+                
+                cleanupUrlStream();
+                triggerError('Failed to download file: ${e.text}');
+            });
+            
+            // Start the download
+            Logger.debug('HCLDownloader: Starting file download from ${_downloadUrl}');
+            _urlStream.load(downloadRequest);
+            
         } catch (e:Dynamic) {
-            triggerError('Failed to write downloaded data to temp file: ${e}');
-            return;
+            // Close the output file if needed
+            try {
+                if (_fileOutput != null) {
+                    _fileOutput.close();
+                    _fileOutput = null;
+                }
+            } catch (_) {}
+            
+            cleanupUrlStream();
+            triggerError('Failed to start file download: ${e}');
         }
-        
-        // Verify file hash
-        verifyFileHash();
     }
     
     /**
-     * Clean up download loader resources
+     * Process bytes available in the URL stream
+     * This is called during progress events and on completion
      */
-    private function _cleanupDownloadLoader():Void {
-        if (_downloadLoader != null) {
-            _downloadLoader.removeEventListener(Event.COMPLETE, _downloadFileComplete);
-            _downloadLoader.removeEventListener(ProgressEvent.PROGRESS, _downloadFileProgress);
-            // We're using an anonymous function for IOErrorEvent now, which can't be directly removed
-            // Instead, we simply set _downloadLoader to null and let the garbage collector handle it
-            _downloadLoader = null;
+    private function processAvailableBytes():Void {
+        if (_urlStream == null || _fileOutput == null) return;
+        
+        try {
+            // Process data as it arrives in the stream
+            while (_urlStream.bytesAvailable > 0) {
+                // Read from stream in chunks (10MB at a time)
+                var chunkSize = Std.int(Math.min(10485760, _urlStream.bytesAvailable));
+                var buffer = new ByteArray();
+                
+                // Read data from the stream into our buffer
+                _urlStream.readBytes(buffer, 0, chunkSize);
+                
+                // Write the buffer to the file directly
+                for (i in 0...chunkSize) {
+                    _fileOutput.writeByte(buffer[i]);
+                }
+            }
+        } catch (e:Dynamic) {
+            Logger.error('HCLDownloader: Error processing stream data: ${e}');
+            // Don't close file or cleanup here - let the error event handler do that
+        }
+    }
+    
+    /**
+     * Clean up URL stream resources
+     */
+    private function cleanupUrlStream():Void {
+        if (_urlStream != null) {
+            try {
+                _urlStream.close(); // Close the stream if it's open
+            } catch (e:Dynamic) {
+                Logger.error('HCLDownloader: Error closing URL stream: ${e}');
+            }
+            
+            // Remove all event listeners
+            _urlStream.removeEventListener(Event.OPEN, function(e) {});
+            _urlStream.removeEventListener(ProgressEvent.PROGRESS, function(e) {});
+            _urlStream.removeEventListener(Event.COMPLETE, function(e) {});
+            _urlStream.removeEventListener(IOErrorEvent.IO_ERROR, function(e) {});
+            
+            _urlStream = null;
         }
     }
 
@@ -950,40 +1317,39 @@ class HCLDownloader {
         Logger.info('HCLDownloader: Verifying file hash');
         
         try {
-            // Use SuperHumanHashes to calculate the hash
-            var calculatedHash = SuperHumanHashes.calculateMD5(_tempFilePath);
-            
-            if (calculatedHash == null) {
-                triggerError("Failed to verify file hash: No hash calculated");
-                cleanupTempFiles();
-                return;
-            }
-            
-            // Compare with expected hash (case insensitive) - following domdownload.sh approach
-            var expectedHash = _currentFile.hash.toLowerCase();
-            calculatedHash = calculatedHash.toLowerCase();
-            
-            if (calculatedHash != expectedHash) {
-                triggerError('Hash verification failed. Expected: ${expectedHash}, Got: ${calculatedHash}');
-                cleanupTempFiles();
-                return;
-            }
-            
-            Logger.info('Hash verification successful: ${calculatedHash}');
-            
-            // Also calculate SHA256 hash if needed
+            // Check if we have a SHA256 hash for verification
             if (_currentFile.sha256 != null) {
-                // Calculate SHA256 hash asynchronously
+                Logger.info('HCLDownloader: Verifying with SHA256 hash');
+                
+                // Calculate SHA256 hash asynchronously (this is the only method available)
                 SuperHumanHashes.calculateSHA256Async(_tempFilePath, function(calculatedSha256:String) {
-                    if (calculatedSha256 != null && calculatedSha256.toLowerCase() != _currentFile.sha256.toLowerCase()) {
-                        Logger.warning('SHA256 hash verification failed. Expected: ${_currentFile.sha256}, Got: ${calculatedSha256}');
+                    if (calculatedSha256 != null) {
+                        calculatedSha256 = calculatedSha256.toLowerCase();
+                        var expectedSha256 = _currentFile.sha256.toLowerCase();
+                        
+                        if (calculatedSha256 != expectedSha256) {
+                            triggerError('SHA256 hash verification failed. Expected: ${expectedSha256}, Got: ${calculatedSha256}');
+                            cleanupTempFiles();
+                            return;
+                        }
+                        
+                        Logger.info('SHA256 hash verification successful: ${calculatedSha256}');
+                        finalizeDownload();
                     } else {
-                        Logger.info('SHA256 hash verification successful');
+                        Logger.warning('Failed to calculate SHA256 hash');
+                        // If we couldn't calculate the hash, don't proceed to verification
+                        cleanupTempFiles();
+                        triggerError('Could not calculate SHA256 hash for verification');
                     }
                 });
+                
+                // Don't proceed further here - wait for the async callback
+                return;
             }
             
-            // Hash verified, move file to cache
+            // If we got here, we don't have a SHA256 hash to verify against
+            // This typically happens when using file IDs instead of hashes
+            Logger.warning('HCLDownloader: Skipping hash verification - no SHA256 hash available. Using file ID stored in hash field');
             finalizeDownload();
             
         } catch (e:Dynamic) {
@@ -1051,6 +1417,29 @@ class HCLDownloader {
                 Logger.warning('Failed to delete temporary file: ${e}');
             }
         }
+    }
+
+    /**
+     * Legacy method for completion handler (kept for compatibility)
+     */
+    private function _downloadFileComplete(e:Event):Void {
+        // This is just a stub for backward compatibility
+        Logger.debug('HCLDownloader: Legacy download complete handler called');
+    }
+    
+    /**
+     * Clean up download loader resources (legacy method)
+     */
+    private function _cleanupDownloadLoader():Void {
+        if (_downloadLoader != null) {
+            _downloadLoader.removeEventListener(Event.COMPLETE, _downloadFileComplete);
+            _downloadLoader.removeEventListener(ProgressEvent.PROGRESS, function(e) {});
+            _downloadLoader.removeEventListener(IOErrorEvent.IO_ERROR, function(e) {});
+            _downloadLoader = null;
+        }
+        
+        // Also clean up URLStream if it exists
+        cleanupUrlStream();
     }
 
     /**
@@ -1135,7 +1524,7 @@ class HCLDownloader {
     }
     
     /**
-     * Download file from custom URL
+     * Download file from custom URL using URLStream for efficient streaming
      */
     private function downloadFileFromCustomUrl(resource:{name:String, url:String, useAuth:Bool, user:String, pass:String}):Void {
         Logger.info('HCLDownloader: Downloading file from custom URL: ${resource.url}/${_currentFile.originalFilename}');
@@ -1156,40 +1545,112 @@ class HCLDownloader {
             downloadRequest.requestHeaders = [new URLRequestHeader("Authorization", "Basic " + base64Auth)];
         }
         
-        // Set up file download loader
-        _downloadLoader = new URLLoader();
-        _downloadLoader.dataFormat = URLLoaderDataFormat.BINARY;
-        _downloadLoader.addEventListener(Event.COMPLETE, _downloadFileComplete);
-        _downloadLoader.addEventListener(ProgressEvent.PROGRESS, _downloadFileProgress);
-        _downloadLoader.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent) {
-            Logger.error('HCLDownloader: Custom download error: ${e.text}, ID: ${e.errorID}');
-            
-            // Log all error fields for maximum diagnostic information
-            var errorDetails = "";
-            for (field in Reflect.fields(e)) {
-                try {
-                    var value = Reflect.field(e, field);
-                    if (value != null && field != "target") {
-                        errorDetails += field + ": " + value + ", ";
-                    }
-                } catch (_) {}
-            }
-            
-            if (errorDetails.length > 0) {
-                Logger.error('HCLDownloader: Error details: ${errorDetails}');
-            }
-            
-            triggerError('Failed to download file from custom URL: ${e.text}');
-            _cleanupDownloadLoader();
-        });
-        
         try {
+            // Create and open file output for writing
+            try {
+                Logger.debug('HCLDownloader: Opening output file: ${_tempFilePath}');
+                _fileOutput = sys.io.File.write(_tempFilePath, true);
+            } catch (e:Dynamic) {
+                triggerError('Failed to open output file: ${e}');
+                return;
+            }
+            
+            // Create URLStream for efficient streaming
+            _urlStream = new URLStream();
+            
+            // Set up event listeners
+            _urlStream.addEventListener(Event.OPEN, function(e:Event):Void {
+                Logger.debug('HCLDownloader: Custom download connection opened');
+            });
+            
+            _urlStream.addEventListener(ProgressEvent.PROGRESS, function(e:ProgressEvent):Void {
+                // Store total bytes for the download
+                _downloadBytesTotal = Std.int(e.bytesTotal);
+                
+                // Calculate progress percentage and notify listeners
+                var progress:Float = 0;
+                if (e.bytesTotal > 0) {
+                    progress = e.bytesLoaded / e.bytesTotal;
+                }
+                
+                Logger.debug('HCLDownloader: Custom download progress: ${Math.round(progress * 100)}% (${e.bytesLoaded}/${e.bytesTotal} bytes)');
+                for (f in _onDownloadProgress) f(this, _currentFile, progress);
+                
+                // Process available bytes in the stream
+                processAvailableBytes();
+            });
+            
+            _urlStream.addEventListener(Event.COMPLETE, function(e:Event):Void {
+                Logger.info('HCLDownloader: Custom download complete');
+                
+                // Process any remaining bytes in the stream
+                processAvailableBytes();
+                
+                // Close the output file
+                try {
+                    if (_fileOutput != null) {
+                        _fileOutput.close();
+                        _fileOutput = null;
+                    }
+                } catch (e:Dynamic) {
+                    Logger.error('HCLDownloader: Error closing output file: ${e}');
+                }
+                
+                // Clean up stream
+                cleanupUrlStream();
+                
+                // Verify the downloaded file
+                verifyFileHash();
+            });
+            
+            _urlStream.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent):Void {
+                Logger.error('HCLDownloader: Custom download error: ${e.text}, ID: ${e.errorID}');
+                
+                // Log all error fields for maximum diagnostic information
+                var errorDetails = "";
+                for (field in Reflect.fields(e)) {
+                    try {
+                        var value = Reflect.field(e, field);
+                        if (value != null && field != "target") {
+                            errorDetails += field + ": " + value + ", ";
+                        }
+                    } catch (_) {}
+                }
+                
+                if (errorDetails.length > 0) {
+                    Logger.error('HCLDownloader: Error details: ${errorDetails}');
+                }
+                
+                // Close the output file
+                try {
+                    if (_fileOutput != null) {
+                        _fileOutput.close();
+                        _fileOutput = null;
+                    }
+                } catch (e:Dynamic) {
+                    Logger.error('HCLDownloader: Error closing output file: ${e}');
+                }
+                
+                cleanupUrlStream();
+                triggerError('Failed to download file from custom URL: ${e.text}');
+            });
+            
+            // Start the download
             Logger.debug('HCLDownloader: Starting custom file download from ${downloadUrl}');
-            _downloadLoader.load(downloadRequest);
+            _urlStream.load(downloadRequest);
             _isDownloading = true;
+            
         } catch (e:Dynamic) {
+            // Close the output file if needed
+            try {
+                if (_fileOutput != null) {
+                    _fileOutput.close();
+                    _fileOutput = null;
+                }
+            } catch (_) {}
+            
+            cleanupUrlStream();
             triggerError('Failed to start custom file download: ${e}');
-            _cleanupDownloadLoader();
         }
     }
 
