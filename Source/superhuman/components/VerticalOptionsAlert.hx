@@ -78,7 +78,7 @@ class VerticalOptionsAlert {
         ?cancelButtonIndex:Int
     ):Alert {
         // Define consistent width and padding for all components
-        final dialogWidth:Float = GenesisApplicationTheme.GRID * 64; // Base width for the entire alert
+        final dialogWidth:Float = GenesisApplicationTheme.GRID * 85; // Increased by another 15% for more content space
         final paddingPercent:Float = 0.015; // 1.5% padding on each side
         
         // Create an alert with no buttons (we'll add them manually in the content)

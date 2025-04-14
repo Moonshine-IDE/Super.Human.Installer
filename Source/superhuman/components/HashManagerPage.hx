@@ -1575,10 +1575,8 @@ class FileEntryItem extends LayoutGroup {
      * Handle download start event
      */
     private function _onDownloadStart(downloader:superhuman.downloaders.HCLDownloader, file:SuperHumanCachedFile):Void {
-        // Show progress or notification
-        if (parentPage != null) {
-            genesis.application.managers.ToastManager.getInstance().showToast('Downloading ${file.originalFilename}...');
-        }
+        // The DownloadDialog already shows progress, don't add additional toast notification
+        // that might appear at wrong times
     }
     
     /**

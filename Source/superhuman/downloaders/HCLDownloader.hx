@@ -54,6 +54,24 @@ import sys.thread.Mutex;
 import sys.thread.Deque;
 import openfl.events.Event;
 import openfl.events.EventDispatcher;
+import openfl.events.EventType;
+import openfl.errors.Error;
+
+/**
+ * ThreadMessageEvent - Custom event class for thread message communication
+ */
+class ThreadMessageEvent extends Event {
+    public var messageData:Dynamic;
+    
+    public function new(type:String, data:Dynamic) {
+        super(type);
+        this.messageData = data;
+    }
+    
+    override public function clone():Event {
+        return new ThreadMessageEvent(type, messageData);
+    }
+}
 
 /**
  * ThreadMessage - Represents a message to be passed between threads
@@ -138,9 +156,8 @@ class ThreadCommunicator extends EventDispatcher {
     private function processMessages():Void {
         var message = _messageQueue.pop(false);
         while (message != null) {
-            // Dispatch the message as an event
-            var event = new Event(message.action);
-            Reflect.setField(event, "data", message.data);
+            // Dispatch the message as a custom ThreadMessageEvent
+            var event = new ThreadMessageEvent(message.action, message.data);
             dispatchEvent(event);
             
             // Get next message
@@ -155,10 +172,10 @@ class ThreadCommunicator extends EventDispatcher {
  */
 class ThreadedNetworkExecutor extends prominic.sys.io.AbstractExecutor {
     // ThreadCommunicator message action constants
-    private static inline final ACTION_COMPLETE = "network_complete";
-    private static inline final ACTION_ERROR = "network_error";
-    private static inline final ACTION_PROGRESS = "network_progress";
-    private static inline final ACTION_REDIRECT = "network_redirect";
+    public static inline final ACTION_COMPLETE = "network_complete";
+    public static inline final ACTION_ERROR = "network_error";
+    public static inline final ACTION_PROGRESS = "network_progress";
+    public static inline final ACTION_REDIRECT = "network_redirect";
     
     // Thread communicator for passing messages between threads
     private static var _communicator:ThreadCommunicator;
@@ -249,30 +266,30 @@ class ThreadedNetworkExecutor extends prominic.sys.io.AbstractExecutor {
             _communicator = ThreadCommunicator.getInstance();
             
             // Set up event handlers for thread messages
-            _communicator.addEventListener(ACTION_COMPLETE, function(e:Event) {
-                var data = Reflect.field(e, "data");
+            _communicator.addEventListener(ACTION_COMPLETE, function(e:ThreadMessageEvent) {
+                var data = e.messageData;
                 if (data != null && data.executor == this) {
                     _finalizeExecution(data.exitCode);
                 }
             });
             
-            _communicator.addEventListener(ACTION_ERROR, function(e:Event) {
-                var data = Reflect.field(e, "data");
+            _communicator.addEventListener(ACTION_ERROR, function(e:ThreadMessageEvent) {
+                var data = e.messageData;
                 if (data != null && data.executor == this) {
                     for (f in _onStdErr) f(this, data.message);
                     _finalizeExecution(1);
                 }
             });
             
-            _communicator.addEventListener(ACTION_PROGRESS, function(e:Event) {
-                var data = Reflect.field(e, "data");
+            _communicator.addEventListener(ACTION_PROGRESS, function(e:ThreadMessageEvent) {
+                var data = e.messageData;
                 if (data != null && data.executor == this) {
                     for (f in _onProgress) f(this, data.progress);
                 }
             });
             
-            _communicator.addEventListener(ACTION_REDIRECT, function(e:Event) {
-                var data = Reflect.field(e, "data");
+            _communicator.addEventListener(ACTION_REDIRECT, function(e:ThreadMessageEvent) {
+                var data = e.messageData;
                 if (data != null && data.executor == this) {
                     _handleRedirect(data.headers);
                 }
@@ -723,9 +740,10 @@ class HCLDownloader {
     /**
      * Update an HCL token in secrets
      * @param tokenName The name of the token to update
-     * @param newToken The new token value
+     * @param newToken The new refresh token value
+     * @param accessToken The current access token to save
      */
-    private function updateHCLToken(tokenName:String, newToken:String):Void {
+    private function updateHCLToken(tokenName:String, newToken:String, ?accessToken:String = null):Void {
         var secrets = SuperHumanInstaller.getInstance().config.secrets;
         if (secrets == null || secrets.hcl_download_portal_api_keys == null) {
             Logger.error('HCLDownloader: Cannot update token - no secrets found');
@@ -736,8 +754,20 @@ class HCLDownloader {
         for (i in 0...keys.length) {
             var key = keys[i];
             if (Reflect.field(key, "name") == tokenName) {
-                // Update the token
+                // Update the refresh token
                 Reflect.setField(key, "key", newToken);
+                
+                // Also store the access token if provided
+                if (accessToken != null) {
+                    // Check if the access_token field exists, if not create it
+                    if (!Reflect.hasField(key, "access_token")) {
+                        Reflect.setField(key, "access_token", accessToken);
+                    } else {
+                        // Update the existing access token
+                        Reflect.setField(key, "access_token", accessToken);
+                    }
+                    Logger.info('HCLDownloader: Stored access token for [${tokenName}]');
+                }
                 
                 // Save the entire configuration to persist token changes
                 // We can't call save() directly on secrets since it's just a typedef
@@ -810,8 +840,11 @@ class HCLDownloader {
     
     /**
      * Get HCL token from secrets
+     * @param tokenName The name of the token to retrieve
+     * @param accessTokenOnly If true, only return the access token (not the refresh token)
+     * @return The token value, or null if not found
      */
-    private function getHCLToken(tokenName:String):String {
+    private function getHCLToken(tokenName:String, accessTokenOnly:Bool = false):String {
         var secrets = SuperHumanInstaller.getInstance().config.secrets;
         if (secrets == null || secrets.hcl_download_portal_api_keys == null) return null;
         
@@ -819,11 +852,37 @@ class HCLDownloader {
         for (i in 0...keys.length) {
             var key = keys[i];
             if (Reflect.field(key, "name") == tokenName) {
+                // If we only want the access token and it exists, return it
+                if (accessTokenOnly && Reflect.hasField(key, "access_token")) {
+                    return Reflect.field(key, "access_token");
+                }
+                
+                // Otherwise return the refresh token
                 return Reflect.field(key, "key");
             }
         }
         
         return null;
+    }
+    
+    /**
+     * Check if a token has a saved access token
+     * @param tokenName The name of the token to check
+     * @return True if the token has a saved access token
+     */
+    private function hasAccessToken(tokenName:String):Bool {
+        var secrets = SuperHumanInstaller.getInstance().config.secrets;
+        if (secrets == null || secrets.hcl_download_portal_api_keys == null) return false;
+        
+        var keys:Array<Dynamic> = cast(secrets.hcl_download_portal_api_keys, Array<Dynamic>);
+        for (i in 0...keys.length) {
+            var key = keys[i];
+            if (Reflect.field(key, "name") == tokenName) {
+                return Reflect.hasField(key, "access_token");
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -876,8 +935,757 @@ class HCLDownloader {
             Logger.info('HCLDownloader: File missing, downloading directly to: ${_tempFilePath}');
         }
         
-        // Start the download process by getting access token
-        getAccessToken(token);
+        // Initialize thread synchronization
+        _mutex = new Mutex();
+        _progressMutex = new Mutex();
+        
+        // Start the entire download process in a single worker thread
+        // This includes token request, catalog fetching, URL redirection, and file download
+        _thread = Thread.create(function() {
+            try {
+                // Start the download process by getting access token
+                getAccessTokenThreaded(token);
+            } catch (e:Dynamic) {
+                // Acquire mutex before setting shared state
+                _mutex.acquire();
+                var errorMsg = 'Thread exception: ${e}';
+                _mutex.release();
+                
+                // Post the error via communicator
+                if (_communicator != null) {
+                    _communicator.postThreadMessage(ThreadedNetworkExecutor.ACTION_ERROR, {
+                        message: errorMsg
+                    });
+                } else {
+                    triggerError(errorMsg);
+                }
+            }
+        });
+    }
+    
+    /**
+     * Threaded version of getAccessToken
+     * All pre-download operations run in the worker thread
+     */
+    private function getAccessTokenThreaded(refreshToken:String):Void {
+        if (_isDownloading) {
+            Logger.warning('HCLDownloader: Already downloading a file');
+            return;
+        }
+        
+        // Update current step with progress reporting
+        updateStep(HCLDownloadStep.GettingAccessToken);
+        
+        // First check if we already have a saved access token for this token name
+        if (hasAccessToken(_currentTokenName)) {
+            // Use the existing access token instead of using the refresh token
+            _accessToken = getHCLToken(_currentTokenName, true); // true = get access token only
+            
+            if (_accessToken != null) {
+                Logger.info('HCLDownloader: Using saved access token for ${_currentTokenName} (threaded)');
+                updateStep(HCLDownloadStep.ObtainedAccessToken);
+                _isDownloading = true;
+                
+                // Continue to next step - fetch catalog to find file ID
+                fetchCatalogThreaded();
+                return;
+            } else {
+                Logger.warning('HCLDownloader: Failed to get saved access token, will try refresh token (threaded)');
+            }
+        }
+        
+        // If we got here, we need to use the refresh token to get a new access token
+        // Reset access token to be safe
+        _accessToken = null;
+        
+        Logger.info('HCLDownloader: Getting access token from refresh token (threaded)');
+        Logger.debug('HCLDownloader: Token length: ${refreshToken != null ? refreshToken.length : 0}');
+        
+        // Store token for potential retry
+        _currentToken = refreshToken;
+        
+        // Use Haxe standard library Http instead of URLLoader for better compatibility
+        var http = new haxe.Http(MYHCL_TOKEN_URL);
+        
+        // Match headers from working curl command
+        http.setHeader("Content-Type", "application/json");
+        http.setHeader("Accept", "application/json");
+        http.setHeader("User-Agent", "curl/7.68.0"); // Mimic curl's user agent
+        
+        // Add callbacks to process the response
+        http.onData = function(data:String) {
+            updateStep(HCLDownloadStep.ReceivedTokenResponse);
+            Logger.debug('HCLDownloader: Received token response (threaded)');
+            
+            // Process response - similar to _accessTokenLoaderComplete
+            var responseJson:Dynamic;
+            try {
+                responseJson = haxe.Json.parse(data);
+                updateStep(HCLDownloadStep.ParsingTokenJSON);
+                Logger.debug('HCLDownloader: Parsed JSON response successfully (threaded)');
+            } catch (e:Dynamic) {
+                triggerError('Failed to parse token response: ${e}');
+                return;
+            }
+            
+            // Extract refresh token first - this is CRITICAL as the refresh token is rotated on each use
+            var newRefreshToken:String = null;
+            if (Reflect.hasField(responseJson, "refreshToken")) {
+                newRefreshToken = Reflect.field(responseJson, "refreshToken");
+                Logger.debug('HCLDownloader: Found new rotated refresh token in response (threaded)');
+                
+                // Save the new refresh token back to SuperHumanSecrets
+                if (newRefreshToken != null && newRefreshToken != refreshToken) {
+                    // Use custom thread communicator to update token on main thread
+                    var communicator = ThreadCommunicator.getInstance();
+                    communicator.postThreadMessage("token_update", {
+                        tokenName: _currentTokenName,
+                        newToken: newRefreshToken
+                    });
+                    
+                    // Set up listener on main thread if it doesn't exist
+                    _setupTokenUpdateListener();
+                }
+            }
+            
+            // Extract access token - standard OAuth responses use "access_token" field
+            var accessToken:String = null;
+            
+            // Try standard OAuth field first
+            if (Reflect.hasField(responseJson, "access_token")) {
+                accessToken = Reflect.field(responseJson, "access_token");
+                updateStep(HCLDownloadStep.FoundAccessToken);
+                Logger.debug('HCLDownloader: Found access_token field in response (threaded)');
+            } 
+            // Try HCL specific field if standard not found
+            else if (Reflect.hasField(responseJson, "accessToken")) {
+                accessToken = Reflect.field(responseJson, "accessToken");
+                updateStep(HCLDownloadStep.FoundAccessToken);
+                Logger.debug('HCLDownloader: Found accessToken field in response (threaded)');
+            }
+            
+            if (accessToken == null) {
+                var errorMessage = "Unknown error";
+                if (Reflect.hasField(responseJson, "error")) {
+                    errorMessage = Reflect.field(responseJson, "error");
+                    if (Reflect.hasField(responseJson, "error_description")) {
+                        errorMessage += ": " + Reflect.field(responseJson, "error_description");
+                    }
+                } else if (Reflect.hasField(responseJson, "summary")) {
+                    errorMessage = Reflect.field(responseJson, "summary");
+                }
+                
+                // Log for debugging
+                Logger.error('HCLDownloader: Token error (threaded): ${errorMessage}');
+                triggerError('Failed to get access token: ${errorMessage}');
+                return;
+            }
+            
+            Logger.info('HCLDownloader: Successfully obtained fresh access token (threaded)');
+            updateStep(HCLDownloadStep.ObtainedAccessToken);
+            _accessToken = accessToken;
+            _isDownloading = true;
+            
+            // Store the access token for future use - this is critical to avoid using refresh token each time
+            // Use custom thread communicator to update token on main thread (with both refresh and access tokens)
+            if (_communicator == null) {
+                _communicator = ThreadCommunicator.getInstance();
+            }
+            
+            _communicator.postThreadMessage("token_update_with_access", {
+                tokenName: _currentTokenName,
+                newToken: newRefreshToken != null ? newRefreshToken : refreshToken, // Use new token if available
+                accessToken: accessToken
+            });
+            
+            // Set up listener on main thread if it doesn't exist
+            _setupAccessTokenUpdateListener();
+            
+            // Continue to next step - fetch catalog to find file ID
+            fetchCatalogThreaded();
+        };
+        
+        http.onError = function(error:String) {
+            Logger.error('HCLDownloader: Token request failed with error (threaded): ${error}');
+            triggerError('Failed to get access token: ${error}');
+        };
+        
+        http.onStatus = function(status:Int) {
+            Logger.debug('HCLDownloader: HTTP status code (threaded): ${status}');
+        };
+        
+        // Format data as JSON exactly as in the bash script
+        var payload = { refreshToken: refreshToken };
+        var jsonPayload = haxe.Json.stringify(payload);
+        
+        updateStep(HCLDownloadStep.SendingTokenRequest);
+        
+        // Send the request
+        try {
+            Logger.debug('HCLDownloader: Sending token request to ${MYHCL_TOKEN_URL} (threaded)');
+            http.setPostData(jsonPayload);
+            http.request(true); // true = POST request
+        } catch (e:Dynamic) {
+            triggerError('Failed to send token request: ${e}');
+        }
+    }
+    
+    /**
+     * Threaded version of fetchCatalog
+     */
+    private function fetchCatalogThreaded():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.FetchingCatalog;
+        
+        Logger.info('HCLDownloader: Fetching file catalog (threaded)');
+        
+        // Use Haxe Http for consistency
+        var http = new haxe.Http(MYHCL_CATALOG_URL);
+        
+        // Add authorization header with bearer token
+        http.setHeader("Authorization", "Bearer " + _accessToken);
+        http.setHeader("Accept", "application/json");
+        http.setHeader("User-Agent", "curl/7.68.0"); // Mimic curl's user agent
+        
+        // Add callback for successful response
+        http.onData = function(data:String) {
+            Logger.debug('HCLDownloader: Received catalog response (threaded)');
+            
+            // Save response to a file for debugging
+            try {
+                sys.io.File.saveContent("catalog_response.json", data);
+                Logger.debug('HCLDownloader: Saved catalog response to catalog_response.json (threaded)');
+            } catch (e:Dynamic) {
+                Logger.error('HCLDownloader: Failed to save catalog response to file (threaded): ${e}');
+            }
+            
+            // Parse JSON
+            var catalogJson:Dynamic;
+            try {
+                catalogJson = haxe.Json.parse(data);
+                Logger.debug('HCLDownloader: Parsed catalog JSON successfully (threaded)');
+            } catch (e:Dynamic) {
+                triggerError('Failed to parse catalog: ${e}');
+                return;
+            }
+            
+            // Find the file ID by name
+            var fileId = findFileIdByName(catalogJson, _currentFile.originalFilename);
+            if (fileId != null) {
+                Logger.info('HCLDownloader: Found file ID in catalog (threaded): ${fileId}');
+                // Store file ID in hash field
+                _currentFile.hash = fileId;
+                getDownloadUrlThreaded();
+            } else {
+                triggerError('Failed to find file ID for ${_currentFile.originalFilename} in catalog');
+            }
+        };
+        
+        // Add callback for error
+        http.onError = function(error:String) {
+            Logger.error('HCLDownloader: Catalog request failed with error (threaded): ${error}');
+            triggerError('Failed to fetch catalog: ${error}');
+        };
+        
+        // Send the request
+        try {
+            Logger.debug('HCLDownloader: Sending catalog request to ${MYHCL_CATALOG_URL} (threaded)');
+            http.request(false); // false = GET request
+        } catch (e:Dynamic) {
+            Logger.error('HCLDownloader: Failed to send catalog request (threaded): ${e}');
+            triggerError('Failed to send catalog request: ${e}');
+        }
+    }
+    
+    /**
+     * Threaded version of getDownloadUrl
+     */
+    private function getDownloadUrlThreaded():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.GettingDownloadURL;
+        
+        Logger.info('HCLDownloader: Getting download URL for file ID (threaded): ${_currentFile.hash}');
+        
+        // Reset redirect tracking
+        _followingRedirects = false;
+        _finalRedirectUrl = null;
+        
+        // Construct the download URL using the file ID
+        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.hash + MYHCL_DOWNLOAD_URL_SUFFIX;
+        Logger.debug('HCLDownloader: Requesting download URL from (threaded): ${downloadUrl}');
+        
+        // Start following redirects from this URL
+        _followingRedirects = true;
+        getUrlWithRedirectsThreaded(downloadUrl);
+    }
+    
+    /**
+     * Threaded version of getUrlWithRedirects
+     * This non-recursive implementation handles redirects one at a time in the worker thread
+     */
+    private function getUrlWithRedirectsThreaded(url:String):Void {
+        var maxRedirects = 5;
+        var redirectCount = 0;
+        var currentUrl = url;
+        
+        // Create a function that can be called to process the current URL
+        function processUrl():Void {
+            if (redirectCount > maxRedirects) {
+                Logger.error('HCLDownloader: Too many redirects (${redirectCount})');
+                triggerError('Failed to get download URL: Too many redirects');
+                _followingRedirects = false;
+                return;
+            }
+            
+            if (!_followingRedirects) {
+                // We've already processed a redirect that led to a download
+                Logger.debug('HCLDownloader: Redirect chain was interrupted, ignoring further processing');
+                return;
+            }
+            
+            var http = new haxe.Http(currentUrl);
+            
+            // Add authorization header with bearer token
+            http.setHeader("Authorization", "Bearer " + _accessToken);
+            http.setHeader("Accept", "application/json");
+            http.setHeader("User-Agent", "curl/7.68.0"); // Mimic curl's user agent
+            
+            http.onData = function(data:String) {
+                if (!_followingRedirects) return; // Chain was already completed
+                
+                Logger.debug('HCLDownloader: Received response from URL (threaded): ${currentUrl}');
+                
+                // Save response to a file for debugging
+                if (redirectCount == 0) { // Only save the first response
+                    try {
+                        sys.io.File.saveContent("download_url_response.json", data);
+                        Logger.debug('HCLDownloader: Saved download URL response to download_url_response.json (threaded)');
+                    } catch (e:Dynamic) {
+                        Logger.error('HCLDownloader: Failed to save download URL response to file (threaded): ${e}');
+                    }
+                }
+                
+                // Check if this is an error response
+                try {
+                    var responseJson = haxe.Json.parse(data);
+                    
+                    // If we got valid JSON, it's likely an error message
+                    if (Reflect.hasField(responseJson, "summary")) {
+                        _followingRedirects = false;
+                        triggerError('Failed to get download URL: ${responseJson.summary}');
+                        return;
+                    }
+                } catch (e:Dynamic) {
+                    // Not JSON, might be text or binary data - continue
+                }
+                
+                // If we get actual data and no more redirects, use the response
+                var trimmedData = StringTools.trim(data);
+                if (trimmedData.length > 0 && StringTools.startsWith(trimmedData.toLowerCase(), "http")) {
+                    // Response contains a URL
+                    _finalRedirectUrl = trimmedData;
+                    Logger.debug('HCLDownloader: Got download URL from response (threaded): ${_finalRedirectUrl}');
+                    // Always route back to main thread for downloading
+                // Send the message to start download on main thread
+                if (_communicator == null) {
+                    _communicator = ThreadCommunicator.getInstance();
+                }
+                
+                // Post message to main thread to start download
+                _communicator.postThreadMessage("start_download", {
+                    url: _finalRedirectUrl,
+                    tempFilePath: _tempFilePath,
+                    file: _currentFile
+                });
+                
+                // Set up listener on main thread if not already done
+                _setupMainThreadDownloadListener();
+                    return;
+                }
+                
+                // If we got here, but the response is empty or not a URL,
+                // assume the current URL is the final one
+                _finalRedirectUrl = currentUrl;
+                Logger.debug('HCLDownloader: Using current URL as download URL (threaded): ${_finalRedirectUrl}');
+                
+                // Always route back to main thread for downloading
+                if (_communicator == null) {
+                    _communicator = ThreadCommunicator.getInstance();
+                }
+                
+                // Post message to main thread to start download
+                _communicator.postThreadMessage("start_download", {
+                    url: _finalRedirectUrl,
+                    tempFilePath: _tempFilePath,
+                    file: _currentFile
+                });
+                
+                // Set up listener on main thread if not already done
+                _setupMainThreadDownloadListener();
+            };
+
+            http.onStatus = function(status:Int) {
+                Logger.debug('HCLDownloader: HTTP Status for ${currentUrl} (threaded): ${status}');
+                
+                if (!_followingRedirects) return; // Chain was already completed
+                
+                if (status >= 300 && status < 400) {
+                    // Get the Location header for redirects
+                    var headers = http.responseHeaders;
+                    var location = null;
+                    
+                    // Find the Location header (case-insensitive)
+                    for (header in headers.keys()) {
+                        if (header.toLowerCase() == "location") {
+                            location = headers.get(header);
+                            break;
+                        }
+                    }
+                    
+                    if (location != null) {
+                        Logger.debug('HCLDownloader: Redirecting to (threaded): ${location}');
+                        // Update for next redirect
+                        currentUrl = location;
+                        redirectCount++;
+                        processUrl(); // Process the next URL in the chain
+                    } else {
+                        Logger.error('HCLDownloader: No Location header found for redirect status (threaded) ${status}');
+                        _followingRedirects = false;
+                        triggerError('Failed to get download URL: No Location header in redirect response');
+                    }
+                }
+                // No special cases for other status codes like 403 - we MUST follow the redirects
+            };
+
+            http.onError = function(error:String) {
+                if (!_followingRedirects) return; // Chain was already completed
+                
+                Logger.error('HCLDownloader: Error requesting ${currentUrl} (threaded): ${error}');
+                
+                // Always treat errors as fatal - no fallbacks
+                _followingRedirects = false;
+                triggerError('Failed to get download URL: ${error}');
+            };
+
+            try {
+                Logger.debug('HCLDownloader: Making request to ${currentUrl} (redirect #${redirectCount}, threaded)');
+                http.request(false); // false = GET request
+            } catch (e:Dynamic) {
+                Logger.error('HCLDownloader: Exception making request to ${currentUrl} (threaded): ${e}');
+                _followingRedirects = false;
+                triggerError('Failed to send download URL request: ${e}');
+            }
+        }
+        
+        // Start the chain
+        processUrl();
+    }
+    
+    /**
+     * Threaded version of startDownload
+     */
+    private function startDownloadThreaded():Void {
+        if (!_followingRedirects) return; // Another download already started
+        
+        // Mark as no longer following redirects to avoid multiple downloads
+        _followingRedirects = false;
+        
+        // Set the download URL and start the download
+        _downloadUrl = _finalRedirectUrl;
+        
+        // We need to return to the main thread for URLStream operations
+        // The error "Call run() only from the main thread" indicates URLStream must be used on main thread
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Post message to main thread to start download
+        _communicator.postThreadMessage("start_download", {
+            url: _downloadUrl,
+            tempFilePath: _tempFilePath,
+            file: _currentFile
+        });
+        
+        // Set up listener on main thread if not already done
+        _setupMainThreadDownloadListener();
+    }
+    
+    /**
+     * Set up listener for download operations on the main thread
+     */
+    private var _mainThreadDownloadListenerAdded:Bool = false;
+    private function _setupMainThreadDownloadListener():Void {
+        if (_mainThreadDownloadListenerAdded) return;
+        
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Add listener for download start messages - runs on main thread
+        _communicator.addEventListener("start_download", function(e:ThreadMessageEvent) {
+            var data = e.messageData;
+            if (data != null && data.url != null) {
+                // Store values from message
+                _downloadUrl = data.url;
+                if (data.tempFilePath != null) {
+                    _tempFilePath = data.tempFilePath;
+                }
+                
+                Logger.debug('HCLDownloader: Starting download on main thread from: ${_downloadUrl}');
+                
+                // Call the main thread download method which uses URLStream
+                // This now runs on the main thread
+                downloadFileMainThread();
+            }
+        });
+        
+        _mainThreadDownloadListenerAdded = true;
+    }
+    
+    // Thread and mutex for general thread synchronization
+    private var _mutex:Mutex;
+    private var _progressMutex:Mutex;
+    private var _thread:Thread;
+    
+    // Thread and mutex for file access during verification
+    private var _verificationMutex:Mutex;
+    private var _verificationThread:Thread;
+    
+    // Thread communicator for message passing between threads
+    private var _communicator:ThreadCommunicator;
+    
+    // Event listener flags to avoid duplicate listeners
+    private var _tokenUpdateListenerAdded:Bool = false;
+    private var _progressUpdateListenerAdded:Bool = false;
+    
+    /**
+     * Set up token update listener (one time setup)
+     */
+    private function _setupTokenUpdateListener():Void {
+        if (_tokenUpdateListenerAdded) return;
+        
+        // Get communicator instance
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Add listener for token update messages
+        _communicator.addEventListener("token_update", function(e:ThreadMessageEvent) {
+            var data = e.messageData;
+            if (data != null && data.tokenName != null && data.newToken != null) {
+                updateHCLToken(data.tokenName, data.newToken);
+                Logger.info('HCLDownloader: Updated rotated refresh token in secrets (from thread message)');
+            }
+        });
+        
+        _tokenUpdateListenerAdded = true;
+    }
+    
+    /**
+     * Set up access token update listener (one time setup)
+     * This handles updating both refresh and access tokens together
+     */
+    private var _accessTokenUpdateListenerAdded:Bool = false;
+    private function _setupAccessTokenUpdateListener():Void {
+        if (_accessTokenUpdateListenerAdded) return;
+        
+        // Get communicator instance
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Add listener for token update messages that include access token
+        _communicator.addEventListener("token_update_with_access", function(e:ThreadMessageEvent) {
+            var data = e.messageData;
+            if (data != null && data.tokenName != null && data.newToken != null && data.accessToken != null) {
+                // Update both refresh token and access token together
+                updateHCLToken(data.tokenName, data.newToken, data.accessToken);
+                Logger.info('HCLDownloader: Updated both refresh token and access token in secrets (from thread message)');
+            }
+        });
+        
+        _accessTokenUpdateListenerAdded = true;
+    }
+    
+    /**
+     * Set up progress update listener (one time setup)
+     */
+    private function _setupProgressUpdateListener():Void {
+        if (_progressUpdateListenerAdded) return;
+        
+        // Get communicator instance
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Add listener for progress update messages
+        _communicator.addEventListener("download_progress", function(e:ThreadMessageEvent) {
+            var data = e.messageData;
+            if (data != null && data.file != null && data.progress != null) {
+                Logger.debug('HCLDownloader: Download progress (from thread): ${Math.round(data.progress * 100)}% (${data.bytesLoaded}/${data.bytesTotal} bytes)');
+                for (f in _onDownloadProgress) f(this, data.file, data.progress);
+            }
+        });
+        
+        _progressUpdateListenerAdded = true;
+    }
+    
+    /**
+     * Threaded version of downloadFile
+     */
+    private function downloadFileThreaded():Void {
+        throw new Error("This function should never be called directly - should only be dispatched via main thread");
+    }
+    
+    /**
+     * Main thread download method - called via thread message
+     */
+    private function downloadFileMainThread():Void {
+        // Update current step
+        _currentStep = HCLDownloadStep.Downloading;
+        
+        // Create URL request for file download
+        var downloadRequest = new URLRequest(_downloadUrl);
+        downloadRequest.requestHeaders = [
+            new URLRequestHeader("Authorization", "Bearer " + _accessToken),
+            new URLRequestHeader("User-Agent", "curl/7.68.0") // Match curl's user agent
+        ];
+        
+        try {
+            // Create and open file output for writing
+            try {
+                Logger.debug('HCLDownloader: Opening output file (threaded): ${_tempFilePath}');
+                _fileOutput = sys.io.File.write(_tempFilePath, true);
+            } catch (e:Dynamic) {
+                triggerError('Failed to open output file: ${e}');
+                return;
+            }
+            
+            // Create URLStream for efficient streaming
+            _urlStream = new URLStream();
+            
+            // Set up event listeners
+            _urlStream.addEventListener(Event.OPEN, function(e:Event):Void {
+                Logger.debug('HCLDownloader: Download connection opened (threaded)');
+            });
+            
+            _urlStream.addEventListener(ProgressEvent.PROGRESS, function(e:ProgressEvent):Void {
+                // Thread-safe update of progress data
+                _progressMutex.acquire();
+                
+                // Store total bytes for the download
+                _downloadBytesTotal = Std.int(e.bytesTotal);
+                
+                // Calculate progress percentage
+                var progress:Float = 0;
+                if (e.bytesTotal > 0) {
+                    progress = e.bytesLoaded / e.bytesTotal;
+                }
+                _progressMutex.release();
+                
+                // Post progress event to UI thread using our thread communication system
+                if (_communicator != null) {
+                    _communicator.postThreadMessage("download_progress", {
+                        bytesLoaded: e.bytesLoaded,
+                        bytesTotal: e.bytesTotal,
+                        progress: progress,
+                        file: _currentFile
+                    });
+                }
+                
+                // Setup listener for progress updates if not already done
+                _setupProgressUpdateListener();
+                
+                // Process available bytes in the stream
+                processAvailableBytes();
+            });
+            
+            _urlStream.addEventListener(Event.COMPLETE, function(e:Event):Void {
+                Logger.info('HCLDownloader: Download stream complete (threaded)');
+                
+                // Update step to writing file now that download is complete
+                updateStep(HCLDownloadStep.WritingFile);
+                
+                // Process any remaining bytes in the stream
+                processAvailableBytes();
+                
+                // Close the output file
+                try {
+                    if (_fileOutput != null) {
+                        _fileOutput.close();
+                        _fileOutput = null;
+                    }
+                } catch (e:Dynamic) {
+                    Logger.error('HCLDownloader: Error closing output file (threaded): ${e}');
+                }
+                
+                // Clean up stream
+                cleanupUrlStream();
+                
+                // Need to ensure the file is fully written before verification
+                // Add a small delay to allow file system operations to complete
+                Logger.debug('HCLDownloader: File downloaded, ensuring file handle is properly closed before verification');
+                
+                // Use a timer to create a short delay before verification
+                // This helps avoid race conditions with file handles
+                var verificationTimer = new haxe.Timer(500); // 500ms delay
+                verificationTimer.run = function() {
+                    verificationTimer.stop();
+                    verificationTimer = null;
+                    
+                    // Now verify the downloaded file - this will move to the next step
+                    verifyFileHashThreaded();
+                };
+            });
+            
+            _urlStream.addEventListener(IOErrorEvent.IO_ERROR, function(e:IOErrorEvent):Void {
+                Logger.error('HCLDownloader: Download error (threaded): ${e.text}, ID: ${e.errorID}');
+                
+                // Log all error fields for maximum diagnostic information
+                var errorDetails = "";
+                for (field in Reflect.fields(e)) {
+                    try {
+                        var value = Reflect.field(e, field);
+                        if (value != null && field != "target") {
+                            errorDetails += field + ": " + value + ", ";
+                        }
+                    } catch (_) {}
+                }
+                
+                if (errorDetails.length > 0) {
+                    Logger.error('HCLDownloader: Error details (threaded): ${errorDetails}');
+                }
+                
+                // Close the output file
+                try {
+                    if (_fileOutput != null) {
+                        _fileOutput.close();
+                        _fileOutput = null;
+                    }
+                } catch (e:Dynamic) {
+                    Logger.error('HCLDownloader: Error closing output file (threaded): ${e}');
+                }
+                
+                cleanupUrlStream();
+                triggerError('Failed to download file: ${e.text}');
+            });
+            
+            // Start the download
+            Logger.debug('HCLDownloader: Starting file download from (threaded) ${_downloadUrl}');
+            _urlStream.load(downloadRequest);
+            
+        } catch (e:Dynamic) {
+            // Close the output file if needed
+            try {
+                if (_fileOutput != null) {
+                    _fileOutput.close();
+                    _fileOutput = null;
+                }
+            } catch (_) {}
+            
+            cleanupUrlStream();
+            triggerError('Failed to start file download: ${e}');
+        }
     }
 
     /**
@@ -1698,39 +2506,123 @@ class HCLDownloader {
     }
 
     /**
-     * Step 4: Verify the file hash
+     * Step 4: Verify the file hash in a thread
+     * This is a threaded implementation that runs verification in a separate thread
      */
-    private function verifyFileHash():Void {
-        // Update current step
-        _currentStep = HCLDownloadStep.VerifyingHash;
+    private function verifyFileHashThreaded():Void {
+        // Safety check - this can happen during multiple async operations
+        if (_currentFile == null) {
+            Logger.error('HCLDownloader: Cannot verify file hash - current file is null');
+            cleanupTempFiles();
+            return;
+        }
         
-        Logger.info('HCLDownloader: Verifying file hash');
+        if (_tempFilePath == null || !FileSystem.exists(_tempFilePath)) {
+            Logger.error('HCLDownloader: Cannot verify file hash - temp file does not exist: ${_tempFilePath}');
+            cleanupTempFiles();
+            return;
+        }
+        
+        // Update current step with clear message about verification
+        updateStep(HCLDownloadStep.VerifyingHash);
+        
+        Logger.info('HCLDownloader: Starting SHA256 verification (threaded)');
+        
+        // Post progress event with verification status
+        if (_communicator != null) {
+            _communicator.postThreadMessage("verification_progress", {
+                file: _currentFile,
+                message: "Starting SHA256 verification...",
+                progress: 0.0
+            });
+        }
+        
+        // Get communicator instance if needed
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Set up listener for verification progress if not already done
+        _setupVerificationListener();
         
         try {
             // Check if we have a SHA256 hash for verification
             if (_currentFile.sha256 != null) {
-                Logger.info('HCLDownloader: Verifying with SHA256 hash');
+                Logger.info('HCLDownloader: Verifying with SHA256 hash (threaded)');
                 
-                // Calculate SHA256 hash asynchronously (this is the only method available)
-                SuperHumanHashes.calculateSHA256Async(_tempFilePath, function(calculatedSha256:String) {
-                    if (calculatedSha256 != null) {
-                        calculatedSha256 = calculatedSha256.toLowerCase();
-                        var expectedSha256 = _currentFile.sha256.toLowerCase();
-                        
-                        if (calculatedSha256 != expectedSha256) {
-                            triggerError('SHA256 hash verification failed. Expected: ${expectedSha256}, Got: ${calculatedSha256}');
-                            cleanupTempFiles();
-                            return;
+                // Post progress update
+                _communicator.postThreadMessage("verification_progress", {
+                    file: _currentFile,
+                    message: "Calculating file checksum...",
+                    progress: 0.2
+                });
+                
+                // Store file reference locally to prevent null reference if cleanup occurs elsewhere
+                var fileRef = _currentFile;
+                var tempPathRef = _tempFilePath;
+                
+                // Calculate SHA256 hash asynchronously
+                SuperHumanHashes.calculateSHA256Async(tempPathRef, function(calculatedSha256:String) {
+                    // Safe null checks for all variables
+                    if (calculatedSha256 == null || fileRef == null) {
+                        Logger.error('SHA256 verification failed: calculatedSha256=${calculatedSha256 != null}, fileRef=${fileRef != null}');
+                        // Post verification failure if possible
+                        if (_communicator != null) {
+                            _communicator.postThreadMessage("verification_failed", {
+                                message: 'SHA256 verification failed: null reference'
+                            });
                         }
-                        
-                        Logger.info('SHA256 hash verification successful: ${calculatedSha256}');
-                        finalizeDownload();
-                    } else {
-                        Logger.warning('Failed to calculate SHA256 hash');
-                        // If we couldn't calculate the hash, don't proceed to verification
+                        // Clean up if possible
                         cleanupTempFiles();
-                        triggerError('Could not calculate SHA256 hash for verification');
+                        return;
                     }
+                    
+                    calculatedSha256 = calculatedSha256.toLowerCase();
+                    
+                    // Safely handle the case where sha256 might be null
+                    if (fileRef.sha256 == null) {
+                        Logger.error('SHA256 verification failed: no expected hash value in file reference');
+                        if (_communicator != null) {
+                            _communicator.postThreadMessage("verification_failed", {
+                                message: 'SHA256 verification failed: no expected hash value'
+                            });
+                        }
+                        cleanupTempFiles();
+                        return;
+                    }
+                    
+                    var expectedSha256 = fileRef.sha256.toLowerCase();
+                    
+                    // Post progress update for hash comparison
+                    _communicator.postThreadMessage("verification_progress", {
+                        file: _currentFile,
+                        message: "Comparing file checksum...",
+                        progress: 0.8
+                    });
+                    
+                    if (calculatedSha256 != expectedSha256) {
+                        Logger.error('SHA256 hash verification failed. Expected: ${expectedSha256}, Got: ${calculatedSha256}');
+                        
+                        // Post verification failure
+                        _communicator.postThreadMessage("verification_failed", {
+                            file: _currentFile,
+                            message: 'SHA256 hash verification failed. Expected: ${expectedSha256}, Got: ${calculatedSha256}'
+                        });
+                        
+                        triggerError('SHA256 hash verification failed. Expected: ${expectedSha256}, Got: ${calculatedSha256}');
+                        cleanupTempFiles();
+                        return;
+                    }
+                    
+                    // Post progress update for successful verification
+                    _communicator.postThreadMessage("verification_progress", {
+                        file: _currentFile,
+                        message: "SHA256 verification successful!",
+                        progress: 1.0
+                    });
+                    
+                    Logger.info('SHA256 hash verification successful (threaded): ${calculatedSha256}');
+                    finalizeDownload();
                 });
                 
                 // Don't proceed further here - wait for the async callback
@@ -1739,24 +2631,93 @@ class HCLDownloader {
             
             // If we got here, we don't have a SHA256 hash to verify against
             // This typically happens when using file IDs instead of hashes
-            Logger.warning('HCLDownloader: Skipping hash verification - no SHA256 hash available. Using file ID stored in hash field');
+            Logger.warning('HCLDownloader: Skipping hash verification - no SHA256 hash available (threaded)');
+            
+            // Post message about skipping verification
+            _communicator.postThreadMessage("verification_progress", {
+                file: _currentFile,
+                message: "Skipping hash verification (no SHA256 hash available)",
+                progress: 1.0
+            });
+            
             finalizeDownload();
             
         } catch (e:Dynamic) {
+            Logger.error('Exception during hash verification (threaded): ${e}');
+            
+            // Post verification failure
+            _communicator.postThreadMessage("verification_failed", {
+                file: _currentFile,
+                message: 'Exception during hash verification: ${e}'
+            });
+            
             triggerError('Exception during hash verification: ${e}');
             cleanupTempFiles();
         }
+    }
+    
+    /**
+     * Set up verification listener (one time setup)
+     */
+    private var _verificationListenerAdded:Bool = false;
+    private function _setupVerificationListener():Void {
+        if (_verificationListenerAdded) return;
+        
+        // Get communicator instance
+        if (_communicator == null) {
+            _communicator = ThreadCommunicator.getInstance();
+        }
+        
+        // Add listener for verification progress messages
+        _communicator.addEventListener("verification_progress", function(e:ThreadMessageEvent) {
+            var data = e.messageData;
+            if (data != null && data.file != null) {
+                Logger.debug('HCLDownloader: Verification progress: ${data.message}');
+                // Update the UI with the verification progress
+                updateStep(HCLDownloadStep.VerifyingHash, data.progress);
+            }
+        });
+        
+        // Add listener for verification failure messages
+        _communicator.addEventListener("verification_failed", function(e:ThreadMessageEvent) {
+            var data = e.messageData;
+            if (data != null && data.message != null) {
+                Logger.error('HCLDownloader: Verification failed: ${data.message}');
+            }
+        });
+        
+        _verificationListenerAdded = true;
+    }
+    
+    /**
+     * Legacy method for compatibility
+     */
+    private function verifyFileHash():Void {
+        // Just delegate to the threaded implementation
+        verifyFileHashThreaded();
     }
 
     /**
      * Final step: Move file to cache
      */
     private function finalizeDownload():Void {
+        // Null safety check - this can happen during multiple async operations completing
+        if (_currentFile == null) {
+            Logger.error('HCLDownloader: Cannot finalize download - current file is null');
+            cleanupTempFiles();
+            return;
+        }
+        
         // Update current step
         updateStep(HCLDownloadStep.MovingFile);
         
         // Get target path from file cache
         var targetPath = _currentFile.path;
+        if (targetPath == null) {
+            Logger.error('HCLDownloader: Cannot finalize download - target path is null');
+            cleanupTempFiles();
+            return;
+        }
         
         // Ensure target directory exists
         var targetDir = haxe.io.Path.directory(targetPath);
@@ -1770,17 +2731,23 @@ class HCLDownloader {
             }
         }
         
-        // Move temp file to target path (matching domdownload.sh approach of renaming verified file)
-        try {
-            if (FileSystem.exists(targetPath)) {
-                FileSystem.deleteFile(targetPath);
+        // Check if we need to move the file (we don't if _tempFilePath is already the target path)
+        if (_tempFilePath != targetPath) {
+            // Move temp file to target path (matching domdownload.sh approach of renaming verified file)
+            try {
+                if (FileSystem.exists(targetPath)) {
+                    FileSystem.deleteFile(targetPath);
+                }
+                FileSystem.rename(_tempFilePath, targetPath);
+                Logger.info('HCLDownloader: Moved downloaded file from temp to: ${targetPath}');
+            } catch (e:Dynamic) {
+                triggerError('Failed to move downloaded file to cache: ${e}');
+                cleanupTempFiles();
+                return;
             }
-            FileSystem.rename(_tempFilePath, targetPath);
-            Logger.info('HCLDownloader: Moved downloaded file from temp to: ${targetPath}');
-        } catch (e:Dynamic) {
-            triggerError('Failed to move downloaded file to cache: ${e}');
-            cleanupTempFiles();
-            return;
+        } else {
+            // File was already downloaded to the target path - no move needed
+            Logger.info('HCLDownloader: File already at target path, no move needed: ${targetPath}');
         }
         
         // Update file exists flag
@@ -1875,13 +2842,25 @@ class HCLDownloader {
         // Check for specific error conditions and provide helpful messages
         var enhancedMessage = message;
         
-        // Check for 403 errors and add EULA warning
+        // Check for 403 errors and add appropriate context depending on which stage we're in
         if (message.toLowerCase().indexOf("403") >= 0 || 
             message.toLowerCase().indexOf("forbidden") >= 0 ||
             message.toLowerCase().indexOf("not authorized") >= 0) {
             
-            enhancedMessage = message + "\n\nYou may need to accept the EULA in the HCL Software Portal." +
-                              "\nPlease visit: https://my.hcltechsw.com/ and log in to accept the license agreement.";
+            // Differentiate between token errors and download errors
+            if (_currentStep == HCLDownloadStep.GettingAccessToken || 
+                _currentStep == HCLDownloadStep.SendingTokenRequest || 
+                _currentStep == HCLDownloadStep.ReceivedTokenResponse || 
+                _currentStep == HCLDownloadStep.ParsingTokenJSON) {
+                
+                // Authentication-related 403 error
+                enhancedMessage = message + "\n\nAPI key has likely expired." +
+                                 "\nPlease generate a new API key at https://my.hcltechsw.com/";
+            } else {
+                // Download-related 403 error - likely EULA issue
+                enhancedMessage = message + "\n\nYou may need to accept the EULA in the HCL Software Portal." +
+                                 "\nPlease visit: https://my.hcltechsw.com/ and log in to accept the license agreement.";
+            }
         }
         
         Logger.error('HCLDownloader: ${enhancedMessage}');

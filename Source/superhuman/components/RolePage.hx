@@ -1018,10 +1018,14 @@ class RolePickerItem extends LayoutGroup {
         // Show/hide all file selection buttons based on role being enabled
         _allFilesGroup.includeInLayout = _allFilesGroup.visible = _roleImpl.role.enabled;
         
-        // Show/hide each selection button based on settings
+        // Check if an installer is selected for this role
+        var installerSelected = _roleImpl.role.files.installer != null;
+        
+        // Show/hide each selection button based on settings and installer selection
         _installerSelectButton.includeInLayout = _installerSelectButton.visible = showInstaller;
-        _fixpackSelectButton.includeInLayout = _fixpackSelectButton.visible = showFixpack;
-        _hotfixSelectButton.includeInLayout = _hotfixSelectButton.visible = showHotfix;
+        // Only show fixpack and hotfix buttons if an installer is selected for this role
+        _fixpackSelectButton.includeInLayout = _fixpackSelectButton.visible = showFixpack && installerSelected;
+        _hotfixSelectButton.includeInLayout = _hotfixSelectButton.visible = showHotfix && installerSelected;
         
         // All buttons should be enabled if the role is enabled and not disabled by dependency
         var buttonsEnabled = _roleImpl.role.enabled && !isDisabledByDependency;
