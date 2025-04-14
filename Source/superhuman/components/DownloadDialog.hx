@@ -78,9 +78,21 @@ class DownloadDialog {
     private var _cancelButton:GenesisFormButton;
     private var _secretsButton:GenesisFormButton;
     
+    // Progress indicator components
+    private var _progressGroup:LayoutGroup;
+    private var _progressBar:genesis.application.components.ProgressBar;
+    private var _progressLabel:Label;
+    private var _statusLabel:Label;
+    
     // Token data
     private var _hclTokens:Array<{name:String, key:String}>;
     private var _customResources:Array<{name:String, url:String}>;
+    
+    // Downloader instance
+    private var _downloader:HCLDownloader;
+    
+    // Download in progress
+    private var _downloadInProgress:Bool = false;
     
     // Callback for when dialog is closed
     private var _callback:(state:{index:Int, ?userData:Dynamic}) -> Void;
@@ -124,9 +136,12 @@ class DownloadDialog {
         _callback = callback;
         _parentSprite = parentSprite;
         
+        // Get downloader instance
+        _downloader = HCLDownloader.getInstance();
+        
         // Get available tokens
-        _hclTokens = HCLDownloader.getInstance().getAvailableHCLTokens();
-        _customResources = HCLDownloader.getInstance().getAvailableCustomResources();
+        _hclTokens = _downloader.getAvailableHCLTokens();
+        _customResources = _downloader.getAvailableCustomResources();
         
         // Create the alert dialog
         _alert = createDialog(title);
@@ -193,6 +208,14 @@ class DownloadDialog {
         
         _content.addChild(fileInfoGroup);
         
+        // Add SHA256 hash if available
+        if (_file.sha256 != null) {
+            var shaHashLabel = new Label("SHA256: " + _file.sha256);
+            shaHashLabel.wordWrap = true;
+            shaHashLabel.layoutData = new VerticalLayoutData(100);
+            fileInfoGroup.addChild(shaHashLabel);
+        }
+        
         // Add separator
         var separator = new HLine();
         separator.alpha = 0.3;
@@ -215,7 +238,7 @@ class DownloadDialog {
             sourceLabel.layoutData = new VerticalLayoutData(100);
             _content.addChild(sourceLabel);
             
-            // Create toggle container with horizontal layout
+            // Create toggle container with horizontal layout similar to FileSyncSetting
             var toggleContainer = new LayoutGroup();
             var toggleLayout = new HorizontalLayout();
             toggleLayout.gap = GenesisApplicationTheme.GRID * 2;
@@ -232,10 +255,21 @@ class DownloadDialog {
             }
             toggleContainer.addChild(hclLabel);
             
-            // Create the toggle checkbox with empty text
+            // Create checkbox toggle with empty text
             _hclSourceCheck = new GenesisFormCheckBox("");
-            _hclSourceCheck.enabled = hasHCLTokens || hasCustomResources; // Enable if either is available
-            _hclSourceCheck.selected = hasHCLTokens; // Default to HCL if available
+            
+            // Logic for checkbox state:
+            // - Unchecked = HCL Download Portal (false)
+            // - Checked = Custom Resource URL (true)
+            
+            // Enable the toggle only if both source types are available
+            _hclSourceCheck.enabled = (hasHCLTokens && hasCustomResources);
+            
+            // Default selection logic:
+            // - False (unchecked) = HCL Download Portal
+            // - True (checked) = Custom Resource URL
+            _hclSourceCheck.selected = !hasHCLTokens && hasCustomResources;
+            
             _hclSourceCheck.addEventListener(TriggerEvent.TRIGGER, onSourceChanged);
             toggleContainer.addChild(_hclSourceCheck);
             
@@ -252,7 +286,7 @@ class DownloadDialog {
             _customSourceCheck = new Check();
             _customSourceCheck.visible = false;
             _customSourceCheck.includeInLayout = false;
-            _customSourceCheck.selected = !hasHCLTokens && hasCustomResources;
+            _customSourceCheck.selected = !_hclSourceCheck.selected;
             
             _sourceGroup.addChild(toggleContainer);
             
@@ -277,6 +311,33 @@ class DownloadDialog {
             noTokensLabel.layoutData = new VerticalLayoutData(100);
             _content.addChild(noTokensLabel);
         }
+        
+        // Create progress indicator (initially hidden)
+        _progressGroup = new LayoutGroup();
+        _progressGroup.layoutData = new VerticalLayoutData(100);
+        _progressGroup.visible = _progressGroup.includeInLayout = false;
+        
+        var progressLayout = new VerticalLayout();
+        progressLayout.gap = GenesisApplicationTheme.GRID;
+        progressLayout.horizontalAlign = HorizontalAlign.CENTER;
+        _progressGroup.layout = progressLayout;
+        
+        // Status label
+        _statusLabel = new Label("Preparing download...");
+        _statusLabel.wordWrap = true;
+        _statusLabel.layoutData = new VerticalLayoutData(100);
+        _progressGroup.addChild(_statusLabel);
+        
+        // Progress bar
+        _progressBar = new genesis.application.components.ProgressBar();
+        _progressBar.width = dialogWidth * 0.8;
+        _progressGroup.addChild(_progressBar);
+        
+        // Progress label
+        _progressLabel = new Label("0%");
+        _progressGroup.addChild(_progressLabel);
+        
+        _content.addChild(_progressGroup);
         
         // Create button container centered at the bottom
         var buttonGroup = new LayoutGroup();
@@ -341,8 +402,12 @@ class DownloadDialog {
         // Clear existing items
         var items = new ArrayCollection<String>();
         
-        if (_hclSourceCheck.selected) {
-            // Use HCL tokens
+        // IMPORTANT: Toggle behavior is:
+        // - Unchecked/false = HCL Download Portal
+        // - Checked/true = Custom Resource URL
+        
+        if (!_hclSourceCheck.selected) {
+            // Use HCL tokens when checkbox is UNCHECKED
             if (_hclTokens != null) {
                 for (token in _hclTokens) {
                     if (token != null && token.name != null) {
@@ -351,7 +416,7 @@ class DownloadDialog {
                 }
             }
         } else {
-            // Use custom resources
+            // Use custom resources when checkbox is CHECKED
             if (_customResources != null) {
                 for (resource in _customResources) {
                     if (resource != null && resource.name != null) {
@@ -385,9 +450,15 @@ class DownloadDialog {
             return;
         }
         
-        if (_hclSourceCheck.selected) {
+        // IMPORTANT: Toggle behavior is:
+        // - Unchecked/false = HCL Download Portal
+        // - Checked/true = Custom Resource URL
+        
+        if (!_hclSourceCheck.selected) {
+            // HCL tokens (when checkbox is UNCHECKED)
             hasTokens = _hclTokens != null && _hclTokens.length > 0;
         } else {
+            // Custom resources (when checkbox is CHECKED)
             hasTokens = _customResources != null && _customResources.length > 0;
         }
         
@@ -418,13 +489,154 @@ class DownloadDialog {
      * Handle download button click
      */
     private function onDownloadClicked(e:TriggerEvent):Void {
-        closeDialog(RESULT_DOWNLOAD);
+        // Get the selected token name and source type
+        var tokenName = getSelectedTokenName();
+        var isHCLSource = isHCLSourceSelected();
+        
+        if (tokenName == null || tokenName.length == 0) {
+            Logger.error("No token selected for download");
+            return;
+        }
+        
+        // Show progress UI and hide selection controls
+        showProgressUI();
+        
+        // Set up event listeners for download progress
+        _downloader.onDownloadStart.add(onDownloadStart);
+        _downloader.onDownloadProgress.add(onDownloadProgress);
+        _downloader.onDownloadComplete.add(onDownloadComplete);
+        _downloader.onDownloadError.add(onDownloadError);
+        
+        // Set download in progress flag
+        _downloadInProgress = true;
+        
+        // Start the download with appropriate method
+        if (isHCLSource) {
+            _statusLabel.text = "Getting access token from HCL Portal...";
+            _downloader.downloadFileWithHCLToken(_file, tokenName);
+        } else {
+            _statusLabel.text = "Downloading from custom resource...";
+            _downloader.downloadFileWithCustomResource(_file, tokenName);
+        }
+    }
+    
+    /**
+     * Show progress UI, hide other controls
+     */
+    private function showProgressUI():Void {
+        // Hide source selection and token controls
+        if (_sourceGroup != null) {
+            _sourceGroup.visible = _sourceGroup.includeInLayout = false;
+        }
+        
+        // Hide token dropdown row if present
+        for (i in 0..._content.numChildren) {
+            var child = _content.getChildAt(i);
+            if (Std.is(child, GenesisFormRow)) {
+                child.visible = false;
+                // Cast to GenesisFormRow to access includeInLayout
+                var formRow:GenesisFormRow = cast(child, GenesisFormRow);
+                formRow.includeInLayout = false;
+            }
+        }
+        
+        // Show progress UI
+        _progressGroup.visible = _progressGroup.includeInLayout = true;
+        
+        // Disable buttons during download
+        _downloadButton.enabled = false;
+        _cancelButton.enabled = true;
+        
+        if (_secretsButton != null) {
+            _secretsButton.visible = _secretsButton.includeInLayout = false;
+        }
+    }
+    
+    /**
+     * Handle download start event
+     */
+    private function onDownloadStart(downloader:HCLDownloader, file:SuperHumanCachedFile):Void {
+        _statusLabel.text = "Download started: " + file.originalFilename;
+        _progressBar.percentage = 0;
+        _progressLabel.text = "0%";
+    }
+    
+    /**
+     * Handle download progress event
+     */
+    private function onDownloadProgress(downloader:HCLDownloader, file:SuperHumanCachedFile, progress:Float):Void {
+        // Update progress bar and label
+        _progressBar.percentage = progress;
+        _progressLabel.text = Math.round(progress * 100) + "%";
+        
+        // Update status text
+        if (progress > 0) {
+            _statusLabel.text = "Downloading " + file.originalFilename + "...";
+        }
+    }
+    
+    /**
+     * Handle download complete event
+     */
+    private function onDownloadComplete(downloader:HCLDownloader, file:SuperHumanCachedFile, success:Bool):Void {
+        // Remove event listeners
+        cleanupDownloadListeners();
+        
+        if (success) {
+            _statusLabel.text = "Download completed successfully!";
+            _progressBar.percentage = 1.0;
+            _progressLabel.text = "100%";
+            
+            // Close dialog after a short delay
+            haxe.Timer.delay(function() {
+                closeDialog(RESULT_DOWNLOAD);
+            }, 1000);
+        } else {
+            _statusLabel.text = "Download failed.";
+            
+            // Re-enable download button
+            _downloadButton.enabled = true;
+        }
+        
+        _downloadInProgress = false;
+    }
+    
+    /**
+     * Handle download error event
+     */
+    private function onDownloadError(downloader:HCLDownloader, file:SuperHumanCachedFile, error:String):Void {
+        // Remove event listeners
+        cleanupDownloadListeners();
+        
+        // Show error message
+        _statusLabel.text = "Error: " + error;
+        _progressBar.percentage = 0;
+        
+        // Re-enable download button but keep progress UI visible
+        _downloadButton.enabled = true;
+        _downloadInProgress = false;
+    }
+    
+    /**
+     * Clean up download event listeners
+     */
+    private function cleanupDownloadListeners():Void {
+        _downloader.onDownloadStart.remove(onDownloadStart);
+        _downloader.onDownloadProgress.remove(onDownloadProgress);
+        _downloader.onDownloadComplete.remove(onDownloadComplete);
+        _downloader.onDownloadError.remove(onDownloadError);
     }
     
     /**
      * Handle cancel button click
      */
     private function onCancelClicked(e:TriggerEvent):Void {
+        // If download is in progress, confirm before canceling
+        if (_downloadInProgress) {
+            // Just close for now - we don't have a way to cancel downloads in progress yet
+            cleanupDownloadListeners();
+        }
+        
         closeDialog(RESULT_CANCEL);
     }
     
@@ -439,6 +651,11 @@ class DownloadDialog {
      * Close the dialog with a result
      */
     private function closeDialog(result:Int):Void {
+        // Clean up any event listeners
+        if (_downloadInProgress) {
+            cleanupDownloadListeners();
+        }
+        
         // Close the alert using PopUpManager
         try {
             PopUpManager.removePopUp(_alert);
@@ -482,6 +699,11 @@ class DownloadDialog {
     public function isHCLSourceSelected():Bool {
         // Default to true if UI isn't initialized yet (prefer HCL download)
         if (_hclSourceCheck == null) return true;
-        return _hclSourceCheck.selected;
+        
+        // IMPORTANT: Toggle behavior is:
+        // - Unchecked/false = HCL Download Portal
+        // - Checked/true = Custom Resource URL
+        // So we return the OPPOSITE of the checkbox state
+        return !_hclSourceCheck.selected;
     }
 }

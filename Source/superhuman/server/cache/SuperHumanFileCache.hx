@@ -450,7 +450,7 @@ class SuperHumanFileCache extends EventDispatcher {
             }
         }
         
-        // Calculate hash with robust error handling
+        // Calculate hash with robust error handling -- we will only want to calcuate the sha256 in the future, with no backwards compat for md5
         var hash:String = null;
         try {
             Logger.info('Calculating MD5 hash for: ${sourceFilePath}');

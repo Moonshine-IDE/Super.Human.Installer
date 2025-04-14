@@ -14,7 +14,7 @@ class SuperHumanHashes
 	 * - Value is a map where:
 	 *   - Key is file type (installers, hotfixes, fixpacks)
 	 *   - Value is an array of hash entries with the following fields:
-	 *     - hash: MD5 hash (for backward compatibility)
+	 *     - hash: MD5 hash (for backward compatibility) -- which we will remove soon as we don't want backwards compatability
 	 *     - sha256: SHA256 hash (more secure)
 	 *     - fileName: Expected file name
 	 *     - version: Version information object

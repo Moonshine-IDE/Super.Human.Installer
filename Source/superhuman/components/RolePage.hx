@@ -1719,6 +1719,7 @@ class RolePickerItem extends LayoutGroup {
                 if (currentDir != null) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
                 
                 // Calculate hash
+                // Soon we will remove all md5 hashing and use only sha256 with no backward compat for md5
                 var fileHash = SuperHumanHashes.calculateMD5(path);
                 
                 if (expectedHash != null && fileHash != expectedHash) {

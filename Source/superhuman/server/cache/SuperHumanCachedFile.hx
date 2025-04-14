@@ -45,7 +45,7 @@ typedef SuperHumanCachedFile = {
     originalFilename: String,
     
     /**
-     * MD5 hash of the file
+     * MD5 hash of the file -- to be removed soon, we don't want backwards compatability
      */
     hash: String,
     
