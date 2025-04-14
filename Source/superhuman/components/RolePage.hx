@@ -78,6 +78,16 @@ import superhuman.theme.SuperHumanInstallerTheme;
 class RolePage extends Page {
 
     final _w:Float = GenesisApplicationTheme.GRID * 140;
+    
+    // Role dependency definitions
+    private static final ROLES_DEPEND_ON_DOMINO:Array<String> = ["verse", "leap"];
+    private static final ROLES_VERSION_DEPENDENT:Array<String> = ["nomadweb", "traveler", "domino-rest-api"];
+    
+    // Domino selection tracking
+    private var _dominoInstallerSelected:Bool = false;
+    private var _dominoInstallerVersion:Dynamic = null;
+    private var _dominoRole:RoleData = null;
+    private var _roleFixpacks:Map<String, Array<String>> = new Map();
 
     var _buttonGroup:LayoutGroup;
     var _buttonGroupLayout:HorizontalLayout;
@@ -189,6 +199,9 @@ class RolePage extends Page {
     override function updateContent( forced:Bool = false ) {
 
         super.updateContent();
+        
+        // Check if Domino installer is selected and update dependency info
+        checkDominoInstaller();
 
         if ( _listGroup != null) {
 
@@ -484,8 +497,29 @@ class RolePage extends Page {
                 if (rolesList.length > 0) {
                     // Add the custom roles to the list
                     for (i in rolesList) {
-                        var item = new RolePickerItem(i, _server);
-                        _listGroup.addChild(item);
+                // Create RolePickerItem with dependency info
+                var isDependentRole = ROLES_DEPEND_ON_DOMINO.indexOf(i.role.value.toLowerCase()) >= 0;
+                var isVersionDependentRole = ROLES_VERSION_DEPENDENT.indexOf(i.role.value.toLowerCase()) >= 0;
+                
+                // Add extra logging for dependency information
+                Logger.info('RolePage: Creating custom role item for ${i.role.value}, isDependentRole=${isDependentRole}, isVersionDependentRole=${isVersionDependentRole}, dominoSelected=${_dominoInstallerSelected}');
+                
+                // Add extra logging for dependency information
+                Logger.info('RolePage: Creating standard role item for ${i.role.value}, isDependentRole=${isDependentRole}, isVersionDependentRole=${isVersionDependentRole}, dominoSelected=${_dominoInstallerSelected}');
+                
+                var item = new RolePickerItem(
+                    i, 
+                    _server, 
+                    isDependentRole,
+                    isVersionDependentRole,
+                    _dominoInstallerSelected,
+                    _dominoInstallerVersion,
+                    _roleFixpacks
+                );
+                
+                // Listen for installer changes to update dependencies
+                item.addEventListener(Event.CHANGE, onRoleItemChanged);
+                _listGroup.addChild(item);
                         
                         var line = new HLine();
                         line.layoutData = new VerticalLayoutData(100);
@@ -506,12 +540,32 @@ class RolePage extends Page {
                 for (r in _server.roles.value) {
                     if (r.value == impl.role.value) {
                         impl.role = r;
+                        
+                        // Find and store the Domino role for dependency checking
+                        if (r.value.toLowerCase() == "domino") {
+                            _dominoRole = r;
+                        }
                     }
                 }
             }
 
             for (i in coll) {
-                var item = new RolePickerItem(i, _server);
+                // Create RolePickerItem with dependency info
+                var isDependentRole = ROLES_DEPEND_ON_DOMINO.indexOf(i.role.value.toLowerCase()) >= 0;
+                var isVersionDependentRole = ROLES_VERSION_DEPENDENT.indexOf(i.role.value.toLowerCase()) >= 0;
+                
+                var item = new RolePickerItem(
+                    i, 
+                    _server, 
+                    isDependentRole,
+                    isVersionDependentRole,
+                    _dominoInstallerSelected,
+                    _dominoInstallerVersion,
+                    _roleFixpacks
+                );
+                
+                // Listen for installer changes to update dependencies
+                item.addEventListener(Event.CHANGE, onRoleItemChanged);
                 _listGroup.addChild(item);
 
                 var line = new HLine();
@@ -531,6 +585,142 @@ class RolePage extends Page {
         
         // Show a confirmation callout
         TextCallout.show("Opening HCL Domino license page in your browser", _licenseLink);
+    }
+    
+    /**
+     * Check if Domino installer is selected and update dependency info
+     * This is made public so it can be called from child components
+     */
+    public function checkDominoInstaller():Void {
+        _dominoInstallerSelected = false;
+        _dominoInstallerVersion = null;
+        
+        // Find the Domino role
+        Logger.info('RolePage: checkDominoInstaller - _dominoRole is ${_dominoRole != null ? "found" : "null"}');
+        
+        if (_dominoRole != null) {
+            // Check if an installer file is selected
+            var hasInstaller = _dominoRole.files.installer != null;
+            var hasInstallerVersion = _dominoRole.files.installerVersion != null;
+            
+            Logger.info('RolePage: checkDominoInstaller - hasInstaller: ${hasInstaller}, hasInstallerVersion: ${hasInstallerVersion}');
+            
+            if (hasInstaller && hasInstallerVersion) {
+                _dominoInstallerSelected = true;
+                _dominoInstallerVersion = _dominoRole.files.installerVersion;
+                Logger.info('RolePage: Domino installer selected with version: ${_dominoInstallerVersion.fullVersion}');
+                Logger.info('RolePage: Setting _dominoInstallerSelected = true');
+            } else {
+                Logger.info('RolePage: No Domino installer selected, _dominoInstallerSelected = false');
+            }
+        }
+        
+        // Update fixpack tracking
+        updateRoleFixpacks();
+    }
+    
+    /**
+     * Update tracking of selected fixpacks for all roles
+     */
+    private function updateRoleFixpacks():Void {
+        _roleFixpacks = new Map();
+        
+        // Loop through all roles to collect selected fixpacks
+        if (_server != null && _server.roles != null && _server.roles.value != null) {
+            for (roleData in _server.roles.value) {
+                if (roleData.files.fixpacks != null && roleData.files.fixpacks.length > 0) {
+                    // Extract fixpack versions from the file paths or metadata
+                    var fixpackVersions = new Array<String>();
+                    
+                    // If there's a fixpack version in the role data
+                    if (roleData.files.installerFixpackVersion != null) {
+                        var version = roleData.files.installerFixpackVersion;
+                        if (Reflect.hasField(version, "fixPackVersion")) {
+                            fixpackVersions.push(Reflect.field(version, "fixPackVersion"));
+                        }
+                    }
+                    
+                    if (fixpackVersions.length > 0) {
+                        _roleFixpacks.set(roleData.value, fixpackVersions);
+                        Logger.info('RolePage: Role ${roleData.value} has fixpacks: ${fixpackVersions.join(", ")}');
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handle changes to role items - particularly Domino selection
+     */
+    private function onRoleItemChanged(e:Event):Void {
+        var item:RolePickerItem = cast e.currentTarget;
+        
+        // If this is the Domino role, update dependencies
+        if (item.role.value.toLowerCase() == "domino") {
+            Logger.info('RolePage: Domino role selection changed, updating dependencies');
+            
+            // Find and store the Domino role directly from server's role collection
+            _dominoRole = null;
+            for (r in _server.roles.value) {
+                if (r.value.toLowerCase() == "domino") {
+                    _dominoRole = r;
+                    Logger.info('RolePage: Found Domino role: installer=${r.files.installer != null}, version=${r.files.installerVersion != null}');
+                    
+                    // If version is available, log it
+                    if (r.files.installerVersion != null) {
+                        try {
+                            var versionInfo = r.files.installerVersion;
+                            var fullVersionStr = "unknown";
+                            var majorVersionStr = "unknown";
+                            var minorVersionStr = "unknown";
+                            var patchStr = "N/A";
+                            
+                            // Safely access version properties using Reflect
+                            if (Reflect.hasField(versionInfo, "fullVersion")) {
+                                fullVersionStr = Std.string(Reflect.field(versionInfo, "fullVersion"));
+                            }
+                            
+                            if (Reflect.hasField(versionInfo, "majorVersion")) {
+                                majorVersionStr = Std.string(Reflect.field(versionInfo, "majorVersion"));
+                            }
+                            
+                            if (Reflect.hasField(versionInfo, "minorVersion")) {
+                                minorVersionStr = Std.string(Reflect.field(versionInfo, "minorVersion"));
+                            }
+                            
+                            if (Reflect.hasField(versionInfo, "patch")) {
+                                patchStr = Std.string(Reflect.field(versionInfo, "patch"));
+                            }
+                            
+                            Logger.info('RolePage: Domino version: ' + 
+                                'fullVersion=${fullVersionStr}, ' + 
+                                'majorVersion=${majorVersionStr}, ' + 
+                                'minorVersion=${minorVersionStr}, ' + 
+                                'patch=${patchStr}');
+                        } catch (e) {
+                            Logger.error('RolePage: Error accessing version info: ${e}');
+                        }
+                    }
+                    
+                    break;
+                }
+            }
+            
+            // Update Domino installer selection status
+            checkDominoInstaller();
+            
+            Logger.info('RolePage: After checkDominoInstaller, _dominoInstallerSelected=${_dominoInstallerSelected}, version=${_dominoInstallerVersion != null ? _dominoInstallerVersion.fullVersion : "null"}');
+            
+            // Force refresh all roles to apply dependency rules
+            Logger.info('RolePage: Updating all role items to reflect new Domino installer status');
+            updateContent(true);
+        } else if (item.role.value.toLowerCase() == "nomadweb" || 
+                  item.role.value.toLowerCase() == "traveler" || 
+                  item.role.value.toLowerCase() == "domino-rest-api") {
+            // Also refresh content if any version-dependent role changes
+            Logger.info('RolePage: Version-dependent role ${item.role.value} changed, updating content');
+            updateContent(true);
+        }
     }
     
     function _buttonCloseTriggered( e:TriggerEvent ) {
@@ -583,17 +773,36 @@ class RolePickerItem extends LayoutGroup {
     var _installerSelectButton:Button;
     var _fixpackSelectButton:Button;
     var _hotfixSelectButton:Button;
+    
+    // Dependency tracking
+    private var _isDependentRole:Bool = false;
+    private var _isVersionDependentRole:Bool = false;
+    private var _dominoInstallerSelected:Bool = false;
+    private var _dominoInstallerVersion:Dynamic = null;
+    private var _roleFixpacks:Map<String, Array<String>> = null;
+    private var _dependencyWarning:Label;
 
     public var role( get, never ):RoleData;
     function get_role() return _roleImpl.role;
 
-    public function new( roleImpl:ServerRoleImpl, server:Server ) {
-
+    public function new(
+        roleImpl:ServerRoleImpl, 
+        server:Server, 
+        isDependentRole:Bool = false,
+        isVersionDependentRole:Bool = false,
+        dominoInstallerSelected:Bool = false,
+        dominoInstallerVersion:Dynamic = null,
+        roleFixpacks:Map<String, Array<String>> = null
+    ) {
         super();
 
         _roleImpl = roleImpl;
         _server = server;
-
+        _isDependentRole = isDependentRole;
+        _isVersionDependentRole = isVersionDependentRole;
+        _dominoInstallerSelected = dominoInstallerSelected;
+        _dominoInstallerVersion = dominoInstallerVersion;
+        _roleFixpacks = roleFixpacks;
     }
 
     override function initialize() {
@@ -662,6 +871,13 @@ class RolePickerItem extends LayoutGroup {
         _helpImage.alpha = .33;
         _helpImage.toolTip = _roleImpl.description;
         _labelGroup.addChild( _helpImage );
+        
+        // Create dependency warning label (initially hidden)
+        _dependencyWarning = new Label();
+        _dependencyWarning.variant = GenesisApplicationTheme.LABEL_SMALL_CENTERED;
+        _dependencyWarning.wordWrap = true;
+        _dependencyWarning.includeInLayout = _dependencyWarning.visible = false;
+        this.addChild(_dependencyWarning);
 
         var spacer = new LayoutGroup();
         spacer.layoutData = new HorizontalLayoutData( 100 );
@@ -760,6 +976,9 @@ class RolePickerItem extends LayoutGroup {
         _installerGroup.removeChildren();
         _installerGroup.visible = _installerGroup.includeInLayout = false;
         
+        // Check dependency status
+        var isDisabledByDependency = checkDependencyStatus();
+        
         // Populate all dropdowns with cached files
         _populateInstallerDropdown();
         _populateFixpackDropdown();
@@ -804,15 +1023,20 @@ class RolePickerItem extends LayoutGroup {
         _fixpackSelectButton.includeInLayout = _fixpackSelectButton.visible = showFixpack;
         _hotfixSelectButton.includeInLayout = _hotfixSelectButton.visible = showHotfix;
         
-        // All buttons should be enabled if the role is enabled
-        _installerSelectButton.enabled = _roleImpl.role.enabled;
-        _fixpackSelectButton.enabled = _roleImpl.role.enabled;
-        _hotfixSelectButton.enabled = _roleImpl.role.enabled;
+        // All buttons should be enabled if the role is enabled and not disabled by dependency
+        var buttonsEnabled = _roleImpl.role.enabled && !isDisabledByDependency;
+        _installerSelectButton.enabled = buttonsEnabled;
+        _fixpackSelectButton.enabled = buttonsEnabled;
+        _hotfixSelectButton.enabled = buttonsEnabled;
+        
+        // Set alpha for visual indication of disabled status
+        var alphaValue = buttonsEnabled ? 1.0 : 0.5;
+        _allFilesGroup.alpha = alphaValue;
         
         // Also enable the browse buttons used in dialogs
-        _installerButton.enabled = _roleImpl.role.enabled;
-        _fixpackButton.enabled = _roleImpl.role.enabled;
-        _hotfixButton.enabled = _roleImpl.role.enabled;
+        _installerButton.enabled = buttonsEnabled;
+        _fixpackButton.enabled = buttonsEnabled;
+        _hotfixButton.enabled = buttonsEnabled;
         
         // Show installer file if one is selected
         if (_roleImpl.role.files.installer != null) {
@@ -876,17 +1100,110 @@ class RolePickerItem extends LayoutGroup {
 
             default:
                 _roleImpl.role.files.installer = null;
-
+                // If this is the Domino role and the installer was removed, notify parent
+                if (_roleImpl.role.value.toLowerCase() == "domino") {
+                    Logger.info('${this}: Domino installer removed, notifying parent');
+                    // Find the parent RolePage to force an immediate update
+                    var parent = this.parent;
+                    while (parent != null && !Std.isOfType(parent, RolePage)) {
+                        parent = parent.parent;
+                    }
+                    
+                    if (parent != null) {
+                        var rolePage = cast(parent, RolePage);
+                        Logger.info('${this}: Found RolePage parent, forcing content update after file selection');
+                        rolePage.checkDominoInstaller();
+                        rolePage.updateContent(true);
+                    } else {
+                        // As fallback, dispatch change event to notify the parent component
+                        this.dispatchEvent(new Event(Event.CHANGE, true));
+                    }
+                }
         }
 
         updateData();
-
     }
 
     // Single dialog flag to manage all file dialogs
     private var _isFileDialogOpen:Bool = false;
     
+    
     /**
+     * Check dependency status for this role
+     * @return True if the role should be disabled due to dependencies
+     */
+    private function checkDependencyStatus():Bool {
+        // Reset dependency warning
+        _dependencyWarning.includeInLayout = _dependencyWarning.visible = false;
+        
+        // Log current state for debugging
+        Logger.info('${this}: Checking dependency for ${_roleImpl.role.value}: isDependentRole=${_isDependentRole}, dominoSelected=${_dominoInstallerSelected}');
+        
+        // If this is not a dependent role, no restrictions apply
+        if (!_isDependentRole && !_isVersionDependentRole) {
+            return false;
+        }
+        
+        // Check if Domino installer is selected
+        if (!_dominoInstallerSelected) {
+            // For dependent roles, disable if Domino installer is not selected
+            _check.enabled = false;
+            _dependencyWarning.text = "Requires Domino installer to be selected";
+            _dependencyWarning.includeInLayout = _dependencyWarning.visible = true;
+            return true;
+        }
+        
+        // For version-dependent roles, check version compatibility
+        if (_isVersionDependentRole && _dominoInstallerVersion != null) {
+            if (!isCompatibleWithSelectedDomino()) {
+                _check.enabled = false;
+                _dependencyWarning.text = 'Incompatible with selected Domino version ${_dominoInstallerVersion.fullVersion}';
+                _dependencyWarning.includeInLayout = _dependencyWarning.visible = true;
+                return true;
+            }
+        }
+        
+        // Role can be enabled
+        _check.enabled = !_roleImpl.role.isdefault;
+        return false;
+    }
+    
+    /**
+     * Check if this role is compatible with the selected Domino version
+     */
+    private function isCompatibleWithSelectedDomino():Bool {
+        if (_dominoInstallerVersion == null) return false;
+        
+        var roleName = _roleImpl.role.value.toLowerCase();
+        switch (roleName) {
+            case "traveler":
+                // Traveler versions should match Domino major.minor versions
+                if (_dominoInstallerVersion.majorVersion != null && 
+                    _dominoInstallerVersion.minorVersion != null) {
+                    return true; // We'll filter specific files in the dropdown population
+                }
+                return false;
+                
+            case "nomadweb":
+                // Nomad Web uses patch with _R<dominoMajor> suffix
+                if (_dominoInstallerVersion.majorVersion != null) {
+                    return true; // We'll filter specific files in the dropdown population
+                }
+                return false;
+                
+            case "domino-rest-api":
+                // Domino REST API uses patch with _R<dominoMajor> suffix
+                if (_dominoInstallerVersion.majorVersion != null) {
+                    return true; // We'll filter specific files in the dropdown population
+                }
+                return false;
+                
+            default:
+                return true; // Non-version-dependent roles are always compatible
+        }
+    }
+    
+     /**
      * Populate the installer dropdown with cached files
      */
     private function _populateInstallerDropdown() {
@@ -901,6 +1218,16 @@ class RolePickerItem extends LayoutGroup {
         
         // Filter to only include files that actually exist
         var validCachedFiles = _cachedFiles.filter(function(file) return file.exists);
+        
+        // For version-dependent roles, filter based on Domino compatibility
+        if (_isVersionDependentRole && _dominoInstallerSelected && _dominoInstallerVersion != null) {
+            validCachedFiles = filterCompatibleFiles(validCachedFiles);
+            
+            // If filtering removed all files, log this
+            if (validCachedFiles.length == 0 && _cachedFiles.length > 0) {
+                Logger.info('${this}: All cached files filtered out due to Domino version compatibility');
+            }
+        }
         
         // Add a placeholder prompt item if there are no valid cached files
         if (validCachedFiles.length == 0) {
@@ -931,6 +1258,22 @@ class RolePickerItem extends LayoutGroup {
             // Add version in a clear format if available
             if (cachedFile.version != null && cachedFile.version.fullVersion != null) {
                 displayName += ' - v${cachedFile.version.fullVersion}';
+                
+                // Add warning about required fixpack
+                if (Reflect.hasField(cachedFile.version, "fixPackVersion")) {
+                    var requiredFixpack = Reflect.field(cachedFile.version, "fixPackVersion");
+                    var hasRequiredFixpack = false;
+                    
+                    // Check if we have the required fixpack
+                    if (_roleFixpacks != null && _roleFixpacks.exists(_roleImpl.role.value)) {
+                        var installedFixpacks = _roleFixpacks.get(_roleImpl.role.value);
+                        hasRequiredFixpack = installedFixpacks.indexOf(requiredFixpack) >= 0;
+                    }
+                    
+                    if (!hasRequiredFixpack) {
+                        displayName += ' (Requires fixpack ${requiredFixpack})';
+                    }
+                }
             }
             
             dropdownItems.add({
@@ -1020,6 +1363,61 @@ class RolePickerItem extends LayoutGroup {
     }
     
     /**
+    /**
+     * Filter files based on compatibility with selected Domino version
+     */
+    private function filterCompatibleFiles(files:Array<SuperHumanCachedFile>):Array<SuperHumanCachedFile> {
+        if (_dominoInstallerVersion == null) return files;
+        
+        var roleName = _roleImpl.role.value.toLowerCase();
+        return files.filter(function(file) {
+            if (file.version == null) return false;
+            
+            switch (roleName) {
+                case "traveler":
+                    // Match major and minor version with Domino
+                    return Reflect.hasField(file.version, "majorVersion") && 
+                           Reflect.hasField(file.version, "minorVersion") &&
+                           Reflect.field(file.version, "majorVersion") == _dominoInstallerVersion.majorVersion &&
+                           Reflect.field(file.version, "minorVersion") == _dominoInstallerVersion.minorVersion;
+                    
+                case "nomadweb":
+                    // Check for _R<dominoMajor> suffix in patch or fullVersion
+                    var dominoSuffix = '_R${_dominoInstallerVersion.majorVersion}';
+                    
+                    if (Reflect.hasField(file.version, "patch") && 
+                        Reflect.field(file.version, "patch") != null &&
+                        StringTools.contains(Reflect.field(file.version, "patch"), dominoSuffix)) {
+                        return true;
+                    }
+                    
+                    // Sometimes newer versions don't use the suffix
+                    if (Reflect.hasField(file.version, "fullVersion") && 
+                        !StringTools.contains(Reflect.field(file.version, "fullVersion"), "_R")) {
+                        // If no _R suffix, it might be compatible with multiple versions
+                        return true;
+                    }
+                    
+                    return false;
+                    
+                case "domino-rest-api":
+                    // Check for _R<dominoMajor> suffix in patch or fullVersion
+                    var dominoSuffix = '_R${_dominoInstallerVersion.majorVersion}';
+                    
+                    if (Reflect.hasField(file.version, "patch") && 
+                        Reflect.field(file.version, "patch") != null) {
+                        return StringTools.contains(Reflect.field(file.version, "patch"), dominoSuffix);
+                    }
+                    
+                    return false;
+                    
+                default:
+                    return true; // Non-version-dependent roles are always compatible
+            }
+        });
+    }
+    
+    /**
      * Populate the fixpack dropdown with cached files
      */
     private function _populateFixpackDropdown() {
@@ -1034,6 +1432,11 @@ class RolePickerItem extends LayoutGroup {
         
         // Filter to only include files that actually exist
         var validCachedFiles = cachedFixpacks.filter(function(file) return file.exists);
+        
+        // For version-dependent roles, filter based on Domino compatibility
+        if (_isVersionDependentRole && _dominoInstallerSelected && _dominoInstallerVersion != null) {
+            validCachedFiles = filterCompatibleFiles(validCachedFiles);
+        }
         
         // Add a placeholder prompt item if there are no valid cached files
         if (validCachedFiles.length == 0) {
@@ -1149,6 +1552,33 @@ class RolePickerItem extends LayoutGroup {
         
         // Filter to only include files that actually exist
         var validCachedFiles = cachedHotfixes.filter(function(file) return file.exists);
+        
+        // For version-dependent roles, filter based on Domino compatibility
+        if (_isVersionDependentRole && _dominoInstallerSelected && _dominoInstallerVersion != null) {
+            validCachedFiles = filterCompatibleFiles(validCachedFiles);
+        }
+        
+        // Handle hotfixes that require specific fixpacks
+        validCachedFiles = validCachedFiles.filter(function(file) {
+            // If this file doesn't specify a fixpack requirement, it's always compatible
+            if (file.version == null || !Reflect.hasField(file.version, "fixPackVersion")) {
+                return true;
+            }
+            
+            // Get the required fixpack
+            var requiredFixpack = Reflect.field(file.version, "fixPackVersion");
+            Logger.info('${this}: Hotfix requires fixpack: ${requiredFixpack}');
+            
+            // If no fixpacks are installed for this role, user can make an informed choice
+            // We'll just show a warning in the hotfix name or description
+            if (_roleFixpacks == null || !_roleFixpacks.exists(_roleImpl.role.value)) {
+                return true; // Include it but we'll mark it as requiring a fixpack
+            }
+            
+            // Check if the specific fixpack is installed
+            var installedFixpacks = _roleFixpacks.get(_roleImpl.role.value);
+            return installedFixpacks.indexOf(requiredFixpack) >= 0;
+        });
         
         // Add a placeholder prompt item if there are no valid cached files
         if (validCachedFiles.length == 0) {
@@ -1561,6 +1991,40 @@ class RolePickerItem extends LayoutGroup {
                 _roleImpl.role.files.installerHash = hash;
                 _roleImpl.role.files.installerVersion = version;
                 
+                // If this is the Domino role and the installer was selected, notify parent
+                if (_roleImpl.role.value.toLowerCase() == "domino") {
+                    Logger.info('${this}: Domino installer selected, path=${path}, hash=${hash}');
+                    if (version != null) {
+                        try {
+                            Logger.info('${this}: Domino version info: ' + 
+                                'fullVersion=${version.fullVersion}, ' +
+                                'majorVersion=${version.majorVersion}, ' +
+                                'minorVersion=${version.minorVersion}' +
+                                (Reflect.hasField(version, "patch") ? ', patch=' + Reflect.field(version, "patch") : ''));
+                        } catch (e) {
+                            Logger.error('${this}: Error logging version info: ${e}');
+                        }
+                    } else {
+                        Logger.warning('${this}: No version info available for selected Domino installer');
+                    }
+                    
+                    // Find the parent RolePage to force an immediate refresh
+                    var parent = this.parent;
+                    while (parent != null && !Std.isOfType(parent, RolePage)) {
+                        parent = parent.parent;
+                    }
+                    
+                    if (parent != null) {
+                        var rolePage = cast(parent, RolePage);
+                        Logger.info('${this}: Found RolePage parent, forcing refresh after file selection');
+                        rolePage.checkDominoInstaller();
+                        rolePage.updateContent(true);
+                    } else {
+                        // Fallback to event dispatch if parent not found
+                        this.dispatchEvent(new Event(Event.CHANGE, true));
+                    }
+                }
+                
             case "hotfixes":
                 if (!_roleImpl.role.files.hotfixes.contains(path)) {
                     _roleImpl.role.files.hotfixes.push(path);
@@ -1573,6 +2037,11 @@ class RolePickerItem extends LayoutGroup {
                     _roleImpl.role.files.fixpacks.push(path);
                     _roleImpl.role.files.installerFixpackHash = hash;
                     _roleImpl.role.files.installerFixpackVersion = version;
+                    
+                    // If this is any role getting a fixpack, we need to update hotfix dependencies
+                    Logger.info('${this}: Fixpack added to ${_roleImpl.role.value}, notifying parent');
+                    // Dispatch change event to notify the parent component about fixpack change
+                    this.dispatchEvent(new Event(Event.CHANGE, true));
                 }
         }
         
@@ -1699,6 +2168,28 @@ class RolePickerItem extends LayoutGroup {
                         _roleImpl.role.files.installerFileName = selectedFile.originalFilename;
                         _roleImpl.role.files.installerHash = selectedFile.hash;
                         _roleImpl.role.files.installerVersion = selectedFile.version;
+                        
+                        // Handle Domino installer selection
+                        if (_roleImpl.role.value.toLowerCase() == "domino") {
+                            Logger.info('${this}: Domino installer selected from cached files dialog');
+                            
+                            // Notify role page of selection change
+                            this.dispatchEvent(new Event(Event.CHANGE, true));
+                            
+                            // Navigate up to find RolePage parent
+                            var parent = this.parent;
+                            while (parent != null && !Std.isOfType(parent, RolePage)) {
+                                parent = parent.parent;
+                            }
+                            
+                            if (parent != null) {
+                                var rolePage = cast(parent, RolePage);
+                                Logger.info('${this}: Found RolePage parent, forcing content update');
+                                rolePage.checkDominoInstaller();
+                                rolePage.updateContent(true);
+                            }
+                        }
+                        
                         updateData();
                     }
                 }
