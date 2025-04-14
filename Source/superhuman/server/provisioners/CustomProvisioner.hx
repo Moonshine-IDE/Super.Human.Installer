@@ -801,7 +801,7 @@ override public function generateHostsFileContent():String {
         }
         
         // Bridge adapter
-        content = _replaceVariable(content, "NETWORK_BRIDGE", _server.networkBridge.value);
+        content = _replaceVariable(content, "NETWORK_BRIDGE", _server.getEffectiveNetworkInterface());
         content = _replaceVariable(content, "DISABLE_BRIDGE_ADAPTER", _server.disableBridgeAdapter.value ? "true" : "false");
         
         // User settings

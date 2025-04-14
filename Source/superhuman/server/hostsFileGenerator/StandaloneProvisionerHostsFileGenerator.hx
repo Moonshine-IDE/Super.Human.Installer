@@ -211,7 +211,57 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
     }
 
     static function _getDefaultTemplateValues(internalProvisioner:StandaloneProvisioner, defaultProvisionerFieldValue:String = null, defaultRoleFieldValue:Dynamic = ""):Dynamic {
-        return {
+        // Get the application secrets from global config
+        var secretsObj:Dynamic = {};
+        var secrets = SuperHumanInstaller.getInstance().config.secrets;
+        
+        // Helper function to sanitize secret names (replace hyphens with underscores)
+        function sanitizeSecretName(name:String):String {
+            return StringTools.replace(name, "-", "_");
+        }
+        
+        // Add HCL Download Portal API Keys
+        if (secrets != null && secrets.hcl_download_portal_api_keys != null) {
+            for (apiKey in secrets.hcl_download_portal_api_keys) {
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(apiKey.name)}', apiKey.key);
+            }
+        }
+        
+        // Add Git API Keys
+        if (secrets != null && secrets.git_api_keys != null) {
+            for (apiKey in secrets.git_api_keys) {
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(apiKey.name)}', apiKey.key);
+            }
+        }
+        
+        // Add Vagrant Atlas Tokens
+        if (secrets != null && secrets.vagrant_atlas_token != null) {
+            for (token in secrets.vagrant_atlas_token) {
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(token.name)}', token.key);
+            }
+        }
+        
+        // Add Custom Resource URLs
+        if (secrets != null && secrets.custom_resource_url != null) {
+            for (resource in secrets.custom_resource_url) {
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(resource.name)}_URL', resource.url);
+                if (resource.useAuth) {
+                    Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(resource.name)}_USER', resource.user);
+                    Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(resource.name)}_PASS', resource.pass);
+                }
+            }
+        }
+        
+        // Add Docker Hub Credentials
+        if (secrets != null && secrets.docker_hub != null) {
+            for (dockerCred in secrets.docker_hub) {
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(dockerCred.name)}_USER', dockerCred.docker_hub_user);
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(dockerCred.name)}_TOKEN', dockerCred.docker_hub_token);
+            }
+        }
+        
+        // Merge secrets with the rest of the template values
+        var templateValues = {
             USER_EMAIL: internalProvisioner.server.userEmail.value,
             
             //settings
@@ -241,7 +291,7 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
          	NETWORK_GATEWAY: ( internalProvisioner.server.dhcp4.value ) ? "" : internalProvisioner.server.networkGateway.value,
             // Always true, never false
          	NETWORK_DHCP4: internalProvisioner.server.dhcp4.value,
-         	NETWORK_BRIDGE: internalProvisioner.server.networkBridge.value,
+         	NETWORK_BRIDGE: internalProvisioner.server.getEffectiveNetworkInterface(),
          	
          	//dns
          	NETWORK_DNS_NAMESERVER_1: ( internalProvisioner.server.dhcp4.value ) ? "1.1.1.1" : internalProvisioner.server.nameServer1.value,
@@ -331,5 +381,12 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,
         };
+        
+        // Copy all secret fields into the template values object
+        for (field in Reflect.fields(secretsObj)) {
+            Reflect.setField(templateValues, field, Reflect.field(secretsObj, field));
+        }
+        
+        return templateValues;
     }
 }
