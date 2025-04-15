@@ -99,7 +99,7 @@ jobs:
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.78
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
           pushd .
           cd /Users/runner/hostedtoolcache/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
@@ -117,6 +117,10 @@ jobs:
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
+          pushd .
+          cd /Users/runner/hostedtoolcache/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+          popd
 
       - name: List dependencies
         run: haxelib list
