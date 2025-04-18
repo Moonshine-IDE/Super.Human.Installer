@@ -138,7 +138,7 @@ jobs:
       #  shell: cmd
         run: |
           haxelib run openfl build project.xml windows ^
-            %haxe_flag% ^
+            ${{ env.haxe_flag }} ^
             -Dlogverbose ^
             -Dlogcolor ^
             -Dgitsha=${{ github.sha }} ^
