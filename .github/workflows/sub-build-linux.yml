@@ -83,8 +83,14 @@ jobs:
           sudo apt-get install g++-multilib
           sudo apt-get install libfuse2
 
-      - name: Set up Haxe
-        uses: Moonshine-IDE/setup-haxe-action@master
+      #- name: Set up Haxe
+      #  uses: Moonshine-IDE/setup-haxe-action@master
+      #  with:
+      #    haxe-version: ${{ env.haxe_version }}
+
+      -
+        name: "Setting up Haxe"
+        uses: krdlab/setup-haxe@v1.5.1
         with:
           haxe-version: ${{ env.haxe_version }}
 
