@@ -42,7 +42,8 @@ env:
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
   haxe_version: 4.3.6
   bin_path: Export/${{ inputs.env }}/windows/bin/
-
+  AGENT_TOOLSDIRECTORY: "D:\\github\runners\\Super.Human.Installer\\_work\\_tool"
+  
 jobs:
   build:
     runs-on: [self-hosted, windows]
