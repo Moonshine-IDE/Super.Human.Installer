@@ -134,8 +134,8 @@ jobs:
         run: haxelib list
 
       - name: Build
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        shell: cmd
+      #  if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+      #  shell: cmd
         run: |
           haxelib run openfl build project.xml windows ^
             %haxe_flag% ^
