@@ -101,9 +101,14 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
           pushd .
-          cd /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
+          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
+
+      - name: Install dependencies
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        working-directory: Build
+        run: |
           haxelib install lime 8.2.2
           haxelib install format
           haxelib install hxp
