@@ -59,11 +59,11 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Checkout LFS objects
-        run: git lfs checkout
+      #  with:
+      #    lfs: true
+#
+      #- name: Checkout LFS objects
+      #  run: git lfs checkout
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
