@@ -117,10 +117,6 @@ jobs:
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
-          pushd .
-          cd /Users/runner/hostedtoolcache/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
-          haxe compile.hxml
-          popd
 
       - name: List dependencies
         run: haxelib list
