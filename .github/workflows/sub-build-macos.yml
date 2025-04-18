@@ -101,7 +101,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
           pushd .
-          cd /Users/runner/hostedtoolcache/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
+          cd /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           cd ../build/
           haxe compile.hxml
