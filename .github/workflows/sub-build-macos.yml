@@ -103,8 +103,6 @@ jobs:
           pushd .
           cd /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
-          cd ../build/
-          haxe compile.hxml
           popd
           haxelib install lime 8.2.2
           haxelib install format
