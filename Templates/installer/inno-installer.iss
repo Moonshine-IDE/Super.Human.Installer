@@ -37,11 +37,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Main application files - using exact path specified by BinPath
+; Main application files 
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Copy provisioners to the user's application data folder directly
-Source: "{#AssetsPath}\provisioners\*"; DestDir: "{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Copy provisioners to the user's application data folder with long path support
+Source: "\\?\{#AssetsPath}\provisioners\*"; DestDir: "\\?\{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"

@@ -187,6 +187,22 @@ jobs:
           $binPathAbs = Join-Path -Path $rootPath -ChildPath "${{ env.bin_path }}"
           $assetsPathAbs = Join-Path -Path $rootPath -ChildPath "Assets"
           
+          # Enable Windows long path support for current process
+          Write-Host "Enabling long path support for current process"
+          & {
+            $longPathsEnabled = $false
+            try {
+              $regKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
+              $longPathsEnabled = (Get-ItemProperty -Path $regKey -Name 'LongPathsEnabled' -ErrorAction SilentlyContinue).LongPathsEnabled -eq 1
+            } catch { }
+            
+            if (-not $longPathsEnabled) {
+              Write-Host "Long paths not enabled in registry. Your provisioners may still have issues."
+            } else {
+              Write-Host "Long paths enabled in Windows registry."
+            }
+          }
+          
           # Set environment variables for Inno Setup script
           $env:PRODUCT_NAME="${{ env.app_name }}"
           $env:PRODUCT_VERSION="${{ inputs.version }}"
