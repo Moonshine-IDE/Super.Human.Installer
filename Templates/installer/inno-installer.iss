@@ -39,13 +39,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Main application files 
+; Main application files
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; 7zip files for extraction
-Source: "..\..\Assets\installer\7za.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\Assets\installer\7zxa.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\Assets\installer\7za.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Compressed provisioners file
 Source: "..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
@@ -71,7 +66,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppNa
 
 [Run]
 ; Extract provisioners during installation
-Filename: "{app}\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{userappdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
+Filename: "{app}\assets\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{userappdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
 
 ; Launch application after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
