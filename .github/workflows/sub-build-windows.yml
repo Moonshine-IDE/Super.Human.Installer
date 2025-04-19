@@ -42,7 +42,6 @@ env:
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
   haxe_version: 4.3.6
   bin_path: Export/${{ inputs.env }}/windows/bin/
-  AGENT_TOOLSDIRECTORY: "D:\\GA\\SHI\\_work\\_tool"
 
 jobs:
   build:
@@ -171,9 +170,10 @@ jobs:
           
       - name: "Uploading bin to prominic.net"
         run: |
+          $env:HOME = "D:\GA\SHI\_work\Super.Human.Installer\Super.Human.Installer"; cygwin
           echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
-          rsync -avz ${{ env.bin_path }} startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin
+          rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" ${{ env.bin_path }} startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin
 
       - name: Print NSIS version
         run: makensis.exe -version
