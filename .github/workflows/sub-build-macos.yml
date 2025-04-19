@@ -125,11 +125,6 @@ jobs:
         run: |
           # Try running in a subshell with explicit environment
           (
-            export NEKOPATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64"
-            export LD_LIBRARY_PATH="$NEKOPATH"
-            export DYLD_FALLBACK_LIBRARY_PATH="$NEKOPATH"
-            export HAXE_STD_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/std"
-            
             # Run with exec to replace the shell process
             exec haxelib run openfl setup -y
           )
