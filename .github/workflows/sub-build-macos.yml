@@ -88,6 +88,11 @@ jobs:
         run: haxelib --global update haxelib
 
 
+      - name: Set Neko Environment
+        run: |
+          echo "NEKOPATH=/usr/lib/neko" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=/usr/lib/neko:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
       - name: Install dependencies
         working-directory: Build
         run: |
