@@ -69,15 +69,13 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppNa
 
 [Run]
 ; Extract provisioners during installation
-Filename: "{app}\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{appdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
+Filename: "{app}\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{userappdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
 
 ; Launch application after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Clean up the provisioners directory during uninstall
-Type: filesandordirs; Name: "{localappdata}\{#AppName}\provisioners"
-; Clean up any other data directories
+; Clean up application directory
 Type: filesandordirs; Name: "{localappdata}\{#AppName}"
-; Also clean up roaming app data, if any exists
-Type: filesandordirs; Name: "{appdata}\{#AppName}"
+; Clean up roaming app data
+Type: filesandordirs; Name: "{userappdata}\{#AppName}"
