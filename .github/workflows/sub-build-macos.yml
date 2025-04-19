@@ -88,10 +88,12 @@ jobs:
         run: haxelib --global update haxelib
 
 
-      - name: Fix DYLD_FALLBACK_LIBRARY_PATH
+      - name: Fix Environment Variables
         run: |
+          echo "LD_LIBRARY_PATH=/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64" >> $GITHUB_ENV
+          echo "TERM=xterm" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64" >> $GITHUB_ENV
-
+      
       - name: Install dependencies
         working-directory: Build
         run: |
