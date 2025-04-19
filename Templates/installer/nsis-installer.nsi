@@ -18,6 +18,9 @@ RequestExecutionLevel user
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "${ROOT_KEY}"
 
+; Enable long path support
+System::Call 'kernel32::SetProcessWorkingSetSize(i -1, i -1, i -1)'
+
 ; MUI 1.67 compatible ------
 !include "MUI.nsh"
 
@@ -60,7 +63,11 @@ Section "MainSection" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
   !cd "..\..\"
-  File /r "${BIN_PATH}"
+  
+  ; Use standard File command for binary files, but exclude provisioners
+  ; to avoid long path issues
+  File /r /x "assets\provisioners\*.*" "${BIN_PATH}"
+  
   !cd "Templates/installer/"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
