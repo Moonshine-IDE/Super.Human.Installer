@@ -76,6 +76,17 @@ Filename: "{app}\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{userapp
 ; Launch application after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[Code]
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    // Clean up local and roaming app data directories
+    DelTree(ExpandConstant('{localappdata}\{#AppName}'), True, True, True);
+    DelTree(ExpandConstant('{userappdata}\{#AppName}'), True, True, True);
+  end;
+end;
+
 [UninstallDelete]
 ; Clean up application directory
 Type: filesandordirs; Name: "{localappdata}\{#AppName}"
