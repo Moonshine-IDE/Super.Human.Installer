@@ -33,7 +33,9 @@
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
 	<assets rename="assets/config" path="Assets/config" include="*"/>
-	<assets rename="assets/provisioners" path="Assets/provisioners" include="*"/>
+	<!-- <assets rename="assets/provisioners" path="Assets/provisioners" include="*"/> -->
+    <assets rename="assets/provisioners" path="Assets/provisioners" include="*" if="mac || linux"/>
+
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>
 	<assets rename="assets/bin" path="Assets/bin/windows" include="*" if="windows"/>
 	<assets rename="assets/bin" path="Assets/bin/linux" include="*" if="linux"/>
