@@ -18,9 +18,6 @@ RequestExecutionLevel user
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_UNINST_ROOT_KEY "${ROOT_KEY}"
 
-; Enable long path support
-System::Call 'kernel32::SetProcessWorkingSetSize(i -1, i -1, i -1)'
-
 ; MUI 1.67 compatible ------
 !include "MUI.nsh"
 
@@ -67,7 +64,7 @@ Section "MainSection" SEC01
   !cd "Templates/installer/"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
-  CreateShortCut "$DESKTOP\S${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
 SectionEnd
 
 ; Copy provisioners to the common directory
@@ -130,3 +127,8 @@ Section Uninstall
   DeleteRegKey HKCU "${PRODUCT_DIR_REGKEY}"
   SetAutoClose true
 SectionEnd
+
+Function .onInit
+  ; Enable long path support
+  System::Call 'kernel32::SetProcessWorkingSetSize(i -1, i -1, i -1)'
+FunctionEnd
