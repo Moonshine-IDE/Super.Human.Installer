@@ -1,1 +1,12 @@
+# Mark binary files to prevent line ending conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.psd binary
+*.bin binary
+
+# Text files with specific line ending handling
 id_rsa text eol=lf
