@@ -1,2 +1,0 @@
-Assets/images/** -filter -diff -merge
-Assets/images/common/** -filter -diff -merge
