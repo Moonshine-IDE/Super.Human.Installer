@@ -128,24 +128,25 @@ jobs:
           echo "DYLD_FALLBACK_LIBRARY_PATH: $DYLD_FALLBACK_LIBRARY_PATH"
           echo "HAXE_STD_PATH: $HAXE_STD_PATH"
 
-      - name: Run OpenFL Setup with forced env overrides
+      - name: Run OpenFL Setup with controlled env
+        env: {}  # Ensure no global environment is injected for these variables.
         run: |
-          # Unset any preexisting values that could be interfering.
+          # Unset potential variables that might be inherited
           unset LD_LIBRARY_PATH
           unset DYLD_FALLBACK_LIBRARY_PATH
       
-          # Set the variables explicitly to our desired values.
+          # Set the variables explicitly to your desired values:
           export LD_LIBRARY_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64"
           export DYLD_FALLBACK_LIBRARY_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64"
           export HAXE_STD_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/std"
       
-          # Confirm the environment variables
+          # Optionally confirm:
           echo "NEKOPATH: $NEKOPATH"
           echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
           echo "DYLD_FALLBACK_LIBRARY_PATH: $DYLD_FALLBACK_LIBRARY_PATH"
           echo "HAXE_STD_PATH: $HAXE_STD_PATH"
       
-          # Run the OpenFL setup command with verbose output.
+          # Now run the OpenFL setup command
           haxelib run openfl setup -y -verbose
 
       - name: Install and Configuring OpenFL
