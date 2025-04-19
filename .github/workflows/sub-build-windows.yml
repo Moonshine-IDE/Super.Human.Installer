@@ -157,10 +157,16 @@ jobs:
             New-Item -ItemType Directory -Path "Assets\installer" -Force
           }
           
+          # Change directory to the provisioners directory to avoid extra nesting
+          Push-Location "Assets\provisioners"
+          
           # Compress provisioners using 7zip
           # Using -mx=9 for maximum compression
-          # Using * wildcard to include only contents (not the directory structure)
-          7z a -t7z -mx=9 "Assets\installer\provisioners.7z" "Assets\provisioners\*"
+          # The '.' specifies current directory contents without creating extra nesting
+          7z a -t7z -mx=9 "..\..\Assets\installer\provisioners.7z" "."
+          
+          # Return to previous directory
+          Pop-Location
           
           # Verify compression worked
           if (Test-Path "Assets\installer\provisioners.7z") {
