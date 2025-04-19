@@ -106,7 +106,7 @@ jobs:
           path: ${{ env.bin_path }}
           key: ${{ env.app_name }}-macos-bin
         
-      - name: Install dependencies
+      - name: Installing hxcpp
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
@@ -116,7 +116,7 @@ jobs:
           haxe compile.hxml
           popd
 
-      - name: Install dependencies
+      - name: Installing dependencies
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
@@ -126,7 +126,7 @@ jobs:
           haxelib git yaml https://github.com/Sword352/hx-yaml master
           haxelib git lime-samples https://github.com/openfl/lime-samples
 
-      - name: Install OpenFL
+      - name: Installing OpenFL
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
@@ -138,7 +138,7 @@ jobs:
         run: |
           haxelib run openfl setup -y
 
-      - name: Install and Configuring OpenFL
+      - name: Installing Additional Dependencies
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
