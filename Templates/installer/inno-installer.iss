@@ -83,16 +83,8 @@ Filename: "cmd.exe"; Parameters: "/c del ""{userappdata}\{#AppName}\provisioners
 ; Launch application after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
-[Messages]
-; Custom uninstall messages
-UninstallingMsg=Please wait while %1 is being uninstalled...
-UninstallStatusLabel=Cleaning up %1 files and settings...
 
 [Code]
-// Constants for directory attributes
-const
-  FILE_ATTRIBUTE_DIRECTORY = $00000010;
-  
 // Importing LoadSkin API from ISSkin.DLL
 procedure LoadSkin(lpszPath: String; lpszIniFileName: String);
 external 'LoadSkin@files:isskin.dll stdcall';
@@ -139,7 +131,7 @@ end;
 // Create a batch file for deletion and execute it
 procedure CreateAndExecuteCleanupBatch(DirPath: string);
 var
-  BatFileName, BatFilePath, CommandLine: string;
+  BatFileName, BatFilePath: string;
   ResultCode: Integer;
   RetryCount: Integer;
   RetryResult: Integer;

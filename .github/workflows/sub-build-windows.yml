@@ -205,7 +205,9 @@ jobs:
         run: |
           # Get absolute paths for Inno Setup
           $rootPath = Get-Location
-          $binPathAbs = Join-Path -Path $rootPath -ChildPath "${{ env.bin_path }}"
+          # Remove trailing slash if present to avoid double slashes
+          $binPath = "${{ env.bin_path }}".TrimEnd('\', '/')
+          $binPathAbs = Join-Path -Path $rootPath -ChildPath $binPath
           
           # Enable Windows long path support for current process
           Write-Host "Enabling long path support for current process"
