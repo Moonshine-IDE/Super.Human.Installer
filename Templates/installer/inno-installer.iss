@@ -120,10 +120,10 @@ function InitializeSetup(): Boolean;
 begin
   // Extract VCL Styles skin file to temp directory
   ExtractTemporaryFile('VclStylesinno.dll');
-  ExtractTemporaryFile('Amakrits.vsf');
+  ExtractTemporaryFile('Carbon.vsf');
   
   // Load the VCL style with explicit path
-  LoadVCLStyle(ExpandConstant('{tmp}\Amakrits.vsf'));
+  LoadVCLStyle(ExpandConstant('{tmp}\Carbon.vsf'));
   
   Result := True;
 end;
@@ -140,7 +140,7 @@ end;
 function InitializeUninstall(): Boolean;
 begin
   // Load VCL style for uninstaller
-  LoadVCLStyle_UnInstall(ExpandConstant('{#VCLStylesSkinPath}\Amakrits.vsf'));
+  LoadVCLStyle_UnInstall(ExpandConstant('{#VCLStylesSkinPath}\Carbon.vsf'));
   Result := True;
 end;
 
