@@ -185,7 +185,6 @@ jobs:
           # Get absolute paths for Inno Setup
           $rootPath = Get-Location
           $binPathAbs = Join-Path -Path $rootPath -ChildPath "${{ env.bin_path }}"
-          $assetsPathAbs = Join-Path -Path $rootPath -ChildPath "Assets"
           
           # Get drive letter from the path
           $driveLetter = $rootPath.Drive.Name + ":"
@@ -205,6 +204,11 @@ jobs:
               Write-Error "Could not extract volume ID from mountvol output"
               exit 1
           }
+          
+          # Create path to provisioners directory without drive letter
+          # The Assets\provisioners directory is at the project root
+          $provisionersPath = "Assets\provisioners"
+          Write-Host "Provisioners path: $provisionersPath"
           
           # Enable Windows long path support for current process
           Write-Host "Enabling long path support for current process"
@@ -228,7 +232,6 @@ jobs:
           $env:PRODUCT_PUBLISHER="Prominic.NET"
           $env:PRODUCT_WEB_SITE="https://superhumaninstaller.com/"
           $env:BIN_PATH="$binPathAbs"
-          $env:ASSETS_PATH="$assetsPathAbs"
           $env:VOLUME_ID="$volumeId"
           $env:PRODUCT_EXE="${{ env.app_name }}.exe"
           $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
@@ -236,7 +239,7 @@ jobs:
           # Show paths for debugging
           Write-Host "Root Path: $rootPath"
           Write-Host "Bin Path: $binPathAbs"
-          Write-Host "Assets Path: $assetsPathAbs"
+          Write-Host "Provisioners Path: $provisionersPath"
           Write-Host "Volume ID: $volumeId"
           
           # Compile Inno Setup script with working directory set to the script's location

@@ -43,7 +43,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Copy provisioners to the user's application data folder with volume ID for long path support
-Source: "\\?\Volume{#VolumeID}\{#AssetsPath}\provisioners\*"; DestDir: "\\?\{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "\\?\Volume{{{#VolumeID}}}\Assets\provisioners\*"; DestDir: "\\?\{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
