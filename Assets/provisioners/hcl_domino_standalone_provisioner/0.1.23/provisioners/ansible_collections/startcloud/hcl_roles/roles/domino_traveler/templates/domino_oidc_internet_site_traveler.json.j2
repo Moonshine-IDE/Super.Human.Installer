@@ -1,0 +1,47 @@
+{
+	"title": "Creating the Traveler Internet Site",
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Creating Traveler Internet Site---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "names.nsf", 
+                    "documents":[
+                        { 
+                            "action": "create", 
+                            "computeWithForm": true,
+                            "items": {
+                                "Form"                          : "WebSite",
+                                "AutomationComment"             : "Traveler",
+                                "WSIsDflt"                      : "0",
+                                "ISiteAdrs"                     : [ "{{ domino_install_traveler_url }}" ],
+                                "ISiteName"                     : "Traveler",
+                                "ISiteOrg"                      : "{{ domino_organization }}",
+                                "WSHostingSrvrs"                : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
+                                "HTTP_TCP_Redirect"             : "1",
+                                "HTTP_SessionCookieSecure"      : "1",
+                                "HTTP_sessioncookieSamesite"    : "2",
+                                "HTTP_SessionCookieHTTPOnly"    : "1",
+                                "HTTP_GenerateSessionCookie"    : "1",
+                                "HTTP_ForceLoginOnSSL"          : "1",
+                                "HTTP_EnableRedirectCmd"        : "1",
+                                "TCPAnonymous"                  : "0",
+                                "TCPNameAndPwd"                 : "0",
+                                "SSLAnonymous"                  : "0",
+                                "SSLNameAndPwd"                 : "0",
+                                "SSLBearerToken"                : "1",
+                                "SSLPasskey"                    : "1",
+                                "SSLKeyFile"                    : "{{ cert_dir }}/kyr/{{ kyr_cert }}",
+                                "SSLCipherList"                 : [ "C030", "9F", "C02F", "9E" ],
+                                "HTTP_EnableSessionAuth"        : "1",
+                                "HTTP_MaxActiveSessions"        : "1000"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

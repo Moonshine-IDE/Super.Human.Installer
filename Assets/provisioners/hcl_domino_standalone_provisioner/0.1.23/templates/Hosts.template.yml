@@ -193,10 +193,9 @@ hosts:
 
     vars:
       # Secrets Override: If you don't want to use a secrets file you can override secrets here
-      #secrets:
-      #  domino_installer_base_url: ::DOWNLOAD_BASE_URL::
-      #  domino_installer_url_user: ::DOWNLOAD_AUTH_USER::
-      #  domino_installer_url_pass: ::DOWNLOAD_AUTH_PASS::
+      domino_installer_base_url: ::SECRETS_PROMINIC_DOWNLOADS_URL::
+      domino_installer_url_user: ::SECRETS_PROMINIC_DOWNLOADS_USER::  # Only if useAuth is true
+      domino_installer_url_pass: ::SECRETS_PROMINIC_DOWNLOADS_PASS::  # Only if useAuth is true
       
       debug_all: ::DEBUG_ALL_ANSIBLE_TASKS::
       selfsigned_enabled: ::CERT_SELFSIGNED::
@@ -273,9 +272,9 @@ hosts:
       nomadweb_hash: ::NOMADWEB_HASH::
       nomadweb_archive: ::NOMADWEB_INSTALLER::
       nomadweb_version: ::NOMADWEB_VERSION::
-      nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
       nomad_hotfix_archive: ::NOMADWEB_HOTFIX_INSTALLER:: ### NEW VARIABLES NEEDED FOR DOMINO HOTFIX, Default to False, until the HF button is added in SHI
       nomad_hotfix_version: ::NOMADWEB_VERSION_HOTFIX_INSTALL:: # "HF1"
+      nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
 
       # Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
