@@ -175,21 +175,23 @@ jobs:
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
           rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" ${{ env.bin_path }} startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin
 
-      - name: Print NSIS version
-        run: makensis.exe -version
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
 
-      - name: Create NSIS installer
-        run: >
-          makensis.exe
-          /DPRODUCT_NAME=${{ env.app_name }}
-          /DPRODUCT_VERSION=${{ inputs.version }}
-          /DPRODUCT_PUBLISHER="Prominic.NET"
-          /DPRODUCT_WEB_SITE="/https://superhumaninstaller.com/"
-          /DBIN_PATH="${{ env.bin_path }}\*.*"
-          /DPRODUCT_EXE=${{ env.app_name }}.exe
-          /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
-          /DROOT_KEY=HKCU
-          Templates/installer/nsis-installer.nsi
+      - name: Create Inno Setup installer
+        run: |
+          # Set environment variables for Inno Setup script
+          $env:PRODUCT_NAME="${{ env.app_name }}"
+          $env:PRODUCT_VERSION="${{ inputs.version }}"
+          $env:PRODUCT_PUBLISHER="Prominic.NET"
+          $env:PRODUCT_WEB_SITE="https://superhumaninstaller.com/"
+          $env:BIN_PATH="${{ env.bin_path }}"
+          $env:PRODUCT_EXE="${{ env.app_name }}.exe"
+          $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
+          
+          # Compile Inno Setup script
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "Templates/installer/inno-installer.iss"
 
       - name: Sign installer
         if: ${{ inputs.env == 'Production' }}
