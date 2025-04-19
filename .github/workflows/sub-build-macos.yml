@@ -96,7 +96,7 @@ jobs:
           key: ${{ env.app_name }}-macos-bin
 
       - name: Install dependencies
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
@@ -106,7 +106,7 @@ jobs:
           popd
 
       - name: Install dependencies
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib install lime 8.2.2
@@ -114,8 +114,18 @@ jobs:
           haxelib install hxp
           haxelib git yaml https://github.com/Sword352/hx-yaml master
           haxelib git lime-samples https://github.com/openfl/lime-samples
+
+      - name: Install and Configuring OpenFL
+        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        working-directory: Build
+        run: |
           haxelib install openfl 9.4.1
           haxelib run openfl setup
+
+      - name: Install and Configuring OpenFL
+        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        working-directory: Build
+        run: |
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
