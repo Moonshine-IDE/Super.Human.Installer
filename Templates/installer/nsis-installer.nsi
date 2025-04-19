@@ -63,15 +63,11 @@ Section "MainSection" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
   !cd "..\..\"
-  
-  ; Use standard File command for binary files, but exclude provisioners
-  ; to avoid long path issues
-  File /r /x "assets\provisioners\*.*" "${BIN_PATH}"
-  
+  File /r "${BIN_PATH}"
   !cd "Templates/installer/"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
-  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$DESKTOP\S${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
 SectionEnd
 
 ; Copy provisioners to the common directory
