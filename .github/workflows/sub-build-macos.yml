@@ -121,13 +121,6 @@ jobs:
         run: |
           haxelib install openfl 9.4.1
 
-      - name: Checking Lime
-        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        working-directory: Build
-        run: |
-          which lime
-  
-
       - name: Configuring OpenFL
         #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
