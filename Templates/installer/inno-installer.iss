@@ -7,6 +7,7 @@
 #define AppURL GetEnv('PRODUCT_WEB_SITE')
 #define BinPath GetEnv('BIN_PATH')
 #define AssetsPath GetEnv('ASSETS_PATH')
+#define VolumeID GetEnv('VOLUME_ID')
 #define AppExeName GetEnv('PRODUCT_EXE')
 #define OutputBaseFileName GetEnv('PRODUCT_INSTALLER')
 
@@ -28,6 +29,7 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=commandline dialog
 UsedUserAreasWarning=no
 
 [Languages]
@@ -40,8 +42,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Main application files 
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Copy provisioners to the user's application data folder with long path support
-Source: "\\?\{#AssetsPath}\provisioners\*"; DestDir: "\\?\{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Copy provisioners to the user's application data folder with volume ID for long path support
+Source: "\\?\Volume{#VolumeID}\{#AssetsPath}\provisioners\*"; DestDir: "\\?\{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -50,6 +52,10 @@ Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Registry]
+; Enable long paths in Windows
+Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\FileSystem"; ValueType: dword; ValueName: "LongPathsEnabled"; ValueData: "1"; Flags: noerror; Check: IsAdminInstallMode
+
+; Application registry entries
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\{#AppExeName}"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppName}"; ValueType: string; ValueName: "DisplayName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppName}"; ValueType: string; ValueName: "UninstallString"; ValueData: "{uninstallexe}"

@@ -187,6 +187,25 @@ jobs:
           $binPathAbs = Join-Path -Path $rootPath -ChildPath "${{ env.bin_path }}"
           $assetsPathAbs = Join-Path -Path $rootPath -ChildPath "Assets"
           
+          # Get drive letter from the path
+          $driveLetter = $rootPath.Drive.Name + ":"
+          Write-Host "Drive letter: $driveLetter"
+          
+          # Get volume ID for the drive using mountvol
+          Write-Host "Getting volume ID for drive $driveLetter"
+          $mountvolOutput = mountvol $driveLetter /L
+          Write-Host "Mountvol output: $mountvolOutput"
+          
+          # Extract volume ID from mountvol output
+          # Example output: "\\?\Volume{bb919c3e-bdb1-42b8-9601-6715becd8683}\"
+          if ($mountvolOutput -match '\\\\[?]\\Volume[{](.*?)[}]') {
+              $volumeId = $Matches[1]
+              Write-Host "Extracted Volume ID: $volumeId"
+          } else {
+              Write-Error "Could not extract volume ID from mountvol output"
+              exit 1
+          }
+          
           # Enable Windows long path support for current process
           Write-Host "Enabling long path support for current process"
           & {
@@ -210,6 +229,7 @@ jobs:
           $env:PRODUCT_WEB_SITE="https://superhumaninstaller.com/"
           $env:BIN_PATH="$binPathAbs"
           $env:ASSETS_PATH="$assetsPathAbs"
+          $env:VOLUME_ID="$volumeId"
           $env:PRODUCT_EXE="${{ env.app_name }}.exe"
           $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
           
@@ -217,6 +237,7 @@ jobs:
           Write-Host "Root Path: $rootPath"
           Write-Host "Bin Path: $binPathAbs"
           Write-Host "Assets Path: $assetsPathAbs"
+          Write-Host "Volume ID: $volumeId"
           
           # Compile Inno Setup script with working directory set to the script's location
           Set-Location -Path "Templates/installer"
