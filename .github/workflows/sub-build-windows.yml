@@ -150,9 +150,16 @@ jobs:
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-windows-bin
           path: ${{ env.bin_path }}
+          
+      - name: "Uploading bin to prominic.net"
+        run: |
+          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz ${{ env.bin_path }} startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin
 
       - name: Print NSIS version
         run: makensis.exe -version
@@ -183,10 +190,17 @@ jobs:
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-windows-installer
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
+          
+      - name: "Uploading installer to prominic.net"
+        run: |
+          echo "Uploading installer to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz Templates/installer/${{ env.app_name }}-Setup.exe startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe
 
       - name: Copy files to choco
         env:
@@ -211,8 +225,17 @@ jobs:
 
       - name: Upload choco package
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         env:
           choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
         with:
           name: ${{ env.app_name }}-Choco
           path: Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg
+          
+      - name: "Uploading choco package to prominic.net"
+        env:
+          choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
+        run: |
+          echo "Uploading choco package to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg

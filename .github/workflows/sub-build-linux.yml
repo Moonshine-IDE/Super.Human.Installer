@@ -147,9 +147,16 @@ jobs:
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-linux-bin
           path: ${{ env.bin_path }}
+          
+      - name: "Uploading bin to prominic.net"
+        run: |
+          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-linux-bin"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz ${{ env.bin_path }}/ startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-linux-bin
 
       - name: Create AppImage
         uses: Moonshine-IDE/create-appimage-action@main
@@ -166,7 +173,14 @@ jobs:
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-linux-installer
           path: Build/${{ env.app_name }}-x86_64.AppImage
           if-no-files-found: error
+          
+      - name: "Uploading AppImage to prominic.net"
+        run: |
+          echo "Uploading AppImage to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-x86_64.AppImage"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz Build/${{ env.app_name }}-x86_64.AppImage startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-x86_64.AppImage
