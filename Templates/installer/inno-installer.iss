@@ -34,7 +34,8 @@ UninstallDisplayIcon={app}\{#AppExeName}
 ; Custom dark theme installer images and skin
 SetupIconFile=..\..\Assets\images\setup.ico
 WizardSmallImageFile=..\..\Assets\images\wizard-small.bmp
-WizardImageFile=..\..\Assets\images\wizard-large.bmp
+; Remove the wizard image by not specifying it
+; WizardImageFile=..\..\Assets\images\wizard-large.bmp
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -42,18 +43,20 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+#define VCLStylesSkinPath "{localappdata}\VCLStylesSkin"
+
 [Files]
+; VCL Styles files - list these at the top to avoid extraction delays
+Source: "..\..\Assets\bin\windows\VclStylesinno.dll"; DestDir: "{tmp}"; Flags: dontcopy
+Source: "..\..\Assets\bin\windows\Amakrits.vsf"; DestDir: "{tmp}"; Flags: dontcopy
+Source: "..\..\Assets\bin\windows\VclStylesinno.dll"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
+Source: "..\..\Assets\bin\windows\Amakrits.vsf"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
+
 ; Main application files
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Compressed provisioners file
 Source: "..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
-
-; Add the ISSkin DLL used for skinning Inno Setup installations
-Source: "ISSkin.dll"; DestDir: "{tmp}"; Flags: dontcopy
-
-; Add the Visual Style resource
-Source: "Vista.cjstyles"; DestDir: "{tmp}"; Flags: dontcopy
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -85,13 +88,13 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(
 
 
 [Code]
-// Importing LoadSkin API from ISSkin.DLL
-procedure LoadSkin(lpszPath: String; lpszIniFileName: String);
-external 'LoadSkin@files:isskin.dll stdcall';
+// Import the LoadVCLStyle function from VclStylesInno.DLL
+procedure LoadVCLStyle(VClStyleFile: String); external 'LoadVCLStyleW@files:VclStylesinno.dll stdcall setuponly';
+procedure LoadVCLStyle_UnInstall(VClStyleFile: String); external 'LoadVCLStyleW@{#VCLStylesSkinPath}\VclStylesinno.dll stdcall uninstallonly';
 
-// Importing UnloadSkin API from ISSkin.DLL
-procedure UnloadSkin();
-external 'UnloadSkin@files:isskin.dll stdcall';
+// Import the UnLoadVCLStyles function from VclStylesInno.DLL
+procedure UnLoadVCLStyles; external 'UnLoadVCLStyles@files:VclStylesinno.dll stdcall setuponly';
+procedure UnLoadVCLStyles_UnInstall; external 'UnLoadVCLStyles@{#VCLStylesSkinPath}\VclStylesinno.dll stdcall uninstallonly';
 
 // Importing ShowWindow Windows API from User32.DLL
 function ShowWindow(hWnd: Integer; uType: Integer): Integer;
@@ -115,8 +118,13 @@ external 'FindClose@kernel32.dll stdcall';
 
 function InitializeSetup(): Boolean;
 begin
-  ExtractTemporaryFile('Vista.cjstyles');
-  LoadSkin(ExpandConstant('{tmp}\Vista.cjstyles'), 'NormalBlack.ini');
+  // Extract VCL Styles skin file to temp directory
+  ExtractTemporaryFile('VclStylesinno.dll');
+  ExtractTemporaryFile('Amakrits.vsf');
+  
+  // Load the VCL style with explicit path
+  LoadVCLStyle(ExpandConstant('{tmp}\Amakrits.vsf'));
+  
   Result := True;
 end;
 
@@ -125,7 +133,22 @@ begin
   // Hide Window before unloading skin so user does not get
   // a glimpse of an unskinned window before it is closed
   ShowWindow(StrToInt(ExpandConstant('{wizardhwnd}')), 0);
-  UnloadSkin();
+  UnLoadVCLStyles();
+end;
+
+// Handle uninstaller skin loading
+function InitializeUninstall(): Boolean;
+begin
+  // Load VCL style for uninstaller
+  LoadVCLStyle_UnInstall(ExpandConstant('{#VCLStylesSkinPath}\Amakrits.vsf'));
+  Result := True;
+end;
+
+procedure DeinitializeUninstall();
+begin
+  // Hide window before unloading skin
+  ShowWindow(StrToInt(ExpandConstant('{wizardhwnd}')), 0);
+  UnLoadVCLStyles_UnInstall();
 end;
 
 // Create a batch file for deletion and execute it
