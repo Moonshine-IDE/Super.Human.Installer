@@ -31,7 +31,7 @@ PrivilegesRequiredOverridesAllowed=commandline
 UsedUserAreasWarning=no
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\{#AppExeName}
-; Custom dark theme installer images
+; Custom dark theme installer images and skin
 SetupIconFile=..\..\Assets\images\setup.ico
 WizardSmallImageFile=..\..\Assets\images\wizard-small.bmp
 WizardImageFile=..\..\Assets\images\wizard-large.bmp
@@ -48,6 +48,12 @@ Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs cr
 
 ; Compressed provisioners file
 Source: "..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
+
+; Add the ISSkin DLL used for skinning Inno Setup installations
+Source: "ISSkin.dll"; DestDir: {tmp}; Flags: dontcopy
+
+; Add the Visual Style resource
+Source: "Vista.cjstyles"; DestDir: {tmp}; Flags: dontcopy
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -76,31 +82,31 @@ Filename: "{app}\assets\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
-// Custom dark theme colors
-const
-  DarkBackground = $1A1A1A;  // Dark background
-  DarkText = $E0E0E0;        // Light text
-  DarkAccent = $2D3046;      // Dark accent (slightly bluish)
-  DarkControl = $2A2A2A;     // Dark control background
+// Importing LoadSkin API from ISSkin.DLL
+procedure LoadSkin(lpszPath: String; lpszIniFileName: String);
+external 'LoadSkin@files:isskin.dll stdcall';
 
-// Initialize dark theme for the entire installer
-procedure InitializeWizard();
+// Importing UnloadSkin API from ISSkin.DLL
+procedure UnloadSkin();
+external 'UnloadSkin@files:isskin.dll stdcall';
+
+// Importing ShowWindow Windows API from User32.DLL
+function ShowWindow(hWnd: Integer; uType: Integer): Integer;
+external 'ShowWindow@user32.dll stdcall';
+
+function InitializeSetup(): Boolean;
 begin
-  // Set colors for dark theme
-  WizardForm.BackButton.Font.Color := clWhite;
-  WizardForm.NextButton.Font.Color := clWhite;
-  WizardForm.CancelButton.Font.Color := clWhite;
-  WizardForm.BeveledLabel.Font.Color := clWhite;
-  
-  // Set text colors for labels
-  WizardForm.WelcomeLabel1.Font.Color := clWhite;
-  WizardForm.WelcomeLabel2.Font.Color := clWhite;
-  WizardForm.FinishedLabel.Font.Color := clWhite;
-  WizardForm.PageNameLabel.Font.Color := clWhite;
-  WizardForm.PageDescriptionLabel.Font.Color := clWhite;
-  
-  // Use dark colors defined in SetupSkin.dll
-  // The custom images already provide the dark theme appearance
+  ExtractTemporaryFile('Vista.cjstyles');
+  LoadSkin(ExpandConstant('{tmp}\Vista.cjstyles'), 'NormalBlack.ini');
+  Result := True;
+end;
+
+procedure DeinitializeSetup();
+begin
+  // Hide Window before unloading skin so user does not get
+  // a glimpse of an unskinned window before it is closed
+  ShowWindow(StrToInt(ExpandConstant('{wizardhwnd}')), 0);
+  UnloadSkin();
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
