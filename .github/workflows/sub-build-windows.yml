@@ -159,7 +159,8 @@ jobs:
           
           # Compress provisioners using 7zip
           # Using -mx=9 for maximum compression
-          7z a -t7z -mx=9 "Assets\installer\provisioners.7z" "Assets\provisioners"
+          # Using * wildcard to include only contents (not the directory structure)
+          7z a -t7z -mx=9 "Assets\installer\provisioners.7z" "Assets\provisioners\*"
           
           # Verify compression worked
           if (Test-Path "Assets\installer\provisioners.7z") {
