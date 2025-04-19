@@ -41,12 +41,12 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; 7zip files for extraction
-Source: "..\..\..\Assets\installer\7za.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\..\Assets\installer\7zxa.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\..\..\Assets\installer\7za.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\Assets\installer\7za.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\Assets\installer\7zxa.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\Assets\installer\7za.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Compressed provisioners file
-Source: "..\..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
+Source: "..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
