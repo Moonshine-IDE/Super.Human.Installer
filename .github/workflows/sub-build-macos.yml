@@ -126,10 +126,13 @@ jobs:
         working-directory: Build
         run: |
           expect << EOF
+          log_user 1
+          exp_internal 1
           spawn haxelib run openfl setup
-          expect "Do you want to install the \"openfl\" command? [y/n/a] ?"
-          send "y\r"
-          expect eof
+          expect {
+            "Do you want to install the \"openfl\" command? [y/n/a] ?" { send "y\r" }
+            eof
+          }
           EOF
 
       - name: Install and Configuring OpenFL
