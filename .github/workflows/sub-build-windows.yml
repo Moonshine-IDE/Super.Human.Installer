@@ -147,19 +147,43 @@ jobs:
       - name: Show Build
         run: ls -r ${{ env.bin_path }}
 
-      - name: Copy Provisioners for Windows
+      - name: Compress Provisioners
         shell: pwsh
         run: |
-          echo "Copying provisioners to build directory"
-          $destDir = "${{ env.bin_path }}\assets\provisioners"
-          if (-not (Test-Path $destDir)) {
-            New-Item -ItemType Directory -Path $destDir -Force
+          echo "Compressing provisioners directory to avoid path length issues"
+          
+          # Create installer assets directory if it doesn't exist
+          if (-not (Test-Path "Assets\installer")) {
+            New-Item -ItemType Directory -Path "Assets\installer" -Force
           }
-          robocopy "Assets\provisioners" "$destDir" /E /NP /NFL /NDL /NJH /NJS
-          # robocopy returns non-zero exit codes for success scenarios:
-          # 0 = No files copied, 1 = Files copied successfully
-          # We need to handle this to prevent GitHub from thinking the step failed
-          if ($LASTEXITCODE -le 1) { exit 0 } else { exit $LASTEXITCODE }
+          
+          # Compress provisioners using 7zip
+          # Using -mx=9 for maximum compression
+          7z a -t7z -mx=9 "Assets\installer\provisioners.7z" "Assets\provisioners"
+          
+          # Verify compression worked
+          if (Test-Path "Assets\installer\provisioners.7z") {
+            $fileSize = (Get-Item "Assets\installer\provisioners.7z").Length / 1MB
+            Write-Host "Provisioners compressed successfully: $fileSize MB"
+          } else {
+            Write-Error "Failed to compress provisioners"
+            exit 1
+          }
+          
+          # Copy 7zip components to installer directory
+          if (-not (Test-Path "Assets\installer\7za.dll")) {
+            Copy-Item "Templates\installer\7za.dll" -Destination "Assets\installer\"
+            Copy-Item "Templates\installer\7zxa.dll" -Destination "Assets\installer\"
+            Copy-Item "Templates\installer\7za.exe" -Destination "Assets\installer\"
+            Copy-Item "Templates\installer\License.txt" -Destination "Assets\installer\"
+          }
+          
+          # Make these available for the application too
+          $destDir = "${{ env.bin_path }}\assets"
+          Copy-Item "Assets\installer\provisioners.7z" -Destination "$destDir\"
+          Copy-Item "Assets\installer\7za.dll" -Destination "$destDir\"
+          Copy-Item "Assets\installer\7zxa.dll" -Destination "$destDir\"
+          Copy-Item "Assets\installer\7za.exe" -Destination "$destDir\"
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
@@ -186,30 +210,6 @@ jobs:
           $rootPath = Get-Location
           $binPathAbs = Join-Path -Path $rootPath -ChildPath "${{ env.bin_path }}"
           
-          # Get drive letter from the path
-          $driveLetter = $rootPath.Drive.Name + ":"
-          Write-Host "Drive letter: $driveLetter"
-          
-          # Get volume ID for the drive using mountvol
-          Write-Host "Getting volume ID for drive $driveLetter"
-          $mountvolOutput = mountvol $driveLetter /L
-          Write-Host "Mountvol output: $mountvolOutput"
-          
-          # Extract volume ID from mountvol output
-          # Example output: "\\?\Volume{bb919c3e-bdb1-42b8-9601-6715becd8683}\"
-          if ($mountvolOutput -match '\\\\[?]\\Volume[{](.*?)[}]') {
-              $volumeId = $Matches[1]
-              Write-Host "Extracted Volume ID: $volumeId"
-          } else {
-              Write-Error "Could not extract volume ID from mountvol output"
-              exit 1
-          }
-          
-          # Create path to provisioners directory without drive letter
-          # The Assets\provisioners directory is at the project root
-          $provisionersPath = "Assets\provisioners"
-          Write-Host "Provisioners path: $provisionersPath"
-          
           # Enable Windows long path support for current process
           Write-Host "Enabling long path support for current process"
           & {
@@ -232,15 +232,12 @@ jobs:
           $env:PRODUCT_PUBLISHER="Prominic.NET"
           $env:PRODUCT_WEB_SITE="https://superhumaninstaller.com/"
           $env:BIN_PATH="$binPathAbs"
-          $env:VOLUME_ID="$volumeId"
           $env:PRODUCT_EXE="${{ env.app_name }}.exe"
           $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
           
           # Show paths for debugging
           Write-Host "Root Path: $rootPath"
           Write-Host "Bin Path: $binPathAbs"
-          Write-Host "Provisioners Path: $provisionersPath"
-          Write-Host "Volume ID: $volumeId"
           
           # Compile Inno Setup script with working directory set to the script's location
           Set-Location -Path "Templates/installer"

@@ -1,13 +1,11 @@
 ; Inno Setup Script for Super.Human.Installer
-; Equivalent to the NSIS script with better path handling
+; Using 7zip to handle long paths for provisioners
 
 #define AppName GetEnv('PRODUCT_NAME')
 #define AppVersion GetEnv('PRODUCT_VERSION')
 #define AppPublisher GetEnv('PRODUCT_PUBLISHER')
 #define AppURL GetEnv('PRODUCT_WEB_SITE')
 #define BinPath GetEnv('BIN_PATH')
-#define AssetsPath GetEnv('ASSETS_PATH')
-#define VolumeID GetEnv('VOLUME_ID')
 #define AppExeName GetEnv('PRODUCT_EXE')
 #define OutputBaseFileName GetEnv('PRODUCT_INSTALLER')
 
@@ -42,8 +40,13 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Main application files 
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Copy provisioners to the user's application data folder with volume ID for long path support
-Source: "\\?\Volume{{{#VolumeID}}}\Assets\provisioners\*"; DestDir: "\\?\{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
+; 7zip files for extraction
+Source: "..\..\..\Assets\installer\7za.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\..\Assets\installer\7zxa.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\..\Assets\installer\7za.exe"; DestDir: "{app}"; Flags: ignoreversion
+
+; Compressed provisioners file
+Source: "..\..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -65,4 +68,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppNa
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppName}"; ValueType: string; ValueName: "Publisher"; ValueData: "{#AppPublisher}"
 
 [Run]
+; Extract provisioners during installation
+Filename: "{app}\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{localappdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
+
+; Launch application after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
