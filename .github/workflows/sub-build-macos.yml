@@ -170,8 +170,9 @@ jobs:
           name: ${{ env.app_name }}-macos-bin
           path: ${{ env.bin_path }}
           
-      - name: "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin"
+      - name: "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/"
         run: |
+          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
           rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin
 
@@ -219,8 +220,9 @@ jobs:
           if-no-files-found: error
 
       -
-        name: "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg"
+        name: "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer"
         id: uploading-artifact
         run: |
-            ssh startcloud@public-artifacts.prominic.net "mkdir /local/www/Super.Human.Installer/${{ inputs.version }}"
+            echo "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg"
+            ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
             rsync -avz ${{ env.app_name }}-Setup.pkg  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg
