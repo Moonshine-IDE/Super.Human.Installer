@@ -50,7 +50,7 @@ Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs cr
 Source: "..\..\Assets\installer\provisioners.7z"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall
 
 ; Add the ISSkin DLL used for skinning Inno Setup installations
-Source: "ISSkin.dll"; DestDir: {tmp}; Flags: dontcopy
+Source: "ISSkin.dll"; DestDir: {app}; Flags: dontcopy
 
 ; Add the Visual Style resource
 Source: "Vista.cjstyles"; DestDir: {tmp}; Flags: dontcopy
@@ -81,6 +81,11 @@ Filename: "{app}\assets\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{
 ; Launch application after install
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[Messages]
+; Custom uninstall messages
+UninstallingMsg=Please wait while %1 is being uninstalled...
+UninstallStatusLabel=Cleaning up %1 files and settings...
+
 [Code]
 // Importing LoadSkin API from ISSkin.DLL
 procedure LoadSkin(lpszPath: String; lpszIniFileName: String);
@@ -110,17 +115,29 @@ begin
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  AppLocalPath, AppRoamingPath: string;
 begin
   if CurUninstallStep = usPostUninstall then
   begin
-    // Clean up local and roaming app data directories
-    DelTree(ExpandConstant('{localappdata}\{#AppName}'), True, True, True);
-    DelTree(ExpandConstant('{userappdata}\{#AppName}'), True, True, True);
+    // IMPORTANT: These paths only target the application's own directories
+    // They will NOT affect any other user data
+    AppLocalPath := ExpandConstant('{localappdata}\{#AppName}');
+    AppRoamingPath := ExpandConstant('{userappdata}\{#AppName}');
+    
+    // Log what we're trying to remove
+    Log('Cleaning up application directory: ' + AppLocalPath);
+    Log('Cleaning up application data in roaming: ' + AppRoamingPath);
+    
+    // Try standard deletes with various fallbacks
+    DelTree(AppLocalPath, True, True, True);
+    DelTree(AppRoamingPath, True, True, True);
   end;
 end;
 
 [UninstallDelete]
-; Clean up application directory
+; Clean up application directory in local AppData
 Type: filesandordirs; Name: "{localappdata}\{#AppName}"
-; Clean up roaming app data
+
+; Clean up application directory in roaming AppData (userappdata and appdata are the same)
 Type: filesandordirs; Name: "{userappdata}\{#AppName}"
