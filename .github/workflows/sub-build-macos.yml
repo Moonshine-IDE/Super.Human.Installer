@@ -125,7 +125,12 @@ jobs:
         #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib run openfl setup
+          expect << EOF
+          spawn haxelib run openfl setup
+          expect "Do you want to install the \"openfl\" command? [y/n/a] ?"
+          send "y\r"
+          expect eof
+          EOF
 
       - name: Install and Configuring OpenFL
         #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
