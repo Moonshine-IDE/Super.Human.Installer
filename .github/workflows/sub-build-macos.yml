@@ -98,7 +98,16 @@ jobs:
       - name: Update haxelib
         run: haxelib --global update haxelib
 
+      - name: Cache Binaries
+        id: cache-bin
+        if: ${{ inputs.caching }}
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.bin_path }}
+          key: ${{ env.app_name }}-macos-bin
+        
       - name: Install dependencies
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
@@ -108,6 +117,7 @@ jobs:
           popd
 
       - name: Install dependencies
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib install lime 8.2.2
@@ -117,25 +127,19 @@ jobs:
           haxelib git lime-samples https://github.com/openfl/lime-samples
 
       - name: Install OpenFL
-        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib install openfl 9.4.1
 
       - name: Configuring OpenFL
-        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          env
-
-      - name: Configuring OpenFL
-        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        working-directory: Build
-        run: |
-          haxelib run openfl setup -noalias
+          haxelib run openfl setup -y
 
       - name: Install and Configuring OpenFL
-        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
@@ -161,9 +165,15 @@ jobs:
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-macos-bin
           path: ${{ env.bin_path }}
+          
+      - name: "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin"
+        run: |
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin
 
       - name: Sign app
         uses: Moonshine-IDE/macos-sign-app-action@main
@@ -202,7 +212,15 @@ jobs:
 
       - name: Upload Installer
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-macos-installer
           path: ./${{ env.app_name }}-Setup.pkg
           if-no-files-found: error
+
+      -
+        name: "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg"
+        id: uploading-artifact
+        run: |
+            ssh startcloud@public-artifacts.prominic.net "mkdir /local/www/Super.Human.Installer/${{ inputs.version }}"
+            rsync -avz ${{ env.app_name }}-Setup.pkg  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg
