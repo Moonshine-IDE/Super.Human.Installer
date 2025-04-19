@@ -88,11 +88,11 @@ jobs:
         run: haxelib --global update haxelib
 
 
-      - name: Set Neko Environment for OpenFL
+      - name: Fix DYLD_FALLBACK_LIBRARY_PATH
         run: |
-          echo "DYLD_FALLBACK_LIBRARY_PATH=/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64:$DYLD_FALLBACK_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_FALLBACK_LIBRARY_PATH=/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64" >> $GITHUB_ENV
 
-      - name: Install dependencies
+          - name: Install dependencies
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
