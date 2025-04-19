@@ -48,9 +48,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; VCL Styles files - list these at the top to avoid extraction delays
 Source: "..\..\Assets\bin\windows\VclStylesinno.dll"; DestDir: "{tmp}"; Flags: dontcopy
-Source: "..\..\Assets\bin\windows\Amakrits.vsf"; DestDir: "{tmp}"; Flags: dontcopy
+Source: ".\Carbon.vsf"; DestDir: "{tmp}"; Flags: dontcopy
 Source: "..\..\Assets\bin\windows\VclStylesinno.dll"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
-Source: "..\..\Assets\bin\windows\Amakrits.vsf"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
+Source: ".\Carbon.vsf"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
 
 ; Main application files
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
