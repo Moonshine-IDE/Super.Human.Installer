@@ -121,6 +121,13 @@ jobs:
         run: |
           haxelib install openfl 9.4.1
 
+      - name: Echo Library Environment
+        run: |
+          echo "NEKOPATH: $NEKOPATH"
+          echo "LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+          echo "DYLD_FALLBACK_LIBRARY_PATH: $DYLD_FALLBACK_LIBRARY_PATH"
+          echo "HAXE_STD_PATH: $HAXE_STD_PATH"
+
       - name: Configuring OpenFL
         #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
