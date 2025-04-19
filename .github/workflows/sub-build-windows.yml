@@ -43,8 +43,8 @@ env:
   haxe_version: 4.3.6
   bin_path: Export/${{ inputs.env }}/windows/bin/
   AGENT_TOOLSDIRECTORY: "D:\\github\\runners\\Super.Human.Installer\\_work\\_tool"
-  HAXEPATH:  "${{ env.AGENT_TOOLSDIRECTORY }}\\haxe\\${{ env.haxe_version }}\\x64"
-  NEKO_INSTPATH: "${{ env.AGENT_TOOLSDIRECTORY }}\\neko\\2.3.0\\x64"
+  HAXEPATH:  "D:\\github\\runners\\Super.Human.Installer\\_work\\_tool\\haxe\\4.3.6\\x64"
+  NEKO_INSTPATH: "D:\\github\\runners\\Super.Human.Installer\\_work\\_tool\\neko\\2.3.0\\x64"
 
 jobs:
   build:
