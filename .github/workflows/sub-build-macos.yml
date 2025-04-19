@@ -121,13 +121,26 @@ jobs:
         run: |
           haxelib install openfl 9.4.1
 
-      - name: Run OpenFL setup with different process isolation
+      - name: Run OpenFL setup with direct Neko VM
         run: |
-          # Try running in a subshell with explicit environment
-          (
-            # Run with exec to replace the shell process
-            exec haxelib run openfl setup -y
-          )
+          # Find the Neko VM
+          NEKO_VM="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64/neko"
+          
+          # Find the OpenFL setup script
+          OPENFL_PATH=$(haxelib path openfl | head -1)
+          OPENFL_SETUP=$(find $OPENFL_PATH -name "Setup.n" | head -1)
+          
+          echo "Using Neko VM: $NEKO_VM"
+          echo "Using OpenFL Setup: $OPENFL_SETUP"
+          
+          # Set the environment variables explicitly
+          export NEKOPATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64"
+          export LD_LIBRARY_PATH="$NEKOPATH"
+          export DYLD_FALLBACK_LIBRARY_PATH="$NEKOPATH"
+          export HAXE_STD_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/std"
+          
+          # Run the Neko VM directly with the setup script
+          $NEKO_VM $OPENFL_SETUP -y
 
       - name: Install and Configuring OpenFL
         #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
