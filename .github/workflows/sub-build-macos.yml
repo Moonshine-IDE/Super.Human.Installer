@@ -121,27 +121,18 @@ jobs:
         run: |
           haxelib install openfl 9.4.1
 
-      - name: Configuring OpenFL
-        #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        working-directory: Build
+      - name: Run OpenFL setup with different process isolation
         run: |
-          # Create a script that will run the command
-          cat > run_openfl_setup.sh << 'EOF'
-          #!/bin/bash
-          export NEKOPATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64"
-          export LD_LIBRARY_PATH="$NEKOPATH:$LD_LIBRARY_PATH"
-          export DYLD_FALLBACK_LIBRARY_PATH="$NEKOPATH:$DYLD_FALLBACK_LIBRARY_PATH"
-          export HAXE_STD_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/std"
-              
-          cd "$(pwd)"
-          haxelib run openfl setup -y
-          EOF
-              
-          # Make it executable
-          chmod +x run_openfl_setup.sh
-              
-          # Run it through SSH to localhost (which works according to your experience)
-          ssh localhost "$(pwd)/run_openfl_setup.sh"
+          # Try running in a subshell with explicit environment
+          (
+            export NEKOPATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64"
+            export LD_LIBRARY_PATH="$NEKOPATH"
+            export DYLD_FALLBACK_LIBRARY_PATH="$NEKOPATH"
+            export HAXE_STD_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/std"
+            
+            # Run with exec to replace the shell process
+            exec haxelib run openfl setup -y
+          )
 
       - name: Install and Configuring OpenFL
         #if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
