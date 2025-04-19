@@ -76,7 +76,7 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppNa
 
 [Run]
 ; Extract provisioners during installation
-Filename: "{app}\assets\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{userappdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
+Filename: "{app}\assets\bin\7za.exe"; Parameters: "x ""{tmp}\provisioners.7z"" -o""{userappdata}\{#AppName}\provisioners"" -y"; StatusMsg: "Extracting provisioners..."; Flags: runhidden
 ; Clean up the 7z file after extraction
 Filename: "cmd.exe"; Parameters: "/c del ""{userappdata}\{#AppName}\provisioners.7z"""; StatusMsg: "Cleaning up temporary files..."; Flags: runhidden
 

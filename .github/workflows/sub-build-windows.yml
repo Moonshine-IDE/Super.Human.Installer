@@ -177,20 +177,10 @@ jobs:
             exit 1
           }
           
-          # Copy 7zip components to installer directory
-          if (-not (Test-Path "Assets\installer\7za.dll")) {
-            Copy-Item "Templates\installer\7za.dll" -Destination "Assets\installer\"
-            Copy-Item "Templates\installer\7zxa.dll" -Destination "Assets\installer\"
-            Copy-Item "Templates\installer\7za.exe" -Destination "Assets\installer\"
-            Copy-Item "Templates\installer\License.txt" -Destination "Assets\installer\"
-          }
-          
-          # Make these available for the application too
+          # Only need to copy the provisioners.7z file
+          # 7za binaries are already in Assets/bin/windows and will be included automatically
           $destDir = "${{ env.bin_path }}\assets"
           Copy-Item "Assets\installer\provisioners.7z" -Destination "$destDir\"
-          Copy-Item "Assets\installer\7za.dll" -Destination "$destDir\"
-          Copy-Item "Assets\installer\7zxa.dll" -Destination "$destDir\"
-          Copy-Item "Assets\installer\7za.exe" -Destination "$destDir\"
 
       - name: Upload bin
         uses: actions/upload-artifact@v4
