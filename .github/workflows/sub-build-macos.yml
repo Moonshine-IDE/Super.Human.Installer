@@ -128,7 +128,7 @@ jobs:
           echo "DYLD_FALLBACK_LIBRARY_PATH: $DYLD_FALLBACK_LIBRARY_PATH"
           echo "HAXE_STD_PATH: $HAXE_STD_PATH"
 
-      - name: Run OpenFL Setup with explicit values
+      - name: Run OpenFL Setup with explicit environment variables
         run: |
           env \
             LD_LIBRARY_PATH="/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64" \
