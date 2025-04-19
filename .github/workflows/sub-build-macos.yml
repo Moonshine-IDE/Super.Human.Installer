@@ -88,10 +88,9 @@ jobs:
         run: haxelib --global update haxelib
 
 
-      - name: Set Neko Environment
+      - name: Set Neko Environment for OpenFL
         run: |
-          echo "NEKOPATH=/usr/lib/neko" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=/usr/lib/neko:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+          echo "DYLD_FALLBACK_LIBRARY_PATH=/Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64:$DYLD_FALLBACK_LIBRARY_PATH" >> $GITHUB_ENV
 
       - name: Install dependencies
         working-directory: Build
