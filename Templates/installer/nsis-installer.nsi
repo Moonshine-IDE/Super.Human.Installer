@@ -72,24 +72,17 @@ Section "Provisioners" SEC02
   ; Create the provisioners directory in the user's application data folder
   CreateDirectory "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners"
   
-  ; Copy provisioners from the installer to the common directory
+; Copy provisioners from the installer to the common directory
   !cd "..\..\"
-  SetOutPath "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners"
-  File /r "Assets\provisioners\*.*"
+  
+  ; Use robocopy to handle long paths for provisioners
+  DetailPrint "Copying provisioners using robocopy for long path support..."
+  SetOutPath "$EXEDIR"
+  ExecWait 'cmd.exe /c robocopy "Assets\provisioners" "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners" /E /R:1 /W:1 /NFL /NDL /NJH /NJS' $0
+  DetailPrint "Robocopy exit code: $0"
+  
   !cd "Templates/installer/"
   
-  ; Create provisioner.yml files for each provisioner type
-  FileOpen $0 "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners\hcl_domino_standalone_provisioner\provisioner.yml" w
-  FileWrite $0 "name: HCL Standalone Provisioner$\r$\n"
-  FileWrite $0 "type: hcl_domino_standalone_provisioner$\r$\n"
-  FileWrite $0 "description: Default provisioner for standalone Domino servers$\r$\n"
-  FileClose $0
-  
-  FileOpen $0 "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners\hcl_domino_additional_provisioner\provisioner.yml" w
-  FileWrite $0 "name: HCL Additional Provisioner$\r$\n"
-  FileWrite $0 "type: hcl_domino_additional_provisioner$\r$\n"
-  FileWrite $0 "description: Provisioner for additional Domino servers$\r$\n"
-  FileClose $0
 SectionEnd
 
 Section -AdditionalIcons
