@@ -180,18 +180,32 @@ jobs:
           choco install innosetup -y
 
       - name: Create Inno Setup installer
+        shell: pwsh
         run: |
+          # Get absolute paths for Inno Setup
+          $rootPath = Get-Location
+          $binPathAbs = Join-Path -Path $rootPath -ChildPath "${{ env.bin_path }}"
+          $assetsPathAbs = Join-Path -Path $rootPath -ChildPath "Assets"
+          
           # Set environment variables for Inno Setup script
           $env:PRODUCT_NAME="${{ env.app_name }}"
           $env:PRODUCT_VERSION="${{ inputs.version }}"
           $env:PRODUCT_PUBLISHER="Prominic.NET"
           $env:PRODUCT_WEB_SITE="https://superhumaninstaller.com/"
-          $env:BIN_PATH="${{ env.bin_path }}"
+          $env:BIN_PATH="$binPathAbs"
+          $env:ASSETS_PATH="$assetsPathAbs"
           $env:PRODUCT_EXE="${{ env.app_name }}.exe"
           $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
           
-          # Compile Inno Setup script
-          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "Templates/installer/inno-installer.iss"
+          # Show paths for debugging
+          Write-Host "Root Path: $rootPath"
+          Write-Host "Bin Path: $binPathAbs"
+          Write-Host "Assets Path: $assetsPathAbs"
+          
+          # Compile Inno Setup script with working directory set to the script's location
+          Set-Location -Path "Templates/installer"
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
+          Set-Location -Path $rootPath
 
       - name: Sign installer
         if: ${{ inputs.env == 'Production' }}

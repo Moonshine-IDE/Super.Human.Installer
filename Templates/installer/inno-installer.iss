@@ -6,6 +6,7 @@
 #define AppPublisher GetEnv('PRODUCT_PUBLISHER')
 #define AppURL GetEnv('PRODUCT_WEB_SITE')
 #define BinPath GetEnv('BIN_PATH')
+#define AssetsPath GetEnv('ASSETS_PATH')
 #define AppExeName GetEnv('PRODUCT_EXE')
 #define OutputBaseFileName GetEnv('PRODUCT_INSTALLER')
 
@@ -36,8 +37,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Main application files
+; Main application files - using exact path specified by BinPath
 Source: "{#BinPath}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Copy provisioners to the user's application data folder directly
+Source: "{#AssetsPath}\provisioners\*"; DestDir: "{localappdata}\{#AppName}\provisioners"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -56,37 +60,3 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Uninstall\{#AppNa
 
 [Run]
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  SourcePath, DestPath: string;
-begin
-  if CurStep = ssPostInstall then 
-  begin
-    // Copy provisioners to the common directory
-    SourcePath := ExpandConstant('{app}\assets\provisioners\');
-    DestPath := ExpandConstant('{localappdata}\{#AppName}\provisioners\');
-    
-    if DirExists(SourcePath) then
-    begin
-      if not DirExists(DestPath) then
-        ForceDirectories(DestPath);
-        
-      Log('Copying provisioners from ' + SourcePath + ' to ' + DestPath);
-      
-      // Use built-in functions for copying files and directories
-      DelTree(DestPath, True, True, True);
-      CreateDir(DestPath);
-      
-      // Launch a cmd process with robocopy for better handling of long paths
-      // Robocopy error codes 0-7 are considered successful
-      Exec(ExpandConstant('{cmd}'), '/c robocopy "' + SourcePath + '" "' + DestPath + '" /E /R:1 /W:1 /NFL /NDL /NJH /NJS', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      
-      if (ResultCode > 7) then
-        Log('Robocopy failed with exit code: ' + IntToStr(ResultCode));
-      else
-        Log('Provisioners copied successfully');
-    end;
-  end;
-end;
