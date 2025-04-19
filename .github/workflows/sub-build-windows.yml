@@ -214,7 +214,7 @@ jobs:
         run: |
           echo "Uploading installer to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
-          rsync -avz Templates/installer/${{ env.app_name }}-Setup.exe startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe
+          rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" Templates/installer/${{ env.app_name }}-Setup.exe startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe
 
       - name: Copy files to choco
         env:
@@ -252,4 +252,4 @@ jobs:
         run: |
           echo "Uploading choco package to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
-          rsync -avz Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg
+          rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg
