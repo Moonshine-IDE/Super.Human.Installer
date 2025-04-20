@@ -1,3 +1,4 @@
 --class-path ../Genesis/Source
 --main genesis.buildtools.Build
 --interp
+-lib hxWindowColorMode

@@ -409,9 +409,15 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super.initialize();
 
-		// Set the window to dark mode
-		WindowColorMode.setDarkMode();
-		WindowColorMode.redrawWindowHeader();
+		// Set the window to dark mode (Windows only)
+		#if windows
+		try {
+			WindowColorMode.setDarkMode();
+			WindowColorMode.redrawWindowHeader();
+		} catch(e:Dynamic) {
+			Logger.warning('${this}: Error setting window dark mode: ${e}');
+		}
+		#end
 		
 		// Always use dark theme for application UI
 		Theme.setTheme( new SuperHumanInstallerTheme() );
