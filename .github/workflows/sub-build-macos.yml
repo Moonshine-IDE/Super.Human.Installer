@@ -199,9 +199,20 @@ jobs:
           echo "Resetting keychain list to default..."
           security list-keychains -s login.keychain
           
+          # CRITICAL FIX: Reset the default keychain (this addresses the phantom keychain issue)
+          echo "Resetting default keychain to login.keychain..."
+          security default-keychain -s login.keychain
+          
           # Verify the cleanup worked
           echo "Current keychain list after cleanup:"
           security list-keychains
+          
+          echo "Current default keychain:"
+          security default-keychain
+          
+          # Check system preferences to verify default keychain was reset
+          echo "Checking system preferences for default keychain:"
+          defaults read com.apple.security DefaultKeychain 2>/dev/null || echo "No DefaultKeychain found in preferences"
           
           echo "Checking if build.keychain-db file still exists:"
           if [ -f /Users/prominic/Library/Keychains/build.keychain-db ]; then
