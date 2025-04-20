@@ -164,6 +164,11 @@ class ProvisionerManager {
             Logger.info('Created provisioners directory at ${provisionersDir}');
         }
         
+        // Check if we need to copy bundled provisioners on Mac/Linux
+        #if (mac || linux)
+        _copyBundledProvisionersIfNeeded(provisionersDir);
+        #end
+        
         // Read all provisioner types
         try {
             var provisionerDirs = FileSystem.readDirectory(provisionersDir);
@@ -2610,5 +2615,235 @@ class ProvisionerManager {
             throw e;
         }
     }
+
+    /**
+     * Check if the provisioners directory is empty and copy bundled provisioners if needed
+     * This is specific to Mac and Linux, where provisioners are included in the application bundle
+     * @param provisionersDir The path to the provisioners directory
+     */
+    #if (mac || linux)
+    static private function _copyBundledProvisionersIfNeeded(provisionersDir:String):Void {
+        Logger.info('Checking if bundled provisioners need to be copied on Mac/Linux');
+        
+        try {
+            // Check if the directory is empty or has no valid provisioners
+            var isEmpty = true;
+            var hasValidProvisioners = false;
+            
+            if (FileSystem.exists(provisionersDir)) {
+                var items = FileSystem.readDirectory(provisionersDir);
+                isEmpty = (items.length == 0);
+                
+                // If not empty, check if it has any subdirectories with provisioner-collection.yml files
+                if (!isEmpty) {
+                    Logger.info('Provisioners directory exists with ${items.length} items, checking if valid provisioners exist');
+                    
+                    for (item in items) {
+                        var itemPath = Path.addTrailingSlash(provisionersDir) + item;
+                        if (FileSystem.isDirectory(itemPath)) {
+                            // Check for provisioner-collection.yml file to indicate a valid provisioner directory
+                            var metadataPath = Path.addTrailingSlash(itemPath) + PROVISIONER_METADATA_FILENAME;
+                            if (FileSystem.exists(metadataPath)) {
+                                Logger.info('Found valid provisioner collection: ${item}');
+                                hasValidProvisioners = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Copy provisioners if directory is empty or has no valid provisioners
+            if (isEmpty || !hasValidProvisioners) {
+                Logger.info('Provisioners directory is ${isEmpty ? "empty" : "missing valid provisioners"}, copying from application assets');
+                _copyBundledProvisioners(provisionersDir);
+            } else {
+                Logger.info('Provisioners directory already contains valid provisioners, skipping copy');
+            }
+        } catch (e) {
+            Logger.error('Error checking provisioners directory: ${e}');
+        }
+    }
+    
+    /**
+     * Copy bundled provisioners from application assets to the user's provisioners directory
+     * @param destDir The destination directory to copy to
+     */
+    static private function _copyBundledProvisioners(destDir:String):Void {
+        try {
+            // Path to bundled provisioners in assets
+            var bundledProvisionersPath = "assets/provisioners";
+            
+            Logger.info('Copying bundled provisioners from ${bundledProvisionersPath} to ${destDir}');
+            
+            // Get list of all assets to find provisioner directories
+            var assetList = openfl.Assets.list();
+            var provisionerDirPaths = new Map<String, Bool>();
+            
+            // Find all unique provisioner directories by looking for files in the assets/provisioners path
+            for (assetPath in assetList) {
+                if (assetPath.indexOf(bundledProvisionersPath) == 0) {
+                    // Extract the provisioner type directory (first level after assets/provisioners)
+                    var relativePath = assetPath.substr(bundledProvisionersPath.length);
+                    if (relativePath.startsWith("/")) relativePath = relativePath.substr(1);
+                    
+                    var parts = relativePath.split("/");
+                    if (parts.length > 0) {
+                        var provisionerTypeDir = parts[0];
+                        if (provisionerTypeDir != "") {
+                            provisionerDirPaths.set(provisionerTypeDir, true);
+                        }
+                    }
+                }
+            }
+            
+            // Log the found provisioner directories
+            var provisionerDirs = [for (dir in provisionerDirPaths.keys()) dir];
+            Logger.info('Found ${provisionerDirs.length} provisioner directories in assets: ${provisionerDirs.join(", ")}');
+            
+            // Copy each provisioner directory
+            for (provisionerDir in provisionerDirs) {
+                var sourcePath = Path.addTrailingSlash(bundledProvisionersPath) + provisionerDir;
+                var destPath = Path.addTrailingSlash(destDir) + provisionerDir;
+                
+                Logger.info('Copying provisioner ${provisionerDir} from ${sourcePath} to ${destPath}');
+                
+                // Create destination directory
+                if (!FileSystem.exists(destPath)) {
+                    _createDirectoryRecursive(destPath);
+                }
+                
+                // Copy the provisioner-collection.yml file first
+                var collectionYmlPath = Path.addTrailingSlash(sourcePath) + PROVISIONER_METADATA_FILENAME;
+                var collectionYmlAsset = openfl.Assets.exists(collectionYmlPath) ? openfl.Assets.getBytes(collectionYmlPath) : null;
+                
+                if (collectionYmlAsset != null) {
+                    var destCollectionYmlPath = Path.addTrailingSlash(destPath) + PROVISIONER_METADATA_FILENAME;
+                    File.saveBytes(destCollectionYmlPath, collectionYmlAsset);
+                    Logger.info('Copied ${PROVISIONER_METADATA_FILENAME} for ${provisionerDir}');
+                } else {
+                    Logger.warning('${PROVISIONER_METADATA_FILENAME} not found for ${provisionerDir}');
+                }
+                
+                // Find all version directories for this provisioner type
+                var versionDirs = new Map<String, Bool>();
+                for (assetPath in assetList) {
+                    var provTypeAssetPath = Path.addTrailingSlash(sourcePath);
+                    if (assetPath.indexOf(provTypeAssetPath) == 0) {
+                        var relativePath = assetPath.substr(provTypeAssetPath.length);
+                        if (relativePath.startsWith("/")) relativePath = relativePath.substr(1);
+                        
+                        var parts = relativePath.split("/");
+                        if (parts.length > 0) {
+                            var versionDir = parts[0];
+                            // Skip if it's the provisioner-collection.yml file
+                            if (versionDir != "" && versionDir != PROVISIONER_METADATA_FILENAME) {
+                                versionDirs.set(versionDir, true);
+                            }
+                        }
+                    }
+                }
+                
+                // Log and copy each version directory
+                var versions = [for (dir in versionDirs.keys()) dir];
+                Logger.info('Found ${versions.length} version directories for ${provisionerDir}: ${versions.join(", ")}');
+                
+                for (versionDir in versions) {
+                    var sourceVersionPath = Path.addTrailingSlash(sourcePath) + versionDir;
+                    var destVersionPath = Path.addTrailingSlash(destPath) + versionDir;
+                    
+                    // Create version directory
+                    if (!FileSystem.exists(destVersionPath)) {
+                        _createDirectoryRecursive(destVersionPath);
+                    }
+                    
+                    // Copy all files from this version directory
+                    _copyAssetDirectoryRecursive(sourceVersionPath, destVersionPath, assetList);
+                    
+                    Logger.info('Copied version ${versionDir} for ${provisionerDir}');
+                }
+            }
+            
+            Logger.info('Successfully copied all bundled provisioners to ${destDir}');
+        } catch (e) {
+            Logger.error('Error copying bundled provisioners: ${e}');
+        }
+    }
+    
+    /**
+     * Recursively copy files from an asset directory to a file system directory
+     * @param assetDir The source asset directory path
+     * @param destDir The destination directory path 
+     * @param assetList Optional pre-populated list of all assets to avoid repeated calls to Assets.list()
+     */
+    static private function _copyAssetDirectoryRecursive(assetDir:String, destDir:String, assetList:Array<String> = null):Void {
+        try {
+            // Ensure trailing slash for directory paths
+            assetDir = Path.addTrailingSlash(assetDir);
+            destDir = Path.addTrailingSlash(destDir);
+            
+            // Create destination directory if it doesn't exist
+            if (!FileSystem.exists(destDir)) {
+                _createDirectoryRecursive(destDir);
+            }
+            
+            // Get or use provided asset list
+            if (assetList == null) {
+                assetList = openfl.Assets.list();
+            }
+            
+            // Find all assets in this directory
+            var filesInDir = [];
+            var subDirs = new Map<String, Bool>();
+            
+            for (assetPath in assetList) {
+                if (assetPath.indexOf(assetDir) == 0) {
+                    var relativePath = assetPath.substr(assetDir.length);
+                    
+                    // Skip empty paths
+                    if (relativePath == "") continue;
+                    
+                    // Check if this is a file in the current directory or in a subdirectory
+                    var parts = relativePath.split("/");
+                    
+                    if (parts.length == 1 || (parts.length > 1 && parts[1] == "")) {
+                        // This is a file in the current directory
+                        filesInDir.push(assetPath);
+                    } else {
+                        // This is a file in a subdirectory, extract the subdirectory name
+                        var subDir = parts[0];
+                        if (subDir != "") {
+                            subDirs.set(subDir, true);
+                        }
+                    }
+                }
+            }
+            
+            // Copy all files in the current directory
+            for (filePath in filesInDir) {
+                var fileName = Path.withoutDirectory(filePath);
+                var destFilePath = destDir + fileName;
+                
+                if (openfl.Assets.exists(filePath)) {
+                    var fileData = openfl.Assets.getBytes(filePath);
+                    File.saveBytes(destFilePath, fileData);
+                    Logger.verbose('Copied asset file ${filePath} to ${destFilePath}');
+                } else {
+                    Logger.warning('Asset file not found: ${filePath}');
+                }
+            }
+            
+            // Recursively process subdirectories
+            for (subDir in subDirs.keys()) {
+                var sourceSubDirPath = assetDir + subDir;
+                var destSubDirPath = destDir + subDir;
+                
+                _copyAssetDirectoryRecursive(sourceSubDirPath, destSubDirPath, assetList);
+            }
+        } catch (e) {
+            Logger.error('Error copying asset directory ${assetDir} to ${destDir}: ${e}');
+        }
+    }
+    #end
 
 }
