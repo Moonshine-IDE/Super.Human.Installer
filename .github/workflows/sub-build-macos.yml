@@ -174,6 +174,16 @@ jobs:
           echo "${{ secrets.MAC_CERTKEY_PASS }}"  >> /tmp/keychain_pass
           rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin
 
+      - name: Delete build.keychain
+        run: |
+          # Check if build.keychain exists and delete it
+          if security list-keychains | grep -q "build.keychain"; then
+            echo "Deleting build.keychain to ensure a fresh environment"
+            security delete-keychain build.keychain
+          else
+            echo "No build.keychain found"
+          fi
+
       - name: Sign app
         uses: Moonshine-IDE/macos-sign-app-action@main
         with:
