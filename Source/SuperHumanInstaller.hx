@@ -35,7 +35,9 @@ import openfl.Assets;
 import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
 import haxe.io.Path;
+#if windows
 import hxwindowmode.WindowColorMode;
+#end
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
 import superhuman.components.SecretsPage;

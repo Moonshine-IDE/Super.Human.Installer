@@ -128,8 +128,6 @@ jobs:
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git      
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
-          haxelib install flixel
-          haxelib install hxWindowColorMode
 
       - name: List dependencies
         run: haxelib list

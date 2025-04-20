@@ -5,8 +5,10 @@
 	<include path="Genesis/GenesisApplication.xml"/>
 	<!-- Override properties, add new ones below -->
 
-	<haxelib name="flixel" />
-	<haxelib name="hxWindowColorMode" />
+	<section if="windows">
+		<haxelib name="flixel" />
+		<haxelib name="hxWindowColorMode" />
+	</section>
 
 	<meta version="0.1.95"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
