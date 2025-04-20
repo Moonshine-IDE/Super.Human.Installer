@@ -57,6 +57,13 @@ jobs:
           echo "App ID: ${{ env.app_id }}"
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
+      - name: 'Cleanup build folder'
+        run: |
+          ls -la ./
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+          ls -la ./
+
       - name: Checkout repo
         uses: actions/checkout@v4
 
@@ -183,14 +190,33 @@ jobs:
           else
             echo "No build.keychain found"
           fi
+          
+          # Verify the keychain state
+          echo "Current keychain list:"
+          security list-keychains
 
-      - name: Sign app
+      - name: Sign app with debugging
+        id: sign_app
         uses: Moonshine-IDE/macos-sign-app-action@main
         with:
           app-path: ${{ env.bin_path }}/${{ env.app_name }}.app
           mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
           mac-application-certkey: ${{ secrets.MAC_APPLICATION_CERTKEY }}
           mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
+        continue-on-error: true
+
+      - name: Diagnostics if signing fails
+        if: steps.sign_app.outcome != 'success'
+        run: |
+          echo "Signing failed. Performing diagnostics..."
+          echo "Available keychains:"
+          security list-keychains
+          
+          echo "Available identities in build.keychain (if exists):"
+          security find-identity -v build.keychain || true
+          
+          echo "Attempting manual codesign with full paths and explicit identity..."
+          security find-identity -v -p codesigning
 
       - name: Create installer
         run: |
