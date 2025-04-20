@@ -1,0 +1,106 @@
+name: Update Documentation
+
+on:
+  push:
+    branches:
+      - 'mark-testing-branch'
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: [self-hosted, linux]
+    env:
+      RUBY_VERSION: '3.4.3' # Define Ruby version as an environment variable
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends autoconf bison build-essential g++ make libssl-dev libyaml-dev libreadline-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev
+
+      - name: Update rbenv and ruby-build definitions
+        run: |
+          if [ -d "$(rbenv root)/plugins/ruby-build" ]; then
+            echo "Updating ruby-build..."
+            git -C "$(rbenv root)/plugins/ruby-build" pull
+          else
+            echo "ruby-build plugin not found in rbenv root. Assuming rbenv manages it elsewhere or it's up-to-date."
+          fi
+
+      - name: Install Ruby ${{ env.RUBY_VERSION }} using rbenv
+        run: |
+          rbenv install ${{ env.RUBY_VERSION }} --skip-existing
+          echo "Ruby ${{ env.RUBY_VERSION }} installation checked/completed."
+
+      - name: Set Ruby version for Docs directory
+        run: rbenv local ${{ env.RUBY_VERSION }}
+        working-directory: ./Docs # Set the version specifically for the Docs folder
+
+      - name: Rehash rbenv shims
+        # Rehash is needed after install and setting local version
+        run: rbenv rehash
+
+      - name: Install Bundler and Gems
+        # Install bundler and then install gems from Docs/Gemfile
+        # Bundler will use the version set by `rbenv local`
+        # Configure path to install gems locally within Docs/vendor/bundle
+        run: |
+          eval "$(rbenv init - bash)" # Initialize rbenv for this shell session
+          echo "--- Checking Ruby version in Gem Install step ---"
+          which ruby
+          ruby -v
+          echo "-----------------------------------------------"
+          gem install bundler -v '~> 2.3' # Install a specific bundler version if needed
+          bundle config path vendor/bundle
+          bundle install --jobs 4 --retry 3
+        working-directory: ./Docs # Run bundle install within the Docs directory
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build with Jekyll
+        # Run Jekyll build using the rbenv-selected Ruby and Bundler
+        # Run from within the Docs directory to ensure correct context
+        run: |
+          eval "$(rbenv init - bash)" # Ensure rbenv is active for this step too
+          echo "--- Checking Ruby version in Jekyll Build step ---"
+          which ruby
+          ruby -v
+          echo "------------------------------------------------"
+          bundle exec jekyll build --destination ../_site # Source and config default to current dir (.)
+        working-directory: ./Docs # Run jekyll build within the Docs directory
+        env:
+          JEKYLL_ENV: production
+
+      - name: Generate versioninfo and place in site output
+        # Run the python script AFTER jekyll build and move the output to the built site directory
+        run: |
+          python3 DevOps/generate-vinfo.py
+          # Ensure _site directory exists before moving
+          mkdir -p ./_site
+          mv versioninfo.json ./_site/versioninfo.json
+
+      - name: Upload artifact
+        # Upload the built site (_site directory)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './_site' # Upload the Jekyll build output from the root
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

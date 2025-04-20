@@ -1,0 +1,42 @@
+# Basic Jekyll settings
+title: Super.Human.Installer Documentation
+description: Documentation for the Super.Human.Installer application.
+baseurl: "" # Keep empty for hosting at the root of the domain
+url: "https://docs.superhumaninstaller.com" # Your custom domain
+# github_username: Prominic # Optional: Your GitHub username/org
+
+# Theme settings
+theme: just-the-docs
+
+# Theme customization (optional, examples below)
+color_scheme: dark # Or "light", or custom schemes
+search_enabled: true # Enable the built-in search
+
+# Aux links for header (optional)
+# aux_links:
+#   "SHI on GitHub":
+#     - "https://github.com/Prominic/Super.Human.Installer"
+
+# Footer content (optional)
+# footer_content: "Copyright &copy; 2024 Prominic.NET, Inc. Distributed under the SSPL license."
+
+# Navigation structure (can be controlled via front matter in markdown files)
+# See Just the Docs documentation for advanced navigation configuration if needed
+# https://just-the-docs.com/docs/navigation-structure/
+
+# Exclude files from Jekyll build process
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  # Add other files/folders to exclude if necessary
+
+# Markdown processor (kramdown is default and recommended)
+markdown: kramdown
+kramdown:
+  input: GFM # Enable GitHub Flavored Markdown
+  syntax_highlighter: rouge # Use Rouge for syntax highlighting
+
+# Plugins (if using any beyond the theme)
+# plugins:
+#   - jekyll-seo-tag
+#   - jekyll-sitemap
