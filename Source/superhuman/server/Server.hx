@@ -892,6 +892,9 @@ class Server {
         // Clean up Vagrant's cache before starting to handle cases where the VM was deleted outside the application
         Vagrant.getInstance().pruneGlobalStatus();
 
+        // This ensures we don't try to recreate the VM with an old/invalid ID
+        this.combinedVirtualMachine.value.vagrantMachine.vagrantId = null;
+
         _forceVagrantProvisioning = provision;
         this.status.value = ServerStatus.Initializing;
         this.combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId = this.virtualBoxId;

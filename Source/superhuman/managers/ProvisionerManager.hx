@@ -154,7 +154,6 @@ class ProvisionerManager {
             return; // Already initialized
         }
         
-        Logger.info('Initializing provisioner cache...');
         _cachedProvisioners = new Map<String, Array<ProvisionerDefinition>>();
         
         // Scan provisioners directory
@@ -175,11 +174,9 @@ class ProvisionerManager {
             Logger.info('Found ${provisionerDirs.length} potential provisioner directories');
             
             // Log each provisioner directory before processing
-            Logger.info('Found provisioner directories:');
             for (dir in provisionerDirs) {
                 var fullPath = Path.addTrailingSlash(provisionersDir) + dir;
                 var isDir = FileSystem.isDirectory(fullPath);
-                Logger.info('  - ${dir} (isDirectory: ${isDir})');
                 
                 // If it's a directory, check for metadata files
                 if (isDir) {
@@ -187,8 +184,6 @@ class ProvisionerManager {
                     var legacyPath = Path.addTrailingSlash(fullPath) + "provisioner.yml";
                     var hasMetadata = FileSystem.exists(metadataPath);
                     var hasLegacy = FileSystem.exists(legacyPath);
-                    Logger.info('    Has provisioner-collection.yml: ${hasMetadata}');
-                    Logger.info('    Has provisioner.yml in root: ${hasLegacy}');
                     
                     // Check version directories
                     try {
@@ -198,8 +193,6 @@ class ProvisionerManager {
                             item != PROVISIONER_METADATA_FILENAME
                         );
                         
-                        Logger.info('    Version directories: ${versionSubdirs.length}');
-                        
                         // Check each version directory for provisioner.yml
                         for (versionDir in versionSubdirs) {
                             var versionPath = Path.addTrailingSlash(fullPath) + versionDir;
@@ -208,23 +201,12 @@ class ProvisionerManager {
                             var hasScriptsDir = FileSystem.exists(Path.addTrailingSlash(versionPath) + "scripts") && 
                                                FileSystem.isDirectory(Path.addTrailingSlash(versionPath) + "scripts");
                             
-                            Logger.info('      - Version ${versionDir}:');
-                            Logger.info('        Has provisioner.yml: ${hasVersionMetadata}');
-                            Logger.info('        Has scripts directory: ${hasScriptsDir}');
-                            
                             // Check content of version metadata file if it exists
                             if (hasVersionMetadata) {
                                 try {
                                     var content = File.getContent(versionMetadataPath);
-                                    Logger.info('        provisioner.yml content:');
                                     var lines = content.split("\n");
                                     var previewLines = lines.length > 5 ? lines.slice(0, 5) : lines;
-                                    for (line in previewLines) {
-                                        Logger.info('          ${line}');
-                                    }
-                                    if (lines.length > 5) {
-                                        Logger.info('          ...(${lines.length - 5} more lines)');
-                                    }
                                 } catch (e) {
                                     Logger.error('        Error reading provisioner.yml: ${e}');
                                 }
@@ -241,14 +223,12 @@ class ProvisionerManager {
                 
                 // Skip if not a directory
                 if (!FileSystem.isDirectory(provisionerPath)) {
-                    Logger.verbose('Skipping non-directory: ${provisionerPath}');
                     continue;
                 }
                 
                 // Read provisioner metadata
                 var metadata = readProvisionerMetadata(provisionerPath);
                 if (metadata == null) {
-                    Logger.verbose('Skipping directory without valid metadata: ${provisionerPath}');
                     continue;
                 }
                 
@@ -268,7 +248,6 @@ class ProvisionerManager {
             for (type in _cachedProvisioners.keys()) {
                 var count = _cachedProvisioners.get(type).length;
                 totalProvisioners += count;
-                Logger.info('Cached ${count} provisioners of type ${type}');
             }
             Logger.info('Provisioner cache initialized with ${totalProvisioners} total provisioners');
             
@@ -305,7 +284,6 @@ class ProvisionerManager {
                 // For backwards compatibility, we'll check for scripts directory but not require it
                 var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
                 var hasScriptsDir = FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath);
-                Logger.info('Version directory ${versionDir}: ${hasScriptsDir ? "has" : "does not have"} scripts folder');
                 
                 // Check for version-specific metadata file - MUST EXIST
                 var versionMetadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
@@ -329,8 +307,6 @@ class ProvisionerManager {
                         versionMetadata.configuration.basicFields.length : 0;
                     var advancedCount = (versionMetadata.configuration.advancedFields != null) ? 
                         versionMetadata.configuration.advancedFields.length : 0;
-                    
-                    Logger.info('Version metadata has ${basicCount} basic fields and ${advancedCount} advanced fields');
                 }
                 
                 // Override version field with the directory name to ensure consistency
@@ -467,7 +443,6 @@ class ProvisionerManager {
             // Read the file content directly
             var content = File.getContent(metadataPath);
             var previewLength:Int = cast Math.min(100, content.length);
-            Logger.info('File content preview: ${content.substr(0, previewLength)}...');
             
             // Try to parse the YAML content
             var metadata:Dynamic = null;
@@ -476,13 +451,11 @@ class ProvisionerManager {
                 metadata = Yaml.read(metadataPath);
                 
                 // Debug the YAML parsing result
-                Logger.info('YAML parsing result type: ${Type.typeof(metadata)}');
                 if (metadata != null) {
                     // Check for ObjectMap type (common YAML parser output)
                     if (Std.isOfType(metadata, ObjectMap)) {
                         var objMap:ObjectMap<String, Dynamic> = cast metadata;
                         var keys = [for (k in objMap.keys()) k];
-                        Logger.info('YAML parsed as ObjectMap with keys: ${keys.join(", ")}');
                         
                         // Create a standard object from ObjectMap for easier handling
                         var stdObj:Dynamic = {};
@@ -490,8 +463,6 @@ class ProvisionerManager {
                             Reflect.setField(stdObj, key, objMap.get(key));
                         }
                         metadata = stdObj;
-                    } else {
-                        Logger.info('YAML parsed as standard object');
                     }
                 }
             } catch (yamlError) {
@@ -502,8 +473,6 @@ class ProvisionerManager {
             var hasName = Reflect.hasField(metadata, "name");
             var hasType = Reflect.hasField(metadata, "type");
             var hasDescription = Reflect.hasField(metadata, "description");
-            
-            Logger.info('Field validation - hasName: ${hasName}, hasType: ${hasType}, hasDescription: ${hasDescription}');
             
             if (!hasName || !hasType || !hasDescription) {
                 Logger.warning('Invalid provisioner-collection.yml at ${metadataPath}: missing required fields');
@@ -545,21 +514,16 @@ class ProvisionerManager {
                             var objMap:ObjectMap<String, Dynamic> = cast configData;
                             if (objMap.exists("basicFields")) {
                                 basicFields = objMap.get("basicFields");
-                                Logger.info('Found basicFields in ObjectMap, count: ${basicFields != null ? basicFields.length : 0}');
                             }
                             if (objMap.exists("advancedFields")) {
                                 advancedFields = objMap.get("advancedFields");
-                                Logger.info('Found advancedFields in ObjectMap, count: ${advancedFields != null ? advancedFields.length : 0}');
                             }
                         } 
                         // Handle standard object case
                         else if (Reflect.hasField(configData, "basicFields")) {
                             basicFields = Reflect.field(configData, "basicFields");
-                            Logger.info('Found basicFields in standard object, count: ${basicFields != null ? basicFields.length : 0}');
-                        
                             if (Reflect.hasField(configData, "advancedFields")) {
                                 advancedFields = Reflect.field(configData, "advancedFields");
-                                Logger.info('Found advancedFields in standard object, count: ${advancedFields != null ? advancedFields.length : 0}');
                             }
                         }
                         
@@ -571,7 +535,6 @@ class ProvisionerManager {
                         // Log the results to confirm
                         var basicParsedCount = configuration.basicFields != null ? configuration.basicFields.length : 0;
                         var advancedParsedCount = configuration.advancedFields != null ? configuration.advancedFields.length : 0;
-                        Logger.info('Parsed configuration: basicFields=${basicParsedCount}, advancedFields=${advancedParsedCount}');
                     }
             
             // Parse roles if they exist
@@ -1719,18 +1682,6 @@ class ProvisionerManager {
                  throw new haxe.Exception('Cloned repository directory not found at ${repoDir}');
             }
 
-            // List directory contents for debugging
-            try {
-                var items = FileSystem.readDirectory(repoDir);
-                Logger.info('Cloned repository directory contents (${repoDir}):');
-                for (item in items) {
-                    var isDir = FileSystem.isDirectory(Path.addTrailingSlash(repoDir) + item);
-                    Logger.info('  - ${item} (isDirectory: ${isDir})');
-                }
-            } catch (e) {
-                Logger.error('Error listing cloned repository contents: ${e}');
-            }
-
             var provisionerPath = _findProvisionerRoot(repoDir, repository);
 
             if (provisionerPath == null) {
@@ -1909,7 +1860,6 @@ class ProvisionerManager {
             
             // Read first level directories
             var items = FileSystem.readDirectory(repositoryPath);
-            Logger.info('Found ${items.length} items in repository root');
             
             // Create a function to recursively check directories up to a certain depth
             function checkDirectory(dirPath:String, relativePath:String, depth:Int = 0, maxDepth:Int = 3):String {
@@ -1926,7 +1876,6 @@ class ProvisionerManager {
                 
                 try {
                     var subItems = FileSystem.readDirectory(dirPath);
-                    Logger.verbose('Checking ${subItems.length} items at depth ${depth}: ${relativePath}');
                     
                     // First check any directories with the same name as the repository (common pattern)
                     for (subItem in subItems) {
@@ -2310,11 +2259,6 @@ class ProvisionerManager {
             // Log the conversion for debugging
             var result = _getWindowsLongPath(normalizedPath);
             
-            // Log the conversion to help diagnose path issues
-            if (path != result) {
-                Logger.info('Windows path conversion: "' + path + '" -> "' + result + '"');
-            }
-            
             // Return the converted path
             return result;
         } catch (e) {
@@ -2379,7 +2323,6 @@ class ProvisionerManager {
         // Get the source directory structure using platform-specific paths
         var platformDir = _getPlatformPath(directory);
         var filesToProcess = _collectAllFiles(platformDir);
-        Logger.info('Found ${filesToProcess.length} files to process for zip creation');
         
         // First, make sure all parent directories exist in the zip
         for (filePath in filesToProcess) {
@@ -2414,7 +2357,6 @@ class ProvisionerManager {
                     
                     entries.add(dirEntry);
                     addedDirs.set(currentPath, true);
-                    Logger.verbose('Added directory entry to zip: ${currentPath}');
                 }
             } catch (e) {
                 Logger.warning('Error processing directories for file: ${filePath} - ${e}');
@@ -2446,7 +2388,6 @@ class ProvisionerManager {
                 };
                 
                 entries.add(entry);
-                Logger.verbose('Added file to zip: ${relPath} (${data.length} bytes)');
             } catch (e) {
                 Logger.warning('Could not add file to zip: ${relPath} - ${e}');
             }
@@ -2486,7 +2427,6 @@ class ProvisionerManager {
             
             try {
                 var items = FileSystem.readDirectory(platformDir);
-                Logger.verbose('Found ${items.length} items in directory: ${directory}');
                 
                 for (item in items) {
                     // Construct paths correctly with proper trailing slashes
@@ -2498,7 +2438,6 @@ class ProvisionerManager {
                             // Add all files from subdirectories
                             var subFiles = _collectAllFiles(fullPath);
                             if (subFiles.length > 0) {
-                                Logger.verbose('Adding ${subFiles.length} files from subdirectory: ${item}');
                                 result = result.concat(subFiles);
                             }
                         } else {
@@ -2754,8 +2693,6 @@ class ProvisionerManager {
                     continue;
                 }
                 
-                Logger.verbose('Processing ${isItemDirectory ? "directory" : "file"}: ${item}');
-                
                 if (isItemDirectory) {
                     // Add directory entry
                     var entry:Entry = {
@@ -2798,7 +2735,6 @@ class ProvisionerManager {
                         
                         // Skip compression completely
                         entries.add(entry);
-                        Logger.verbose('Added file to zip: ${zipPath} (${data.length} bytes)');
                     } catch (e) {
                         Logger.warning('Could not add file to zip: ${itemPath} - ${e}');
                     }
@@ -2967,7 +2903,6 @@ class ProvisionerManager {
                 
                 // Skip if not a directory
                 if (!FileSystem.isDirectory(sourcePath)) {
-                    Logger.verbose('Skipping non-directory: ${sourcePath}');
                     continue;
                 }
                 
@@ -3106,7 +3041,6 @@ class ProvisionerManager {
                 if (openfl.Assets.exists(filePath)) {
                     var fileData = openfl.Assets.getBytes(filePath);
                     File.saveBytes(destFilePath, fileData);
-                    Logger.verbose('Copied asset file ${filePath} to ${destFilePath}');
                 } else {
                     Logger.warning('Asset file not found: ${filePath}');
                 }

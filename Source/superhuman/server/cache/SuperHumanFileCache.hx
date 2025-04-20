@@ -214,7 +214,6 @@ class SuperHumanFileCache extends EventDispatcher {
                             if (entries != null && entries.length > 0) {
                                 hasEntries = true;
                                 roleMap.set(typeKey, entries);
-                                Logger.verbose('Loaded ${entries.length} files for ${roleKey}/${typeKey}');
                             } else {
                                 // Handle empty arrays
                                 roleMap.set(typeKey, []);
@@ -331,7 +330,6 @@ class SuperHumanFileCache extends EventDispatcher {
                     };
                     
                     existingEntries.push(cachedFile);
-                    Logger.verbose('Added default hash to registry: ${hash}');
                 }
                 
                 roleMap.set(type, existingEntries);
