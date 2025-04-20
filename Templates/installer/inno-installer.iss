@@ -34,8 +34,10 @@ UninstallDisplayIcon={app}\{#AppExeName}
 ; Custom dark theme installer images and skin
 SetupIconFile=..\..\Assets\images\setup.ico
 WizardSmallImageFile=..\..\Assets\images\wizard-small.bmp
-; Remove the wizard image by not specifying it
-; WizardImageFile=..\..\Assets\images\wizard-large.bmp
+; Use a transparent blank image for the wizard panel
+WizardImageFile=..\..\Assets\images\wizard-large.bmp
+; Enable alpha channel transparency for wizard images
+WizardImageAlphaFormat=defined
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -46,9 +48,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 #define VCLStylesSkinPath "{localappdata}\VCLStylesSkin"
 
 [Files]
-; VCL Styles files - list these at the top to avoid extraction delays
+; VCL Styles files - list these at the very top to avoid extraction delays
 Source: "..\..\Assets\bin\windows\VclStylesinno.dll"; DestDir: "{tmp}"; Flags: dontcopy
 Source: ".\Carbon.vsf"; DestDir: "{tmp}"; Flags: dontcopy
+
+; For the uninstaller
 Source: "..\..\Assets\bin\windows\VclStylesinno.dll"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
 Source: ".\Carbon.vsf"; DestDir: "{#VCLStylesSkinPath}"; Flags: uninsneveruninstall
 
@@ -118,8 +122,7 @@ external 'FindClose@kernel32.dll stdcall';
 
 function InitializeSetup(): Boolean;
 begin
-  // Extract VCL Styles skin file to temp directory
-  ExtractTemporaryFile('VclStylesinno.dll');
+  // Extract only the style file, not the DLL
   ExtractTemporaryFile('Carbon.vsf');
   
   // Load the VCL style with explicit path
@@ -146,8 +149,8 @@ end;
 
 procedure DeinitializeUninstall();
 begin
-  // Hide window before unloading skin
-  ShowWindow(StrToInt(ExpandConstant('{wizardhwnd}')), 0);
+  // In the uninstaller, {wizardhwnd} might not be available, so we'll just unload the skin
+  // without trying to hide the window first to avoid the "cannot evaluate wizardhwnd" error
   UnLoadVCLStyles_UnInstall();
 end;
 
