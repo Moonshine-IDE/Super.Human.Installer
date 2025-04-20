@@ -2685,7 +2685,7 @@ class ProvisionerManager {
                 if (assetPath.indexOf(bundledProvisionersPath) == 0) {
                     // Extract the provisioner type directory (first level after assets/provisioners)
                     var relativePath = assetPath.substr(bundledProvisionersPath.length);
-                    if (relativePath.startsWith("/")) relativePath = relativePath.substr(1);
+                    if (StringTools.startsWith(relativePath, "/")) relativePath = relativePath.substr(1);
                     
                     var parts = relativePath.split("/");
                     if (parts.length > 0) {
@@ -2731,7 +2731,7 @@ class ProvisionerManager {
                     var provTypeAssetPath = Path.addTrailingSlash(sourcePath);
                     if (assetPath.indexOf(provTypeAssetPath) == 0) {
                         var relativePath = assetPath.substr(provTypeAssetPath.length);
-                        if (relativePath.startsWith("/")) relativePath = relativePath.substr(1);
+                        if (StringTools.startsWith(relativePath, "/")) relativePath = relativePath.substr(1);
                         
                         var parts = relativePath.split("/");
                         if (parts.length > 0) {
