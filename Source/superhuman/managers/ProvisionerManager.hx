@@ -2667,101 +2667,53 @@ class ProvisionerManager {
     
     /**
      * Copy bundled provisioners from application assets to the user's provisioners directory
+     * This uses a simple, direct method to copy the entire provisioners directory recursively
      * @param destDir The destination directory to copy to
      */
     static private function _copyBundledProvisioners(destDir:String):Void {
         try {
-            // Path to bundled provisioners in assets
-            var bundledProvisionersPath = "assets/provisioners";
+            // Get path to bundled provisioners in application directory
+            var bundledProvisionersPath = Path.addTrailingSlash(System.applicationDirectory) + "assets/provisioners";
             
             Logger.info('Copying bundled provisioners from ${bundledProvisionersPath} to ${destDir}');
             
-            // Get list of all assets to find provisioner directories
-            var assetList = openfl.Assets.list();
-            var provisionerDirPaths = new Map<String, Bool>();
-            
-            // Find all unique provisioner directories by looking for files in the assets/provisioners path
-            for (assetPath in assetList) {
-                if (assetPath.indexOf(bundledProvisionersPath) == 0) {
-                    // Extract the provisioner type directory (first level after assets/provisioners)
-                    var relativePath = assetPath.substr(bundledProvisionersPath.length);
-                    if (StringTools.startsWith(relativePath, "/")) relativePath = relativePath.substr(1);
-                    
-                    var parts = relativePath.split("/");
-                    if (parts.length > 0) {
-                        var provisionerTypeDir = parts[0];
-                        if (provisionerTypeDir != "") {
-                            provisionerDirPaths.set(provisionerTypeDir, true);
-                        }
-                    }
-                }
+            // Check if the source directory exists
+            if (!FileSystem.exists(bundledProvisionersPath)) {
+                Logger.error('Bundled provisioners directory not found at ${bundledProvisionersPath}');
+                return;
             }
             
-            // Log the found provisioner directories
-            var provisionerDirs = [for (dir in provisionerDirPaths.keys()) dir];
-            Logger.info('Found ${provisionerDirs.length} provisioner directories in assets: ${provisionerDirs.join(", ")}');
+            if (!FileSystem.isDirectory(bundledProvisionersPath)) {
+                Logger.error('Bundled provisioners path exists but is not a directory: ${bundledProvisionersPath}');
+                return;
+            }
             
-            // Copy each provisioner directory
+            // List all provisioner directories
+            var provisionerDirs = FileSystem.readDirectory(bundledProvisionersPath);
+            Logger.info('Found ${provisionerDirs.length} provisioner directories to copy');
+            
+            // Copy each directory using the existing recursive copy method
             for (provisionerDir in provisionerDirs) {
                 var sourcePath = Path.addTrailingSlash(bundledProvisionersPath) + provisionerDir;
                 var destPath = Path.addTrailingSlash(destDir) + provisionerDir;
                 
-                Logger.info('Copying provisioner ${provisionerDir} from ${sourcePath} to ${destPath}');
+                // Skip if not a directory
+                if (!FileSystem.isDirectory(sourcePath)) {
+                    Logger.verbose('Skipping non-directory: ${sourcePath}');
+                    continue;
+                }
                 
-                // Create destination directory
+                Logger.info('Copying provisioner ${provisionerDir}...');
+                
+                // Make sure destination directory exists
                 if (!FileSystem.exists(destPath)) {
                     _createDirectoryRecursive(destPath);
                 }
                 
-                // Copy the provisioner-collection.yml file first
-                var collectionYmlPath = Path.addTrailingSlash(sourcePath) + PROVISIONER_METADATA_FILENAME;
-                var collectionYmlAsset = openfl.Assets.exists(collectionYmlPath) ? openfl.Assets.getBytes(collectionYmlPath) : null;
+                // Use the existing directory copy method
+                _copyDirectoryRecursive(sourcePath, destPath);
                 
-                if (collectionYmlAsset != null) {
-                    var destCollectionYmlPath = Path.addTrailingSlash(destPath) + PROVISIONER_METADATA_FILENAME;
-                    File.saveBytes(destCollectionYmlPath, collectionYmlAsset);
-                    Logger.info('Copied ${PROVISIONER_METADATA_FILENAME} for ${provisionerDir}');
-                } else {
-                    Logger.warning('${PROVISIONER_METADATA_FILENAME} not found for ${provisionerDir}');
-                }
-                
-                // Find all version directories for this provisioner type
-                var versionDirs = new Map<String, Bool>();
-                for (assetPath in assetList) {
-                    var provTypeAssetPath = Path.addTrailingSlash(sourcePath);
-                    if (assetPath.indexOf(provTypeAssetPath) == 0) {
-                        var relativePath = assetPath.substr(provTypeAssetPath.length);
-                        if (StringTools.startsWith(relativePath, "/")) relativePath = relativePath.substr(1);
-                        
-                        var parts = relativePath.split("/");
-                        if (parts.length > 0) {
-                            var versionDir = parts[0];
-                            // Skip if it's the provisioner-collection.yml file
-                            if (versionDir != "" && versionDir != PROVISIONER_METADATA_FILENAME) {
-                                versionDirs.set(versionDir, true);
-                            }
-                        }
-                    }
-                }
-                
-                // Log and copy each version directory
-                var versions = [for (dir in versionDirs.keys()) dir];
-                Logger.info('Found ${versions.length} version directories for ${provisionerDir}: ${versions.join(", ")}');
-                
-                for (versionDir in versions) {
-                    var sourceVersionPath = Path.addTrailingSlash(sourcePath) + versionDir;
-                    var destVersionPath = Path.addTrailingSlash(destPath) + versionDir;
-                    
-                    // Create version directory
-                    if (!FileSystem.exists(destVersionPath)) {
-                        _createDirectoryRecursive(destVersionPath);
-                    }
-                    
-                    // Copy all files from this version directory
-                    _copyAssetDirectoryRecursive(sourceVersionPath, destVersionPath, assetList);
-                    
-                    Logger.info('Copied version ${versionDir} for ${provisionerDir}');
-                }
+                Logger.info('Successfully copied provisioner ${provisionerDir}');
             }
             
             Logger.info('Successfully copied all bundled provisioners to ${destDir}');
