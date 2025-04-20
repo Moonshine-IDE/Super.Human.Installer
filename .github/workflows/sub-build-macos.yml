@@ -181,19 +181,35 @@ jobs:
           echo "${{ secrets.MAC_CERTKEY_PASS }}"  >> /tmp/keychain_pass
           rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin
 
-      - name: Delete build.keychain
+      - name: Comprehensive keychain cleanup
         run: |
-          # Check if build.keychain exists and delete it
+          echo "Performing comprehensive keychain cleanup..."
+          
+          # Check and delete from security's perspective
           if security list-keychains | grep -q "build.keychain"; then
-            echo "Deleting build.keychain to ensure a fresh environment"
-            security delete-keychain build.keychain
-          else
-            echo "No build.keychain found"
+            echo "Found build.keychain in security list, attempting to delete..."
+            security delete-keychain build.keychain || true
           fi
           
-          # Verify the keychain state
-          echo "Current keychain list:"
+          # Direct file removal (using full path since it's most reliable)
+          echo "Removing keychain file directly..."
+          rm -f /Users/prominic/Library/Keychains/build.keychain-db || true
+          
+          # Reset the keychain list to ensure clean state
+          echo "Resetting keychain list to default..."
+          security list-keychains -s login.keychain
+          
+          # Verify the cleanup worked
+          echo "Current keychain list after cleanup:"
           security list-keychains
+          
+          echo "Checking if build.keychain-db file still exists:"
+          if [ -f /Users/prominic/Library/Keychains/build.keychain-db ]; then
+            echo "WARNING: build.keychain-db still exists despite cleanup attempts"
+            ls -la /Users/prominic/Library/Keychains/build.keychain-db
+          else
+            echo "Confirmed: build.keychain-db has been removed"
+          fi
 
       - name: Sign app with debugging
         id: sign_app
