@@ -5,6 +5,9 @@
 	<include path="Genesis/GenesisApplication.xml"/>
 	<!-- Override properties, add new ones below -->
 
+	<haxelib name="flixel" />
+	<haxelib name="hxWindowColorMode" />
+
 	<meta version="0.1.95"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
 	<meta title="Super.Human.Installer Development" if="debug"/>
@@ -23,7 +26,6 @@
 		
 	<app path="${exportdir}" main="SuperHumanInstaller" file="${appfile}"/>
 
-
 	<icon path="Assets/icon.png"/>
 
 	<source path="Source"/>
@@ -33,7 +35,6 @@
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
 	<assets rename="assets/config" path="Assets/config" include="*"/>
-	<!-- <assets rename="assets/provisioners" path="Assets/provisioners" include="*"/> -->
     <assets rename="assets/provisioners" path="Assets/provisioners" include="*" if="mac || linux"/>
 
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>

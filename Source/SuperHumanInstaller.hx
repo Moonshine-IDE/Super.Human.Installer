@@ -35,6 +35,7 @@ import openfl.Assets;
 import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
 import haxe.io.Path;
+import hxwindowmode.WindowColorMode;
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
 import superhuman.components.SecretsPage;
@@ -408,7 +409,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super.initialize();
 
-		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
+		// Set the window to dark mode
+		WindowColorMode.setDarkMode();
+		WindowColorMode.redrawWindowHeader();
+		
+		// Always use dark theme for application UI
+		Theme.setTheme( new SuperHumanInstallerTheme() );
 
 		this._header.logo = Assets.getPath( SuperHumanInstallerTheme.IMAGE_ICON );
 
@@ -1188,6 +1194,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._onWindowFocusOut();
 
 	}
+	
+	// We don't need an OS theme change handler when using setDarkMode directly
 
 	override function _onWindowResize( w:Int, h:Int ) {
 
