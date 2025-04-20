@@ -2327,6 +2327,274 @@ class ProvisionerManager {
         #end
     }
     
+    /**
+     * Create a structured zip file from a directory with enhanced organization and reliability
+     * This method creates a zip archive that preserves directory structure and handles deep paths
+     * @param directory The source directory to zip
+     * @return Bytes The zip file as bytes
+     */
+    static private function _zipWholeDirectory(directory:String):Bytes {
+        Logger.info('Creating structured zip from directory: ${directory}');
+        
+        // Add validation before proceeding
+        if (directory == null || directory == "") {
+            Logger.error('Cannot zip null or empty directory path');
+            throw new haxe.Exception('Invalid directory path: null or empty');
+        }
+        
+        // Check existence and directory status
+        var directoryExists = FileSystem.exists(directory);
+        var isDirectory = directoryExists && FileSystem.isDirectory(directory);
+        Logger.info('Source directory exists: ${directoryExists}, Is directory: ${isDirectory}');
+        
+        if (!directoryExists) {
+            Logger.error('Cannot zip non-existent directory: ${directory}');
+            throw new haxe.Exception('Invalid directory path: directory does not exist');
+        }
+        
+        if (!isDirectory) {
+            Logger.error('Cannot zip non-directory path: ${directory}');
+            throw new haxe.Exception('Invalid directory path: not a directory');
+        }
+        
+        // Create a new empty zip archive
+        var entries = new List<Entry>();
+        
+        // Add a directory entry for the root directory
+        var rootEntry:Entry = {
+            fileName: "./",
+            fileSize: 0,
+            fileTime: Date.now(),
+            compressed: false,
+            dataSize: 0,
+            data: Bytes.alloc(0),
+            crc32: 0
+        };
+        entries.add(rootEntry);
+        
+        // Keep track of directories we've added to prevent duplicates
+        var addedDirs = new Map<String, Bool>();
+        addedDirs.set("./", true);
+        
+        // Get the source directory structure using platform-specific paths
+        var platformDir = _getPlatformPath(directory);
+        var filesToProcess = _collectAllFiles(platformDir);
+        Logger.info('Found ${filesToProcess.length} files to process for zip creation');
+        
+        // First, make sure all parent directories exist in the zip
+        for (filePath in filesToProcess) {
+            try {
+                // Create relative path for the zip entry
+                var relPath = filePath.substr(platformDir.length + 1);
+                relPath = StringTools.replace(relPath, "\\", "/");
+                
+                // Add directory entries for all parent directories
+                var dirParts = relPath.split("/");
+                var currentPath = "";
+                
+                // Skip the last part (which is the file)
+                for (i in 0...dirParts.length - 1) {
+                    currentPath += dirParts[i] + "/";
+                    
+                    // Skip if we already added this directory
+                    if (addedDirs.exists(currentPath)) {
+                        continue;
+                    }
+                    
+                    // Add directory entry
+                    var dirEntry:Entry = {
+                        fileName: currentPath,
+                        fileSize: 0,
+                        fileTime: Date.now(),
+                        compressed: false,
+                        dataSize: 0,
+                        data: Bytes.alloc(0),
+                        crc32: 0
+                    };
+                    
+                    entries.add(dirEntry);
+                    addedDirs.set(currentPath, true);
+                    Logger.verbose('Added directory entry to zip: ${currentPath}');
+                }
+            } catch (e) {
+                Logger.warning('Error processing directories for file: ${filePath} - ${e}');
+            }
+        }
+        
+        // Now add all files
+        for (filePath in filesToProcess) {
+            // Create relative path for the zip entry
+            var relPath = filePath.substr(platformDir.length + 1);
+            relPath = StringTools.replace(relPath, "\\", "/");
+            
+            try {
+                // Get the platform path for the file
+                var platformFilePath = _getPlatformPath(filePath);
+                
+                // Get the file data with platform-specific path handling
+                var data = File.getBytes(platformFilePath);
+                
+                // Create an uncompressed entry (to avoid ZLib issues with deep paths)
+                var entry:Entry = {
+                    fileName: relPath,
+                    fileSize: data.length,
+                    fileTime: FileSystem.stat(platformFilePath).mtime,
+                    compressed: false,
+                    dataSize: data.length,
+                    data: data,
+                    crc32: haxe.crypto.Crc32.make(data)
+                };
+                
+                entries.add(entry);
+                Logger.verbose('Added file to zip: ${relPath} (${data.length} bytes)');
+            } catch (e) {
+                Logger.warning('Could not add file to zip: ${relPath} - ${e}');
+            }
+        }
+        
+        // Write all entries to a zip file
+        var out = new BytesOutput();
+        var writer = new Writer(out);
+        writer.write(entries);
+        
+        Logger.info('Successfully created zip with ${entries.length} entries');
+        return out.getBytes();
+    }
+    
+    /**
+     * Recursively collect all files from a directory and its subdirectories
+     * Enhanced to handle very deep Windows paths reliably
+     * @param directory The directory to collect files from
+     * @return Array<String> All file paths found
+     */
+    static private function _collectAllFiles(directory:String):Array<String> {
+        var result:Array<String> = [];
+        
+        try {
+            // Ensure we're using platform-specific path handling
+            var platformDir = _getPlatformPath(directory);
+            
+            if (!FileSystem.exists(platformDir)) {
+                Logger.error('Directory does not exist: ${directory}');
+                return result;
+            }
+            
+            if (!FileSystem.isDirectory(platformDir)) {
+                Logger.error('Path is not a directory: ${directory}');
+                return result;
+            }
+            
+            try {
+                var items = FileSystem.readDirectory(platformDir);
+                Logger.verbose('Found ${items.length} items in directory: ${directory}');
+                
+                for (item in items) {
+                    // Construct paths correctly with proper trailing slashes
+                    var fullPath = Path.addTrailingSlash(directory) + item;
+                    var platformPath = _getPlatformPath(fullPath);
+                    
+                    try {
+                        if (FileSystem.isDirectory(platformPath)) {
+                            // Add all files from subdirectories
+                            var subFiles = _collectAllFiles(fullPath);
+                            if (subFiles.length > 0) {
+                                Logger.verbose('Adding ${subFiles.length} files from subdirectory: ${item}');
+                                result = result.concat(subFiles);
+                            }
+                        } else {
+                            // Add this file to the result
+                            result.push(fullPath);
+                        }
+                    } catch (fileErr) {
+                        // Log but continue processing other files
+                        Logger.warning('Error processing item ${item} in directory ${directory}: ${fileErr}');
+                    }
+                }
+            } catch (readErr) {
+                Logger.error('Could not read directory ${directory}: ${readErr}');
+                
+                #if windows
+                // Add specific info for Windows to help with debugging
+                var dirLength = directory.length;
+                Logger.error('Path length: ${dirLength}, possibly exceeding Windows limits even with long path support');
+                Logger.error('Platform path used: ${platformDir}');
+                #end
+            }
+        } catch (e) {
+            Logger.error('Error collecting files from directory ${directory}: ${e}');
+        }
+        
+        return result;
+    }
+    
+    /**
+     * Unzip content to a directory with enhanced error handling and path management
+     * @param zipBytes The zipped content as bytes
+     * @param directory The target directory
+     */
+    static private function _unzipToDirectory(zipBytes:Bytes, directory:String):Void {
+        Logger.info('Unzipping to directory: ${directory}');
+        
+        // Ensure that the target directory exists
+        if (!FileSystem.exists(directory)) {
+            FileSystem.createDirectory(directory);
+        }
+        
+        try {
+            // Read the zip entries
+            var entries = Reader.readZip(new BytesInput(zipBytes));
+            var fileCount = 0;
+            var dirCount = 0;
+            var errorCount = 0;
+            
+            for (entry in entries) {
+                var fileName = entry.fileName;
+                
+                // Process directory entries
+                if (fileName.length > 0 && fileName.charAt(fileName.length - 1) == "/") {
+                    var dirPath = Path.addTrailingSlash(directory) + fileName;
+                    try {
+                        _createDirectoryRecursive(dirPath);
+                        dirCount++;
+                    } catch (e) {
+                        Logger.warning('Could not create directory from zip: ${dirPath} - ${e}');
+                        errorCount++;
+                    }
+                    continue;
+                }
+                
+                // Process file entries
+                var filePath = Path.addTrailingSlash(directory) + fileName;
+                var parentDir = Path.directory(filePath);
+                
+                try {
+                    // Create parent directories if they don't exist
+                    if (!FileSystem.exists(parentDir)) {
+                        _createDirectoryRecursive(parentDir);
+                    }
+                    
+                    // Extract the file
+                    var data = entry.data;
+                    if (entry.compressed) {
+                        Tools.uncompress(entry);
+                    }
+                    
+                    var platformFilePath = _getPlatformPath(filePath);
+                    File.saveBytes(platformFilePath, entry.data);
+                    fileCount++;
+                } catch (e) {
+                    Logger.warning('Could not extract file from zip: ${fileName} - ${e}');
+                    errorCount++;
+                }
+            }
+            
+            Logger.info('Unzip completed: ${fileCount} files, ${dirCount} directories, ${errorCount} errors');
+        } catch (e) {
+            Logger.error('Error unzipping to directory ${directory}: ${e}');
+            throw e;
+        }
+    }
+    
     static private function _zipDirectory(directory:String):Bytes {
         Logger.info('Zipping directory: ${directory}');
         
@@ -2667,7 +2935,7 @@ class ProvisionerManager {
     
     /**
      * Copy bundled provisioners from application assets to the user's provisioners directory
-     * This uses a simple, direct method to copy the entire provisioners directory recursively
+     * This uses a zip/unzip approach to handle complex directory structures reliably
      * @param destDir The destination directory to copy to
      */
     static private function _copyBundledProvisioners(destDir:String):Void {
@@ -2692,7 +2960,7 @@ class ProvisionerManager {
             var provisionerDirs = FileSystem.readDirectory(bundledProvisionersPath);
             Logger.info('Found ${provisionerDirs.length} provisioner directories to copy');
             
-            // Copy each directory using the existing recursive copy method
+            // Copy each directory using the zip/unzip approach
             for (provisionerDir in provisionerDirs) {
                 var sourcePath = Path.addTrailingSlash(bundledProvisionersPath) + provisionerDir;
                 var destPath = Path.addTrailingSlash(destDir) + provisionerDir;
@@ -2710,15 +2978,74 @@ class ProvisionerManager {
                     _createDirectoryRecursive(destPath);
                 }
                 
-                // Use the existing directory copy method
-                _copyDirectoryRecursive(sourcePath, destPath);
-                
-                Logger.info('Successfully copied provisioner ${provisionerDir}');
+                try {
+                    // Use the zip/unzip approach for more reliable copying of complex directory structures
+                    Logger.info('Using zip/unzip method to copy ${provisionerDir}');
+                    
+                    // 1. Zip the source directory
+                    var zipBytes = _zipWholeDirectory(sourcePath);
+                    Logger.info('Successfully zipped source directory: ${sourcePath}');
+                    
+                    // 2. Unzip to the destination
+                    _unzipToDirectory(zipBytes, destPath);
+                    Logger.info('Successfully unzipped to destination: ${destPath}');
+                    
+                    // 3. Verify the copy operation
+                    var success = _verifyProvisionerCopy(sourcePath, destPath);
+                    if (success) {
+                        Logger.info('Verified copy was successful for provisioner ${provisionerDir}');
+                    } else {
+                        Logger.warning('Verification failed for provisioner ${provisionerDir}, some files may be missing');
+                    }
+                    
+                } catch (e) {
+                    Logger.error('Error during zip/unzip copy of ${provisionerDir}: ${e}');
+                    Logger.warning('Falling back to direct copy method for ${provisionerDir}');
+                    
+                    // Fall back to direct copy if zip/unzip fails
+                    try {
+                        _copyDirectoryRecursive(sourcePath, destPath);
+                        Logger.info('Successfully copied provisioner ${provisionerDir} using fallback method');
+                    } catch (fallbackError) {
+                        Logger.error('Fallback copy also failed for ${provisionerDir}: ${fallbackError}');
+                    }
+                }
             }
             
             Logger.info('Successfully copied all bundled provisioners to ${destDir}');
         } catch (e) {
             Logger.error('Error copying bundled provisioners: ${e}');
+        }
+    }
+    
+    /**
+     * Verify that a provisioner was copied correctly by checking key files
+     * @param sourcePath The source directory
+     * @param destPath The destination directory
+     * @return Whether the verification was successful
+     */
+    static private function _verifyProvisionerCopy(sourcePath:String, destPath:String):Bool {
+        try {
+            // Check if the provisioner-collection.yml file exists in the destination
+            var metadataPath = Path.addTrailingSlash(destPath) + PROVISIONER_METADATA_FILENAME;
+            if (FileSystem.exists(metadataPath)) {
+                Logger.info('Found provisioner metadata file in destination');
+                return true;
+            }
+            
+            // Check for version directories
+            var versions = _getValidVersionDirectories(destPath);
+            if (versions.length > 0) {
+                Logger.info('Found ${versions.length} valid version directories in destination');
+                return true;
+            }
+            
+            // If none of the above checks passed, the copy might not be complete
+            Logger.warning('No valid provisioner structure found in destination');
+            return false;
+        } catch (e) {
+            Logger.error('Error verifying provisioner copy: ${e}');
+            return false;
         }
     }
     
