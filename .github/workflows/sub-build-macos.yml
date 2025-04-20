@@ -169,7 +169,6 @@ jobs:
         run: |
           echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
-          echo "${{ secrets.MAC_KEYCHAIN_PASS }}" > /tmp/keychain_pass
           rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin
 
       - name: Sign app
