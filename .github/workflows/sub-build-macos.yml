@@ -222,6 +222,36 @@ jobs:
             echo "Confirmed: build.keychain-db has been removed"
           fi
 
+      - name: Unlock login keychain before signing
+        run: |
+          echo "Unlocking login keychain for code signing..."
+          
+          # NOTE: This requires storing the macOS user's login password as a secret
+          # Alternatively, you could configure the self-hosted runner to not require a password for the keychain
+          if [[ -n "${{ secrets.LOGIN_KEYCHAIN_PASSWORD }}" ]]; then
+            # Unlock the login keychain with the user's password
+            security unlock-keychain -p "${{ secrets.LOGIN_KEYCHAIN_PASSWORD }}" login.keychain || true
+            echo "Login keychain unlocked with provided password"
+          else
+            echo "No LOGIN_KEYCHAIN_PASSWORD secret found - keychain might remain locked"
+            echo "For self-hosted runners, you may need to run: security set-keychain-settings -u login.keychain"
+            echo "Or add LOGIN_KEYCHAIN_PASSWORD to your repository secrets"
+          fi
+          
+          # Set the keychain to stay unlocked for a longer period
+          security set-keychain-settings -u login.keychain || true
+          
+          # Ensure the login keychain is in the search list
+          security list-keychains -s login.keychain
+          
+          # Show current keychain state
+          echo "Current keychain list:"
+          security list-keychains
+          
+          # Show available identities
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning || true
+
       - name: Sign app with debugging
         id: sign_app
         uses: Moonshine-IDE/macos-sign-app-action@main
