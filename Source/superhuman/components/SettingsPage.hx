@@ -333,8 +333,18 @@ class SettingsPage extends Page {
         }
 
         if (_fileSyncSetting != null) {
-            // Set the selected sync method
-            _fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
+            // Check if we're on Windows
+            var isWindows:Bool = openfl.system.Capabilities.os.toLowerCase().indexOf("windows") >= 0;
+            
+            if (isWindows) {
+                // On Windows: always default to rsync
+                _fileSyncSetting.selectedSyncMethod = SyncMethod.Rsync;
+                Logger.info('${this}: Setting rsync as default sync method for Windows');
+            } else {
+                // For Mac/other platforms: respect user preferences with compatibility check
+                _fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
+                Logger.info('${this}: Using user-specified sync method: ${_fileSyncSetting.selectedSyncMethod}');
+            }
             
             // Set the disabled state based on the global flag
             _fileSyncSetting.syncDisabled = superhuman.config.SuperHumanGlobals.IS_SYNC_DISABLED;
