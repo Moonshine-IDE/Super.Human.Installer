@@ -1051,14 +1051,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && 
-		    this.previousPageId != PAGE_SETUP_APPLICATIONS && 
-		    this.previousPageId != PAGE_SECRETS &&
-		    this.previousPageId != PAGE_HASH_MANAGER) {
-			this.selectedPageId = this.previousPageId;
-		} else {
-			this.selectedPageId = PAGE_SERVER;
-		}
+		this.selectedPageId = PAGE_SERVER;
 	}
 	
 	function _cancelSecrets( e:SuperHumanApplicationEvent ) {
@@ -1115,13 +1108,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && 
-		    this.previousPageId != PAGE_SETUP_APPLICATIONS && 
-		    this.previousPageId != PAGE_HASH_MANAGER) {
-			this.selectedPageId = this.previousPageId;
-		} else {
-			this.selectedPageId = PAGE_SERVER;
-		}
+		this.selectedPageId = PAGE_SERVER;
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.settingssaved' ) );
 
 	}
