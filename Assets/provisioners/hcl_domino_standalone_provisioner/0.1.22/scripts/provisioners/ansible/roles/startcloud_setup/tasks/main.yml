@@ -1,0 +1,37 @@
+---
+-
+  name: "Setting timezone to {{ timezone }}"
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+-
+  name: "Creating Directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: 0777
+  with_items:
+    - "{{ completed_dir }}"
+    - "/root/.ansible/tmp"
+    - "/vagrant/support-bundle"
+
+-
+  name: "Writing current variables to /vagrant/support-bundle/ansible-system-variables.json"
+  ansible.builtin.copy:
+    content: "{{ vars }}"
+    dest: "/vagrant/support-bundle/ansible-system-variables.json"
+    force: false
+    mode: 'a+x'
+
+-
+  name: "Printing out {{ provisioner_name }} version used"
+  ansible.builtin.debug:
+    msg: "This Ansible Playbook was Generated with {{ provisioner_name }} v{{ provisioner_version }}"
+
+-
+  name: "Writing current variables to /vagrant/support-bundle/version.json"
+  ansible.builtin.copy:
+    content: "{{ provisioner_version }}"
+    dest: "/vagrant/support-bundle/version.json"
+    force: false
+    mode: 'a+x'

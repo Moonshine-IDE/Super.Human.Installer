@@ -1,0 +1,46 @@
+#jinja2:lstrip_blocks: True
+---
+-
+  become: true
+  gather_facts: true
+  hosts: all
+  {% if role_vars is defined and role_vars and role_vars != "" %}
+  vars:
+    core_provisioner_version: {{ core_provisioner_version }}
+    provisioner_name: {{ provisioner_name }}
+    provisioner_version: {{ provisioner_version }}
+    {% for key, value in role_vars.items() %}
+    {{ key }}: {{ value }}
+    {% endfor %}
+  {% endif %}
+  roles:
+    {% for role in provision_roles %}
+    -
+      role: {{ role.name }}
+      {% if role.when is defined %}
+      when: {{ role.when }}
+      {% endif %}
+      {% if role.vars is defined or role.port_forwards is defined %}
+      vars:
+        {% if role.vars is defined %}
+        {% for key, value in role.vars.items() %}
+        {{ key }}: {{ value }}
+        {% endfor %}
+        {% endif %}
+        {% if role.port_forwards is defined %}
+        {{ role.name }}_port_forwards:
+          {% for ports in role.port_forwards %}
+            - 
+              guest: {{ ports.guest }}
+              host: {{ ports.host }}
+              ip: {{ ports.ip }}
+              {% if ports.url is defined %}
+              url: {{ ports.url }}
+              {% endif %}
+              {% if ports.proxied is defined %}
+              proxied: {{ ports.proxied }}
+              {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}

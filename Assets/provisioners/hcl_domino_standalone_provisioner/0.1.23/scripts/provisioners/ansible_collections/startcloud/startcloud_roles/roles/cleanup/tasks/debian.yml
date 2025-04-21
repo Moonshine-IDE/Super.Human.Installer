@@ -1,0 +1,266 @@
+---
+-
+  name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Ensure apt cache is updated."
+  ansible.builtin.apt:
+    cache_valid_time: 3600
+    update_cache: true
+
+-
+  name: "Upgrade all apt packages"
+  ansible.builtin.apt:
+    force_apt_get: true
+    upgrade: dist
+
+-
+  name: "Remove Uneeded Dev Packages, Docs and Man Pages"
+  ansible.builtin.shell: "{{ item }}"
+  with_items:
+    - "dpkg --list | awk '{ print $2 }' | grep linux-source | xargs apt-get -y purge"
+    - "dpkg --list | awk '{ print $2 }' | grep -- '-doc$' | xargs apt-get -y purge"
+
+-
+  name: "Remove LXD Snap"
+  ignore_errors: true
+  snap:
+    name:
+      - lxd
+    state: absent
+
+-
+  name: "Remove core18 Snap"
+  ignore_errors: true
+  snap:
+    name:
+      - core18
+      - core20
+    state: absent
+
+-
+  name: "Remove Snapd"
+  ignore_errors: true
+  snap:
+    name:
+      - snapd
+    state: absent
+
+-
+  name: "Remove unwanted packages."
+  ansible.builtin.apt:
+    name:
+      - snapd
+      - ppp
+      - pppconfig
+      - pppoeconf
+      - linux-source
+      - popularity-contest
+      - installation-report
+      - landscape-common
+      - wireless-tools
+      - wpasupplicant
+      - ubuntu-serverguide
+    state: absent
+
+-
+  name: "Use Deborphan to clean up packages."
+  ansible.builtin.shell: "{{ item }}"
+  with_items:
+    - "deborphan --find-config | xargs apt-get -y purge"
+    - "deborphan | xargs apt-get -y purge"
+
+-
+  name: "Cleaning up udev rules"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /dev/.udev/
+    - /lib/udev/rules.d/75-persistent-net-generator.rules
+
+-
+  name: "Cleaning leftover DHCP Leases"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /var/lib/dhcp3/*
+    - /var/lib/dhcp/*
+
+-
+  name: "Truncate Machine ID"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /etc/machine-id
+
+-
+  name: "Truncate Machine ID"
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ item }}"
+    force: false
+  with_items:
+    - /etc/machine-id
+
+-
+  name: "Unset the Machine ID."
+  ansible.builtin.shell: "rm /var/lib/dbus/machine-id"
+
+-
+  name: "Link Machine ID file"
+  ansible.builtin.shell: "ln -s /etc/machine-id /var/lib/dbus/machine-id"
+
+-
+  name: "Removing Apt Caches"
+  ansible.builtin.find:
+    file_type: directory
+    paths: /var/lib/apt
+  register: cache_files_to_delete
+
+-
+  name: "Ansible remove file wildcard"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ cache_files_to_delete.files }}"
+
+-
+  name: "Removing Apt Caches"
+  ansible.builtin.find:
+    file_type: directory
+    paths: /var/cache
+  register: cache_files_to_delete
+
+-
+  name: "Ansible remove file wildcard"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ cache_files_to_delete.files }}"
+
+-
+  name: "Find /var/log files.old or .log via regex"
+  ansible.builtin.find:
+    paths: /var/log
+    patterns: "^.*?\\.(?:old|log\\.gz)$"
+    use_regex: true
+  register: log_files_to_delete
+
+-
+  name: "Ansible remove file wildcard"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ log_files_to_delete.files }}"
+
+-
+  name: "Removing Caches, Logs, Docs, Man Pages, History, Tmp"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /var/log/lastlog
+    - /var/log/wtmp
+    - /var/log/btmp
+
+-
+  name: "Truncate Audit Logs"
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ item }}"
+    force: false
+  with_items:
+    - /var/log/lastlog
+    - /var/log/wtmp
+    - /var/log/btmp
+
+-
+  name: "Unset the History File."
+  ansible.builtin.shell: "unset HISTFILE"
+
+-
+  name: "Clear out all logs in Subfolder of Log Dir"
+  ansible.builtin.shell: 'find /var/log -type f | while read f; do echo -ne '''' > "${f}"; done;'
+
+-
+  name: "Removing Caches, Logs, Docs, Man Pages, History, Tmp"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /root/.bash_history
+    - "/home/{{ user }}/.bash_history"
+    - /usr/share/doc/*
+    - /usr/share/man/*
+    - /tmp/*
+
+-
+  name: "Recreating TMP, Doc and Man"
+  ansible.builtin.file:
+    path: "{{ item }}"
+  with_items:
+    - /usr/share/doc/
+    - /usr/share/man/
+    - /tmp/
+
+-
+  name: "Remove useless packages from the cache"
+  ansible.builtin.apt:
+    autoclean: true
+
+-
+  name: "Register Stale Netplan Configs"
+  ansible.builtin.find:
+    paths: /etc/netplan
+    patterns: "*.yaml"
+  register: files_to_delete
+
+-
+  name: "Remove old YAML configs"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ files_to_delete.files }}"
+
+-
+  name: "Add enp0s6 for DHCP for BHYVE Zones"
+  ansible.builtin.template:
+    dest: /etc/netplan/50-cloud-init.yaml
+    mode: a+x
+    src: dhcp-all.debian.yaml.j2
+
+-
+  name: "Purge and Autoremove"
+  ansible.builtin.apt:
+    autoremove: true
+    purge: true
+
+-
+  name: "Unset the Machine ID."
+  ignore_errors: true
+  ansible.builtin.shell: "{{ item }}"
+  with_items:
+    - "sudo apt-get --purge autoremove"
+    - "rm /var/lib/dbus/machine-id"
+    - "sudo rm -rf /snap"
+    - "sudo rm -rf /root/snap"
+    - "sudo rm -rf /var/snap"
+    - "sudo rm -rf /etc/cloud"
+    - "sudo rm -rf /var/lib/cloud"
+
+-
+  name: "Remove old directories and files"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/snap"
+    - "/root/snap"
+    - "/var/snap"
+    - "/etc/cloud"
+    - "/var/lib/cloud"
+

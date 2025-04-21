@@ -1,0 +1,9 @@
+---
+- 
+  hosts: all
+  name: Installing Sysmon
+  gather_facts: true
+  vars_files:
+    - ../all
+  roles:
+    - sysmon

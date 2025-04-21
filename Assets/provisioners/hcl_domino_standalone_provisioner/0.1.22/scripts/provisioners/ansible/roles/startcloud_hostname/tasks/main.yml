@@ -1,0 +1,18 @@
+---
+-
+  name: "Setting hostname"
+  ansible.builtin.hostname:
+    name: "{{ settings.hostname }}.{{ settings.domain }}"
+
+-
+  name: "Setting /etc/hosts"
+  ansible.builtin.replace:
+    path: "/etc/hosts"
+    regexp: "{{ item.regex }}"
+    replace: "{{ item.replace }}"
+  with_items:
+    - { regex: "(^127.0.0.1)(.*)$", replace: '127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
+    - { regex: "(^127.0.1.1)(.*)$", replace: '127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
+
+
+

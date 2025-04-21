@@ -1,0 +1,17 @@
+[Unit]
+Description=Web Terminal Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory={{ web_terminal_path }}
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=web-terminal
+
+[Install]
+WantedBy=multi-user.target

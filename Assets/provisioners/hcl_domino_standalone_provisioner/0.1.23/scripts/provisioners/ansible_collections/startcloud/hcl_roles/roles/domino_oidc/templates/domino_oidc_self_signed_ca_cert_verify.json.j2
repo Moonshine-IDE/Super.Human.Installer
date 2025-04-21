@@ -1,0 +1,41 @@
+{ 
+    "title": "Setting Self Signed Certificate Authority as Trusted", 
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Import Documents ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "certstore.nsf", 
+                    "documents":[
+                        { 
+                            "action": "update", 
+                            "search": {
+                                        "formula":"Form=\"Certifier\" & KeyIdentifier=\"{{ ca_subject_key_id }}\"",
+                                        "number":0
+                            },
+                            "computeWithForm": true,
+                            "items": {
+                                "Category" : ["ICAP", "INETServer", "OIDC"],
+                                "Status" : "I",
+                                "RestictUseToCategory" : "0"
+                            }
+                        },
+                        { 
+                            "action": "update", 
+                            "search": {
+                                        "formula":"Form=\"KeyFile\" & KeyIdentifier=\"{{ subject_key_id }}\"",
+                                        "number":0
+                            },
+                            "computeWithForm": true,
+                            "items": {
+                                "TrustedRoots" : ["{{ ca_subject_key_id }}"]
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

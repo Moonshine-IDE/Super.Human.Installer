@@ -1,0 +1,30 @@
+# Server Configuration
+server:
+  # Port to run the server on
+  port: {{ startcloud_web_terminal_port_forwards[0].guest }}
+  # SSL certificate paths (required for HTTPS)
+  ssl:
+    cert: {{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt
+    key: {{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key
+
+# User Authentication
+# Format: username: password
+# Add as many users as needed
+# IMPORTANT: Change these default credentials!
+users:
+  admin: {{ web_terminal_users.admin }}
+
+# Terminal Configuration
+terminal:
+  # Default shell command (will be overridden to powershell.exe on Windows)
+  shell: bash
+  # Terminal dimensions
+  cols: 80
+  rows: 30
+  
+# Note: After copying this file to config.yaml:
+# 1. Update SSL certificate paths
+# 2. Change default passwords
+# 3. Set appropriate file permissions:
+#    sudo chown root:root config.yaml
+#    sudo chmod 600 config.yaml

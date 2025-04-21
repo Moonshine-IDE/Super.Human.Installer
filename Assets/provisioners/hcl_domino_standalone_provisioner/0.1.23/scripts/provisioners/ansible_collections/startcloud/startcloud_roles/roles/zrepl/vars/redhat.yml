@@ -1,0 +1,5 @@
+---
+packages:
+  - zrepl
+zrepl_yum_repo_gpg_key: https://zrepl.cschwarz.com/rpm/rpm-key.asc
+zrepl_yum_repo: https://zrepl.cschwarz.com/rpm/repo

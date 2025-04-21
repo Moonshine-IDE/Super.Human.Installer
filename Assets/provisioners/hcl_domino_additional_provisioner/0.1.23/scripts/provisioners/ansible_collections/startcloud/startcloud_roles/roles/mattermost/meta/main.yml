@@ -1,0 +1,18 @@
+galaxy_info:
+  role_name: mattermost
+  author: William Wu
+  description: Setup Mattermost platform
+  company: PyLabs
+  license: MIT
+  min_ansible_version: 2.11
+  platforms:
+  - name: Debian
+    versions:
+    - Buster
+    - 10
+  galaxy_tags:
+    - debian
+    - mattermost
+dependencies:
+  - pylabs.percona # for ngram support
+  - pylabs.letsencrypt_auth

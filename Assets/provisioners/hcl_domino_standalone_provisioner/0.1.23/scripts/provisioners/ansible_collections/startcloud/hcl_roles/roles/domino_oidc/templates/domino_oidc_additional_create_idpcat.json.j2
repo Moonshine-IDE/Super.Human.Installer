@@ -1,0 +1,44 @@
+{
+	"title": "Create idpcat database from Template",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 1. Create database from template ---",
+			"databases": [
+				{
+				    "action": "create",
+				    "title": "Identity Catalogue Database",
+				    "filePath": "idpcat.nsf",
+				    "templatePath": "idpcat.ntf",
+				    "sign": true,
+				    "replace": false,
+                    "ACL": {
+                        "ACLEntries": [
+                          {
+                            "name": "AutomaticallyCrossCertifiedUsers",
+                            "level": "manager",
+                            "type": "personGroup",
+                            "isPublicReader": true,
+                            "isPublicWriter": true,
+                            "canCreateDocuments": true,
+                            "canDeleteDocuments": true
+                          },
+                          {
+                            "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+                            "level": "manager",
+                            "canReplicateOrCopyDocuments": true,
+                            "canDeleteDocuments": true
+                          }
+                        ]
+                    }
+				}
+			]
+		},
+		{
+			"title": "--- Step 2 (final). Completed ---",
+			"messages": [
+				"IDPcat Configured for Additional Domino Server"
+			]
+		}
+	]
+}

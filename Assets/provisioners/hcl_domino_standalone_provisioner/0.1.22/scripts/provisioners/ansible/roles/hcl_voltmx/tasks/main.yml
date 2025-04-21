@@ -1,0 +1,337 @@
+---
+-
+  name: "Checking if the VoltMX Installer archive is at /voltmx/archives/{{ voltmx_installer_archive }}"
+  register: voltmx_server_installer_check
+  ansible.builtin.stat:
+    path: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+    get_md5: false
+
+-
+  name: "Checking if VoltMX has been installed"
+  register: voltmx_server_installed
+  ansible.builtin.stat:
+    path: "{{ completed_dir }}/voltmxsetup"
+    get_md5: false
+
+-
+  name: "Checking if the VoltMX was extracted extracted installer is at {{ installer_dir }}/voltmx/core"
+  register: voltmx_extracted
+  ansible.builtin.stat:
+    path: "{{ installer_dir }}/voltmx/core"
+    get_md5: false
+
+- 
+  name: "Increase maximum SQL connections"
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regexp: '^#max_connections '
+    line: max_connections = 300
+
+-
+  name: "Restarting MariaDB"
+  ansible.builtin.systemd:
+    name: mariadb
+    state: restarted
+
+-
+  name: "Downloading VoltMX from {{ voltmx_installer_base_url }}"
+  when: not voltmx_server_installer_check.stat.exists and not voltmx_server_installed.stat.exists and not voltmx_extracted.stat.exists
+  register: voltlsresult
+  until: "voltlsresult is not failed"
+  retries: 3
+  ansible.builtin.get_url:
+    mode: '0755'
+    url: "{{ voltmx_installer_base_url }}"
+    dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+    username: "{{ voltmx_installer_url_user }}"
+    password: "{{ voltmx_installer_url_pass }}"
+
+-
+  name: "Extracting voltmx from {{ voltmx_installer_archive }}"
+  when: not voltmx_server_installed.stat.exists or not voltmx_extracted.stat.exists
+  ansible.builtin.unarchive:
+    src: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+    dest: "{{ installer_dir }}/voltmx/core"
+    remote_src: true
+
+-
+  name: "Grabbing External IP address"
+  ansible.builtin.shell: >
+    lshw -xml -c net |
+    xmllint --xpath
+    "string(//node[@id='network:1']/configuration/setting[@id='ip']/@value|//node[@id='network']/configuration/setting[@id='ip']/@value)" -
+  args:
+    executable: /bin/bash
+  register: netoutput
+
+-
+  name: "Adding VoltMX Host Records"
+  ansible.builtin.lineinfile:
+    path: "/etc/hosts"
+    search_string: '{{ netoutput.stdout }}'
+    line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} {{ voltmx_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+-
+  name: "Adding Voltmx silent install response file"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.template:
+    dest: "{{ installer_dir }}/voltmx/installer.properties"
+    mode: a+x
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    src: "installer.properties.j2"
+
+-
+  name: "Setting Installer to be Executable"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.file:
+    mode: a+x
+    path: "{{ item }}"
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+  with_items:
+    - "{{ installer_dir }}/voltmx/core/VoltMXFoundry_Installer_Linux/VoltMXFoundryInstaller-9.5.1.1_GA.bin"
+
+-
+  name: "Creating VoltMX App Directory"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+  loop:
+    - "{{ voltmx_installation_dir }}"
+    - /war-builder/
+- 
+  name: "Copying Original installer.properties to /tmp/installer.properties.orig"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.copy:
+    remote_src: True
+    src: "{{ installer_dir }}/voltmx/core/VoltMXFoundry_Installer_Linux/installer.properties"
+    dest: /tmp/installer.properties.orig
+
+-
+  name: "Removing Original installer.properties"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.file:
+    path: "{{ installer_dir }}/voltmx/core/VoltMXFoundry_Installer_Linux/installer.properties"
+    state: absent
+
+-
+  name: "Installing VoltMX Via Silent Installer"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.shell: "{{ item }}"
+  become: true
+  become_user: "{{ service_user }}"
+  args:
+    chdir: "{{ installer_dir }}/voltmx/core/VoltMXFoundry_Installer_Linux"
+    executable: /bin/bash
+    creates: "{{ completed_dir }}/voltmxsetup"
+  with_items:
+    - "./VoltMXFoundryInstaller-9.5.1.1_GA.bin -f {{ installer_dir }}/voltmx/installer.properties -i silent"
+
+- 
+  name: "Import SSL certificate into cacerts"
+  when: not voltmx_server_installed.stat.exists
+  become_user: "{{ service_user }}"
+  community.general.java_cert:
+    executable: "/local/voltmx-foundry/jre/bin/keytool"
+    cert_path: "{{ cert_dir }}/crt/default-signed.crt"
+    keystore_path: /local/voltmx-foundry/jre/lib/security/cacerts
+    keystore_pass: changeit
+    state: present
+    cert_alias: "{{ settings.hostname }}.{{ settings.domain }}"
+    trust_cacert: true
+
+-
+  name: Pause for 60 seconds to let VoltMX fully configure
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.pause:
+    seconds: 60
+
+-
+  name: "Placing VoltMX Service scripts"
+  become: true
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.template:
+    owner: "{{ item.owner }}"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "a+x"
+  loop:
+    - { src: 'voltmx.service.j2', dest: '/etc/systemd/system/voltmx.service', owner: '{{ service_user }}' }
+
+-
+  name: "Stopping VoltMX via systemd Service"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.service:
+    name: voltmx
+    state: stopped
+    enabled: true
+
+-
+  name: Pause for 60 seconds to let VoltMX fully configure
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.pause:
+    seconds: 60
+
+-
+  name: "Setting up VoltMX for Reverse Proxy"
+  when: not voltmx_server_installed.stat.exists and not voltmx_port_forwards[1].guest is defined
+  become: true
+  become_user: "{{ service_user }}"
+  block:
+    - 
+      name: "Set Tomcat to accept HTTPS proxied connections from HAProxy"
+      ansible.builtin.lineinfile:
+        path: "{{ voltmx_installation_dir }}/tomcat/conf/server.xml"
+        regexp: '<Connector server="HCL" port="{{ voltmx_port_forwards[0].guest }}"'
+        line: "<Connector server=\"HCL\" port=\"{{ voltmx_port_forwards[0].guest }}\" protocol=\"HTTP/1.1\" maxHttpHeaderSize=\"8192\" maxThreads=\"150\"     enableLookups=\"false\" acceptCount=\"25\" disableUploadTimeout=\"true\" tcpNoDelay=\"true\" compression=\"on\" compressionMinSize=\"512000\"     compressableMimeType=\"text/html,text/xml,text/css,text/plain,text/javascript,application/x-javascript,application/javascript,application/json,    application/xml\" connectionTimeout=\"20000\" proxyName=\"{{ voltmx_port_forwards[1].url }}.{{ settings.hostname }}.{{ settings.domain }}\"     proxyPort=\"443\" scheme=\"https\" secure=\"true\" />"
+
+    - 
+      name: "Creating War-Builder"
+      ansible.builtin.shell: ls *.war | cut -d '.' -f1 | xargs -I {} bash -c "sudo mkdir -p /war-builder/{} && sudo chmod 777 -R /war-builder/"
+      args:
+        chdir: "{{ voltmx_installation_dir }}/tomcat/webapps/"
+
+    - 
+      name: "Copying orignal war files"
+      ansible.builtin.shell: ls *.war | xargs -I {} bash -c "cp {} /war-builder/"
+      args:
+        chdir: "{{ voltmx_installation_dir }}/tomcat/webapps/"
+
+    - 
+      name: "Expanding war files for editing"
+      become_user: "{{ service_user }}"
+      ansible.builtin.shell: ls *.war | cut -d '.' -f1 | xargs -I {} bash -c "sudo mkdir -p /war-builder/{} && sudo chmod 777 -R /war-builder/ && cd {} && jar -xvf {{ voltmx_installation_dir }}/tomcat/webapps/{}.war"
+      args:
+        executable: "/bin/bash"
+        chdir: /war-builder/
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
+
+    - 
+      name: "Registering Files with URLs to modify"
+      ansible.builtin.shell: |
+        grep -rnw voltmx.demo.startcloud | cut -d ':' -f1
+      args:
+        chdir: /war-builder/
+      register: voltmx_urls_to_modify
+
+    - 
+      name: "Replacing URLs"
+      ansible.builtin.replace:
+        path: "/war-builder/{{ item }}"
+        regexp: '(\s+){{ voltmx_port_forwards[0].url }}\.{{ settings.hostname }}\.{{ settings.domain.split(".")[0] }}\.{{ settings.domain.split(".")[1] }}:{{ voltmx_port_forwards[0].guest }}(\s+.*)?$'
+        replace: '\1{{ voltmx_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}:443\2'
+      loop: "{{ voltmx_urls_to_modify.stdout_lines | unique }}"
+
+    - 
+      name: "Creating new war files"
+      become_user: "{{ service_user }}"
+      ansible.builtin.shell: ls *.war | cut -d '.' -f1 | xargs -I {} bash -c "cd {} && jar -cvf {{ voltmx_installation_dir }}/tomcat/webapps/{}.war *"
+      args:
+        executable: "/bin/bash"
+        chdir: /war-builder/
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
+
+-
+  name: "Setting up VoltMX for Reverse Proxy"
+  when: not voltmx_server_installed.stat.exists and voltmx_port_forwards[1].guest is defined
+  become: true
+  become_user: "{{ service_user }}"
+  block:
+    -
+      name: "Set Tomcat to accept HTTPS proxied connections from HAProxy"
+      ansible.builtin.lineinfile:
+        path: "{{ voltmx_installation_dir }}/tomcat/conf/server.xml"
+        regexp: '(.*<Connector.*port="{{ voltmx_port_forwards[1].guest }}")(.*\/>)'
+        line: '\1 proxyName=\"{{ voltmx_port_forwards[1].url }}.{{ settings.hostname }}.{{ settings.domain }}\" proxyPort=\"443\" \2'
+
+    - 
+      name: "Creating War-Builder"
+      ansible.builtin.shell: ls *.war | cut -d '.' -f1 | xargs -I {} bash -c "sudo mkdir -p /war-builder/{} && sudo chmod 777 -R /war-builder/"
+      args:
+        chdir: "{{ voltmx_installation_dir }}/tomcat/webapps/"
+
+    - 
+      name: "Copying orignal war files"
+      ansible.builtin.shell: ls *.war | xargs -I {} bash -c "cp {} /war-builder/"
+      args:
+        chdir: "{{ voltmx_installation_dir }}/tomcat/webapps/"
+
+    - 
+      name: "Expanding war files for editing"
+      become_user: "{{ service_user }}"
+      ansible.builtin.shell: ls *.war | cut -d '.' -f1 | xargs -I {} bash -c "sudo mkdir -p /war-builder/{} && sudo chmod 777 -R /war-builder/ && cd {} && jar -xvf {{ voltmx_installation_dir }}/tomcat/webapps/{}.war"
+      args:
+        executable: "/bin/bash"
+        chdir: /war-builder/
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
+
+    - 
+      name: "Registering Files with URLs to modify"
+      ansible.builtin.shell: |
+        grep -rnw voltmx.demo.startcloud | cut -d ':' -f1
+      args:
+        chdir: /war-builder/
+      register: voltmx_urls_to_modify
+
+    - 
+      name: "Replacing URLs"
+      ansible.builtin.replace:
+        path: "/war-builder/{{ item }}"
+        regexp: '(\s+){{ voltmx_port_forwards[0].url }}\.{{ settings.hostname }}\.{{ settings.domain.split(".")[0] }}\.{{ settings.domain.split(".")[1] }}:{{ voltmx_port_forwards[0].guest }}(\s+.*)?$'
+        replace: '\1{{ voltmx_port_forwards[1].url }}.{{ settings.hostname }}.{{ settings.domain }}:443\2'
+      loop: "{{ voltmx_urls_to_modify.stdout_lines | unique }}"
+
+    - 
+      name: "Creating new war files"
+      become_user: "{{ service_user }}"
+      ansible.builtin.shell: ls *.war | cut -d '.' -f1 | xargs -I {} bash -c "cd {} && jar -cvf {{ voltmx_installation_dir }}/tomcat/webapps/{}.war *"
+      args:
+        executable: "/bin/bash"
+        chdir: /war-builder/
+      environment:
+        PATH: "{{ ansible_env.PATH }}:{{ service_home_dir }}/.sdkman/candidates/java/current/bin"
+
+- 
+  name: "Getting process IDs of the process in case of any lingering services"
+  when: not voltmx_server_installed.stat.exists
+  community.general.pids:
+      name: java
+  register: pids_of_java
+
+- 
+  name: "Printing the process IDs obtained"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.debug:
+    msg: "PIDS of java:{{pids_of_java.pids|join(',')}}"
+
+-
+  name: "Starting VoltMX via systemd Service"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.service:
+    name: voltmx
+    state: started
+    enabled: true
+
+-
+  name: "Marking VoltMX as Installed"
+  when: not voltmx_server_installed.stat.exists
+  ansible.builtin.file:
+    path: "{{ completed_dir }}/voltmxsetup"
+    state: touch
+
+-
+  name: "Checking VoltMX is listening on port {{ voltmx_port_forwards[0].guest }}"
+  ansible.builtin.wait_for:
+    port: "{{ voltmx_port_forwards[0].guest }}"
+    delay: 5
+    timeout: 60
+    msg: "Timeout waiting for {{ voltmx_port_forwards[0].guest }} to respond"
+  register: port_check

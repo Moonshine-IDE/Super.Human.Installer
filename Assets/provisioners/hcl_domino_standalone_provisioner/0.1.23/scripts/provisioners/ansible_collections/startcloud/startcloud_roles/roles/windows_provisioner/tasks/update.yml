@@ -1,0 +1,28 @@
+---
+- hosts: all
+  gather_facts: True
+  tasks:
+  - name: Get acm instance version
+    win_file_version:
+      path: 'C:\Program Files (x86)\MyProgram\program.exe'
+    register: exe_file_version
+  - debug:
+      msg: '{{ exe_file_version.file_version }}'
+  - name: Set timezone to 'Central Standard Time' (GMT-06:00)
+    win_timezone:
+      timezone: Central Standard Time
+  - name: Get product id and product key
+    win_product_facts:
+  - debug: var=hostvars[inventory_hostname]
+  - name: Install package dependencies
+    win_chocolatey:
+      name:
+       - chocolatey-core.extension
+       - chocolatey-windowsupdate.extension
+      state: present
+  - name: Install all security, critical, and rollup updates without a scheduled task
+    win_updates:
+      category_names:
+        - SecurityUpdates
+        - CriticalUpdates
+        - UpdateRollups

@@ -1,0 +1,52 @@
+---
+run_tasks: true
+# Default values for variables used in the haxe_install role
+
+# Version of Haxe to install
+haxe_version: "4.3.6"
+
+# Base directory for Haxe installation
+haxe_home: "/opt/haxe/haxe-{{ haxe_version }}"
+
+# Directory for Haxe libraries
+haxelib_dir: "/opt/haxe/haxelib"
+
+# Path to haxe
+haxe: "{{ haxe_home }}/haxe"
+
+# Path to haxelib
+haxelib: "{{ haxe_home }}/haxelib"
+
+# Whether to install Neko (required for Haxe)
+install_neko: true
+
+# Whether to install OpenFL
+install_openfl: true
+
+# Example usage:
+additional_haxe_libraries:
+  - feathersui-validators
+  - lime
+  - pako
+
+# Example usage:
+additional_haxe_libraries_dev:
+  - library: 'mxhx-feathersui'
+    repo: 'https://github.com/mxhx-dev/mxhx-feathersui.git'
+    branch: ""
+  - library: 'mxhx-component'
+    repo: 'https://github.com/mxhx-dev/mxhx-component.git'
+    branch: ""
+#  - library: 'mxhx-runtime-component'
+#    repo: 'https://github.com/mxhx-dev/mxhx-runtime-component.git'
+#    branch: main
+#  - library: 'moonshine-feathersui-text-editor'
+#    repo: 'https://github.com/Moonshine-IDE/moonshine-feathersui-text-editor.git'
+#    branch: main
+#  - library: 'feathersui'
+#    repo: 'https://github.com/feathersui/feathersui-openfl'
+#    branch: main
+# This may break things
+#  - library: 'openfl'
+#    repo: 'https://github.com/openfl/openfl.git'
+#    branch: 9.4.0-Dev

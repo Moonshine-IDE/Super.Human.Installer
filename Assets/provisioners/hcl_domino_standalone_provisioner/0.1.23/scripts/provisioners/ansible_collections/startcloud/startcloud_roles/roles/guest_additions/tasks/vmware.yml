@@ -1,0 +1,50 @@
+---
+- ansible.builtin.file:
+    path: /mnt/hgfs
+    state: directory
+  name: "Create /mnt/hgfs directory for synced folder mounts."
+- ansible.builtin.apt: "name=open-vm-tools state=present"
+  name: "Install open-vm-tools."
+  when: vmware_install_open_vm_tools
+- block:
+    - ansible.builtin.file:
+        path: "/tmp/{{ item }}"
+        state: directory
+      name: "Create temporary directories for VMware tools."
+      with_items:
+        - vmfusion
+        - vmfusion-archive
+    - mount:
+        fstype: iso9660
+        name: /tmp/vmfusion
+        src: "/home/{{ user }}/linux.iso"
+        state: mounted
+      name: "Mount VMware tools."
+    - command: "tar xzf /tmp/vmfusion/VMwareTools-*.tar.gz -C /tmp/vmfusion-archive"
+      name: "Decompress VMware Tools installer into archive folder."
+      tags:
+        - skip_ansible_lint
+    - command: "/tmp/vmfusion-archive/vmware-tools-distrib/vmware-install.pl --default"
+      name: "Run the VMware tools installer."
+      register: vmtools_installer_output
+    - command: "/tmp/vmfusion-archive/vmware-tools-distrib/vmware-install.pl --default --force-install"
+      name: "Run the VMware tools installer with --force-install."
+      when: "vmtools_installer_output.stdout.find('open-vm-tools') != -1"
+    - mount:
+        fstype: iso9660
+        name: /tmp/vmfusion
+        src: "/home/{{ user }}/linux.iso"
+        state: absent
+      name: "Unmount VMware tools."
+    - ansible.builtin.file:
+        path: "/tmp/{{ item }}"
+        state: absent
+      name: "Remove temporary directories for VMware tools."
+      with_items:
+        - vmfusion
+        - vmfusion-archive
+    - ansible.builtin.file:
+        path: "/home/{{ user }}/linux.iso"
+        state: absent
+      name: "Delete VMWare Tools."
+  when: "not vmware_install_open_vm_tools"

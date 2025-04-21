@@ -1,0 +1,150 @@
+--- 
+-
+  name: "Stopping pkg server"
+  become: true
+  ansible.builtin.service: 
+    name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive  | replace('.','') }}"
+    state: started
+
+-
+  name: "Installing Development Tools"
+  become: true
+  community.general.pkg5:
+    name:
+      - git
+      - developer/gcc10
+      - developer/build/gnu-make
+      - system/header
+
+-
+  name: "Creating Public Repo Build directories"
+  become: true
+  ansible.builtin.file:
+    mode: '0755'
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user_id }}"
+  with_items:
+    - "/{{ storage_disk.path }}/src"
+
+- 
+  name: "Install pip pexpect"
+  ansible.builtin.pip:
+    name: pexpect
+
+-
+  name: "Setting package service to read only, preventing package updates over the web"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/readonly = false"
+
+-
+  name: "Setting Package Service port {{ pkg_server.port }}"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/address = 127.0.0.1"
+
+-
+  name: "Setting Package Service as Supplemental"
+  become: true
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.','') }}  repository/collection_type=supplemental"
+
+-
+  name: "Setting Package Description"
+  become: true
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.','') }}  repository/description='{{ pkg_server.description }}'"
+
+-
+  name: "Setting Package Service Repo Name"
+  become: true
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive | replace('.','') }}  repository/name='{{ pkg_server.name }}'"
+
+- 
+  name: "Downloading packages from source"
+  ansible.builtin.git:
+    repo: "{{ pkg_server.repo_url }}"
+    dest: "/{{ storage_disk.path }}/src"
+    clone: true
+    update: true
+    force: true
+    accept_hostkey: yes
+
+-
+  name: "Setting Scripts to be executable"
+  become: true
+  ansible.builtin.file:
+    mode: '+x'
+    path: "{{ item }}"
+    owner: "{{ ansible_user_id }}"
+  with_items:
+    - "/{{ storage_disk.path }}/src/build/buildctl"
+    - "/{{ storage_disk.path }}/src/lib/build.sh"
+
+-
+  name: "Setting pkg5srv as user and group for pkg service"
+  become: true
+  ansible.builtin.file:
+    state: directory
+    path: "/{{ storage_disk.path }}/{{ pkg_server.omnios_release }}"
+    owner: "pkg5srv"
+    group: "pkg5srv"
+    recurse: true
+
+-
+  name: "Stopping pkg server"
+  become: true
+  ansible.builtin.service: 
+    name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }}"
+    state: stopped
+    enabled: false
+
+-
+  name: "Starting pkg server"
+  become: true
+  ansible.builtin.service: 
+    name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }}"
+    state: started
+    enabled: true
+
+-
+  name: "Configuring PGKSRVR Variable"
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/{{ storage_disk.path }}/src/lib/site.sh"
+    regexp: '^(.*)PKGSRVR=(.*)$' 
+    line: 'PKGSRVR=http://localhost:{{ pkg_server.port }}/'
+    backrefs: true
+
+-
+  name: "Configuring IPS_REPO Variable"
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/{{ storage_disk.path }}/src/lib/site.sh"
+    regexp: '^(.*)IPS_REPO=(.*)$' 
+    line: 'IPS_REPO=http://localhost:{{ pkg_server.port }}/'
+    backrefs: true
+
+- 
+  name: "Expecting input for rebuild"
+  ansible.builtin.expect:
+    command: "./buildctl build all"
+    chdir: "/{{ storage_disk.path }}/src/build"
+    echo: true
+    timeout: null
+    responses:
+      'Built package cache will be cleared, continue\?': 'y'
+
+-
+  name: "Setting package service to read only, preventing package updates over the web"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/readonly = true"
+
+-
+  name: "Setting Package Service port {{ pkg_server.port }}"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} delprop pkg/address"
+
+-
+  name: "Starting pkg server"
+  become: true
+  ansible.builtin.service: 
+    name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }}"
+    state: restarted

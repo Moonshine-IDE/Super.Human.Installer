@@ -1,0 +1,10 @@
+location /phpmyadmin {
+    root /usr/share;
+    index index.php;
+}
+
+location ~ ^/phpmyadmin/(.*)\.php$ {
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME /usr/share/$fastcgi_script_name;
+    fastcgi_pass unix:/var/run/php/php7.1-fpm.sock;
+}

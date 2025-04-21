@@ -276,6 +276,7 @@ hosts:
       nomad_hotfix_version: ::NOMADWEB_VERSION_HOTFIX_INSTALL:: # "HF1"
       nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
 
+
       # Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
       traveler_archive: ::TRAVELER_INSTALLER::

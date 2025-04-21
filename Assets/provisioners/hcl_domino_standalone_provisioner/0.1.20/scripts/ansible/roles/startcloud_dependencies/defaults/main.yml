@@ -1,0 +1,12 @@
+---
+packages:
+  - htop
+  - lynx
+  - lshw
+  - libxml2-utils
+  - tree
+  - python3-pexpect
+  - python3-pymongo
+  - python3-pymysql
+pip_packages:
+

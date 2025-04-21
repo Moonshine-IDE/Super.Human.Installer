@@ -1,0 +1,5 @@
+#!/bin/bash
+
+LOGNAME="/var/log/clamav/clamav-$(date +'%Y-%m-%d').log";
+DIRTOSCAN="/home";
+clamscan -ri "$DIRTOSCAN" &>"$LOGNAME";

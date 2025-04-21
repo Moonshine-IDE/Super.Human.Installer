@@ -1,0 +1,14 @@
+---
+  - name: Create nginx SSL certificates directory
+    ansible.builtin.file:
+      state: directory
+      path: /etc/nginx/ssl
+      owner: root
+      group: root
+    tags:
+      - bbb_letsencript_ssl_dir
+
+  - name: Create dhparam SSL file
+    ansible.builtin.command: openssl dhparam -dsaparam -out /etc/nginx/ssl/dhp-4096.pem 4096 creates=/etc/nginx/ssl/dhp-4096.pem
+    tags:
+      - bbb_create_dhpem_file

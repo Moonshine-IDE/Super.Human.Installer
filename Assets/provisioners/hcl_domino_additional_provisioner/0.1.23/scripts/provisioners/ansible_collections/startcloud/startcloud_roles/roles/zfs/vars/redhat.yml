@@ -1,0 +1,5 @@
+---
+openzfs_rpm: https://zfsonlinux.org/epel/zfs-release-2-3$(rpm --eval "%{dist}").noarch.rpm
+packages:
+  - zfs
+  - kernel-devel
