@@ -108,6 +108,13 @@ class SecretsPage extends Page {
     var _dockerHubCredentials:Array<DockerHubRow> = [];
     var _buttonAddDockerHub:Button;
     var _buttonOpenDockerHub:GenesisButton;
+    
+    // SSH Keys
+    var _rowSSHKeys:GenesisFormRow;
+    var _sshKeysContainer:LayoutGroup;
+    var _sshKeys:Array<SSHKeyRow> = [];
+    var _buttonAddSSHKey:Button;
+    var _buttonOpenSSHDocs:GenesisButton;
 
     public function new() {
         super();
@@ -706,6 +713,113 @@ class SecretsPage extends Page {
 
         // No need for the separate button container anymore
 
+        // Add a separator line
+        var separator5 = new HLine();
+        separator5.width = _width - GenesisApplicationTheme.GRID * 4;
+        _form.addChild(separator5);
+
+        // SSH Keys
+        _rowSSHKeys = new GenesisFormRow();
+        _form.addChild(_rowSSHKeys);
+        
+        // Set the column widths
+        var sshLabel = cast(_rowSSHKeys.getChildAt(0), feathers.core.FeathersControl);
+        var sshContent = cast(_rowSSHKeys.getChildAt(1), feathers.core.FeathersControl);
+        if (sshLabel != null) sshLabel.layoutData = new HorizontalLayoutData(40);
+        if (sshContent != null) sshContent.layoutData = new HorizontalLayoutData(60);
+        
+        // Create a custom label container with vertical layout
+        var sshLabelContainer = new LayoutGroup();
+        var sshLabelVerticalLayout = new VerticalLayout();
+        sshLabelVerticalLayout.gap = GenesisApplicationTheme.GRID;
+        sshLabelVerticalLayout.horizontalAlign = HorizontalAlign.LEFT;
+        sshLabelContainer.layout = sshLabelVerticalLayout;
+        
+        // Create header row with title and add button
+        var sshHeaderRow = new LayoutGroup();
+        var sshHeaderLayout = new HorizontalLayout();
+        sshHeaderLayout.horizontalAlign = HorizontalAlign.LEFT;
+        sshHeaderLayout.verticalAlign = VerticalAlign.MIDDLE;
+        sshHeaderLayout.gap = GenesisApplicationTheme.GRID;
+        sshHeaderRow.layout = sshHeaderLayout;
+        
+        // Create the text label
+        var sshTextLabel = new Label();
+        sshTextLabel.text = "SSH Keys";
+        sshTextLabel.width = GenesisApplicationTheme.GRID * 35; // Increased width for better display
+        
+        // Create add button
+        _buttonAddSSHKey = new Button();
+        _buttonAddSSHKey.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_ADD);
+        _buttonAddSSHKey.setPadding(0);
+        _buttonAddSSHKey.width = GenesisApplicationTheme.GRID * 3;
+        _buttonAddSSHKey.height = GenesisApplicationTheme.GRID * 3;
+        _buttonAddSSHKey.addEventListener(TriggerEvent.TRIGGER, _addSSHKey);
+        _buttonAddSSHKey.toolTip = "Add SSH Key";
+        
+        // Add text and button to header row
+        sshHeaderRow.addChild(sshTextLabel);
+        sshHeaderRow.addChild(_buttonAddSSHKey);
+        
+        // Add header row to label container
+        sshLabelContainer.addChild(sshHeaderRow);
+        
+        // Create row for GitHub SSH Keys documentation link
+        var sshWebLinkRow = new LayoutGroup();
+        var sshWebLinkLayout = new HorizontalLayout();
+        sshWebLinkLayout.horizontalAlign = HorizontalAlign.LEFT;
+        sshWebLinkLayout.verticalAlign = VerticalAlign.MIDDLE;
+        sshWebLinkLayout.gap = GenesisApplicationTheme.GRID;
+        sshWebLinkRow.layout = sshWebLinkLayout;
+        
+        // Create button with only icon (no text)
+        _buttonOpenSSHDocs = new GenesisButton();
+        _buttonOpenSSHDocs.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_WEB);
+        _buttonOpenSSHDocs.text = ""; // Remove text
+        _buttonOpenSSHDocs.setPadding(0); // Reduce padding for icon-only button
+        _buttonOpenSSHDocs.width = GenesisApplicationTheme.GRID * 3; // Set fixed width
+        _buttonOpenSSHDocs.height = GenesisApplicationTheme.GRID * 3; // Set fixed height
+        _buttonOpenSSHDocs.addEventListener(TriggerEvent.TRIGGER, _buttonOpenSSHDocsTriggered);
+        _buttonOpenSSHDocs.toolTip = "Open GitHub SSH Keys Documentation";
+        
+        // Create label for link description
+        var sshLinkLabel = new Label();
+        sshLinkLabel.text = "GitHub SSH Documentation";
+        sshLinkLabel.width = GenesisApplicationTheme.GRID * 30;
+        
+        // Add button and label to row
+        sshWebLinkRow.addChild(_buttonOpenSSHDocs);
+        sshWebLinkRow.addChild(sshLinkLabel);
+        
+        // Add row to label container
+        sshLabelContainer.addChild(sshWebLinkRow);
+        
+        // Replace the default label with our custom container
+        _rowSSHKeys.removeChildAt(0);
+        _rowSSHKeys.addChildAt(sshLabelContainer, 0);
+        cast(sshLabelContainer, feathers.core.FeathersControl).layoutData = new HorizontalLayoutData(40);
+        
+        // Container for SSH Key entries
+        _sshKeysContainer = new LayoutGroup();
+        var sshLayout = new VerticalLayout();
+        sshLayout.gap = GenesisApplicationTheme.GRID;
+        sshLayout.horizontalAlign = HorizontalAlign.LEFT;
+        _sshKeysContainer.layout = sshLayout;
+        _sshKeysContainer.width = _width - GenesisApplicationTheme.GRID * 30;
+        
+        // Create a vertical layout for the content area
+        var sshContentLayout = new VerticalLayout();
+        sshContentLayout.gap = GenesisApplicationTheme.GRID;
+        sshContentLayout.horizontalAlign = HorizontalAlign.LEFT;
+        sshContentLayout.paddingTop = 0;
+        sshContentLayout.paddingBottom = 0;
+        sshContentLayout.paddingLeft = 0;
+        sshContentLayout.paddingRight = 0;
+        _rowSSHKeys.content.layout = sshContentLayout;
+        
+        // Add entries container to content
+        _rowSSHKeys.content.addChild(_sshKeysContainer);
+
         // Add bottom line and buttons outside the scroll container
         var bottomLine = new HLine();
         bottomLine.width = _width;
@@ -773,6 +887,13 @@ class SecretsPage extends Page {
                 _addDockerHubRow(dockerCred.name, dockerCred.docker_hub_user, dockerCred.docker_hub_token);
             }
         }
+        
+        // Load SSH Keys
+        if (secrets.ssh_keys != null) {
+            for (sshKey in secrets.ssh_keys) {
+                _addSSHKeyRow(sshKey.name, sshKey.key);
+            }
+        }
     }
 
     private function _clearRows() {
@@ -805,6 +926,12 @@ class SecretsPage extends Page {
             _dockerHubContainer.removeChild(row);
         }
         _dockerHubCredentials = [];
+        
+        // Remove all SSH Key rows
+        for (row in _sshKeys) {
+            _sshKeysContainer.removeChild(row);
+        }
+        _sshKeys = [];
     }
 
     private function _addHclApiKey(e:TriggerEvent) {
@@ -958,6 +1085,17 @@ class SecretsPage extends Page {
             }
         }
         
+        // Check SSH Keys
+        for (row in _sshKeys) {
+            if (!_isValidDescription(row.getName())) {
+                return {
+                    valid: false, 
+                    message: "SSH Key description contains invalid characters. Only letters, numbers, dashes and underscores are allowed.",
+                    invalidRow: row
+                };
+            }
+        }
+        
         return {valid: true, message: "", invalidRow: null};
     }
 
@@ -1038,6 +1176,17 @@ class SecretsPage extends Page {
             }
         }
         
+        // Add SSH Keys
+        if (_sshKeys.length > 0) {
+            secrets.ssh_keys = [];
+            for (row in _sshKeys) {
+                secrets.ssh_keys.push({
+                    name: row.getName(),
+                    key: row.getKey()
+                });
+            }
+        }
+        
         // Save to configuration
         SuperHumanInstaller.getInstance().config.secrets = secrets;
         
@@ -1065,13 +1214,34 @@ class SecretsPage extends Page {
     
     private function _buttonOpenBoxVaultTriggered(e:TriggerEvent) {
         var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_EXTERNAL_URL);
-        event.url = "https://app.vagrantup.com/boxes/search";
+        event.url = "https://boxvault.startcloud.com";
         this.dispatchEvent(event);
     }
     
     private function _buttonOpenDockerHubTriggered(e:TriggerEvent) {
         var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_EXTERNAL_URL);
         event.url = "https://hub.docker.com/settings/security";
+        this.dispatchEvent(event);
+    }
+    
+    private function _addSSHKey(e:TriggerEvent) {
+        _addSSHKeyRow("", "");
+    }
+
+    private function _addSSHKeyRow(name:String, key:String) {
+        var row = new SSHKeyRow(name, key);
+        row.width = _width - GenesisApplicationTheme.GRID * 4;
+        row.onDelete = function() {
+            _sshKeys.remove(row);
+            _sshKeysContainer.removeChild(row);
+        };
+        _sshKeys.push(row);
+        _sshKeysContainer.addChild(row);
+    }
+    
+    private function _buttonOpenSSHDocsTriggered(e:TriggerEvent) {
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_EXTERNAL_URL);
+        event.url = "https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent";
         this.dispatchEvent(event);
     }
 
@@ -1519,6 +1689,91 @@ class CustomResourceRow extends LayoutGroup {
     
     public function getPass():String {
         return _passInput.text;
+    }
+}
+
+// Component for SSH Key
+class SSHKeyRow extends LayoutGroup {
+    private var _nameInput:GenesisFormTextInput;
+    private var _keyInput:GenesisFormTextInput;
+    private var _deleteButton:Button;
+    
+    public var onDelete:Void->Void;
+    
+    /**
+     * Highlights the description field to indicate validation error
+     */
+    public function highlightDescriptionField():Void {
+        // Call isValid with validation to highlight the field
+        _nameInput.isValid();
+    }
+    
+    public function new(name:String, key:String) {
+        super();
+        
+        // Set up vertical layout
+        var mainLayout = new VerticalLayout();
+        mainLayout.gap = GenesisApplicationTheme.GRID;
+        this.layout = mainLayout;
+        this.width = GenesisApplicationTheme.GRID * 90;
+        
+        // Name row
+        var nameRow = new LayoutGroup();
+        var nameRowLayout = new HorizontalLayout();
+        nameRowLayout.gap = GenesisApplicationTheme.GRID;
+        nameRowLayout.verticalAlign = VerticalAlign.MIDDLE;
+        nameRow.layout = nameRowLayout;
+        
+        // Delete button at the beginning of the first row
+        _deleteButton = new Button();
+        _deleteButton.icon = GenesisApplicationTheme.getCommonIcon(GenesisApplicationTheme.ICON_DESTROY_SMALL);
+        _deleteButton.setPadding(0); // Remove padding
+        _deleteButton.width = GenesisApplicationTheme.GRID * 3;
+        _deleteButton.height = GenesisApplicationTheme.GRID * 3;
+        _deleteButton.addEventListener(TriggerEvent.TRIGGER, function(_) {
+            if (onDelete != null) onDelete();
+        });
+        _deleteButton.toolTip = "Delete";
+        
+        // Name input without separate label - use GenesisFormTextInput with validation
+        _nameInput = new GenesisFormTextInput(name, "Enter Description", ~/^[a-zA-Z0-9_-]*$/, false);
+        _nameInput.minLength = 1; // At least one character required
+        _nameInput.width = GenesisApplicationTheme.GRID * 65; // Fixed width
+        
+        // Add components to name row
+        nameRow.addChild(_deleteButton);
+        nameRow.addChild(_nameInput);
+        
+        // Key row
+        var keyRow = new LayoutGroup();
+        var keyRowLayout = new HorizontalLayout();
+        keyRowLayout.gap = GenesisApplicationTheme.GRID;
+        keyRowLayout.verticalAlign = VerticalAlign.MIDDLE;
+        keyRow.layout = keyRowLayout;
+        
+        // Spacer to align with delete button position
+        var spacer = new LayoutGroup();
+        spacer.width = GenesisApplicationTheme.GRID * 3;
+        
+        // Key input without separate label
+        _keyInput = new GenesisFormTextInput(key, "Enter SSH Key (in PEM format)", null, false);
+        _keyInput.width = GenesisApplicationTheme.GRID * 65; // Fixed width
+        
+        // Add components to key row
+        keyRow.addChild(spacer);
+        keyRow.addChild(_keyInput);
+        
+        // Add rows to main container
+        this.addChild(nameRow);
+        this.addChild(keyRow);
+    }
+    
+    public function getName():String {
+        return _nameInput.text;
+    }
+    
+    public function getKey():String {
+        return _keyInput.text;
     }
 }
 

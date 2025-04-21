@@ -59,10 +59,16 @@ typedef DockerHubCredential = {
     docker_hub_token: String
 }
 
+typedef SSHKey = {
+    name: String,
+    key: String
+}
+
 typedef SuperHumanSecrets = {
     ?hcl_download_portal_api_keys: Array<HclDownloadPortalApiKey>,
     ?git_api_keys: Array<GitApiKey>,
     ?vagrant_atlas_token: Array<VagrantAtlasToken>,
     ?custom_resource_url: Array<CustomResourceUrl>,
-    ?docker_hub: Array<DockerHubCredential>
+    ?docker_hub: Array<DockerHubCredential>,
+    ?ssh_keys: Array<SSHKey>
 }

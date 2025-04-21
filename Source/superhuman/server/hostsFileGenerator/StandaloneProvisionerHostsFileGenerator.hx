@@ -260,6 +260,13 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             }
         }
         
+        // Add SSH Keys
+        if (secrets != null && secrets.ssh_keys != null) {
+            for (sshKey in secrets.ssh_keys) {
+                Reflect.setField(secretsObj, 'SECRETS_${sanitizeSecretName(sshKey.name)}_SSH', sshKey.key);
+            }
+        }
+        
         // Merge secrets with the rest of the template values
         var templateValues = {
             USER_EMAIL: internalProvisioner.server.userEmail.value,
