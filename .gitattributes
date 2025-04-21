@@ -1,3 +1,5 @@
+.github/workflows/** merge=ours
+
 # Mark binary files to prevent line ending conversion
 *.png binary
 *.jpg binary
