@@ -1,0 +1,202 @@
+#!/usr/bin/python3
+import socket
+import os.path
+import sys
+import struct
+import fcntl
+import os
+import sched
+import time
+import subprocess
+import x728bat_display
+import smbus
+import RPi.GPIO as GPIO
+
+from gpiozero import CPUTemperature
+from luma.core.interface.serial import i2c, spi, pcf8574
+from luma.lcd.device import hd44780
+from luma.core.render import canvas
+from luma.core.util import bytes_to_nibbles
+from luma.core.framebuffer import full_frame, diff_to_previous
+
+from PIL import Image, ImageDraw
+
+BUZZER_PIN = 20
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BUZZER_PIN, GPIO.OUT)
+
+efg = "0"
+wfg = "0"
+i2c_port = 2
+cols = 20
+rows = 4
+
+bus = smbus.SMBus(1)
+
+hostname = socket.gethostname()
+IPAddr = socket.gethostbyname(hostname)
+IPAddr = socket.gethostbyname_ex(hostname)[1]
+
+interface = pcf8574(port=i2c_port, address=0x27)
+device = hd44780(interface, width=cols, height=rows)
+fnt = device.get_font("A00")
+
+
+def get_ip_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(
+        fcntl.ioctl(
+            s.fileno(), 0x8915, struct.pack("256s", bytes(ifname[:15], "utf-8"))
+        )[20:24]
+    )
+
+
+def progress_bar(width, height, percentage):
+    img = Image.new("1", (width, height))
+    drw = ImageDraw.Draw(img)
+    drw.rectangle((0, 0, width - 1, height - 1), fill="black", outline="white")
+    drw.rectangle((0, 0, width * percentage, height - 1), fill="white", outline="white")
+    return img
+
+
+def display1(scheduler):
+    with canvas(device) as draw:
+        try:
+            scheduler.enter(5, 1, display1, (scheduler,))
+            try:
+                display1pstr = (
+                    "MOD: "
+                    + socket.gethostname().split("-")[0]
+                    + "-"
+                    + socket.gethostname().split("-")[1]
+                )
+            except:
+                draw.text((0, 0), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 0), display1pstr, font=fnt, fill="white")
+            try:
+                display1pstr = (
+                    "MAC: " + socket.gethostname().split("-")[2].split(".")[0]
+                )
+            except:
+                draw.text((0, 8), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 8), display1pstr, font=fnt, fill="white")
+            try:
+                capacity = int(x728bat_display.readCapacity(bus))
+                if capacity >= 100:
+                    display1pstr = "BAT: " + str(capacity) + "% Charged"
+                elif 20 < capacity <= 99:
+                    display1pstr = "BAT: " + str(capacity) + "% Okay"
+                elif 5 < capacity <= 20:
+                    display1pstr = "BAT: " + str(capacity) + "% Warning"
+                elif capacity < 5:
+                    display1pstr = "BAT: " + str(capacity) + "% CRITICAL!!"
+                    GPIO.output(BUZZER_PIN, 1)
+                    time.sleep(0.1)
+                    GPIO.output(BUZZER_PIN, 0)
+                    time.sleep(0.1)
+            except:
+                draw.text((0, 16), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 16), f"BAT: {capacity:.0f}%", font=fnt, fill="white")
+                draw.bitmap((45, 16), progress_bar(50, 8, capacity), fill="white")
+            try:
+                install_status_file = open("/opt/prominic/install_status", "r")
+                status = int(install_status_file.read())
+                if status == 0:
+                    display1pstr = "STS:" + " Error"
+                elif status == 1:
+                    display1pstr = "STS:" + " Provisioning"
+                elif status == 2:
+                    display1pstr = "STS:" + " Connecting"
+                elif status == 3:
+                    display1pstr = "STS:" + " Authenticating"
+                elif status == 4:
+                    display1pstr = "STS:" + " Registering"
+                elif status == 5:
+                    display1pstr = "STS:" + " User Setup"
+                elif status == 6:
+                    display1pstr = "STS:" + " Ready"
+            except:
+                draw.text((0, 24), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 24), display1pstr, font=fnt, fill="white")
+
+        except KeyboardInterrupt:
+            GPIO.cleanup()
+        except:
+            draw.text((0, 0), f"Service Error", font=fnt, fill="white")
+            draw.text((0, 8), f"Service Error", font=fnt, fill="white")
+            draw.text((0, 16), f"Service Error", font=fnt, fill="white")
+            draw.text((0, 24), f"Service Error", font=fnt, fill="white")
+        finally:
+            time.sleep(5)
+
+
+def display2(scheduler):
+    with canvas(device) as draw:
+        try:
+            scheduler.enter(5, 1, display2, (scheduler,))
+            try:
+                cpu = CPUTemperature()
+                if cpu.temperature >= 80.00:
+                    display2pstr = (
+                        "TMP: " + str(cpu.temperature) + "% Throttling System"
+                    )
+                elif 70.00 < cpu.temperature <= 80.00:
+                    display2pstr = "TMP: " + str(cpu.temperature) + "% Warning"
+                elif 50.00 < cpu.temperature <= 70.00:
+                    display2pstr = "TMP: " + str(cpu.temperature) + "% Warm"
+                elif 30.00 < cpu.temperature <= 50.00:
+                    display2pstr = "TMP: " + str(cpu.temperature) + "% Okay"
+                elif cpu.temperature < 30.00:
+                    display2pstr = "TMP: " + str(cpu.temperature) + "% Cool"
+            except:
+                draw.text((0, 0), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 0), display2pstr, font=fnt, fill="white")
+
+            try:
+                display2pstr = "EIP: " + get_ip_address("eth0")
+            except:
+                draw.text((0, 8), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 8), display2pstr, font=fnt, fill="white")
+
+            try:
+                voltage = round(x728bat_display.readVoltage(bus), 2)
+                if 4.00 < voltage:
+                    display2pstr = "VOL: " + str(voltage) + " Charged"
+                elif 3.00 < voltage < 4.00:
+                    display2pstr = "VOL: " + str(voltage) + " Good"
+                elif voltage < 3.00:
+                    display2pstr = "VOL: " + str(voltage) + " CRITICAL!!"
+            except:
+                draw.text((0, 16), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 16), display2pstr, font=fnt, fill="white")
+
+            try:
+                cmd = "last -4 -w | grep 'logged in' | grep ':1' | awk '{print $1}'"
+                current_user = os.popen(cmd).read().strip()
+                display2pstr = "USR: " + current_user
+            except:
+                draw.text((0, 24), f"Service Error", font=fnt, fill="white")
+            finally:
+                draw.text((0, 24), display2pstr, font=fnt, fill="white")
+        except KeyboardInterrupt:
+            GPIO.cleanup()
+        except:
+            draw.text((0, 0), f"Service Error", font=fnt, fill="white")
+            draw.text((0, 8), f"Service Error", font=fnt, fill="white")
+            draw.text((0, 16), f"Service Error", font=fnt, fill="white")
+            draw.text((0, 24), f"Service Error", font=fnt, fill="white")
+        finally:
+            time.sleep(5)
+
+display_scheduler = sched.scheduler(time.time, time.sleep)
+display_scheduler.enter(5, 1, display1, (display_scheduler,))
+display_scheduler.enter(5, 1, display2, (display_scheduler,))
+display_scheduler.run()

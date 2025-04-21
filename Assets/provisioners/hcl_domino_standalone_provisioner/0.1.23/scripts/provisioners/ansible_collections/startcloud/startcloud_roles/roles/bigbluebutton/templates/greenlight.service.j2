@@ -1,0 +1,16 @@
+# /etc/systemd/system/greenlight.service
+[Unit]
+Description=Greenlight Service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardError=null
+StandardOutput=null
+WorkingDirectory={{ bbb_greenlight_libdir }}
+ExecStart=/usr/local/bin/docker-compose -f {{ bbb_greenlight_etcdir }}/docker-compose.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f {{ bbb_greenlight_etcdir }}/docker-compose.yml down
+
+[Install]
+WantedBy=multi-user.target

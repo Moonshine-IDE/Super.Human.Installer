@@ -1,0 +1,27 @@
+---
+-
+  name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Creating zrepl repository file"
+  ansible.builtin.yum_repository:
+    name: zrepl
+    description: zrepl repository
+    baseurl: "{{ zrepl_yum_repo }}"
+    gpgkey: "{{ zrepl_yum_repo_gpg_key }}"
+    gpgcheck: true
+    enabled: true
+
+-
+  name: "Importing zrepl GPG key"
+  ansible.builtin.rpm_key:
+    key: "{{ zrepl_yum_repo_gpg_key }}"
+    state: present
+
+-
+  name: "Installing zrepl package"
+  ansible.builtin.yum:
+    name: "{{ packages }}"
+    state: present
+    

@@ -1,0 +1,19 @@
+[program:haproxy]
+directory=/etc/haproxy
+command=/usr/sbin/haproxy -W -db -f /etc/haproxy/haproxy.cfg  -n 4096 -N 4096
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/haproxy.log
+stderr_logfile=/var/log/haproxy_err.log
+user=root
+
+
+[program:dump]
+directory=/etc/haproxy
+command= /etc/haproxy/dump.sh
+autostart=true
+autorestart=false
+startsecs=0
+stdout_logfile=/var/log/dumphaproxy.log
+stderr_logfile=/var/log/dumphaproxy_err.log
+user=root

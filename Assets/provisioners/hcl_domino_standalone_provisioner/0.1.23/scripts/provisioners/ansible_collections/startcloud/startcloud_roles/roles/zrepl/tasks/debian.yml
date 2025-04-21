@@ -1,0 +1,61 @@
+---
+-
+  name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Installing packages"
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+
+-
+  name: "Downloading and Installing APT Key"
+  ansible.builtin.get_url:
+    url: "{{ zrepl_apt_key_url }}"
+    dest: "{{ zrepl_apt_key_dst }}"
+    mode: '0644'
+
+-
+  name: "Gathering System Architecture"
+  ansible.builtin.command: dpkg --print-architecture
+  register: arch_result
+  changed_when: false
+
+-
+  name: Gathering distribution information
+  ansible.builtin.command: lsb_release -i -s
+  register: distro_result
+  changed_when: false
+
+-
+  name: "Gathering codename information"
+  ansible.builtin.command: lsb_release -c -s
+  register: codename_result
+  changed_when: false
+
+-
+  name: "Setting distribution and codename fact"
+  ansible.builtin.set_fact:
+    distro_codename: "{{ distro_result.stdout | lower }} {{ codename_result.stdout | lower }}"
+
+-
+  name: "Adding zrepl apt repository"
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ arch_result.stdout }} signed-by={{ zrepl_apt_key_dst }}] https://zrepl.cschwarz.com/apt/{{ distro_codename }} main"
+    state: present
+    filename: "{{ zrepl_apt_repo_file | basename | splitext | first }}"
+
+-
+  name: "Updating apt cache"
+  ansible.builtin.apt:
+    update_cache: true
+
+
+-
+  name: "Installing Dependencies"
+  ansible.builtin.apt:
+    name:
+      - zrepl
+    state: present
+    update_cache: true

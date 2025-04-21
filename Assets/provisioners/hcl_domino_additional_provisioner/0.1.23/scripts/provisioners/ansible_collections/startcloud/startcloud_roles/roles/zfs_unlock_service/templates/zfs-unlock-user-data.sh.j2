@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+zpool import -f user_data
+zfs load-key -L file:///dev/disk/by-partlabel/key user_data
+zfs mount user_data

@@ -1,0 +1,78 @@
+--- 
+-
+  name: "Creating release zfs dataset for repo storage"
+  become: true
+  community.general.zfs:
+    name: "{{ storage_disk.path }}/{{ pkg_server.omnios_release }}"
+    state: present
+
+-
+  name: "Creating pkg zfs dataset for repo storage"
+  become: true
+  community.general.zfs:
+    name: "{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg"
+    state: present
+
+-
+  name: "Checking if pkgrepo {{ pkg_server.archive }}/{{ pkg_server.omnios_release }} exists"
+  register: repo_exists
+  ansible.builtin.stat:
+    path: "/{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg/pkg5.repository"
+    get_md5: false
+
+-
+  name: "Creating {{ pkg_server.omnios_release }} {{ pkg_server.archive }} repo"
+  become: true
+  ansible.builtin.command: "pfexec pkgrepo create /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg"
+  when:
+    - not repo_exists.stat.exists
+
+-
+  name: "Setting Package Service prefix"
+  become: true
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg publisher/prefix={{ pkg_server.name }}"
+#  when:
+#    - not repo_exists.stat.exists
+
+-
+  name: "Setting Package Service Repo Name"
+  become: true
+  ansible.builtin.command: "pkgrepo set -s /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg -p {{ pkg_server.archive }}  repository/name='{{ pkg_server.name }}'"
+#  when:
+#    - not repo_exists.stat.exists
+
+-
+  name: "Setting pkg instance {{ pkg_server.omnios_release }}_{{ pkg_server.archive  | replace('.','') }}"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server add {{ pkg_server.omnios_release }}_{{ pkg_server.archive  | replace('.','') }}"
+  when:
+    - not repo_exists.stat.exists
+
+-
+  name: "Adding property type application to service"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} addpg pkg application"
+  when:
+    - not repo_exists.stat.exists
+
+-
+  name: "Setting pkg root"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/inst_root = /{{ storage_disk.path }}/{{ pkg_server.omnios_release }}/pkg"
+
+-
+  name: "Setting package service to read only, preventing package updates over the web"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/readonly = true"
+
+-
+  name: "Setting Package Service port {{ pkg_server.port }}"
+  become: true
+  ansible.builtin.command: "pfexec svccfg -s pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }} setprop pkg/port = {{ pkg_server.port }}"
+
+-
+  name: "Enabling and start pkg server"
+  become: true
+  ansible.builtin.service: 
+    name: "pkg/server:{{ pkg_server.omnios_release }}_{{ pkg_server.archive | replace('.','') }}"
+    state: started

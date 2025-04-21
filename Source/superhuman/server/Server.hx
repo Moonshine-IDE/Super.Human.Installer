@@ -93,7 +93,7 @@ class Server {
         var sc = new Server();
 
         sc._id = data.server_id;
-        
+
         // Log provisioner type without normalizing it
         if (data.provisioner != null) {
             // Log the incoming provisioner data for debugging

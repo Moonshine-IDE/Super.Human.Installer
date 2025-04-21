@@ -1,0 +1,17 @@
+# grafana.ini.j2
+
+# line 35 : specify protocol ⇒ possible to change to [https], [h2], [socket]
+protocol = http
+
+# line 38 : IP address Grafana listens ⇒ listens [0.0.0.0] with the default below
+;http_addr =
+
+# line 41 : specify port ⇒ possible to change to other port
+;http_port = 3000
+
+# line 44 : specify domain name ⇒ possible to change to your domain name
+;domain = localhost
+
+# line 67 : specify your certificate if you set [https] or [h2] for protocol
+cert_file = /etc/letsencrypt/live/dlp.srv.world/fullchain.pem
+cert_key = /etc/letsencrypt/live/dlp.srv.world/privkey.pem

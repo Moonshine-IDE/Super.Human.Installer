@@ -1,0 +1,32 @@
+---
+- name: Install required packages
+  ansible.builtin.package:
+    name:
+      - python3
+      - python3-pip
+      - supervisor
+    state: present
+
+- name: Ensure supervisord is started and enabled
+  ansible.builtin.service:
+    name: supervisor
+    state: started
+    enabled: yes
+
+- name: Create supervisord configuration directory
+  ansible.builtin.file:
+    path: /etc/supervisor/conf.d
+    state: directory
+
+- name: Copy supervisord configuration file
+  ansible.builtin.template:
+    src: supervisord.conf.j2
+    dest: /etc/supervisor/supervisord.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart supervisord to apply configuration
+  ansible.builtin.service:
+    name: supervisor
+    state: restarted

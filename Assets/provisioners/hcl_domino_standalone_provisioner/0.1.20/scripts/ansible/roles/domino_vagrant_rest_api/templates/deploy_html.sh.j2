@@ -1,0 +1,50 @@
+#!/bin/bash
+# Deploy an HTML application to the Domino server (domino/html)
+# USAGE: ./deploy_html.sh <zip> <directory>
+# Parameters:
+#   - <zip>.  The path to the zip file containing the application to deploy.
+#   - <directory>.  The directory relative to domino/html.  The zip will be extracted into this directory.  If the directory exists, it will be recreated.
+
+set -e
+
+ZIP_FILE=$1
+TARGET_DIR=$2
+
+DOMINO_HTML_DIR={{ domino_home_dir }}/domino/html
+TARGET_FULL=$DOMINO_HTML_DIR/$TARGET_DIR
+
+echo "Deploying $ZIP_FILE to $TARGET_FULL"
+
+# change permissions to ensure command runs cleanly
+TIMESTAMP=`date +%Y%m%d%H%M%S`
+ZIP_FILE_CHOWN=${ZIP_FILE}.${TIMESTAMP}.zip
+cp "$ZIP_FILE" "$ZIP_FILE_CHOWN"
+sudo chown {{ domino_user }}:{{ domino_group }} "$ZIP_FILE_CHOWN"
+
+# cleanup existing application
+if [ -e "$TARGET_FULL" ]; then
+	sudo rm -r "$TARGET_FULL";
+fi
+
+# ensure directory exists
+sudo su -c "mkdir -p '$TARGET_FULL'" - domino
+
+# unzip the application
+# If the caller was on Windows, the unzip command can return exit code 1 for a
+# warning on the file separators.  This needs to be caught.
+sudo su -c "unzip -q -d '$TARGET_FULL' '$ZIP_FILE_CHOWN' 2>&1" - domino || {
+    EXIT_CODE=$?
+    echo "Exit Code:  '$EXIT_CODE'"
+    if [ $EXIT_CODE -gt 1 ]; then
+        echo "unzip failed with exit code $EXIT_CODE";
+        exit $EXIT_CODE;
+    fi
+}
+sudo chown -R {{ domino_user }}:{{ domino_group }} "$TARGET_FULL"
+# I found some cases on Windows where directories were missing the "x" permission,
+# This permission is required to access the subdirectories or files.
+# This command makes sure this permission is set for all subdirectories.
+sudo find "$TARGET_FULL" -type d -exec chmod 744 {} +
+
+# Cleanup
+sudo rm -f "$ZIP_FILE_CHOWN"

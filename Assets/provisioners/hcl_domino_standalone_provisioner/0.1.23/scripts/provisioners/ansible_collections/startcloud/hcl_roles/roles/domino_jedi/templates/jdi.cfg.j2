@@ -1,0 +1,235 @@
+# Jedi Main Config File
+# produced by ansible template v0.3
+# config file version
+cfg.version=2.0
+
+###########################
+# general startup options #
+###########################
+
+# verbose logging mode
+verbose=true
+# copy log output to console
+log.copy_to_console=false
+# log debug info
+debug=true
+# log call traces
+trace=false
+# log called method's names
+names=false
+# display a help message and exit
+show.help=no
+# display version info and exit
+show.version=no
+
+###########################
+# configuration files     #
+###########################
+
+# base directory for all jedi config files
+cfg.dir={{ prominic_install_dir }}/jedi/etc
+# main config file
+cfg.file=jdi.cfg
+# log file
+log.file=jdi.log
+# partitions file
+cfg.partitions=partitions.xml
+# system properties file name
+cfg.system=system.cfg
+# users file
+cfg.users=users.cfg
+# groups file
+cfg.group=group.cfg
+# ACL config file
+cfg.acl=acl.cfg
+# session id file name
+cfg.sessionid=noteslog/sessionid.cfg
+# file containing the list of commands allowed to be spawned by a jedi client
+cfg.exec.commands=spawning.cfg
+# ip config file
+cfg.ipconfig=ip.cfg
+# email notifications config file
+cfg.email=email.cfg
+# hosts file location
+cfg.hosts=/etc/hosts
+# host unid config file location
+cfg.unid=host_unid.cfg
+# ssl config file location
+cfg.ssl=ssl.cfg
+# aging config file location
+cfg.aging=aging.cfg
+
+###########################
+# TCP ports configuration #
+###########################
+
+# Clear text port
+server.text.port={{ jedi_server_text_port }}
+# Secure text port
+server.ssltext.port=1911
+# Data port
+server.joes.port=1710
+# Secure data port
+server.ssljoes.port=1711
+
+###########################
+# Runtime Config          #
+###########################
+
+# runtime class to be used for execs
+runtime.class=com.Prominic.runtime.DefaultUnixRuntime
+# temporary files directory
+runtime.tmpdir=runtime.tmpdir={{ jedi_install_dir }}/reports/temp
+# java VM location
+java={{ prominic_install_dir }}/jdk/latest/bin/java
+
+###################################################
+# Monitoring and recovery - Default/global values #
+###################################################
+
+# Recovery policies
+# automatically restart frozen servers
+recovery.restart_if_frozen=true
+# automatically restart stopped servers
+recovery.restart_if_down=false
+# enable/disable soft restarts
+recovery.softrestarts=false
+
+# Default monitoring config (can be overriden by the partition monitoring config
+# seconds
+monitors.timer=360
+# use carefully; if you set this to true, jedi won't restart dead partitions anymore
+monitors.allow_other_monitoring_apps=true
+# HTTP monitor config
+# http testpage URL
+monitors.http.testpage=/netmonitor.nsf/test
+# seconds; set to 0 to disable HTTP monitoring
+monitors.http.period=60
+# seconds
+monitors.http.recoverywait=60
+# seconds
+monitors.http.startupwait=180
+# seconds; 0 means no timeout
+monitors.http.timeout=60
+# RPC monitor config
+# seconds; set to 0 to disable RPC monitoring
+monitors.rpc.period=60
+# seconds
+monitors.rpc.startupwait=120
+# seconds; 0 means no timeout
+monitors.rpc.timeout=60
+# Activity monitor config
+# seconds; set to 0 to disable activity monitoring
+monitors.activity.period=120
+# seconds
+monitors.activity.maxinactivitytime=300
+# seconds
+monitors.activity.startupwait=120
+# Console messages monitor config
+# enable/disable message monitoring
+monitors.messages.enabled=true
+
+#####################################
+# Reporting - Default/global values #
+#####################################
+
+# set to true to disable all reports (all periodic tasks)
+reports.disable.all=false
+# set to true to disable report generation
+reports.disable.domino=true
+# set to true to disable disk reports generation
+reports.disable.disk=true
+
+# To disable an individual report, set the period to 0
+# reports directory location
+reports.dir={{ jedi_install_dir }}/reports
+# temporary reports file directory; all dominos must be allowed to write into it
+reports.tempdir={{ jedi_install_dir }}/reports/temp
+# reports filename suffix
+reports.suffix=.sql
+# report file footer
+reports.terminator=EndOfQueue
+# minutes
+reports.period.transactions=0
+# minutes
+reports.period.tasks=0
+# minutes
+reports.period.users=0
+# minutes
+reports.period.sharedspace=0
+# minutes
+reports.period.dedicatedspace=0
+# minutes
+reports.period.uptime=0
+# minutes
+reports.period.swap=0
+
+# minutes; how long to wait after startup before running any reports
+reports.period.wait=5
+# days
+reports.maximumage=4
+# minutes; how often to check for old reports
+reports.period.cleanup=60
+# set to true if you want jedi to generate reports and exit
+reports.generate=false
+# set to true to start jedi as a report upload server only
+reports.servermode=false
+
+###########################
+# Partition Maker         #
+###########################
+
+# R5
+# which class to use to create new partitions
+pm.class=com.Prominic.jdi.pm.UnixPartitionMaker
+# user creation script
+pm.setup.user={{ jedi_install_dir }}/bin/pm/jedi_makeuser.ksh
+# default user password for a new partition
+pm.setup.user.password=password
+# pm script
+pm.setup.pm={{ jedi_install_dir }}/bin/pm/pm.ksh
+# domino process selection pattern
+cfg.domino.process_selection=opt/lotus/notes
+# domino startup command
+cfg.domino.startup={{ domino_install_basedir }}/bin/server
+
+# R6
+# which class to use to create new partitions
+pm6.class=com.Prominic.jdi.pm.UnixPartitionMaker
+# user creation script
+pm6.setup.user={{ jedi_install_dir }}/bin/pm/jedi_makeuser.ksh
+# default user password for a new partition
+pm6.setup.user.password=password
+# pm script
+pm6.setup.pm={{ jedi_install_dir }}/bin/pm/pm.ksh
+# domino process selection pattern
+cfg.domino6.process_selection=opt/lotus/notes
+# domino startup command
+cfg.domino6.startup=/opt/lotus/bin/server
+
+###########################
+# IP Config               #
+###########################
+
+# class to be used for automatic IP config
+ipconfig.class=com.Prominic.jdi.ipconfig.LinuxIPConfigurator
+# set to true to enable automatic IP config
+ipconfig.enable=false
+
+###########################
+# Hosts Config            #
+###########################
+
+# class to be used for the hosts file management
+hosts.class=com.Prominic.jdi.ipconfig.UnixHostsFileManager
+# set to true to enable hosts file management
+hosts.enable=false
+
+###########################
+# Aging Config            #
+###########################
+
+# minutes
+aging.period=1
+# (USE CAREFULLY) set to true to recursively look for old files
+aging.recursive=false

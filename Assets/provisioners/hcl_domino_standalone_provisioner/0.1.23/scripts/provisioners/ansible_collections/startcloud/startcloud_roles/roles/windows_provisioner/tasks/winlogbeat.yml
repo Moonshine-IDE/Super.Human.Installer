@@ -1,0 +1,10 @@
+---
+- 
+  hosts: all
+  strategy: free
+  name: Installing WinLogBeat
+  gather_facts: true
+  vars_files:
+    - ../all
+  roles:
+    - winlogbeat

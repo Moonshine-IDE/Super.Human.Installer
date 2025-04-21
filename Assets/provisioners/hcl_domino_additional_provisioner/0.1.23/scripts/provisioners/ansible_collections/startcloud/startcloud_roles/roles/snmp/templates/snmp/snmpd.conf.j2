@@ -1,0 +1,26 @@
+# {{ ansible_managed }}
+
+createUser {{ snmp_user }} SHA {{ snmp_password }} AES {{ snmp_encryption }}
+
+rouser {{ snmp_user }} priv
+{% if ansible_default_ipv4.address is defined %}
+agentAddress  {{ snmp_agentadress_protocol.ipv4 }}:{{ snmp_agentadress_adress.ipv4 }}:{{ snmp_agentadress_port.ipv4 }}
+{% endif %}
+{% if ansible_default_ipv6.address is defined %}
+agentAddress {{ snmp_agentadress_protocol.ipv6 }}:{{ snmp_agentadress_adress.ipv6 }}:{{ snmp_agentadress_port.ipv6 }}
+{% endif %}
+
+{% if snmp_location is defined %}
+sysLocation {{ snmp_location }}
+{% endif %}
+sysName {{ ansible_fqdn }}
+{% if snmp_contact is defined %}
+sysContact {{ snmp_contact }}
+{% endif %}
+
+{% for item in snmp_extension_list %}
+extend {{ item.extend }}
+{% endfor %}
+{% if "pve" in ansible_kernel %}
+extend proxmox /usr/bin/sudo {{ snmp_extension_scripts }}/proxmox
+{% endif %}

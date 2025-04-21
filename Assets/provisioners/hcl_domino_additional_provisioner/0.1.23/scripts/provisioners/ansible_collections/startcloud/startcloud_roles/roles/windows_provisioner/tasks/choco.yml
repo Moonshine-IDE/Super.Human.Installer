@@ -1,0 +1,11 @@
+---
+- hosts: primary
+  tasks:
+
+  - name: Install package dependencies
+    win_chocolatey:
+      name:
+       - chocolatey-core.extension
+       - chocolatey-windowsupdate.extension
+      state: present
+

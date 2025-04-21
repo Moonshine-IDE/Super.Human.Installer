@@ -1,0 +1,57 @@
+{
+	"title": "Create domcfg database from Template",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 1. Create database from template ---",
+			"databases": [
+				{
+				    "action": "create",
+				    "title": "Domino Web Server Configuration",
+				    "filePath": "domcfg.nsf",
+				    "templatePath": "domcfg5.ntf",
+				    "sign": false,
+				    "replace": false,
+                    "ACL": {
+                        "ACLEntries": [
+                          {
+                            "name": "AutomaticallyCrossCertifiedUsers",
+                            "level": "manager",
+                            "type": "personGroup",
+                            "isPublicReader": true,
+                            "isPublicWriter": true,
+                            "canCreateDocuments": true,
+                            "canDeleteDocuments": true
+                          },
+                          {
+                            "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+                            "level": "manager",
+                            "canReplicateOrCopyDocuments": true,
+                            "canDeleteDocuments": true
+                          }
+                        ]
+                    },
+					"documents": [
+        			  {
+        			    "action": "create",
+        			    "items": {
+        			      "Form": "LoginMap",
+        			      "LF_LoginForm": "DWALoginForm",
+        			      "LF_LoginFormDB": "iwaredir.nsf",
+        			      "LF_ServerType": "0",
+        			      "LF_IP": "",
+        			      "$PublicAccess": "1"
+        			    }
+        			  }
+        			]
+				}
+			]
+		},
+		{
+			"title": "--- Step 2 (final). Completed ---",
+			"messages": [
+				"Domcfg Configured for Additional Domino Server"
+			]
+		}
+	]
+}

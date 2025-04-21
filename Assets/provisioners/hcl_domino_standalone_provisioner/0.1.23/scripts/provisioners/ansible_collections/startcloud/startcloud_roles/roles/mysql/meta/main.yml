@@ -1,0 +1,20 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: mysql
+  author: geerlingguy
+  description: MySQL server for RHEL/CentOS and Debian/Ubuntu.
+  company: "Midwestern Mac, LLC"
+  license: "license (BSD, MIT)"
+  min_ansible_version: "2.10"
+  platforms:
+    - name: Ubuntu
+    - name: Debian
+    - name: ArchLinux
+  galaxy_tags:
+    - database
+    - mysql
+    - mariadb
+    - db
+    - sql
