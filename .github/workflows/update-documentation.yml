@@ -1,10 +1,10 @@
 name: Update Documentation
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - 'mark-testing-branch'
-  workflow_dispatch:
   release:
     types: [published]
 
