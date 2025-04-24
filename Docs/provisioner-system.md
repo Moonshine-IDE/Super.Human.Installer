@@ -11,15 +11,15 @@ The provisioner system is the core mechanism in Super.Human.Installer (SHI) resp
 
 ## What is a Provisioner?
 
-A provisioner is a self-contained package defining a specific server environment. It includes:
+A provisioner is a structured project defining a specific server environment. It includes:
 
 *   **Metadata**: Name, type, description, version, author.
 *   **Configuration Fields**: Defines basic and advanced settings exposed in the SHI UI.
 *   **Roles**: Defines software components (like Domino, Traveler) that can be installed.
-*   **Templates**: Base files (like `Hosts.template.yml`, `Vagrantfile.template`) used to generate VM configuration.
+*   **Templates**: Base files (like `Hosts.template.yml`) used to generate VM configuration.
 *   **Scripts/Playbooks**: Ansible playbooks, roles, and other scripts executed by Vagrant during provisioning.
 
-SHI uses this information to present configuration options to the user and generate the necessary files (`Hosts.yml`, `Vagrantfile`) within a server instance's directory to instruct Vagrant and Ansible.
+SHI uses this information to present configuration options to the user and generate the necessary files (`Hosts.yml`) within a server instance's directory to instruct Vagrant and Ansible.
 
 ## Provisioner Types
 
@@ -41,7 +41,6 @@ Provisioners are stored within the application's storage directory under a `prov
     │   ├── provisioner.yml             # REQUIRED: Version-specific metadata (roles, config fields)
     │   ├── templates/                  # Directory for template files (e.g., Hosts.template.yml)
     │   ├── ansible/                    # Optional: Ansible playbooks/roles
-    │   ├── scripts/                    # Optional: Other scripts needed by Vagrant/Ansible
     │   └── ...                         # Other files/directories needed by the provisioner
     └── 0.1.22/                         # Another version directory
         └── ...

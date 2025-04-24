@@ -25,26 +25,26 @@ Ensure these are installed and functional *before* running SHI:
 *   **VirtualBox**: Version 6.1 or higher. Download from [virtualbox.org](https://www.virtualbox.org/).
 *   **Vagrant**: Version 2.2.10 or higher. Download from [vagrantup.com](https://www.vagrantup.com/).
 *   **Git**: Latest version recommended. Required for importing provisioners from GitHub. Download from [git-scm.com](https://git-scm.com/).
-*   **(Optional) Rsync**: Required for the Rsync file synchronization method (default on macOS/Linux). Often pre-installed on macOS/Linux. Windows users might need to install it separately (e.g., via WSL, Cygwin, or cwRsync) if they wish to use Rsync instead of the SCP fallback.
+*   **(Optional) Rsync**: Required for the Rsync file synchronization method (default on macOS/Linux). Often pre-installed on macOS/Linux. Mac may require installing rsync from homebrew/macports due to a divergence in rsync on Mac. rsync 3.0+ required on MacOSx
 
 ## Installation Instructions
 
 ### Windows
 
-1.  Download the latest Super.Human.Installer `.exe` installer from the [official repository releases page](https://github.com/Prominic/Super.Human.Installer/releases).
+1.  Download the latest Super.Human.Installer [exe installer](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest/download/SuperHumanInstaller-Setup.exe) ([view release](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest)).
 2.  Run the installer executable and follow the on-screen instructions.
 
 ### macOS
 
-1.  Download the latest Super.Human.Installer `.dmg` file from the [official repository releases page](https://github.com/Prominic/Super.Human.Installer/releases).
-2.  Open the DMG file and drag the `Super.Human.Installer.app` to your Applications folder.
+1.  Download the latest Super.Human.Installer [pkg file](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest/download/SuperHumanInstaller-Setup.pkg) ([view release](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest)).
+2.  Open the PKG file and proceed through the installation wizard.
 3.  When launching for the first time, you may need to right-click (or Control-click) the application icon and select "Open" from the context menu to bypass Gatekeeper security warnings.
 
 ### Linux
 
-1.  Download the latest `.AppImage` file from the [official repository releases page](https://github.com/Prominic/Super.Human.Installer/releases).
-2.  Make the file executable: `chmod +x Super.Human.Installer-*.AppImage`
-3.  Run the AppImage file: `./Super.Human.Installer-*.AppImage`
+1.  Download the latest [AppImage file](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest/download/SuperHumanInstaller-x86_64.AppImage) ([view release](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest)).
+2.  Make the file executable: `chmod +x SuperHumanInstaller-x86_64.AppImage`
+3.  Run the AppImage file: `./SuperHumanInstaller-x86_64.AppImage`
 
 ## First Run
 
@@ -55,16 +55,19 @@ When you first launch Super.Human.Installer:
 3.  The application initializes its configuration files and directories within your user's application storage location.
 4.  The main Server Management interface is displayed.
 
+![Start Screen](../assets/start-screen.png)
+
 ## Creating Your First Server
 
-1.  Click the "**+ Create New Server**" button on the main Server page. This opens the Service Type selection screen.
+1.  Click the "**Create New**" button on the main Server page. This opens the Service Type selection screen.
 2.  Choose a **Service Type** (which corresponds to a provisioner):
     *   **HCL Domino Standalone Provisioner**: For a new standalone Domino server.
     *   **HCL Domino Additional Provisioner**: For adding a Domino server to an existing environment.
     *   ***Custom Provisioner Name***: If you have imported custom provisioners, they will appear here.
 3.  The appropriate configuration page will open. Fill in the basic settings:
     *   **Hostname**: A unique name for the server (e.g., `myserver`).
-    *   **Organization/Domain**: Your organization's domain (e.g., `example.com`). The FQDN will be computed (e.g., `myserver.example.com`).
+    *   **Domain**: Your organization's domain (e.g., `example.com`). The FQDN will be computed (e.g., `myserver.example.com`).
+    *   **Organization**: Your organization (e.g., `STARTcloud`). This is used for Domino related provisioners.
     *   **Notes Safe ID / Server ID**: Locate the necessary ID file for Domino provisioning.
     *   *(Additional Server Specific)*: Provide details of the existing server.
     *   *(Custom Provisioner Specific)*: Fill in fields defined by the custom provisioner's metadata.

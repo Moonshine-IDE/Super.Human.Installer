@@ -16,6 +16,8 @@ Sensitive information like API keys should not be hardcoded. The Secrets page al
 
 Access this page via **Settings -> Manage Global Secrets**.
 
+![Secrets Management](../assets/secrets.png)
+
 ## Git API Keys / Personal Access Tokens (PATs)
 
 Git API keys (often called Personal Access Tokens or PATs on platforms like GitHub, GitLab, Bitbucket) allow SHI to authenticate with private Git repositories when using the "Import from GitHub" feature on the [Provisioner Import](provisioner-import) page.

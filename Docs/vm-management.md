@@ -13,6 +13,8 @@ Super.Human.Installer (SHI) provides a comprehensive interface for creating and 
 
 The main "Servers" page is your central hub. It displays all configured server instances, their current status (obtained from Vagrant and VirtualBox), and provides controls for managing their lifecycle.
 
+![Server Management Interface](../assets/start-screen.png)
+
 ### Server States
 
 Servers managed by SHI can exist in several states:
@@ -24,7 +26,7 @@ Servers managed by SHI can exist in several states:
 *   **Suspended**: The VM's state has been saved, and it can be quickly resumed.
 *   **Aborted**: The VM was terminated unexpectedly.
 *   **Error**: The VM encountered an error during startup or provisioning (check Console).
-*   *(Various intermediate states like "Starting", "Stopping", "Provisioning", "Syncing" are also shown)*
+*   *(Various intermediate states like "Starting", "Stopping", "Provisioning" are also shown)*
 
 ### Server Actions
 
@@ -34,7 +36,6 @@ Buttons appear next to each server, offering actions based on its current state:
 *   **Stop** (`ServerStatus.Running`): Gracefully shuts down the running VM using `vagrant halt`.
 *   **Suspend** (`ServerStatus.Running`): Pauses the VM using `vagrant suspend`, saving its state.
 *   **Provision** (`ServerStatus.Running`, `ServerStatus.Stopped`): Executes the Ansible provisioning scripts defined by the server's provisioner and enabled roles. Ensures the VM is running first.
-*   **Sync** (`ServerStatus.Running`, `ServerStatus.Stopped`): Synchronizes files between the host and guest using the configured method (Rsync/SCP).
 *   **Destroy** (`Any state except Unconfigured`): Completely removes the VM from VirtualBox using `vagrant destroy`. **This is irreversible.**
 *   **Configure** (`Any state`): Opens the server's configuration page (`ConfigPage`, `AdditionalServerPage`, or `DynamicConfigPage`).
 *   **Delete** (`Any state`): Removes the server configuration *from SHI only*.
@@ -80,18 +81,6 @@ SHI synchronizes files between the host machine (specifically, the server's work
 *   **Rsync**: Generally faster, especially for large or numerous files. Requires `rsync` on the host. Default on macOS/Linux. May require manual setup on Windows.
 *   **SCP**: Uses the Secure Copy Protocol over SSH. More broadly compatible but potentially slower. A reliable fallback.
 
-*Note: The actual underlying sync mechanism used by Vagrant might depend on the guest OS and VirtualBox Guest Additions.*
-
-## Provisioning
-
-Provisioning is the process of installing and configuring software within the VM using Ansible, as defined by the selected provisioner and enabled roles.
-
-1.  Select a server (can be running or stopped).
-2.  Click the "Provision" button (gears icon).
-3.  SHI executes `vagrant provision`.
-4.  Vagrant ensures the VM is running and then executes the configured Ansible playbooks/scripts.
-5.  Console output shows the progress. Status updates when complete.
-
 ## Connecting to VMs
 
 SHI provides convenient buttons for accessing your server:
@@ -100,7 +89,7 @@ SHI provides convenient buttons for accessing your server:
 *   **SSH**: Opens a new terminal window connected to the VM via `vagrant ssh`.
 *   **FTP**: Opens the configured FTP client (like FileZilla, set up in Settings) connected to the server (requires FTP role/configuration).
 *   **Console**: Opens a panel within SHI showing the live console output for the selected server's current or last operation (Start, Provision, etc.). Essential for troubleshooting.
-*   **Folder**: Opens the server's working directory on your host machine in the system's file explorer. This directory contains the `Vagrantfile`, `Hosts.yml`, and other files used to manage the VM.
+*   **Folder**: Opens the server's working directory on your host machine in the system's file explorer. This directory contains the `Hosts.yml`, and other files used to manage the VM.
 
 ## Troubleshooting
 

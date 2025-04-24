@@ -12,6 +12,8 @@ Welcome to the Super.Human.Installer documentation wiki. This wiki provides comp
 
 Super.Human.Installer (SHI) is a cross-platform application built with Haxe, OpenFL, and Feathers UI. It allows you to easily create and manage virtual machines using Vagrant, VirtualBox, and Ansible. Initially designed for HCL Domino environments, SHI has evolved to support custom provisioners, enabling deployment and management of various server types.
 
+[View on GitHub](https://github.com/Moonshine-IDE/Super.Human.Installer){: .btn .btn-blue }
+
 SHI empowers developers, administrators, and testers to:
 
 *   Create consistent development and testing environments across Windows, macOS, and Linux.
@@ -35,19 +37,20 @@ SHI empowers developers, administrators, and testers to:
 *   **[Architecture](architecture)** - Overview of how SHI is structured.
 *   **Using the Application**
     *   **[Server Management](vm-management)** - Creating and managing virtual machines.
-    *   **[Creating & Configuring Servers](creating-and-configuring-servers)** - Detailed steps for server setup. (*New Page*)
+    *   **[Creating & Configuring Servers](creating-and-configuring-servers)** - Detailed steps for server setup.
     *   **[Settings & Management](settings-page)** - Application settings and management tools.
         *   **[Secrets Management](secrets-page)** - Managing API keys and credentials.
         *   **[File Cache & Hashes](file-cache)** - Managing installation files.
         *   **[Provisioner Import](provisioner-import)** - Importing custom provisioners.
 *   **[Provisioner System](provisioner-system)** - Understanding the provisioner architecture.
-    *   **[Creating Custom Provisioners](creating-custom-provisioners)** - Guide for developing your own provisioners. (*New Page*)
-*   **[Help & Support](help-page)** - Links and how to report issues. (*New Page*)
+    *   **[Creating Custom Provisioners](creating-custom-provisioners)** - Guide for developing your own provisioners. 
+*   **[Help & Support](help-page)** - Links and how to report issues.
 
 ## Additional Resources
 
-*   [GitHub Repository](https://github.com/Prominic/Super.Human.Installer) - Access the source code.
-*   [Issue Tracker](https://github.com/Prominic/Super.Human.Installer/issues) - Report bugs or request features.
+*   [GitHub Repository](https://github.com/Moonshine-IDE/Super.Human.Installer) - Access the source code.
+*   [Issue Tracker](https://github.com/Moonshine-IDE/Super.Human.Installer/issues) - Report bugs or request features.
+*   [Download Latest Version](https://github.com/Moonshine-IDE/Super.Human.Installer/releases/latest) - Get the latest release.
 
 ## About This Documentation
 

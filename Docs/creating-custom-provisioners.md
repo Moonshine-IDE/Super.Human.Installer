@@ -12,7 +12,7 @@ Super.Human.Installer (SHI) allows users to create and import custom provisioner
 
 ## Prerequisites
 
-*   Understanding of Vagrant and Vagrantfiles.
+*   Understanding of Vagrant.
 *   Understanding of a configuration management tool supported by Vagrant (Ansible is commonly used and expected by SHI's structure, but others like Shell scripts might work).
 *   Familiarity with YAML syntax for metadata files.
 
@@ -28,10 +28,8 @@ Your custom provisioner must follow a specific directory structure to be recogni
         ├── provisioner.yml             # REQUIRED: Defines this version
         ├── templates/                  # REQUIRED: Contains template files
         │   └── Hosts.template.yml      # REQUIRED: Template for Ansible inventory/vars
-        │   └── Vagrantfile.template    # Optional: Template for Vagrantfile (if needed)
         ├── ansible/                    # Optional: Ansible playbooks, roles, etc.
         │   └── playbook.yml
-        ├── scripts/                    # Optional: Shell scripts or other files
         └── ...                         # Other necessary files/directories
 ```
 
@@ -215,7 +213,7 @@ all:
 
 ## Ansible/Scripts
 
-Place your Ansible playbooks, roles, or shell scripts within the version directory (e.g., in an `ansible/` or `scripts/` subdirectory). Your `Vagrantfile` (either the default one SHI generates or your custom template) should reference these scripts to perform the actual provisioning. Use the variables defined in the generated `Hosts.yml` within your Ansible playbooks.
+Place your Ansible playbooks, roles, or shell scripts within the version directory (e.g., in an `ansible/` the subdirectory).
 
 ## Testing Your Provisioner
 

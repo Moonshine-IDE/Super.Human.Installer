@@ -9,7 +9,7 @@ has_children: true # This page has sub-pages
 
 The Settings page in Super.Human.Installer (SHI) provides access to application-wide configuration options and specialized management interfaces.
 
-![Settings Page](Assets/images/common/settings.png) *(Note: Image might be outdated)*
+![Settings Page](../assets/settings.png)
 
 ## Overview
 

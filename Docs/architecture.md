@@ -85,7 +85,7 @@ Wrapper classes provide an abstraction layer for interacting with command-line t
 1.  User interacts with UI components (e.g., clicks "Start Server").
 2.  UI component dispatches an event (e.g., `SuperHumanApplicationEvent.START_SERVER`).
 3.  `SuperHumanInstaller.hx` catches the event and calls the appropriate method on a Manager or Server instance (e.g., `server.start()`).
-4.  The `Server` object interacts with its associated `Provisioner` to ensure configuration files (`Hosts.yml`, `Vagrantfile`) are up-to-date in the server's directory.
+4.  The `Server` object interacts with its associated `Provisioner` to ensure configuration files (`Hosts.yml`) are up-to-date in the server's directory.
 5.  The `Server` object uses the `Vagrant` integration class to execute the relevant Vagrant command (e.g., `vagrant up`).
 6.  The `Vagrant` class uses the `Executor` system (based on `NativeProcess`) to run the command.
 7.  Vagrant interacts with VirtualBox (via its CLI integration) to create/manage the VM.

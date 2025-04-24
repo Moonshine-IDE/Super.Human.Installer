@@ -12,6 +12,8 @@ The Provisioner Import page allows you to extend Super.Human.Installer (SHI) wit
 
 Access this page via **Settings -> Import Provisioner**.
 
+![Provisioner Import Page](../assets/import-provisioner.png)
+
 ## Overview
 
 Custom provisioners enable you to define and share specialized server environments beyond the built-in HCL Domino types. This page provides multiple methods for adding these custom provisioners to your SHI application, making them available for selection when creating new servers.
