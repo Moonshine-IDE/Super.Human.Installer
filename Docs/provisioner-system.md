@@ -112,14 +112,14 @@ This class is central to the system:
 
 ## Relevant Files
 
-*   `Source/superhuman/managers/ProvisionerManager.hx` - Management of provisioners.
-*   `Source/superhuman/server/provisioners/AbstractProvisioner.hx` - Base class.
-*   `Source/superhuman/server/provisioners/StandaloneProvisioner.hx` - Implementation for standalone type.
-*   `Source/superhuman/server/provisioners/AdditionalProvisioner.hx` - Implementation for additional type.
-*   `Source/superhuman/server/provisioners/CustomProvisioner.hx` - Implementation for custom types.
-*   `Source/superhuman/server/provisioners/ProvisionerType.hx` - Enum defining core types.
-*   `Source/superhuman/server/definitions/ProvisionerDefinition.hx` - Data structure for cached definitions.
-*   `Source/superhuman/server/data/ProvisionerData.hx` - Data structure stored in server config.
-*   `Source/superhuman/components/ProvisionerImportPage.hx` - UI for importing.
-*   `Source/superhuman/components/RolePage.hx` - UI for configuring roles.
-*   `Source/superhuman/server/hostsFileGenerator/` - Classes generating `Hosts.yml`.
+*   [Source/superhuman/managers/ProvisionerManager.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/managers/ProvisionerManager.hx) - Management of provisioners.
+*   [Source/superhuman/server/provisioners/AbstractProvisioner.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/provisioners/AbstractProvisioner.hx) - Base class.
+*   [Source/superhuman/server/provisioners/StandaloneProvisioner.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/provisioners/StandaloneProvisioner.hx) - Implementation for standalone type.
+*   [Source/superhuman/server/provisioners/AdditionalProvisioner.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/provisioners/AdditionalProvisioner.hx) - Implementation for additional type.
+*   [Source/superhuman/server/provisioners/CustomProvisioner.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/provisioners/CustomProvisioner.hx) - Implementation for custom types.
+*   [Source/superhuman/server/provisioners/ProvisionerType.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/provisioners/ProvisionerType.hx) - Enum defining core types.
+*   [Source/superhuman/server/definitions/ProvisionerDefinition.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/definitions/ProvisionerDefinition.hx) - Data structure for cached definitions.
+*   [Source/superhuman/server/data/ProvisionerData.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/data/ProvisionerData.hx) - Data structure stored in server config.
+*   [Source/superhuman/components/ProvisionerImportPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ProvisionerImportPage.hx) - UI for importing.
+*   [Source/superhuman/components/RolePage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/RolePage.hx) - UI for configuring roles.
+*   [Source/superhuman/server/hostsFileGenerator/](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/hostsFileGenerator/) - Classes generating `Hosts.yml`.

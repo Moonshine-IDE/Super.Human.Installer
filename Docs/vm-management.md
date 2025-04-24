@@ -100,10 +100,10 @@ SHI provides convenient buttons for accessing your server:
 
 ## Relevant Files
 
-*   `Source/superhuman/components/ServerPage.hx` - Main server management UI.
-*   `Source/superhuman/components/ServerList.hx` - Renders the list of servers.
-*   `Source/superhuman/managers/ServerManager.hx` - Core server state and lifecycle logic.
-*   `Source/superhuman/server/Server.hx` - Represents a single server instance.
-*   `Source/superhuman/server/CombinedVirtualMachine.hx` - Holds combined state from Vagrant/VirtualBox.
-*   `Genesis/Source/prominic/sys/applications/hashicorp/Vagrant.hx` - Vagrant CLI wrapper.
-*   `Genesis/Source/prominic/sys/applications/oracle/VirtualBox.hx` - VirtualBox CLI wrapper.
+*   [Source/superhuman/components/ServerPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ServerPage.hx) - Main server management UI.
+*   [Source/superhuman/components/ServerList.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ServerList.hx) - Renders the list of servers.
+*   [Source/superhuman/managers/ServerManager.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/managers/ServerManager.hx) - Core server state and lifecycle logic.
+*   [Source/superhuman/server/Server.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/Server.hx) - Represents a single server instance.
+*   [Source/superhuman/server/CombinedVirtualMachine.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/CombinedVirtualMachine.hx) - Holds combined state from Vagrant/VirtualBox.
+*   [Genesis/Source/prominic/sys/applications/hashicorp/Vagrant.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/applications/hashicorp/Vagrant.hx) - Vagrant CLI wrapper.
+*   [Genesis/Source/prominic/sys/applications/oracle/VirtualBox.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/applications/oracle/VirtualBox.hx) - VirtualBox CLI wrapper.

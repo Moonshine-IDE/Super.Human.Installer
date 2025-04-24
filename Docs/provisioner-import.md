@@ -83,8 +83,8 @@ Once a provisioner is successfully imported (either locally or from GitHub):
 
 ## Relevant Files
 
-*   `Source/superhuman/components/ProvisionerImportPage.hx` - UI implementation.
-*   `Source/superhuman/managers/ProvisionerManager.hx` - Core import logic (local and GitHub async).
-*   `Source/superhuman/server/definitions/ProvisionerDefinition.hx` - Data structure for provisioners.
-*   `Genesis/Source/prominic/sys/applications/git/Git.hx` - Git command wrapper used for GitHub imports.
-*   `Genesis/Source/prominic/sys/io/Executor.hx` - Handles asynchronous command execution.
+*   [Source/superhuman/components/ProvisionerImportPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ProvisionerImportPage.hx) - UI implementation.
+*   [Source/superhuman/managers/ProvisionerManager.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/managers/ProvisionerManager.hx) - Core import logic (local and GitHub async).
+*   [Source/superhuman/server/definitions/ProvisionerDefinition.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/definitions/ProvisionerDefinition.hx) - Data structure for provisioners.
+*   [Genesis/Source/prominic/sys/applications/git/Git.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/applications/git/Git.hx) - Git command wrapper used for GitHub imports.
+*   [Genesis/Source/prominic/sys/io/Executor.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/io/Executor.hx) - Handles asynchronous command execution.

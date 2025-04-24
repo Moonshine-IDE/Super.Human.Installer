@@ -15,17 +15,17 @@ Super.Human.Installer is built using the Haxe programming language with the Open
 
 ```mermaid
 graph TD;
-    UserInterface[User Interface (Feathers UI)] --> AppCore[Core Application (SuperHumanInstaller.hx)];
-    AppCore --> Managers[Manager Classes];
-    Managers --> ProvisionerSystem[Provisioner System];
-    Managers --> ExternalTools[External Tool Integrations];
-    ProvisionerSystem --> ServerConfig[Server Configuration Files];
-    ExternalTools --> Vagrant[Vagrant CLI];
-    ExternalTools --> VirtualBox[VirtualBox CLI (VBoxManage)];
-    ExternalTools --> Git[Git CLI];
+    UserInterface("User Interface (Feathers UI)") --> AppCore("Core Application (SuperHumanInstaller.hx)");
+    AppCore --> Managers("Manager Classes");
+    Managers --> ProvisionerSystem("Provisioner System");
+    Managers --> ExternalTools("External Tool Integrations");
+    ProvisionerSystem --> ServerConfig("Server Configuration Files");
+    ExternalTools --> Vagrant("Vagrant CLI");
+    ExternalTools --> VirtualBox("VirtualBox CLI (VBoxManage)");
+    ExternalTools --> Git("Git CLI");
     Vagrant --> VirtualBox;
-    Vagrant --> Ansible[Ansible (via Provisioner Scripts)];
-    VirtualBox --> VM[Virtual Machines];
+    Vagrant --> Ansible("Ansible (via Provisioner Scripts)");
+    VirtualBox --> VM("Virtual Machines");
     Ansible --> VM;
     ServerConfig --> Vagrant;
 ```
@@ -117,11 +117,11 @@ The codebase is primarily organized into:
 
 Key files for understanding the architecture:
 
-*   `Source/SuperHumanInstaller.hx` - Main application class.
-*   `Source/superhuman/managers/ServerManager.hx` - Server instance management.
-*   `Source/superhuman/managers/ProvisionerManager.hx` - Provisioner discovery and management.
-*   `Source/superhuman/server/Server.hx` - Core server object logic.
-*   `Source/superhuman/server/provisioners/AbstractProvisioner.hx` - Base provisioner class.
-*   `Genesis/Source/prominic/sys/io/Executor.hx` - Core command execution logic.
-*   `Genesis/Source/prominic/sys/applications/hashicorp/Vagrant.hx` - Vagrant CLI wrapper.
-*   `Genesis/Source/prominic/sys/applications/oracle/VirtualBox.hx` - VirtualBox CLI wrapper.
+*   [Source/SuperHumanInstaller.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/SuperHumanInstaller.hx) - Main application class.
+*   [Source/superhuman/managers/ServerManager.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/managers/ServerManager.hx) - Server instance management.
+*   [Source/superhuman/managers/ProvisionerManager.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/managers/ProvisionerManager.hx) - Provisioner discovery and management.
+*   [Source/superhuman/server/Server.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/Server.hx) - Core server object logic.
+*   [Source/superhuman/server/provisioners/AbstractProvisioner.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/provisioners/AbstractProvisioner.hx) - Base provisioner class.
+*   [Genesis/Source/prominic/sys/io/Executor.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/io/Executor.hx) - Core command execution logic.
+*   [Genesis/Source/prominic/sys/applications/hashicorp/Vagrant.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/applications/hashicorp/Vagrant.hx) - Vagrant CLI wrapper.
+*   [Genesis/Source/prominic/sys/applications/oracle/VirtualBox.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/prominic/sys/applications/oracle/VirtualBox.hx) - VirtualBox CLI wrapper.

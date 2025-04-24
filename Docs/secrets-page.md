@@ -55,7 +55,7 @@ You can Add SSH keys and reference them in a Hosts.template.yml by using the SSH
 
 ## Relevant Files
 
-*   `Source/superhuman/components/SecretsPage.hx` - UI implementation for this page.
-*   `Source/superhuman/config/SuperHumanSecrets.hx` - Data structure definition for secrets.
-*   `Source/superhuman/config/SuperHumanConfig.hx` - Main configuration where secrets are stored.
-*   `Source/superhuman/managers/ProvisionerManager.hx` - Uses saved Git tokens during GitHub imports.
+*   [Source/superhuman/components/SecretsPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/SecretsPage.hx) - UI implementation for this page.
+*   [Source/superhuman/config/SuperHumanSecrets.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/config/SuperHumanSecrets.hx) - Data structure definition for secrets.
+*   [Source/superhuman/config/SuperHumanConfig.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/config/SuperHumanConfig.hx) - Main configuration where secrets are stored.
+*   [Source/superhuman/managers/ProvisionerManager.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/managers/ProvisionerManager.hx) - Uses saved Git tokens during GitHub imports.

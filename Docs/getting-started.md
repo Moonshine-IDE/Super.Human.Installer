@@ -88,10 +88,10 @@ Once you've created your first server, explore the following sections to learn m
 
 Key files related to the application startup and initial setup:
 
-*   `Source/SuperHumanInstaller.hx` - Main application initialization.
-*   `Source/superhuman/components/LoadingPage.hx` - Initial loading/check page (briefly shown).
-*   `Source/superhuman/components/serviceType/ServiceTypePage.hx` - Service type selection interface.
-*   `Source/superhuman/components/ServerPage.hx` - Main server management page.
-*   `Source/superhuman/components/ConfigPage.hx` - Standard server configuration UI.
-*   `Source/superhuman/components/additionals/AdditionalServerPage.hx` - Additional server configuration UI.
-*   `Source/superhuman/components/DynamicConfigPage.hx` - Custom provisioner configuration UI.
+*   [Source/SuperHumanInstaller.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/SuperHumanInstaller.hx) - Main application initialization.
+*   [Source/superhuman/components/LoadingPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/LoadingPage.hx) - Initial loading/check page (briefly shown).
+*   [Source/superhuman/components/serviceType/ServiceTypePage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/serviceType/ServiceTypePage.hx) - Service type selection interface.
+*   [Source/superhuman/components/ServerPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ServerPage.hx) - Main server management page.
+*   [Source/superhuman/components/ConfigPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ConfigPage.hx) - Standard server configuration UI.
+*   [Source/superhuman/components/additionals/AdditionalServerPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/additionals/AdditionalServerPage.hx) - Additional server configuration UI.
+*   [Source/superhuman/components/DynamicConfigPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/DynamicConfigPage.hx) - Custom provisioner configuration UI.

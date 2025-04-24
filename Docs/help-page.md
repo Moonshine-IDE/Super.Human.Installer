@@ -54,5 +54,5 @@ Contributions to the documentation or codebase are welcome! Please refer to the 
 
 ## Relevant Files
 
-*   `Source/superhuman/components/HelpPage.hx` - UI implementation for the in-app Help page.
-*   `Source/superhuman/components/SupportPage.hx` (Genesis Framework) - UI for log access and issue reporting links.
+*   [Source/superhuman/components/HelpPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/HelpPage.hx) - UI implementation for the in-app Help page.
+*   [Source/superhuman/components/SupportPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Genesis/Source/genesis/application/managers/SupportPage.hx) (Genesis Framework) - UI for log access and issue reporting links.

@@ -53,9 +53,9 @@ The Settings page provides buttons to access specialized management interfaces:
 
 ## Relevant Files
 
-*   `Source/superhuman/components/SettingsPage.hx` - Main Settings page UI implementation.
-*   `Source/superhuman/config/SuperHumanPreferences.hx` - Data structure for preferences.
-*   `Source/superhuman/config/SuperHumanConfig.hx` - Main configuration structure where preferences are stored.
-*   `Source/superhuman/components/filesync/FileSyncSetting.hx` - UI component for sync method selection.
-*   `Source/superhuman/browser/Browsers.hx` & `Source/superhuman/components/browsers/BrowsersList.hx` - Browser configuration logic and UI.
-*   `Source/superhuman/application/Applications.hx` & `Source/superhuman/components/applications/ApplicationsList.hx` - External application logic and UI.
+*   [Source/superhuman/components/SettingsPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/SettingsPage.hx) - Main Settings page UI implementation.
+*   [Source/superhuman/config/SuperHumanPreferences.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/config/SuperHumanPreferences.hx) - Data structure for preferences.
+*   [Source/superhuman/config/SuperHumanConfig.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/config/SuperHumanConfig.hx) - Main configuration structure where preferences are stored.
+*   [Source/superhuman/components/filesync/FileSyncSetting.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/filesync/FileSyncSetting.hx) - UI component for sync method selection.
+*   [Source/superhuman/browser/Browsers.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/browser/Browsers.hx) & [Source/superhuman/components/browsers/BrowsersList.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/browsers/BrowsersList.hx) - Browser configuration logic and UI.
+*   [Source/superhuman/application/Applications.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/application/Applications.hx) & [Source/superhuman/components/applications/ApplicationsList.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/applications/ApplicationsList.hx) - External application logic and UI.

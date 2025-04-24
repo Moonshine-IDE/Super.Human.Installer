@@ -83,3 +83,13 @@ Fill in the required fields:
 *   The server appears in the main "Servers" list with the status "Ready" or "Stopped".
 
 Your server is now configured and ready to be started and provisioned. See [Server Management](vm-management) for the next steps.
+
+## Relevant Files
+
+*   [Source/superhuman/components/ServiceTypePage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/serviceType/ServiceTypePage.hx) - Service type selection interface.
+*   [Source/superhuman/components/ConfigPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/ConfigPage.hx) - Standard server configuration UI.
+*   [Source/superhuman/components/additionals/AdditionalServerPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/additionals/AdditionalServerPage.hx) - Additional server configuration UI.
+*   [Source/superhuman/components/DynamicConfigPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/DynamicConfigPage.hx) - Custom provisioner configuration UI.
+*   [Source/superhuman/components/RolePage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/RolePage.hx) - Role selection interface.
+*   [Source/superhuman/components/AdvancedConfigPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/AdvancedConfigPage.hx) - Advanced configuration UI.
+*   [Source/superhuman/components/DynamicAdvancedConfigPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/DynamicAdvancedConfigPage.hx) - Custom provisioner advanced configuration UI.

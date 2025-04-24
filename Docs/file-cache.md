@@ -72,7 +72,7 @@ If both conditions are met, the file is used for provisioning. If the file is mi
 
 ## Relevant Files
 
-*   `Source/superhuman/components/HashManagerPage.hx` - UI implementation for this page.
-*   `Source/superhuman/server/cache/SuperHumanFileCache.hx` - Core cache management logic (locating files, verifying hashes).
-*   `Source/superhuman/server/cache/SuperHumanCachedFile.hx` - Data structure for cached file information.
-*   `Source/superhuman/config/SuperHumanHashes.hx` - Internal registry of known files, hashes, roles, types, and versions.
+*   [Source/superhuman/components/HashManagerPage.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/components/HashManagerPage.hx) - UI implementation for this page.
+*   [Source/superhuman/server/cache/SuperHumanFileCache.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/cache/SuperHumanFileCache.hx) - Core cache management logic (locating files, verifying hashes).
+*   [Source/superhuman/server/cache/SuperHumanCachedFile.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/server/cache/SuperHumanCachedFile.hx) - Data structure for cached file information.
+*   [Source/superhuman/config/SuperHumanHashes.hx](https://github.com/Moonshine-IDE/Super.Human.Installer/blob/master/Source/superhuman/config/SuperHumanHashes.hx) - Internal registry of known files, hashes, roles, types, and versions.
