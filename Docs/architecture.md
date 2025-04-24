@@ -14,20 +14,20 @@ This page provides an overview of the application's architecture, key components
 Super.Human.Installer is built using the Haxe programming language with the OpenFL and Feathers UI frameworks, allowing it to run across multiple platforms while maintaining a consistent user experience. It leverages external tools like Vagrant and VirtualBox for VM management and Ansible (via provisioners) for software configuration.
 
 ```mermaid
-graph TD
-    UserInterface[User Interface (Feathers UI)] --> AppCore[Core Application (SuperHumanInstaller.hx)]
-    AppCore --> Managers[Manager Classes]
-    Managers --> ProvisionerSystem[Provisioner System]
-    Managers --> ExternalTools[External Tool Integrations]
-    ProvisionerSystem --> ServerConfig[Server Configuration Files]
-    ExternalTools --> Vagrant[Vagrant CLI]
-    ExternalTools --> VirtualBox[VirtualBox CLI (VBoxManage)]
-    ExternalTools --> Git[Git CLI]
-    Vagrant --> VirtualBox
-    Vagrant --> Ansible[Ansible (via Provisioner Scripts)]
-    VirtualBox --> VM[Virtual Machines]
-    Ansible --> VM
-    ServerConfig --> Vagrant
+graph TD;
+    UserInterface[User Interface (Feathers UI)] --> AppCore[Core Application (SuperHumanInstaller.hx)];
+    AppCore --> Managers[Manager Classes];
+    Managers --> ProvisionerSystem[Provisioner System];
+    Managers --> ExternalTools[External Tool Integrations];
+    ProvisionerSystem --> ServerConfig[Server Configuration Files];
+    ExternalTools --> Vagrant[Vagrant CLI];
+    ExternalTools --> VirtualBox[VirtualBox CLI (VBoxManage)];
+    ExternalTools --> Git[Git CLI];
+    Vagrant --> VirtualBox;
+    Vagrant --> Ansible[Ansible (via Provisioner Scripts)];
+    VirtualBox --> VM[Virtual Machines];
+    Ansible --> VM;
+    ServerConfig --> Vagrant;
 ```
 
 ## Key Components

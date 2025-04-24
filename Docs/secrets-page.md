@@ -42,9 +42,9 @@ Changes are saved only when you click the main "Save" button at the bottom of th
 
 When using the "Import from GitHub" feature on the [Provisioner Import](provisioner-import) page, the "GitHub Token" dropdown will be populated with the names of the keys you've saved here. Selecting a token allows SHI to clone private repositories associated with that token. Choose "None" for public repositories.
 
-## SSH Keys - Not Currently Implemented
+## SSH Keys
 
-Support for managing SSH keys (e.g., for SSH-based Git authentication or direct VM access) is planned for future versions but is **not currently implemented**.
+You can Add SSH keys and reference them in a Hosts.template.yml by using the SSH Keys description in between the :: delimeters.
 
 ## Security Considerations
 

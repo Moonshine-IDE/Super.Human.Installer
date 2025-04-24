@@ -32,7 +32,6 @@ The manager displays all known installation files defined in the application's i
 *   **Status**:
     *   **Green Checkmark**: File exists in the cache directory and its SHA256 hash matches the expected hash.
     *   **Yellow Warning Icon**: File is missing from the cache directory.
-    *   **Red Error Icon**: File exists, but its hash does *not* match the expected hash (indicating potential corruption or incorrect file).
 
 ### Adding/Locating Files
 
@@ -47,19 +46,19 @@ If a file is missing or incorrect (Warning/Error status):
     *   Compare the calculated hash with the expected hash.
     *   Update the status icon accordingly.
 
-*Note: Currently, there isn't a dedicated "Add New File" button for files not already known by the internal registry. New file definitions are typically added by updating `SuperHumanHashes.hx` or potentially through future provisioner metadata enhancements.*
+### Downloading Installers from HCL
 
-### Editing Metadata (Not Implemented)
+You can download source files from HCL by clicking the Yellow warning icon to the left of the installer name. This will prompt you to select the appropriate HCL Download Refresh token.
 
-Editing metadata (Role, Type, Version, Hash) for existing entries directly through the UI is **not currently supported**. These details are typically managed within the application's code (`SuperHumanHashes.hx`).
+The refresh token is exchanged for a access token which is then cycled on each download.
 
-### Downloading Missing Files (Not Implemented)
+### Editing Metadata
 
-Directly downloading missing files from sources like HCL is **not currently implemented** within this interface. Files must be obtained manually and then added/located using the "Locate File" button.
+You can edit entries in the GUI, not that SHI, upon a fresh install, will copy its known list of entries from the initial-registry.json file. After it has initially loaded them, the persistant cached upon subsequent app restarts is stored in cache-registry.json.
 
 ## Cache Directory
 
-*   **Show Cache Directory**: Clicking this button opens the system's file explorer to the location where SHI stores the cached installer files (`<AppStorage>/cache/`).
+*   **Show Cache Directory**: Clicking this button opens the system's file explorer to the location where SHI stores the cached installer files (`<AppStorage>/file-cache/`).
 *   **Clear Cache**: This button removes *all* files from the cache directory. You will need to re-locate or re-download necessary files afterwards.
 
 ## File Verification
