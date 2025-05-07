@@ -57,7 +57,7 @@ jobs:
   release:
     name: Draft Release
     needs: [build-linux, build-windows, build-macos]
-    runs-on: [self-hosted, linux]
+    runs-on: ubuntu-latest
 
     steps:
       - name: Print info
