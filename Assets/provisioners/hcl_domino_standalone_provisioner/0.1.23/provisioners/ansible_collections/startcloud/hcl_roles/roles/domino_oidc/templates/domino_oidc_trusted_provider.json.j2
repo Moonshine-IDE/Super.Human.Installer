@@ -1,0 +1,49 @@
+{
+	"title": "Creating the Trusted OIDC Provider Form",
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Creating Trusted OIDC Provider ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "idpcat.nsf", 
+                    "documents":[
+                        { 
+                            "action": "create", 
+                            "computeWithForm": true,
+                            "items": {
+                                "Form": "OIDCProvider",
+                                    {% if domino_oidc_provider_federation_enabled and domino_oidc_provider_web_enabled %}
+                                        "OIDCHostname": ["bearer.vault.{{ domino_server_name_common }}","{{ domino_install_proxy_url }}","{{ settings.hostname }}.{{ settings.domain }}"],
+                                        "OIDCIDVaultScope": "Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",
+                                    {% elif domino_oidc_provider_federation_enabled %}
+                                        "OIDCHostname": ["bearer.vault.{{ domino_server_name_common }}"],
+                                        "OIDCIDVaultScope": "Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",
+                                    {% else %}
+                                        "OIDCHostname": ["{{ domino_install_proxy_url }}","{{ settings.hostname }}.{{ settings.domain }}"],
+                                    {% endif %}
+                                "OIDCProviderName": "Domino OIDC Provider",
+                                "OIDCBaseURL": "https://{{ domino_oidc_install_proxy_url }}/auth/protocol/oidc",
+{% if domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled %}
+                                "OIDC_TrustedRoots": "{{ ca_subject_key_id }}",
+{% else %}
+                                "OIDC_TrustedRoots": "{{ domino_oidc_trusted_roots }}",
+{% endif %}
+                                "OIDCClientID": "{{ domino_oidc_client_id }}",
+                                "OIDCSecret": "{{ domino_oidc_client_secret }}",
+                                "OIDCAuthType": "{{ domino_oidc_auth_type }}",
+                                "OIDCSimplifyRedirectURL": "{{ domino_oidc_simplify_redirect_url }}",
+                                "BearerOptions": "{{ domino_oidc_bearer_options }}",
+                                "BearerCustomClaimName": "{{ domino_oidc_bearer_custom_claim_names }}",
+                                "BearerAlternateAudiences": "{{ domino_oidc_bearer_alternate_audiences }}",
+                                "BearerAllowedClientIDs": "{{ domino_oidc_bearer_allowed_client_ids }}",
+                                "OIDCLogLevel": "{{ domino_oidc_log_level }}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

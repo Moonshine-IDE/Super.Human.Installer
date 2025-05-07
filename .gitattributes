@@ -1,6 +1,14 @@
-*.png filter=lfs diff=lfs merge=lfs -text
-*.jar filter=lfs diff=lfs merge=lfs -text
-*.psd filter=lfs diff=lfs merge=lfs -text
-*.jpg filter=lfs diff=lfs merge=lfs -text
+.github/workflows/** merge=ours
 
+# Mark binary files to prevent line ending conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.jar binary
+*.psd binary
+*.bin binary
+
+# Text files with specific line ending handling
 id_rsa text eol=lf

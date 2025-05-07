@@ -126,14 +126,55 @@ class AdvancedConfigPage extends Page {
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.text' );
         _dropdownNetworkInterface = new GenesisFormPupUpListView( VirtualBox.getInstance().bridgedInterfacesCollection );
-        _dropdownNetworkInterface.itemToText = ( item:BridgedInterface ) -> {
-            if ( item.name == "") return LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.default' );
+        // Create a custom collection with Default and None options at the beginning
+        var originalCollection = VirtualBox.getInstance().bridgedInterfacesCollection;
+        var interfaceCollection = new feathers.data.ArrayCollection<BridgedInterface>();
+        
+        // Get the default network interface from global preferences
+        var defaultNic = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+        
+        // Add Default option (empty string)
+        interfaceCollection.add({ name: "" });
+        
+        // Add None option (special "none" value)
+        interfaceCollection.add({ name: "none" });
+        
+        // Create a deduplicated collection by excluding empty names, "none", and the default interface
+        var addedNames = new Map<String, Bool>();
+        addedNames.set("", true);  // Already added empty string (Default)
+        addedNames.set("none", true); // Already added "none"
+        
+        if (defaultNic != null && defaultNic != "" && defaultNic != "none") {
+            addedNames.set(defaultNic, true); // Mark default as added to avoid duplicates
+        }
+        
+        // Add all original interfaces, excluding duplicates and the default
+        for (i in 0...originalCollection.length) {
+            var interfaceItem = originalCollection.get(i);
+            if (interfaceItem.name != "" && interfaceItem.name != "none" && !addedNames.exists(interfaceItem.name)) {
+                interfaceCollection.add(interfaceItem);
+                addedNames.set(interfaceItem.name, true);
+            }
+        }
+        
+        _dropdownNetworkInterface = new GenesisFormPupUpListView(interfaceCollection);
+        _dropdownNetworkInterface.itemToText = (item:BridgedInterface) -> {
+            if (item.name == "") {
+                // Get the default network interface from global preferences
+                var defaultNic = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+                if (defaultNic != null && defaultNic != "" && defaultNic != "none") {
+                    return 'Default (' + defaultNic + ')';
+                }
+                return 'Default (none selected)';
+            }
+            if (item.name == "none") return "None";
             return item.name;
         };
         _dropdownNetworkInterface.selectedIndex = 0;
         for ( i in 0..._dropdownNetworkInterface.dataProvider.length ) {
             var d = _dropdownNetworkInterface.dataProvider.get( i );
-            if ( d.name == _server.networkBridge.value ) {
+            // Use getEffectiveNetworkInterface to get the actual interface value
+            if ( d.name == _server.getEffectiveNetworkInterface() ) {
                 _dropdownNetworkInterface.selectedIndex = i;
                 break;
             }
@@ -286,12 +327,10 @@ class AdvancedConfigPage extends Page {
         
     }
 
-    override function updateContent( forced:Bool = false ) {
-
+    override public function updateContent( forced:Bool = false ) {
         super.updateContent();
 
         if ( _form != null ) {
-
             _inputNameServer.text = _server.nameServer1.value;
             _inputNameServer2.text = _server.nameServer2.value;
             _inputAlertEmail.text = _server.userEmail.value;
@@ -315,28 +354,30 @@ class AdvancedConfigPage extends Page {
             _inputAlertEmail.enabled = !_server.userEmail.locked;
 
             _dropdownNetworkInterface.selectedIndex = 0;
-            _dropdownNetworkInterface.customButtonVariant = GenesisFormPupUpListView.CHILD_VARIANT_BUTTON;
-
             for ( i in 0..._dropdownNetworkInterface.dataProvider.length ) {
-
                 var d = _dropdownNetworkInterface.dataProvider.get( i );
 
-                if ( d.name == _server.networkBridge.value ) {
-
+                // Use getEffectiveNetworkInterface to get the actual interface value
+                if ( d.name == _server.getEffectiveNetworkInterface() ) {
                     _dropdownNetworkInterface.selectedIndex = i;
                     break;
-
                 }
-
             }
-
-            _updateForm();
-
         }
 
+        _updateForm();
     }
 
     function _updateForm() {
+        // Check if server or UI components are null to prevent crashes
+        if (_server == null || _cbDisableBridgeAdapter == null || 
+            _dropdownNetworkInterface == null || _cbDHCP == null || 
+            _inputNetworkIP == null || _inputGatewayIP == null || 
+            _inputNetmaskIP == null || _inputNameServer == null || 
+            _inputNameServer2 == null) {
+            champaign.core.logging.Logger.warning('${this}: Cannot update form - server or UI components are null');
+            return;
+        }
 
         var canChangeBridgeAdapter:Bool = !_server.disableBridgeAdapter.locked;
         _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
@@ -346,14 +387,13 @@ class AdvancedConfigPage extends Page {
         _cbDisableBridgeAdapter.invalidate();
 
         var canChangeNetworkValues:Bool = !_server.disableBridgeAdapter.locked && !_server.disableBridgeAdapter.value;
-        _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
+        _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.networkBridge.locked;
         _cbDHCP.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
         _inputNetworkIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputGatewayIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputNetmaskIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputNameServer.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
         _inputNameServer2.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
-
     }
 
     function _cbDHCP_Or_cbDisableBridgeAdapterChanged( ?e:Event ) {
@@ -366,8 +406,25 @@ class AdvancedConfigPage extends Page {
     }
 
     override function _cancel( ?e:Dynamic ) {
-     	var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE );
-        		evt.server = _server;
+        // For advanced config, we don't remove provisional servers on cancel
+        // Instead, we just return to the basic config page with no changes
+        
+        // Use CANCEL_PAGE to return to the basic config page
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE );
+        if (_server != null) {
+            evt.server = _server;
+            // Check that provisioner exists before accessing type to avoid null reference
+            if (_server.provisioner != null) {
+                evt.provisionerType = _server.provisioner.type;
+                champaign.core.logging.Logger.info('${this}: Canceling advanced config with provisioner type: ${evt.provisionerType}');
+            } else {
+                champaign.core.logging.Logger.warning('${this}: Server has no provisioner, cannot determine type');
+            }
+        } else {
+            champaign.core.logging.Logger.warning('${this}: No server object available for cancel event');
+        }
+        
+        // The SuperHumanInstaller.hx _cancelAdvancedConfigureServer method will handle navigation
         this.dispatchEvent( evt );
     }
     
@@ -384,7 +441,21 @@ class AdvancedConfigPage extends Page {
         _server.numCPUs.value = Std.int( _stepperCPUs.value );
         _server.memory.value = Std.int( _stepperRAM.value );
         _server.openBrowser.value = _cbOpenBrowser.selected;
-        _server.networkBridge.value = _dropdownNetworkInterface.selectedItem.name;
+        // Get the selected network interface
+        var selectedInterface = _dropdownNetworkInterface.selectedItem.name;
+        
+        // Handle "Default" (empty string) case
+        if (selectedInterface == "") {
+            // Use the default from preferences
+            var defaultNic = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+            if (defaultNic != null && defaultNic != "" && defaultNic != "none") {
+                selectedInterface = defaultNic;
+            }
+        }
+        
+        // Set the value in the server object
+        _server.networkBridge.value = selectedInterface;
+        champaign.core.logging.Logger.info('${this}: Set network bridge to "${selectedInterface}"');
         _server.dhcp4.value = _cbDHCP.selected;
         _server.disableBridgeAdapter.value = _cbDisableBridgeAdapter.selected;
 

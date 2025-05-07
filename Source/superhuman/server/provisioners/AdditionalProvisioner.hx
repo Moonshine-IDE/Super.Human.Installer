@@ -11,7 +11,7 @@ import haxe.io.Path;
 import champaign.core.logging.Logger;
 
 @:allow( superhuman.server.hostsFileGenerator.AdditionalProvisionerHostsFileGenerator )
-class AdditionalProvisioner extends DemoTasks {
+class AdditionalProvisioner extends StandaloneProvisioner {
     
     static public function getDefaultServerData( id:Int ):ServerData {
         return {
@@ -35,7 +35,7 @@ class AdditionalProvisioner extends DemoTasks {
 			network_bridge: "",
 			resources_cpu: 2,
 			resources_ram: 8.0,
-			roles: [ for ( r in DemoTasks.getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
+			roles: [ for ( r in StandaloneProvisioner.getDefaultProvisionerRoles().keyValueIterator() ) r.value ],
 			server_hostname: "",
 			server_id: id,
 			server_organization: "",
@@ -61,42 +61,50 @@ class AdditionalProvisioner extends DemoTasks {
 	}
 
     public override function generateHostsFileContent():String {
-        _hostsTemplate = getFileContentFromSourceTemplateDirectory( DemoTasks.HOSTS_TEMPLATE_FILE );
+        _hostsTemplate = getFileContentFromSourceTemplateDirectory( StandaloneProvisioner.HOSTS_TEMPLATE_FILE );
 
         return AdditionalProvisionerHostsFileGenerator.generateContent( _hostsTemplate, this );
     }
 
 	override public function saveSafeId( serverIdPath:String ):Bool {
-
+        // Very simple version - just copy the file and don't complicate things
+        // When serverIdPath is just a version number, we detect and handle it
+        
+        // Print a direct error if serverIdPath equals the version number
+        if (serverIdPath == this.version) {
+            Logger.error('CRITICAL ERROR: serverIdPath is set to version number "${serverIdPath}" instead of a file path!');
+            Logger.error('This is likely a bug in the code passing the version instead of the actual server ID file path');
+            if ( console != null ) console.appendText('ERROR: The version number "${serverIdPath}" was used as a file path. This is a bug.', true);
+            return false;
+        }
+        
         createTargetDirectory();
 
-        if ( FileSystem.exists( serverIdPath ) ) {
-
-            var safeIdDir = Path.addTrailingSlash( _targetPath ) + Path.addTrailingSlash( _getSafeIdLocation() );
-            FileSystem.createDirectory( safeIdDir );
-			var serverIdFileName = _server.serverProvisionerId != null ? new Path( _server.serverProvisionerId.value ) : new Path( "server.id" );
-			
+        if (FileSystem.exists(serverIdPath)) {
+            var safeIdDir = Path.addTrailingSlash(_targetPath) + Path.addTrailingSlash(_getSafeIdLocation());
+            FileSystem.createDirectory(safeIdDir);
+            
+            // Get the original filename instead of hardcoding "server.id"
+            var originalFileName = Path.withoutDirectory(serverIdPath);
+            var destPath = safeIdDir + originalFileName;
+            
+            Logger.info('${this}: Copying server ID file with original filename: ${originalFileName}');
+            
             try {
-                File.copy( serverIdPath, safeIdDir + serverIdFileName.file + "." + serverIdFileName.ext );
-                if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyserverid', serverIdPath, safeIdDir + serverIdFileName.file + "." + serverIdFileName.ext ) );
+                // Copy preserving the original filename
+                File.copy(serverIdPath, destPath);
+                if (console != null) console.appendText('Copied server ID from ${serverIdPath} to ${destPath}');
                 return true;
-
-            } catch ( e:Exception ) {
-
-                Logger.error( '${this}: Server ID at ${serverIdPath} cannot be copied to ${safeIdDir + "server.id"}. Details: ${e.details()} Message: ${e.message}' );
-                if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyserveridfailed', '${e.details()} Message: ${e.message}' ), true );
-
+            } catch (e:Exception) {
+                Logger.error('Failed to copy server ID: ${e.message}');
+                if (console != null) console.appendText('Failed to copy server ID: ${e.message}', true);
             }
-
         } else {
-
-            Logger.error( '${this}: Server ID does not exist at ${serverIdPath}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provisionerserveridnonexistent', serverIdPath ), true );
-
+            Logger.error('Server ID file not found at path: ${serverIdPath}');
+            if (console != null) console.appendText('Server ID file not found at: ${serverIdPath}', true);
         }
 
         return false;
-
     }
 
     override function _getSafeIdLocation():String {

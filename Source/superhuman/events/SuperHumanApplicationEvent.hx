@@ -59,6 +59,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final COPY_TO_CLIPBOARD:String = "copyToClipboard";
     public static final CREATE_SERVER:String = "createServer";
     public static final CREATE_ADDITIONAL_DOMINO_SERVER:String = "createAdditionalDominoServer";
+    public static final CREATE_CUSTOM_SERVER:String = "createCustomServer";
     public static final DELETE_SERVER:String = "deleteServer";
     public static final DESTROY_SERVER:String = "destroyServer";
     public static final DOWNLOAD_VAGRANT:String = "downloadVagrant";
@@ -67,6 +68,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final OPEN_DOWNLOAD_BROWSER:String = "openDownloadBrowser";
     public static final OPEN_CONSOLE:String = "openConsole";
     public static final OPEN_SERVER_DIRECTORY:String = "openServerDirectory";
+    public static final OPEN_SERVER_TERMINAL:String = "openServerTerminal";
     public static final OPEN_VAGRANT_SSH:String = "openVagrantSSH";
     public static final OPEN_VIRTUALBOX_GUI:String = "openVirtualBoxGUI";
     public static final PROVISION_SERVER:String = "provisionServer";
@@ -81,6 +83,20 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final SYNC_SERVER:String = "syncServer";
     public static final TEXT_LINK:String = "textLink";
     public static final OPEN_FTP_CLIENT:String = "openFtpClient";
+    public static final IMPORT_PROVISIONER:String = "importProvisioner";
+    public static final PROVISIONER_DATA_UPDATED:String = "provisionerDataUpdated";
+    public static final OPEN_SECRETS_PAGE:String = "openSecretsPage";
+    public static final OPEN_EXTERNAL_URL:String = "openExternalUrl";
+    public static final OPEN_PROVISIONER_IMPORT_PAGE:String = "openProvisionerImportPage";
+    public static final CLOSE_PROVISIONER_IMPORT_PAGE:String = "closeProvisionerImportPage";
+    public static final PROVISIONER_IMPORT_COMPLETE:String = "provisionerImportComplete"; // Added for async import
+    public static final OPEN_HASH_MANAGER_PAGE:String = "openHashManagerPage";
+    public static final CLOSE_HASH_MANAGER_PAGE:String = "closeHashManagerPage";
+    public static final OPEN_FILE_CACHE_DIRECTORY:String = "openFileCacheDirectory";
+    public static final DOWNLOAD_FILE_STARTED:String = "downloadFileStarted";
+    public static final DOWNLOAD_FILE_COMPLETED:String = "downloadFileCompleted";
+    public static final DOWNLOAD_FILE_ERROR:String = "downloadFileError";
+    public static final REFRESH_HASH_MANAGER:String = "refreshHashManager";
 
     public var console:Console;
     public var data:String;
@@ -91,6 +107,9 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var browserData:BrowserData;
     public var appData:ApplicationData;
     public var serviceTypeData:ServiceTypeData;
+    public var url:String;
+    public var importSuccess:Bool = false; // Added for async import
+    public var importMessage:String = ""; // Added for async import
     
     public function new( type:String ) {
 

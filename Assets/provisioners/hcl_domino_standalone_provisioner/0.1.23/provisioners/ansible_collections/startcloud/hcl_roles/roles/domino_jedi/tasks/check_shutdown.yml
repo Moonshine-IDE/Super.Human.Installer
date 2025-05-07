@@ -1,0 +1,66 @@
+---
+-
+  name: "Checking console log"
+  ansible.builtin.wait_for:
+    path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/console.log"
+    search_regex: '(Server shutdown complete)|(WARNING:  The server is not yet ready to accept the quit/exit command)'
+    state: present
+    timeout: 30
+  register: log_check
+  when: not shutdown_complete
+
+-
+  name: "Checking for Domino server process"
+  community.general.pids:
+    pattern: "/opt/hcl/domino/notes/latest/linux/server"
+  register: process_check
+  when: not shutdown_complete
+
+-
+  name: "Debug process check"
+  ansible.builtin.debug:
+    msg: "Process check result: {{ log_check }}"
+  when: not shutdown_complete
+
+-
+  name: "Debug process check"
+  ansible.builtin.debug:
+    msg: "Process check result: {{ process_check }}"
+  when: not shutdown_complete
+
+-
+  name: "Setting shutdown status"
+  ansible.builtin.set_fact:
+    shutdown_complete: >-
+      {{ ('Server shutdown complete' in (log_check.content | default(''))) }}
+  when: not shutdown_complete
+
+-
+  name: "Setting shutdown status"
+  ansible.builtin.set_fact:
+    shutdown_complete: >-
+      {{ (process_check.pids | length == 0) }}
+  when: not shutdown_complete
+
+-
+  name: "Sending exit command if needed"
+  ansible.builtin.shell: 'echo "exit" >> {{ domino_home_dir }}/noteslog/notes.input'
+  become: true
+  when: >
+    not shutdown_complete
+
+-
+  name: "Waiting between attempts"
+  ansible.builtin.pause:
+    seconds: 30
+  when: not shutdown_complete
+
+-
+  name: "Displaying current status"
+  ansible.builtin.debug:
+    msg: >-
+      Attempt {{ item }}: 
+      {{ 'Process gone - shutdown confirmed' if process_check.pids | length == 0 else
+         'Warning seen - trying again' if ('WARNING:  The server is not yet ready' in (log_check.content | default(''))) else
+         'Process still running with PIDs ' + (process_check.pids | join(', ')) + ' - no shutdown complete yet'}}
+  when: not shutdown_complete

@@ -1,0 +1,9 @@
+---
+nomadweb_archive: nomad-server-1.0.8-for-domino-1202-linux.tgz
+nomadweb_version: 1.0.8
+nomadweb_debug: false
+domino_nomadweb_port_forwards:
+  -
+    guest: 9443
+    url: "nomadweb"
+domino_nomadweb_proxy_url: "{{ domino_nomadweb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

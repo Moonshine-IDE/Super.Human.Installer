@@ -1,0 +1,16 @@
+---
+# handlers file for gse_build_source
+- name: dnf_update
+  dnf:
+    name: "*"
+    state: latest
+    update_cache: true
+  become: true
+
+- name: Restart PGSQL
+  systemd:
+    name: postgresql
+    state: restarted
+  become: true
+
+  

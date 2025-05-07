@@ -32,6 +32,7 @@ package superhuman.config;
 
 import superhuman.browser.BrowserData;
 import superhuman.config.SuperHumanPreferences;
+import superhuman.config.SuperHumanSecrets;
 import superhuman.config.SuperHumanUserConfig;
 import superhuman.server.data.ServerData;
 import superhuman.application.ApplicationData;
@@ -42,5 +43,6 @@ typedef SuperHumanConfig = {
     servers:Array<ServerData>,
     user:SuperHumanUserConfig,
 	browsers:Array<BrowserData>,
-	applications:Array<ApplicationData>
+	applications:Array<ApplicationData>,
+    ?secrets:SuperHumanSecrets
 }

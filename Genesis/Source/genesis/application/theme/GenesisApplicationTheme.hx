@@ -94,8 +94,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final BUTTON_SELECT_FILE:String = "button-select-file";
     public static final BUTTON_SMALL:String = "button-small";
     public static final BUTTON_TINY:String = "button-tiny";
+    public static final BUTTON_ICON_NO_PADDING:String = "button-icon-no-padding";
     public static final BUTTON_WARNING:String = "button-warning";
     public static final BUTTON_BROWSER_WARNING:String = "button-browser-warning";
+    public static final BUTTON_SERVER_LIST:String = "button-server-list";
     public static final CHECK_LARGE:String = "check-large";
     public static final CHECK_MEDIUM:String = "check-medium";
     public static final RADIO_MEDIUM:String = "radio-medium";
@@ -122,6 +124,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final LAYOUT_GROUP_PERCENTAGE_BAR:String = "layout-group-percentage-bar";
     public static final TEXT_AREA_PRIVACY:String = "text-area-privacy";
 
+    public static final ICON_ADD:String = "assets/images/common/add.png";
     public static final ICON_CHECKBOX_LARGE:String = "assets/images/common/checkbox_large.png";
     public static final ICON_CHECKBOX_LARGE_SELECTED:String = "assets/images/common/checkbox_large_selected.png";
     public static final ICON_CLEAR:String = "assets/images/common/clear.png";
@@ -129,6 +132,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
     public static final ICON_CONSOLE:String = "assets/images/common/console.png";
     public static final ICON_COPY:String = "assets/images/common/copy.png";
     public static final ICON_DELETE:String = "assets/images/common/delete.png";
+    public static final ICON_SSH:String = "assets/images/common/ssh.png";
     public static final ICON_DESTROY:String = "assets/images/common/destroy.png";
     public static final ICON_DESTROY_SMALL:String = "assets/images/common/destroy_small.png";
     public static final ICON_ERROR:String = "assets/images/common/error.png";
@@ -282,8 +286,10 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         this.styleProvider.setStyleFunction( Button, BUTTON_SELECT_FILE, _setButtonSelectFileStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_SMALL, _setButtonSmallStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_TINY, _setButtonTinyStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_ICON_NO_PADDING, _setButtonIconNoPaddingStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_WARNING, _setButtonWarningStyles );
         this.styleProvider.setStyleFunction( Button, BUTTON_BROWSER_WARNING, _setButtonNoBackgrounIconStyles );
+        this.styleProvider.setStyleFunction( Button, BUTTON_SERVER_LIST, _setButtonServerListStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
         this.styleProvider.setStyleFunction( Button, GenesisFormPupUpListView.CHILD_VARIANT_BUTTON_INVALID, _setPopUpListViewInvalidButtonStyles );
         this.styleProvider.setStyleFunction( Button, PopUpListView.CHILD_VARIANT_BUTTON, _setPopUpListViewButtonStyles );
@@ -348,7 +354,7 @@ class GenesisApplicationTheme extends ClassVariantTheme {
 
     function _setAssetLoaderStyles( loader:AssetLoader ) {
 
-        loader.scaleX = loader.scaleY = .5;
+        loader.scaleX = loader.scaleY = .6;
 
     }
 
@@ -486,6 +492,35 @@ class GenesisApplicationTheme extends ClassVariantTheme {
         button.textFormat = _themeTypography.Pale;
         button.disabledTextFormat = _themeTypography.Pale;
         button.disabledAlpha = .5;
+
+    }
+    
+    function _setButtonIconNoPaddingStyles( button:Button ) {
+        // Clear all padding completely
+        button.setPadding(0);
+        button.paddingLeft = 0;
+        button.paddingRight = 0;
+        button.paddingTop = 0;
+        button.paddingBottom = 0;
+        button.gap = 0;
+        
+        // Remove button background
+        var transparentSkin = new RectangleSkin(FillStyle.SolidColor(_themeColors.Btn, 0));
+        button.backgroundSkin = transparentSkin;
+        
+        // Set transparent hover state as well
+        var transparentHoverSkin = new RectangleSkin(FillStyle.SolidColor(_themeColors.BtnHover, 0));
+        button.setSkinForState(ButtonState.HOVER, transparentHoverSkin);
+    }
+    
+    function _setButtonServerListStyles( button:Button ) {
+
+        _setButtonStyles( button );
+        // Override padding to zero for server list buttons
+        button.setPadding( 0 );
+        // Keep horizontalAlign and verticalAlign centered
+        button.horizontalAlign = HorizontalAlign.CENTER;
+        button.verticalAlign = VerticalAlign.MIDDLE;
 
     }
 

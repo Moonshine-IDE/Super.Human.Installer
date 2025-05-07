@@ -1,8 +1,11 @@
 package superhuman.components.browsers;
 
 import genesis.application.components.GenesisButton;
+import lime.ui.FileDialog;
+import lime.ui.FileDialogType;
 import openfl.events.Event;
 import superhuman.theme.SuperHumanInstallerTheme;
+import sys.FileSystem;
 import feathers.text.TextFormat;
 import feathers.controls.Check;
 import feathers.controls.Button;
@@ -111,12 +114,14 @@ class SetupBrowserPage extends Page {
 		
 		_textInputPath = new TextInput("", LanguageManager.getInstance().getString('settingspage.browser.executablebrowserpath'));
 		_textInputPath.layoutData = new HorizontalLayoutData(100);
-		_textInputPath.enabled = false;
+		_textInputPath.enabled = true;
+		_textInputPath.addEventListener(Event.CHANGE, _textInputPathChanged);
 		_execPathGroup.addChild(_textInputPath);
 		
 		_locatePath = new Button(LanguageManager.getInstance().getString('settingspage.browser.locatebrowser'));
 		_locatePath.variant = GenesisApplicationTheme.BUTTON_SELECT_FILE;
-		_locatePath.visible = _locatePath.includeInLayout = false;
+		_locatePath.addEventListener(TriggerEvent.TRIGGER, _locatePathTriggered);
+		_locatePath.visible = _locatePath.includeInLayout = true;
 		_execPathGroup.addChild(_locatePath);
 		
 		horizontalGroupLayout = new HorizontalLayout();
@@ -177,7 +182,12 @@ class SetupBrowserPage extends Page {
 			this.dispatchEvent(refreshDefaultBrowserEvent);
 		}
 		
-		_browserData.browserName = _textInputBrowserName.text;		
+		_browserData.browserName = _textInputBrowserName.text;
+		_browserData.executablePath = _textInputPath.text;
+		
+		// Update the exists flag based on the file path before saving
+		_browserData.exists = _textInputPath.text != null && _textInputPath.text != "" && FileSystem.exists(_textInputPath.text);
+		
 		var superHumanAppEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_BROWSERS_PAGE);
 			superHumanAppEvent.browserData = _browserData;
 		this.dispatchEvent(superHumanAppEvent);
@@ -194,5 +204,48 @@ class SetupBrowserPage extends Page {
     
 	function _buttonCloseTriggered( e:TriggerEvent ) {
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLOSE_BROWSERS_SETUP ) );
+    }
+    
+    /**
+     * Handler for the locate path button click
+     */
+    function _locatePathTriggered(e:TriggerEvent) {
+        var fileDialog = new FileDialog();
+        fileDialog.onSelect.add(_onFileSelected);
+        
+        // Open the file dialog (Lime's FileDialog doesn't support title or filters directly)
+        fileDialog.browse(FileDialogType.OPEN);
+    }
+    
+    /**
+     * Handler for file selection from the file dialog
+     */
+    function _onFileSelected(path:String) {
+        if (path != null && path != "") {
+            _textInputPath.text = path;
+            _validatePath(path);
+        }
+    }
+    
+    /**
+     * Handler for manual text input changes in the path field
+     */
+    function _textInputPathChanged(e:Event) {
+        _validatePath(_textInputPath.text);
+    }
+    
+    /**
+     * Validates if the provided path exists and updates UI accordingly
+     */
+    function _validatePath(path:String) {
+        if (path != null && path != "") {
+            var exists = FileSystem.exists(path);
+            _browserData.executablePath = path;
+            _browserData.exists = exists;
+            
+            // Update UI based on existence
+            _browserNotDetectedGroup.visible = _browserNotDetectedGroup.includeInLayout = !exists;
+            _checkDefaultBrowser.enabled = exists;
+        }
     }
 }

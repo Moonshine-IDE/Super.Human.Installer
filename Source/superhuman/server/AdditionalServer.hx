@@ -11,8 +11,10 @@ import sys.FileSystem;
 import haxe.io.Path;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.ServerData;
+import superhuman.server.data.ProvisionerData;
 import superhuman.server.provisioners.AdditionalProvisioner;
 import lime.system.System;
+import champaign.core.logging.Logger;
 
 class AdditionalServer extends Server {
 
@@ -59,14 +61,15 @@ class AdditionalServer extends Server {
 
         sc._id = data.server_id;
         sc._serverDir = Path.normalize( rootDir + "/hcl_domino_additional_provisioner/" + sc._id );
-        FileSystem.createDirectory( sc._serverDir );
-        sc._path.value = sc._serverDir;
 
-        var latestDemoTasks = ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ];
+        sc._path.value = sc._serverDir;
+        sc.markAsProvisional(); // Use the shared method instead of directly setting the field
+
+        var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ];
 
         if ( data.provisioner == null ) {
 
-            sc._provisioner = new AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, latestDemoTasks.root, sc._serverDir, sc );
+            sc._provisioner = new AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc );
 
         } else {
 
@@ -103,6 +106,7 @@ class AdditionalServer extends Server {
         sc._setupWait.value = data.env_setup_wait;
         sc._userEmail.value = data.user_email;
         sc._userSafeId.value = data.user_safeid;
+        sc._serverProvisionerId.value = data.server_provisioner_id;
         sc._syncMethod = data.syncMethod == null ? SyncMethod.Rsync : data.syncMethod;
         sc._type = ( data.type != null ) ? data.type : ServerType.Domino;
         sc._dhcp4.value = ( data.dhcp4 != null ) ? data.dhcp4 : false;
@@ -168,25 +172,73 @@ class AdditionalServer extends Server {
     }
 
 	override function _saveSafeId() {
-
-        var r = this._provisioner.saveSafeId( _serverProvisionerId.value );
-        if ( !r ) this._busy.value = false;
-
+        // AdditionalServer uses serverProvisionerId for the server.id file
+        // This is set by locateServerProvisionerId()
+        
+        // CRITICAL FIX: Make sure we never use the provisioner version as a file path
+        if (_serverProvisionerId == null || _serverProvisionerId.value == null || _serverProvisionerId.value == "") {
+            Logger.error('${this}: No server ID file path selected');
+            if (console != null) console.appendText("Error: No server ID file has been selected. Please use the 'Locate' button to select a server ID file.", true);
+            this._busy.value = false;
+            return;
+        }
+        
+        // Get the actual server ID file path - it should NEVER be the version number
+        var serverIdPath = _serverProvisionerId.value;
+        
+        // Double-check the serverIdPath is not the provisioner version (critical bug)
+        if (serverIdPath == this._provisioner.version) {
+            Logger.error('${this}: BUG DETECTED - Server ID path is the same as the provisioner version (${serverIdPath})');
+            if (console != null) console.appendText("BUG: Server ID path is using the version number instead of a file path. Please report this issue.", true);
+            this._busy.value = false;
+            return;
+        }
+        
+        // Make sure the file exists at the path
+        if (!FileSystem.exists(serverIdPath)) {
+            Logger.error('${this}: Server ID file does not exist at path: ${serverIdPath}');
+            if (console != null) console.appendText("Error: The selected server ID file cannot be found at: " + serverIdPath, true);
+            this._busy.value = false;
+            return;
+        }
+        
+        // Now call the provisioner with the correct path
+        var result = this._provisioner.saveSafeId(serverIdPath);
+        if (!result) {
+            this._busy.value = false;
+        }
     }
 
     override public function safeIdExists():Bool {
-
+        // For AdditionalServer, we need to check the server ID file
         if ( _serverProvisionerId == null || _serverProvisionerId.value == null || _serverProvisionerId.value == "" ) return false;
 
         return FileSystem.exists( _serverProvisionerId.value );
-
     }
 
     override public function getData():ServerData {
         var sd:ServerData = super.getData();
             sd.existingServerName = _existingServerName.value;
             sd.existingServerIpAddress = _existingServerIpAddress.value;
+            // Make sure server_provisioner_id is explicitly included 
+            sd.server_provisioner_id = _serverProvisionerId.value;
         return sd;
+    }
+
+    // Override updateProvisioner to ensure we don't mess with the serverProvisionerId
+    override public function updateProvisioner(data:ProvisionerData):Bool {
+        // Call super implementation
+        var result = super.updateProvisioner(data);
+        
+        // CRITICAL FIX: Make sure we never set serverProvisionerId to the version
+        // The super.updateProvisioner might have set _serverProvisionerId.value to version
+        if (_serverProvisionerId != null && _serverProvisionerId.value == this._provisioner.version) {
+            Logger.error('${this}: updateProvisioner set serverProvisionerId to version - restoring previous value');
+            // We don't have a previous value to restore, but we can at least clear it to force user selection
+            _serverProvisionerId.value = null;
+        }
+        
+        return result;
     }
 
     public function locateServerProvisionerId( ?callback:()->Void ) {
@@ -196,22 +248,41 @@ class AdditionalServer extends Server {
         var dir = ( SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null ) ? SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
         _fd = new FileDialog();
         var currentDir:String;
+        
+        // Default directory to start in
+        var dir = (SuperHumanInstaller.getInstance().config.user.lastuseddirectory != null) ? 
+            SuperHumanInstaller.getInstance().config.user.lastuseddirectory : System.userDirectory;
 
-        _fd.onSelect.add( path -> {
-
-            currentDir = Path.directory( path );
-            _serverProvisionerId.value = path;
-
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.provisionerserveridselected', path ) );
-
-            if ( currentDir != null ) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
-            if ( callback != null ) callback();
-
-            _fd.onSelect.removeAll();
-            _fd.onCancel.removeAll();
-            _fd = null;
-
-        } );
+        _fd.onSelect.add(path -> {
+            currentDir = Path.directory(path);
+            
+            // Verify the file exists
+            if (FileSystem.exists(path)) {
+                // Store the selected path for the server ID file
+                _serverProvisionerId.value = path;
+                Logger.info('${this}: Set serverProvisionerId to ${path}');
+                
+                // Immediately save the data to persist this change
+                this.saveData();
+                Logger.info('${this}: Saved server data after setting serverProvisionerId');
+                
+                if (console != null) {
+                    console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.provisionerserveridselected', path));
+                }
+                
+                if (currentDir != null) {
+                    SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
+                }
+                
+                if (callback != null) {
+                    callback();
+                }
+            } else {
+                if (console != null) {
+                    console.appendText('Error: Selected file does not exist: ${path}', true);
+                }
+            }
+        });
 
         _fd.onCancel.add( () -> {
             _fd.onCancel.removeAll();
@@ -219,8 +290,7 @@ class AdditionalServer extends Server {
             _fd = null;
         } );
 
-        _fd.browse( FileDialogType.OPEN, null, dir + "/", "Locate your Server Id file with .ids extension" );
-
+        _fd.browse(FileDialogType.OPEN, null, dir + "/", "Locate your Server Id file with .ids extension");
     }
 
     public static function getHostNameServerUrl(hostname:String):ServerURL

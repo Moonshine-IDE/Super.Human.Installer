@@ -324,7 +324,7 @@ class FileTools {
     }
 
     /**
-     * Method returns hash if exists in Array, otherwise null
+     * Method returns hash if exists in Array, otherwise null, we will eventually remove the md5 check and only use SHA256
      **/
     static public function checkMD5( path:String, md5s:Array<String> ):String {
 

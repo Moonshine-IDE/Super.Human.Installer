@@ -41,13 +41,17 @@ env:
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
   haxe_version: 4.3.6
-  bin_path: X:/Export/${{ inputs.env }}/windows/bin/
+  bin_path: Export/${{ inputs.env }}/windows/bin/
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: [self-hosted, windows]
 
     steps:
+      - name: Show Current Path
+        run: |
+          pwd
+
       - name: Build info
         run: |
           echo "Ref: ${{ github.ref_name }}"
@@ -64,19 +68,15 @@ jobs:
 
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          lfs: true
+      #  with:
+      #    lfs: true
+#
+      #- name: Checkout LFS objects
+      #  run: git lfs checkout
 
-      - name: Checkout LFS objects
-        run: git lfs checkout
-
-      - name: Map disk
-        shell: cmd
+      - name: Show Current Path
         run: |
-          echo "Mapping drive X: to current directory..."
-          subst X: "%CD%"
-          echo "Directory mapped to X:"
-          dir X:
+          pwd
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
@@ -89,6 +89,12 @@ jobs:
         uses: Moonshine-IDE/setup-haxe-action@master
         with:
           haxe-version: ${{ env.haxe_version }}
+
+      #-
+      #  name: "Setting up Haxe"
+      #  uses: krdlab/setup-haxe@v1.5.1
+      #  with:
+      #    haxe-version: ${{ env.haxe_version }}
 
       - name: Show haxe info
         run: |
@@ -112,15 +118,15 @@ jobs:
         if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.78
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.86
           pushd .
-          cd C:\hostedtoolcache\windows\haxe\${{env.haxe_version}}\x64\lib\hxcpp\git\tools\hxcpp
+          cd D:\GA\SHI\_work\_tool\haxe\${{env.haxe_version}}\x64\lib\hxcpp\git\tools\hxcpp
           haxe compile.hxml
           popd
           haxelib install lime 8.2.2
           haxelib install format
           haxelib install hxp
-          haxelib install yaml
+          haxelib git yaml https://github.com/Sword352/hx-yaml master
           haxelib git lime-samples https://github.com/openfl/lime-samples
           haxelib install openfl 9.4.1
           haxelib run openfl setup
@@ -128,47 +134,116 @@ jobs:
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
+          haxelib install flixel
+          haxelib install hxWindowColorMode
 
       - name: List dependencies
         run: haxelib list
 
       - name: Build
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
-        shell: cmd
+      #  if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        shell: pwsh
         run: |
-          echo "Switching to drive X and building..."
-          X:
-          haxelib run openfl build project.xml windows ^
-            %haxe_flag% ^
-            -Dlogverbose ^
-            -Dlogcolor ^
-            -Dgitsha=${{ github.sha }} ^
-            -Dgitbranch=${{ github.ref_name }}
+          haxelib run openfl build project.xml windows ${{ env.haxe_flag }} -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
         run: ls -r ${{ env.bin_path }}
 
+      - name: Compress Provisioners
+        shell: pwsh
+        run: |
+          echo "Compressing provisioners directory to avoid path length issues"
+          
+          # Create installer assets directory if it doesn't exist
+          if (-not (Test-Path "Assets\installer")) {
+            New-Item -ItemType Directory -Path "Assets\installer" -Force
+          }
+          
+          # Change directory to the provisioners directory to avoid extra nesting
+          Push-Location "Assets\provisioners"
+          
+          # Compress provisioners using 7zip
+          # Using -mx=9 for maximum compression
+          # The '.' specifies current directory contents without creating extra nesting
+          7z a -t7z -mx=9 "..\..\Assets\installer\provisioners.7z" "."
+          
+          # Return to previous directory
+          Pop-Location
+          
+          # Verify compression worked
+          if (Test-Path "Assets\installer\provisioners.7z") {
+            $fileSize = (Get-Item "Assets\installer\provisioners.7z").Length / 1MB
+            Write-Host "Provisioners compressed successfully: $fileSize MB"
+          } else {
+            Write-Error "Failed to compress provisioners"
+            exit 1
+          }
+          
+          # Only need to copy the provisioners.7z file
+          # 7za binaries are already in Assets/bin/windows and will be included automatically
+          $destDir = "${{ env.bin_path }}\assets"
+          Copy-Item "Assets\installer\provisioners.7z" -Destination "$destDir\"
+
       - name: Upload bin
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-windows-bin
           path: ${{ env.bin_path }}
+          
+      - name: "Uploading bin to prominic.net"
+        run: |
+          $env:HOME = "D:\GA\SHI\_work\Super.Human.Installer\Super.Human.Installer"; cygwin
+          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" ${{ env.bin_path }} startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-windows-bin
 
-      - name: Print NSIS version
-        run: makensis -version
+      - name: Install Inno Setup
+        run: |
+          choco install innosetup -y
 
-      - name: Create NSIS installer
-        run: >
-          makensis 
-          /DPRODUCT_NAME=${{ env.app_name }}
-          /DPRODUCT_VERSION=${{ inputs.version }}
-          /DPRODUCT_PUBLISHER="Prominic.NET"
-          /DPRODUCT_WEB_SITE="/https://superhumaninstaller.com/"
-          /DBIN_PATH="${{ env.bin_path }}\*.*"
-          /DPRODUCT_EXE=${{ env.app_name }}.exe
-          /DPRODUCT_INSTALLER=${{ env.app_name }}-Setup.exe
-          /DROOT_KEY=HKCU
-          X:/Templates/installer/nsis-installer.nsi
+      - name: Create Inno Setup installer
+        shell: pwsh
+        run: |
+          # Get absolute paths for Inno Setup
+          $rootPath = Get-Location
+          # Remove trailing slash if present to avoid double slashes
+          $binPath = "${{ env.bin_path }}".TrimEnd('\', '/')
+          $binPathAbs = Join-Path -Path $rootPath -ChildPath $binPath
+          
+          # Enable Windows long path support for current process
+          Write-Host "Enabling long path support for current process"
+          & {
+            $longPathsEnabled = $false
+            try {
+              $regKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem'
+              $longPathsEnabled = (Get-ItemProperty -Path $regKey -Name 'LongPathsEnabled' -ErrorAction SilentlyContinue).LongPathsEnabled -eq 1
+            } catch { }
+            
+            if (-not $longPathsEnabled) {
+              Write-Host "Long paths not enabled in registry. Your provisioners may still have issues."
+            } else {
+              Write-Host "Long paths enabled in Windows registry."
+            }
+          }
+          
+          # Set environment variables for Inno Setup script
+          $env:PRODUCT_NAME="${{ env.app_name }}"
+          $env:PRODUCT_VERSION="${{ inputs.version }}"
+          $env:PRODUCT_PUBLISHER="Prominic.NET"
+          $env:PRODUCT_WEB_SITE="https://superhumaninstaller.com/"
+          $env:BIN_PATH="$binPathAbs"
+          $env:PRODUCT_EXE="${{ env.app_name }}.exe"
+          $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
+          
+          # Show paths for debugging
+          Write-Host "Root Path: $rootPath"
+          Write-Host "Bin Path: $binPathAbs"
+          
+          # Compile Inno Setup script with working directory set to the script's location
+          Set-Location -Path "Templates/installer"
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
+          Set-Location -Path $rootPath
 
       - name: Sign installer
         if: ${{ inputs.env == 'Production' }}
@@ -183,10 +258,17 @@ jobs:
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ env.app_name }}-windows-installer
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
+          
+      - name: "Uploading installer to prominic.net"
+        run: |
+          echo "Uploading installer to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" Templates/installer/${{ env.app_name }}-Setup.exe startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe
 
       - name: Copy files to choco
         env:
@@ -211,8 +293,17 @@ jobs:
 
       - name: Upload choco package
         uses: actions/upload-artifact@v4
+        continue-on-error: true
         env:
           choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
         with:
           name: ${{ env.app_name }}-Choco
           path: Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg
+          
+      - name: "Uploading choco package to prominic.net"
+        env:
+          choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
+        run: |
+          echo "Uploading choco package to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz -e "C:\tools\cygwin\bin\ssh.exe" Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Choco.nupkg

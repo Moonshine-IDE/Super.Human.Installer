@@ -1,0 +1,36 @@
+{
+	"title": "Creating the Domino OIDC Provider Internet Site",
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Creating Domino OIDC Provider Internet Site---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "names.nsf", 
+                    "documents":[
+                        { 
+                            "action": "update",
+{% if super_human_portal_enabled %}
+                            "search": {
+                                        "formula":"Form=\"WebSite\" & ISiteName=\"Super.Human.Portal\"",
+                                        "number":0
+                            },
+{% else %}
+                            "search": {
+                                        "formula":"Form=\"WebSite\" & ISiteName=\"Domino Web Apps\"",
+                                        "number":0
+                            },
+{% endif %}
+                            "computeWithForm": true,
+                            "items": {
+                                "SSLAnonymous"       : "0",
+                                "SSLNameAndPwd"      : "0"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

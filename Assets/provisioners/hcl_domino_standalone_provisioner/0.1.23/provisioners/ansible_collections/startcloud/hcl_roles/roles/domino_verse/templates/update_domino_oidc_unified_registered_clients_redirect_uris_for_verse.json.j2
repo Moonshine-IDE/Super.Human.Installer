@@ -1,0 +1,30 @@
+{
+	"title": "Updating the OIDC Trusted Provider",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 2. Update OIDC Hostnames ---",
+			"databases": [
+				{
+					"action": "update",
+					"filePath": "idpcat.nsf",
+					"documents": [
+						{
+							"action": "update",
+							"search": {
+							   "formula":"Form=\"RegisteredOAuthClient\" & RC_client_id=\"{{ domino_oidc_client_id }}\"",
+                                        "number":0
+							},
+                            "computeWithForm": true,
+                            "items": {
+                                "RC_Name": "{{ oidc_registered_clients_processed_verse }}",
+                                "RC_redirect_uris": [{% for uri in oidc_registered_clients_redirect_uri_processed_verse.split() %}"{{ uri }}"{% if not loop.last %}, {% endif %}{% endfor %}],
+								"RC_back_channel_logout_uri" : "https://{{ domino_verse_proxy_url }}/auth/protocol/oidc"
+                            }
+						}
+					]
+				}
+			]
+		}
+	]
+}

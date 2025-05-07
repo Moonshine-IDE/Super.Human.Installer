@@ -1,0 +1,77 @@
+---
+-
+  name: "Setting up Debian Installations"
+  when: "ansible_os_family == 'Debian'"
+  block:
+    -
+      name: "Gathering DEB architecture"
+      ansible.builtin.command: dpkg --print-architecture
+      register: deb_architecture
+      changed_when: false
+
+    -
+      name: "Printing DEB architecture"
+      ansible.builtin.debug:
+        msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+
+    -
+      name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true
+
+    -
+      name: "Upgrading all apt packages"
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    -
+      name: "Adding Additional Dependencies {{ packages }}"
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+
+-
+  name: Remove default Dante configuration
+  ansible.builtin.file:
+    path: /etc/danted.conf
+    state: absent
+
+-
+  name: Create new Dante configuration
+  ansible.builtin.copy:
+    dest: /etc/danted.conf
+    content: |
+      logoutput: syslog
+      user.privileged: root
+      user.unprivileged: nobody
+      # The listening network interface or address.
+      internal: 0.0.0.0 port=1080
+      # The proxying network interface or address.
+      external: public_adapter
+      # socks-rules determine what is proxied through the external interface.
+      socksmethod: username
+      # client-rules determine who can connect to the internal interface.
+      clientmethod: none
+      client pass {
+          from: 0.0.0.0/0 to: 0.0.0.0/0
+      }
+      socks pass {
+          from: 0.0.0.0/0 to: 0.0.0.0/0
+      }
+
+-
+  name: Create a dedicated SOCKS user
+  ansible.builtin.user:
+    name: "{{ dante_user }}"
+    shell: /bin/false
+    system: true
+    password: "{{ 'dante_pass' | password_hash('sha512') }}"
+
+-
+  name: Restart Dante service
+  ansible.builtin.systemd:
+    name: danted
+    state: restarted
+    enabled: true

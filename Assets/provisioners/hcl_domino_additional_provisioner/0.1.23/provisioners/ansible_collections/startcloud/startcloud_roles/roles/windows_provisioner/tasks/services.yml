@@ -1,0 +1,28 @@
+---
+- hosts: all
+  gather_facts: True
+  tasks:
+#  - name: Get product id and product key
+#    win_product_facts:
+#  - debug: var=hostvars[inventory_hostname]
+#  - name: Install package dependencies
+#    win_chocolatey:
+#      name:
+#       - chocolatey-core.extension
+#       - chocolatey-windowsupdate.extension
+#      state: present
+#  - name: Install all security, critical, and rollup updates without a scheduled task
+#    win_updates:
+#      category_names:
+#        - SecurityUpdates
+#        - CriticalUpdates
+#        - UpdateRollups
+  - name: Ensure that Google Chrome Update is Set to manual
+    win_service:
+      name: gupdate
+      start_mode: manual
+  - name: Ensure that Telegraf is Set to Automatic and Started
+    win_service:
+      name: telegraf
+      start_mode: delayed
+      state: started

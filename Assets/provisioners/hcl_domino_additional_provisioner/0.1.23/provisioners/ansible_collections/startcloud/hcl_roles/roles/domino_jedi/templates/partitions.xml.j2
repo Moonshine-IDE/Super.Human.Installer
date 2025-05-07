@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+
+<!-- this is produced by ansible template -->
+<partitions>
+    
+  <partition type="domino" punid="{{ settings.server_id }}" version="release {{ domino_major_version }}.{{ domino_minor_version }}.{{ domino_patch_version }}">
+  <hostinfo>
+    <property name="ip">
+      <!-- internal IP may be used as well -->
+      <property-value>127.0.0.1</property-value>
+    </property>
+    <property name="hostname">
+      <property-value>{{ domino_server_name_common }}</property-value>
+    </property>
+  </hostinfo>
+  <property name="DominoId">
+    <property-value>{{ domino_server_name_common }}</property-value>
+  </property>
+  <property name="DominoVersion">
+    <property-value>release {{ domino_major_version }}.{{ domino_minor_version }}.{{ domino_patch_version }}</property-value>
+   </property>
+   <property name="DominoUid">
+     <property-value>{{ domino_user }}</property-value>
+   </property>
+   <property name="DominoDataPath">
+     <property-value>{{ domino_home_dir }}</property-value>
+   </property>
+   <property name="DominoStartupCommand">
+     <property-value>{{ domino_install_basedir }}/bin/server</property-value>
+   </property>
+   <property name="DominoProcessPrefix">
+     <property-value>{{ domino_install_basedir }}/notes</property-value>
+   </property>
+   <property name="DominoServiceId">
+     <property-value></property-value>
+   </property>
+   <property name="DominoServerPassword">
+     <property-value></property-value>
+   </property>
+   <property name="DominoPartitionType">
+     <property-value>SHARED</property-value>
+   </property>
+     <property name="notes.ini.config">
+        <property-value>false</property-value>
+     </property>
+     <property name="notes.ini.config.tasks">
+        <property-value>false</property-value>
+     </property>
+     <property name="notes.ini.config.resources">
+        <property-value>true</property-value>
+     </property>
+     <property name="notes.ini.config.network">
+        <property-value>false</property-value>
+     </property>
+     <property name="notes.ini.tasks.notifications">
+        <property-value>false</property-value>
+     </property>
+     <notes-ini path="notes.ini">
+       <property name="xxpath">
+         <property-value>notes.ini</property-value>
+       </property>
+       <property name="DominoTools_ACLManager_Phase1Impl_INI">
+         <property-value>/Partitions/opt/dominotools/aclmgr.ini</property-value>
+       </property>
+       <property name="ServerTasks">
+         <property-value></property-value>
+       </property>
+     </notes-ini>
+     <monitoring>
+       <property name="monitors.activity.maxinactivitytime">
+         <property-value>300</property-value>
+       </property>
+       <property name="monitors.http.timeout">
+         <property-value>120</property-value>
+       </property>
+       <property name="recovery.restart_if_frozen">
+         <property-value>true</property-value>
+       </property>
+       <property name="recovery.enable_low_memory_restart">
+         <property-value>false</property-value>
+       </property>
+
+       <property name="monitors.aging.recursive">
+         <property-value>false</property-value>
+       </property>
+       <property name="monitors.aging.config">
+         <property-value>noteslog/notes.log*,45
+domino/html/html-logs/*.log.gz,90</property-value>
+       </property>
+       <property name="monitors.rpc.timeout">
+         <property-value>60</property-value>
+       </property>
+       <property name="monitors.messages.enabled">
+         <property-value>true</property-value>
+       </property>
+       <property name="monitors.aging.period">
+         <property-value>60</property-value>
+       </property>
+       <property name="monitors.activity.period">
+         <property-value>120</property-value>
+       </property>
+       <property name="monitors.http.period">
+         <property-value>120</property-value>
+       </property>
+       <property name="monitors.timer">
+         <property-value>360</property-value>
+       </property>
+       <property name="notifications.email.enable">
+         <property-value>false</property-value>
+       </property>
+       <property name="monitors.rpc.startupwait">
+         <property-value>120</property-value>
+       </property>
+       <property name="monitors.schedules.enable">
+         <property-value>false</property-value>
+       </property>
+       <property name="recovery.softrestarts">
+         <property-value>true</property-value>
+       </property>
+       <property name="monitors.activity.startupwait">
+         <property-value>120</property-value>
+       </property>
+       <property name="recovery.restart_if_down">
+         <property-value>false</property-value>
+       </property>
+       <property name="monitors.http.startupwait">
+         <property-value>180</property-value>
+       </property>
+       <property name="monitors.http.testpage">
+         <property-value>/netmonitor.nsf/test</property-value>
+       </property>
+       <property name="monitors.http.port">
+         <property-value>82</property-value>
+       </property>
+       <property name="monitors.http.recoverywait">
+         <property-value>120</property-value>
+       </property>
+     </monitoring>
+  </partition>
+
+</partitions>

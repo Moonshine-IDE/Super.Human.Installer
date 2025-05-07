@@ -59,7 +59,8 @@ import superhuman.server.CombinedVirtualMachine.CombinedVirtualMachineState;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
-import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.StandaloneProvisioner;
+import superhuman.server.provisioners.CustomProvisioner;
 import sys.FileSystem;
 import sys.io.File;
 import yaml.util.ObjectMap;
@@ -92,32 +93,76 @@ class Server {
         var sc = new Server();
 
         sc._id = data.server_id;
-        sc._serverDir = Path.normalize( rootDir + "/hcl_domino_standalone_provisioner/" + sc._id );
-        FileSystem.createDirectory( sc._serverDir );
+
+        // Log provisioner type without normalizing it
+        if (data.provisioner != null) {
+            // Log the incoming provisioner data for debugging
+            Logger.info('Creating server with provisioner type: ${data.provisioner.type}, version: ${data.provisioner.version}');
+            
+            // We're no longer forcing normalization, as it breaks custom provisioners
+            // Instead we'll use string comparison consistently throughout the codebase
+        }
+        
+        // Get the effective provisioner type from data.provisioner
+        // This is set by ServerManager before calling create()
+        var effectiveProvisionerType = data.provisioner != null ? 
+            data.provisioner.type : ProvisionerType.StandaloneProvisioner;
+        Logger.info('Server.create: Using provisioner type for server creation: ${effectiveProvisionerType}');
+        
+        // Store server directory path but don't create it yet
+        sc._serverDir = Path.normalize( rootDir + "/" + effectiveProvisionerType + "/" + sc._id );
         sc._path.value = sc._serverDir;
+        
+        // Set the provisional flag to indicate this server hasn't been confirmed yet
+        sc.markAsProvisional();
+        
+        var latestStandaloneProvisioner = ProvisionerManager.getBundledProvisioners()[ 0 ];
 
-        var latestDemoTasks = ProvisionerManager.getBundledProvisioners()[ 0 ];
-
-        if ( data.provisioner == null ) {
-
-            sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, latestDemoTasks.root, sc._serverDir, sc );
-
-        } else {
-
-            var provisioner = ProvisionerManager.getProvisionerDefinition( data.provisioner.type, data.provisioner.version );
-
-            if ( provisioner != null ) {
-
-                sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, provisioner.root, sc._serverDir, sc );
-
-            } else {
-
-                // The server already exists BUT the provisioner version is not supported
-                // so we create the provisioner with target path only
-                sc._provisioner = new DemoTasks(ProvisionerType.DemoTasks, null, sc._serverDir, sc );
-
+        // Always force data.provisioner to match the type parameter for consistency
+        if (data.provisioner != null) {
+            // Override the provisioner type in the data object to match the type parameter
+            if (Std.string(data.provisioner.type) != Std.string(effectiveProvisionerType)) {
+                Logger.warning('Correcting provisioner type in data from ${data.provisioner.type} to ${effectiveProvisionerType}');
+                data.provisioner.type = effectiveProvisionerType;
             }
+        }
 
+        if (data.provisioner == null) {
+            // Default to StandaloneProvisioner for null provisioner
+            sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, latestStandaloneProvisioner.root, sc._serverDir, sc);
+        } else {
+            // Look up the provisioner definition based on the effective type
+            var provisioner = ProvisionerManager.getProvisionerDefinition(effectiveProvisionerType, data.provisioner.version);
+
+            if (provisioner != null) {
+                // Create the appropriate provisioner based on the effective type
+                if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.StandaloneProvisioner)) {
+                    // Standalone provisioner
+                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, provisioner.root, sc._serverDir, sc);
+                } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
+                    // Additional provisioner - create the proper AdditionalProvisioner instance, not StandaloneProvisioner
+                    sc._provisioner = new superhuman.server.provisioners.AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, provisioner.root, sc._serverDir, sc);
+                } else {
+                    // Custom provisioner
+                    sc._provisioner = new CustomProvisioner(effectiveProvisionerType, provisioner.root, sc._serverDir, sc);
+                }
+            } else {
+                // Fallback - the server already exists BUT the provisioner version is not supported
+                // so we create the provisioner with target path only
+                if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.StandaloneProvisioner)) {
+                    // Standalone provisioner fallback
+                    sc._provisioner = new StandaloneProvisioner(ProvisionerType.StandaloneProvisioner, null, sc._serverDir, sc);
+                    Logger.error('${sc}: Created StandaloneProvisioner with null root (fallback)');
+                } else if (Std.string(effectiveProvisionerType) == Std.string(ProvisionerType.AdditionalProvisioner)) {
+                    // Additional provisioner fallback - create the proper AdditionalProvisioner instance, not StandaloneProvisioner
+                    sc._provisioner = new superhuman.server.provisioners.AdditionalProvisioner(ProvisionerType.AdditionalProvisioner, null, sc._serverDir, sc);
+                    Logger.error('${sc}: Created AdditionalProvisioner with null root (fallback)');
+                } else {
+                    // Custom provisioner fallback
+                    sc._provisioner = new CustomProvisioner(effectiveProvisionerType, null, sc._serverDir, sc);
+                    Logger.error('${sc}: Created CustomProvisioner of type ${effectiveProvisionerType} with null root (fallback)');
+                }
+            }
         }
 
         sc._hostname.value = data.server_hostname;
@@ -142,45 +187,83 @@ class Server {
         sc._combinedVirtualMachine.value = { home: sc._serverDir, serverId: sc._id, vagrantMachine: { vagrantId: null, serverId: sc._id }, virtualBoxMachine: { virtualBoxId: null, serverId: sc._id } };
         sc._disableBridgeAdapter.value = ( data.disable_bridge_adapter != null ) ? data.disable_bridge_adapter : false;
         sc._hostname.locked = sc._organization.locked = ( sc._provisioner.provisioned == true );
+        
+        // Initialize customProperties from data if available
+        if (data.customProperties != null) {
+            sc._customProperties = data.customProperties;
+        }
+        
         sc._created = true;
         sc._setServerStatus();
         return sc;
 
     }
 
-    static public function getComputedName( hostname:String, organization:String ):ServerURL {
+    static public function getComputedName( hostname:String, organization:String, ?customProperties:Dynamic = null, ?provisioner:AbstractProvisioner = null ):ServerURL {
 
         var result:ServerURL = { domainName: "", hostname: "", path: "" };
-
+        
+        // Check if this is a custom provisioner (not one of the standard types)
+        var isCustomProvisioner = false;
+        if (provisioner != null) {
+            isCustomProvisioner = (
+                Std.string(provisioner.type) != Std.string(ProvisionerType.StandaloneProvisioner) && 
+                Std.string(provisioner.type) != Std.string(ProvisionerType.AdditionalProvisioner) &&
+                Std.string(provisioner.type) != Std.string(ProvisionerType.Default)
+            );
+        }
+        
+        // Special handling for custom provisioners
+        if (isCustomProvisioner && customProperties != null) {
+            // For custom provisioners, ONLY look for DOMAIN field in dynamicCustomProperties
+            var domain = null;
+            
+            // Check in dynamicCustomProperties - this is the ONLY place for custom provisioners
+            if (Reflect.hasField(customProperties, "dynamicCustomProperties")) {
+                var dynamicProps = Reflect.field(customProperties, "dynamicCustomProperties");
+                if (dynamicProps != null && Reflect.hasField(dynamicProps, "DOMAIN")) {
+                    domain = Reflect.field(dynamicProps, "DOMAIN");
+                }
+            }
+            
+            // Use the domain if found, otherwise set a default domain
+            if (domain != null && domain != "") {
+                // For custom provisioners, hostname is just the subdomain
+                // and domain is directly from the DOMAIN field
+                result.hostname = hostname;
+                result.domainName = domain;
+                result.path = ""; // No path for custom provisioners
+                
+                return result;
+            }
+        }
+        
+        // Original behavior for standard provisioners or if no domain was found for custom provisioner
         var a = hostname.split( "." );
 
         if ( a.length == 1 && a[0].length > 0 ) {
-
             result.hostname = a[0];
-            result.domainName = organization + ".com";
-
+            
+            // Even for custom provisioners, if we didn't find a DOMAIN field,
+            // fall back to using organization + ".com" if organization is not empty
+            if (organization != null && organization != "") {
+                result.domainName = organization + ".com";
+            } else {
+                // For custom provisioners without a DOMAIN field or organization,
+                // use a default domain to prevent the ".." issue
+                result.domainName = "example.com";
+            }
         } else if ( a.length == 3 ) {
-
             result.hostname = a[0];
             result.domainName = a[1] + "." + a[2];
-
         } else {
-
-            /*
-            result.hostname = a[0].toLowerCase();
-            var s = "";
-            for ( i in 1...a.length ) s += a[i].toLowerCase() + ".";
-            result.domainName = s;
-            */
             result.hostname = "configure";
             result.domainName = "host.name";
-
         }
 
         result.path = organization;
 
         return result;
-
     }
 
     var _action:Property<ServerAction>;
@@ -210,7 +293,8 @@ class Server {
     var _organization:ValidatingProperty;
     var _path:Property<String>;
     var _provisionedBeforeStart:Bool;
-    var _provisioner:DemoTasks;
+    var _provisional:Bool = false;
+    var _provisioner:StandaloneProvisioner;
     var _refreshingVirtualBoxVMInfo:Bool = false;
     var _roles:Property<Array<RoleData>>;
     var _serverDir:String;
@@ -227,6 +311,7 @@ class Server {
     var _vagrantUpExecutorElapsedTimer:Timer;
     var _vagrantUpExecutorStopTimer:Timer;
     var _syncMethod:SyncMethod = SyncMethod.Rsync;
+    var _customProperties:Dynamic = {};
     var _fd:FileDialog;
 
     public var busy( get, never ):Bool;
@@ -283,6 +368,26 @@ class Server {
     public var networkBridge( get, never ):ValidatingProperty;
     function get_networkBridge() return _networkBridge;
     
+    /**
+     * Gets the effective network interface to use, checking for default value
+     * If the server's network interface is empty/"" (default), this returns the global default
+     * Otherwise returns the server's configured value
+     * @return The effective network interface name to use
+     */
+    public function getEffectiveNetworkInterface():String {
+        // If the server's network interface is empty (default), use the global preference
+        if (_networkBridge != null && (_networkBridge.value == null || _networkBridge.value == "")) {
+            // Get the global default from preferences
+            var defaultInterface = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+            
+            // Return the global default if it exists, otherwise empty string
+            return (defaultInterface != null) ? defaultInterface : "";
+        }
+        
+        // Otherwise return the server's configured network interface
+        return _networkBridge.value;
+    }
+    
     public var networkAddress( get, never ):ValidatingProperty;
     function get_networkAddress() return _networkAddress;
     
@@ -314,13 +419,48 @@ class Server {
     function get_path() return _path;
 
     public var provisioned( get, never ):Bool;
-    function get_provisioned() return _provisioner.provisioned;
+    function get_provisioned() {
+        try {
+            // Check if provisioning was explicitly canceled
+            if (_provisioningCanceled) {
+                return false;
+            }
+            
+            // For a server to be considered properly provisioned, BOTH conditions must be true:
+            // 1. The provisioner must report it as provisioned (provisioning.proof file exists)
+            // 2. The VM must exist in VirtualBox
+            //
+            // This ensures servers stopped during provisioning are not reported as provisioned
+            return _provisioner != null && _provisioner.provisioned && vmExistsInVirtualBox();
+        } catch (e) {
+            Logger.error('${this}: Error in provisioned getter: ${e}');
+            return false; // Safer default is false
+        }
+    }
+    
+    /**
+     * Checks if this server's VM exists in VirtualBox
+     * @return True if the VM exists, false otherwise
+     */
+    public function vmExistsInVirtualBox():Bool {
+        if (this.virtualBoxId == null) return false;
+        
+        for (vm in VirtualBox.getInstance().virtualBoxMachines) {
+            if (vm.name == this.virtualBoxId) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public var provisionedBeforeStart( get, never ):Bool;
     function get_provisionedBeforeStart() return _provisionedBeforeStart;
 
     public var provisioner( get, never ):AbstractProvisioner;
     function get_provisioner() return _provisioner;
+
+    public var provisional( get, never ):Bool;
+    function get_provisional() return _provisional;
 
     public var roles( get, never ):Property<Array<RoleData>>;
     function get_roles() return _roles;
@@ -336,7 +476,7 @@ class Server {
 
     public var url( get, never ):ServerURL;
     function get_url() {
-        return getComputedName( _hostname.value, _organization.value );
+        return getComputedName( _hostname.value, _organization.value, _customProperties, _provisioner );
     }
     
     public var userEmail( get, never ):ValidatingProperty;
@@ -362,6 +502,14 @@ class Server {
     public var syncMethod(get, set):SyncMethod;
     function get_syncMethod() return _syncMethod;
     function set_syncMethod( value:SyncMethod ):SyncMethod { _syncMethod = value; return _syncMethod; }
+    
+    public var customProperties(get, set):Dynamic;
+    function get_customProperties() return _customProperties;
+    function set_customProperties(value:Dynamic):Dynamic { _customProperties = value; return _customProperties; }
+    
+    public var userData(get, set):Dynamic;
+    function get_userData() return _customProperties;
+    function set_userData(value:Dynamic):Dynamic { _customProperties = value; return _customProperties; }
     
     function new() {
 
@@ -463,8 +611,36 @@ class Server {
 
     public function getData():ServerData {
 
-        var data:ServerData = {
+        // Process the customProperties to minimize serviceTypeData before serialization
+        var processedCustomProperties = this._customProperties;
+        if (processedCustomProperties != null && Reflect.hasField(processedCustomProperties, "serviceTypeData")) {
+            // Create a copy to avoid modifying the original
+            processedCustomProperties = Reflect.copy(this._customProperties);
+            
+            // Get the original serviceTypeData
+            var originalServiceTypeData = Reflect.field(processedCustomProperties, "serviceTypeData");
+            
+            // Minimize it to just the essential fields
+            if (originalServiceTypeData != null) {
+                var minimalServiceTypeData = {
+                    isEnabled: Reflect.hasField(originalServiceTypeData, "isEnabled") ? 
+                        Reflect.field(originalServiceTypeData, "isEnabled") : true,
+                    provisionerType: Reflect.hasField(originalServiceTypeData, "provisionerType") ? 
+                        Reflect.field(originalServiceTypeData, "provisionerType") : this._provisioner.type,
+                    value: Reflect.hasField(originalServiceTypeData, "value") ? 
+                        Reflect.field(originalServiceTypeData, "value") : "",
+                    description: Reflect.hasField(originalServiceTypeData, "description") ? 
+                        Reflect.field(originalServiceTypeData, "description") : "",
+                    serverType: Reflect.hasField(originalServiceTypeData, "serverType") ? 
+                        Reflect.field(originalServiceTypeData, "serverType") : ""
+                };
+                
+                // Replace with the minimal version for serialization
+                Reflect.setField(processedCustomProperties, "serviceTypeData", minimalServiceTypeData);
+            }
+        }
 
+        var data:ServerData = {
             server_hostname: this._hostname.value,
             server_id: this._id,
             resources_ram: this._memory.value,
@@ -488,7 +664,8 @@ class Server {
             disable_bridge_adapter: this._disableBridgeAdapter.value,
             syncMethod: this._syncMethod,
             existingServerName: "",
-            existingServerIpAddress: ""
+            existingServerIpAddress: "",
+            customProperties: processedCustomProperties
         };
 
         return data;
@@ -500,13 +677,45 @@ class Server {
         _provisioner.copyFiles();
 
     }
+    
+    /**
+     * Initialize server files - creates directory and initial configuration files
+     * This should be called when a user confirms server configuration
+     */
+    public function initializeServerFiles():Void {
+        
+        // Create the server directory if it doesn't exist
+        if (!FileSystem.exists(_serverDir)) {
+            try {
+                FileSystem.createDirectory(_serverDir);
+            } catch (e) {
+                return;
+            }
+        }
+        
+        // Copy provisioner files to the server directory
+        initDirectory();
+        
+        // Save the hosts file
+        saveHostsFile();
+        
+        // Save the server data
+        saveData();
+        
+        // Mark the server as no longer provisional
+        _provisional = false;
+    }
 
     public function isValid():Bool {
-
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                   this.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                   this.provisioner.type != ProvisionerType.Default);
+        
+        // Always required checks for any provisioner type
         var hasVagrant:Bool = Vagrant.getInstance().exists;
         var hasVirtualBox:Bool = VirtualBox.getInstance().exists;
         var isHostnameValid:Bool = _hostname.isValid();
-        var isOrganizationValid:Bool = _organization.isValid();
         var isMemorySufficient:Bool = _memory.value >= 4;
         var isCPUCountSufficient:Bool = _numCPUs.value >= 1;
         
@@ -519,7 +728,11 @@ class Server {
             _nameServer2.isValid()
         );
         
-        var hasSafeId:Bool = safeIdExists();
+        // Conditionally required checks based on provisioner type
+        var isOrganizationValid:Bool = isCustomProvisioner ? true : _organization.isValid();
+        var hasSafeId:Bool = isCustomProvisioner ? true : safeIdExists();
+        
+        // Roles are validated differently based on provisioner type, but always checked
         var areRolesOK:Bool = areRolesValid();
 
         var isValid:Bool = 
@@ -534,7 +747,6 @@ class Server {
             areRolesOK;
             
         return isValid;
-
     }
 
     public function locateNotesSafeId( ?callback:()->Void ) {
@@ -586,17 +798,15 @@ class Server {
     			if (appData != null && appData.exists)
     			{
     				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
-    				Logger.info( '${this}: ' + LanguageManager.getInstance().getString( 'serverpage.server.console.openftp' ) );
 			}
 			else
 			{
 				console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
-				Logger.info( '${this}: ' + LanguageManager.getInstance().getString( 'serverpage.server.console.openftpFailed', appData.appId ) );
 				return;
 			}
 		}
     			
-    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + superhuman.server.provisioners.DemoTasks.HOSTS_FILE);
+    		var hostsFileMap = Yaml.read(Path.addTrailingSlash( this.provisioner.targetPath ) + superhuman.server.provisioners.StandaloneProvisioner.HOSTS_FILE);
     		var hosts:TObjectMap<String, Dynamic> = hostsFileMap.get('hosts')[0];
     		var settings:TObjectMap<String, Dynamic> = hosts.get('settings');
     		var userName = settings.get('vagrant_user');
@@ -607,7 +817,6 @@ class Server {
     		#if windows
 			clientCommand = 'start "" "${appData.executablePath}" ${ftpAppCommand}';
 			Sys.command( clientCommand );
-			Logger.info( '${this}: ' + '[Execute: ${clientCommand}]' );
     		#else
 			var ftpExecutor = new Executor(clientCommand, [ftpAppCommand]);
     			ftpExecutor.execute();
@@ -616,12 +825,63 @@ class Server {
     
     public function saveData() {
         try {
-			
-        	 	var s = Json.stringify( getData() );
-            File.saveContent( Path.addTrailingSlash( this._serverDir ) + _CONFIG_FILE, s );
+            // Check if this is a custom provisioner
+            var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                      this.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                      this.provisioner.type != ProvisionerType.Default);
+            
+            // For custom provisioners, we need to ensure there's no duplication of values
+            if (isCustomProvisioner && this._customProperties != null) {
+                
+                // If dynamicCustomProperties exists, remove any duplicate properties at root level
+                if (Reflect.hasField(this._customProperties, "dynamicCustomProperties")) {
+                    var dynamicProps = Reflect.field(this._customProperties, "dynamicCustomProperties");
+                    if (dynamicProps != null) {
+                        // Get all fields in dynamicCustomProperties
+                        var fieldNames = Reflect.fields(dynamicProps);
+                        
+                        // Check for each field if it also exists at the root level
+                        for (fieldName in fieldNames) {
+                            if (Reflect.hasField(this._customProperties, fieldName)) {
+                                // Remove the duplicate field from root level
+                                Reflect.deleteField(this._customProperties, fieldName);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Get the server data with customProperties included
+            var data = getData();
+            
+            // Ensure type consistency between customProperties and provisioner type
+            if (data.customProperties != null && 
+                Reflect.hasField(data.customProperties, "provisionerDefinition") &&
+                Reflect.hasField(Reflect.field(data.customProperties, "provisionerDefinition"), "data")) {
+                
+                var provDef = Reflect.field(data.customProperties, "provisionerDefinition");
+                var provData = Reflect.field(provDef, "data");
+                
+                // Ensure the provisionerDefinition.data.type matches the top-level provisioner.type
+                if (data.provisioner != null && provData != null) {
+                    if (Std.string(Reflect.field(provData, "type")) != Std.string(data.provisioner.type)) {
+                        Reflect.setField(provData, "type", data.provisioner.type);
+                    }
+                }
+            }
+            
+            // Check if customProperties exists and has dynamic custom properties
+            if (this._customProperties != null) {
+                var hasCustomProps = Reflect.hasField(this._customProperties, "dynamicCustomProperties");
+                var hasAdvancedProps = Reflect.hasField(this._customProperties, "dynamicAdvancedCustomProperties");
+            }
+            
+            var s = Json.stringify(data);
+            File.saveContent(Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE, s);
 
-        } catch ( e ) {};
-
+        } catch (e) {
+            Logger.error('${this}: Error saving server data: ${e}');
+        };
     }
 
     public function start( provision:Bool = false ) {
@@ -631,6 +891,9 @@ class Server {
 
         // Clean up Vagrant's cache before starting to handle cases where the VM was deleted outside the application
         Vagrant.getInstance().pruneGlobalStatus();
+
+        // This ensures we don't try to recreate the VM with an old/invalid ID
+        this.combinedVirtualMachine.value.vagrantMachine.vagrantId = null;
 
         _forceVagrantProvisioning = provision;
         this.status.value = ServerStatus.Initializing;
@@ -647,28 +910,86 @@ class Server {
     }
 
     public function updateProvisioner( data:ProvisionerData ):Bool {
+        // Capture the original version string for preservation
+        var versionStr = null;
+        if (data != null && data.version != null) {
+            versionStr = data.version.toString();
+        } else {
+            Logger.warning('${this}: Updating provisioner with null or invalid version');
+            return false;
+        }
 
-        if ( this._provisioner.version == data.version ) return false;
-
-        var vcd = ProvisionerManager.getProvisionerDefinition( data.type, data.version );
-        var newRoot:String = vcd.root;
-        this._provisioner.reinitialize( newRoot );
-        _propertyChanged( this._provisioner );
-
-        return true;
-
+        // Force provisioner update even if the version appears the same
+        var vcd = ProvisionerManager.getProvisionerDefinition(data.type, data.version);
+        
+        if (vcd != null) {
+            var newRoot:String = vcd.root;
+            this._provisioner.reinitialize(newRoot);
+            
+            // STEP 1: Update serverProvisionerId - this is the single source of truth for version
+            if (this._serverProvisionerId != null) {
+                this._serverProvisionerId.value = versionStr;
+            }
+            
+            // STEP 2: Update the internal _version field which is used by the data getter
+            if (Reflect.hasField(this._provisioner, "_version")) {
+                try {
+                    Reflect.setField(this._provisioner, "_version", data.version);
+                } catch (e) {
+                    Logger.warning('${this}: Could not update provisioner._version directly: ${e}');
+                }
+            }
+            
+            // STEP 3: Initialize custom properties if needed
+            if (this._customProperties == null) {
+                this._customProperties = {};
+            }
+            
+            // STEP 4: Store the provisioner definition in customProperties
+            Reflect.setField(this._customProperties, "provisionerDefinition", vcd);
+            
+            // STEP 5: For custom provisioners, ensure we update any related custom properties
+            var isCustomProvisioner = (data.type != ProvisionerType.StandaloneProvisioner && 
+                                      data.type != ProvisionerType.AdditionalProvisioner);
+            
+            if (isCustomProvisioner) {
+                // Initialize dynamicCustomProperties if it doesn't exist
+                if (!Reflect.hasField(this._customProperties, "dynamicCustomProperties")) {
+                    Reflect.setField(this._customProperties, "dynamicCustomProperties", {});
+                }
+                
+                // Store version information in dynamicCustomProperties for UI components to access
+                var dynamicProps = Reflect.field(this._customProperties, "dynamicCustomProperties");
+                Reflect.setField(dynamicProps, "provisionerVersion", versionStr);
+            }
+            
+            // Trigger update notification
+            _propertyChanged(this._provisioner);
+            
+            // Save the updated data immediately
+            this.saveData();
+            
+            return true;
+        } else {
+            Logger.warning('${this}: Could not find provisioner definition for type ${data.type}, version ${versionStr}');
+            return false;
+        }
     }
 
     function _prepareFiles() {
-
-        _provisioner.copyFiles(_prepareFilesComplete);
-
+        // The provisioner files were already copied during server initialization when Save was clicked
+        // Skip directly to installer files preparation and continue the startup process
+        
+        // Just verify essential files exist and regenerate if missing
+        if (!_provisioner.hostFileExists) {
+            _provisioner.saveHostsFile();
+        }
+        
+        // Proceed directly to the installer file preparation
+        _prepareFilesComplete();
     }
 
     function _prepareFilesComplete() {
-
-        Logger.info( '${this}: Configuration files copied to ${this._serverDir}' );
-        Logger.info( '${this}: Copying installer files to ${this._serverDir}/installers' );
 
         var paths:Array<PathPair> = [];
 
@@ -707,15 +1028,12 @@ class Server {
 
         }
 
-        Logger.info( '${this}: Installer and Fixpack path pairs: ${paths}' );
-
         _provisioner.copyInstallers( paths, _batchCopyComplete );
 
     }
 
     function _batchCopyComplete() {
 
-        Logger.info( '${this}: Setting working directory to ${_serverDir}' );
         if (console != null) {
         		console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.setworkingdirectory', _serverDir ) );
 		}
@@ -725,7 +1043,7 @@ class Server {
         if ( !_provisioner.hostFileExists ) _provisioner.saveHostsFile();
 
         if ( console != null ) {
-            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( superhuman.server.provisioners.DemoTasks.HOSTS_FILE ) ) );
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', _provisioner.getFileContentFromTargetDirectory( superhuman.server.provisioners.StandaloneProvisioner.HOSTS_FILE ) ) );
             console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.virtualboxmachine', Std.string( this._combinedVirtualMachine.value.virtualBoxMachine ) ) );
         }
 
@@ -739,24 +1057,109 @@ class Server {
 
     }
 
+    /**
+     * Marks this server as provisional, meaning it's newly created and not yet saved/configured.
+     * Provisional servers are removed from the system if the user cancels configuration.
+     */
+    public function markAsProvisional() {
+        this._provisional = true;
+    }
+    
     public function saveHostsFile() {
-
-        if ( isValid() ) 
-        {
-            cast(this.provisioner, DemoTasks).saveHostsFile();
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (this.provisioner.data.type != ProvisionerType.StandaloneProvisioner && 
+                                  this.provisioner.data.type != ProvisionerType.AdditionalProvisioner);
+                                  
+        // Perform validation
+        var isValid = this.isValid();
+        if (!isValid) {
+            Logger.warning('${this}: Server validation failed, cannot save Hosts.yml file');
+            
+            if (console != null) {
+                console.appendText("Server validation failed. Please check the following:", true);
+                
+                // Log specific validation issues
+                if (!Vagrant.getInstance().exists)
+                    console.appendText("- Vagrant is not installed", true);
+                    
+                if (!VirtualBox.getInstance().exists)
+                    console.appendText("- VirtualBox is not installed", true);
+                    
+                if (!this.hostname.isValid())
+                    console.appendText("- Invalid hostname", true);
+                    
+                // Only show organization validation for standard provisioners
+                if (!isCustomProvisioner && !this.organization.isValid())
+                    console.appendText("- Invalid organization", true);
+                    
+                if (this.memory.value < 4)
+                    console.appendText("- Memory allocation less than 4GB", true);
+                    
+                if (this.numCPUs.value < 1)
+                    console.appendText("- CPU count insufficient", true);
+                    
+                var isNetworkValid = this.dhcp4.value || (
+                    this.networkBridge.isValid() &&
+                    this.networkAddress.isValid() &&
+                    this.networkGateway.isValid() &&
+                    this.networkNetmask.isValid() &&
+                    this.nameServer1.isValid() &&
+                    this.nameServer2.isValid()
+                );
+                
+                if (!isNetworkValid)
+                    console.appendText("- Network configuration invalid", true);
+                    
+                // Only show SafeID validation for standard provisioners
+                if (!isCustomProvisioner && !this.safeIdExists())
+                    console.appendText("- SafeID file not found", true);
+                    
+                if (!this.areRolesValid())
+                    console.appendText("- Role configuration invalid", true);
+            }
+            
+            return;
+        }
+        
+        // If valid, save the hosts file
+        if (isCustomProvisioner) {
+            cast(this.provisioner, CustomProvisioner).saveHostsFile();
+        } else {
+            cast(this.provisioner, StandaloneProvisioner).saveHostsFile();
         }
     }
 
     function _actionChanged( prop:Property<ServerAction> ) { }
 
     function _propertyChanged<T>( property:T ) {
-
-        if ( !_created ) return;
-
-        _setServerStatus();
-
-        for ( f in _onUpdate ) f( this, true );
-
+        try {
+            // Early exit if server isn't created yet
+            if (!_created) return;
+            
+            // Always handle status update safely
+            try {
+                _setServerStatus();
+            } catch (e) {
+                Logger.error('${this}: Error updating server status in property change: ${e}');
+            }
+            
+            // Handle update callbacks safely
+            if (_onUpdate != null) {
+                for (f in _onUpdate) {
+                    try {
+                        f(this, true);
+                    } catch (e) {
+                        Logger.error('${this}: Error in update callback: ${e}');
+                        // Continue with other callbacks despite errors
+                    }
+                }
+            } else {
+                Logger.warning('${this}: Cannot notify updates - _onUpdate is null');
+            }
+        } catch (e) {
+            // Global error handler
+            Logger.error('${this}: Unhandled exception in _propertyChanged: ${e}');
+        }
     }
 
     public function safeIdExists():Bool {
@@ -768,23 +1171,301 @@ class Server {
     }
 
     public function areRolesValid():Bool {
+        // Check if this is a custom provisioner by looking specifically at the provisioner type
+        // This is the critical check to ensure we don't mix behavior between provisioner types
+        var provisionerType = _provisioner != null && _provisioner.data != null ? _provisioner.data.type : null;
+        var isCustomProvisioner = (provisionerType != null && 
+                                  provisionerType != ProvisionerType.StandaloneProvisioner && 
+                                  provisionerType != ProvisionerType.AdditionalProvisioner &&
+                                  provisionerType != ProvisionerType.Default);
+        
+        Logger.verbose('${this}: Validating roles for server. Provisioner type: ${provisionerType}, Custom provisioner: ${isCustomProvisioner}');
+        
+        // For custom provisioners only, check if the roles have been processed
+        if (isCustomProvisioner) {
+            // Check for the flag set by RolePage.buttonCloseTriggered
+            var rolesProcessed = false;
+            
+            if (_customProperties != null) {
+                // Check for the rolesProcessed flag that's set when the user visits and closes the roles page
+                if (Reflect.hasField(_customProperties, "rolesProcessed")) {
+                    rolesProcessed = Reflect.field(_customProperties, "rolesProcessed") == true;
+                }
+            }
+            
+            // If the user hasn't visited and closed the roles page, return false to force them to visit
+            if (!rolesProcessed) {
+                return false;
+            }
+            
+            // Even if the roles page was visited, we still need to validate that at least one role is enabled
+            // This ensures users don't just visit the page without making necessary changes
+            
+            var hasEnabledRole = false;
+            var validationMessages = new Array<String>();
+            
+            // Get custom role definitions from provisioner metadata if available
+            var customRoleMap = new Map<String, Bool>();
+            var hasMetadata = false;
+            
+            // Look for metadata in customProperties
+            if (_customProperties != null && Reflect.hasField(_customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(_customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "metadata")) {
+                    var metadata = Reflect.field(provDef, "metadata");
+                    if (metadata != null && Reflect.hasField(metadata, "roles")) {
+                        var roles = Reflect.field(metadata, "roles");
+                        if (roles != null) {
+                            hasMetadata = true;
+                            // Cast roles to Array<Dynamic> to avoid "can't iterate on Dynamic" error
+                            var rolesArray:Array<Dynamic> = cast roles;
+                            
+                            // Build a map of role names to installer requirements
+                            for (role in rolesArray) {
+                                if (role != null && Reflect.hasField(role, "name")) {
+                                    var requiresInstaller = false;
+                                    
+                                    // Check if role requires installer
+                                    if (Reflect.hasField(role, "installers")) {
+                                        var installers = Reflect.field(role, "installers");
+                                        if (installers != null && Reflect.hasField(installers, "installer")) {
+                                            requiresInstaller = Reflect.field(installers, "installer");
+                                        }
+                                    }
+                                    
+                                    customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If we have no metadata roles but this is a custom provisioner, 
+            // assume all roles are valid with no installer requirements
+            var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
 
-        var valid:Bool = true;
-
-        for ( r in this._roles.value ) {
-
-            if ( r.enabled ) {
-
-                if ( r.files.installer == null || r.files.installer == "null" || !FileSystem.exists( r.files.installer ) ) 
-                {
-                    valid = false;
-                    break;
+            // Now validate each role
+            for (r in this._roles.value) {
+                if (r.enabled) {
+                    hasEnabledRole = true;
+                    
+                    // If we have no metadata or the role is in the metadata, it's valid
+                    var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
+                    
+                    if (!isValidRole) {
+                        Logger.warning('${this}: Role ${r.value} is not defined in provisioner metadata, skipping installer check');
+                        continue;
+                    }
+                    
+                    // Check if this is a custom role from the metadata that requires an installer
+                    var requiresInstaller = !noValidMetadataRoles && customRoleMap.exists(r.value) ? 
+                                           customRoleMap.get(r.value) : false;
+                    
+                    // If this role has showInstaller=false explicitly set, don't check installer regardless
+                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
+                        requiresInstaller = false;
+                    }
+                    
+                    // Only check installer file if it's required for this role
+                    if (requiresInstaller) {
+                        if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
+                            !FileSystem.exists(r.files.installer)) {
+                            
+                            var errorMsg = 'Role ${r.value} is missing required installer file';
+                            Logger.warning('${this}: ${errorMsg}');
+                            validationMessages.push(errorMsg);
+                            
+                            if (console != null && validationMessages.length > 0) {
+                                console.appendText("Role validation failed:", true);
+                                for (msg in validationMessages) {
+                                    console.appendText("- " + msg, true);
+                                }
+                            }
+                            
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            // Ensure at least one role is enabled
+            if (!hasEnabledRole) {
+                var errorMsg = 'Custom provisioner requires at least one enabled role';
+                Logger.warning('${this}: ${errorMsg}');
+                validationMessages.push(errorMsg);
+                
+                if (console != null && validationMessages.length > 0) {
+                    console.appendText("Role validation failed:", true);
+                    for (msg in validationMessages) {
+                        console.appendText("- " + msg, true);
+                    }
+                }
+                
+                return false;
+            }
+            
+            // If we get here, validation passed
+            return true;
+            
+            // Now proceed with standard custom provisioner role validation
+            var hasEnabledRole = false;
+            var validationMessages = new Array<String>();
+            
+            // Get custom role definitions from provisioner metadata if available
+            var customRoleMap = new Map<String, Bool>();
+            var hasMetadata = false;
+            
+            // Only check for metadata for custom provisioner types
+            if (provisionerType != ProvisionerType.StandaloneProvisioner && 
+                provisionerType != ProvisionerType.AdditionalProvisioner &&
+                _customProperties != null && 
+                Reflect.hasField(_customProperties, "provisionerDefinition")) {
+                
+                var provDef = Reflect.field(_customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "metadata")) {
+                    var metadata = Reflect.field(provDef, "metadata");
+                    if (metadata != null && Reflect.hasField(metadata, "roles")) {
+                        var roles = Reflect.field(metadata, "roles");
+                        if (roles != null) {
+                            hasMetadata = true;
+                            // Cast roles to Array<Dynamic> to avoid "can't iterate on Dynamic" error
+                            var rolesArray:Array<Dynamic> = cast roles;
+                            
+                            // Build a map of role names to installer requirements
+                            for (role in rolesArray) {
+                                if (role != null && Reflect.hasField(role, "name")) {
+                                    var requiresInstaller = false;
+                                    
+                                    // Check if role requires installer
+                                    if (Reflect.hasField(role, "installers")) {
+                                        var installers = Reflect.field(role, "installers");
+                                        if (installers != null && Reflect.hasField(installers, "installer")) {
+                                            requiresInstaller = Reflect.field(installers, "installer");
+                                        }
+                                    }
+                                    
+                                    customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // If we have no metadata roles but this is a custom provisioner, 
+            // assume all roles are valid with no installer requirements
+            var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
+            if (noValidMetadataRoles) {
+                if (!hasMetadata) {
+                    Logger.warning('${this}: Warning: No metadata found for custom provisioner');
+                    if (console != null) {
+                        console.appendText("Warning: No metadata found for custom provisioner. This may affect role validation.", true);
+                    }
+                }
+            }
+            
+            // For custom provisioners with no enabled roles, we need at least one
+            for (r in this._roles.value) {
+                if (r.enabled) {
+                    hasEnabledRole = true;
+                    
+                    // If we have no metadata or the role is in the metadata, it's valid
+                    var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
+                    
+                    if (!isValidRole) {
+                        Logger.warning('${this}: Role ${r.value} is not defined in provisioner metadata, skipping installer check');
+                        validationMessages.push('Role ${r.value} is not defined in provisioner metadata');
+                        continue;
+                    }
+                    
+                    // Check if this is a custom role from the metadata that requires an installer
+                    var requiresInstaller = !noValidMetadataRoles && customRoleMap.exists(r.value) ? 
+                                           customRoleMap.get(r.value) : false;
+                    
+                    // If this role has showInstaller=false, don't check installer regardless
+                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
+                        requiresInstaller = false;
+                    }
+                    
+                    // Only check installer file if it's required for this role
+                    if (requiresInstaller) {
+                        if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
+                            !FileSystem.exists(r.files.installer)) {
+                            
+                            var errorMsg = 'Role ${r.value} is missing required installer file';
+                            Logger.warning('${this}: ${errorMsg}');
+                            validationMessages.push(errorMsg);
+                            
+                            if (console != null && validationMessages.length > 0) {
+                                console.appendText("Role validation failed:", true);
+                                for (msg in validationMessages) {
+                                    console.appendText("- " + msg, true);
+                                }
+                            }
+                            
+                            return false;
+                        }
+                    }
+                }
+            }
+            
+            if (!hasEnabledRole) {
+                var errorMsg = 'Custom provisioner requires at least one enabled role';
+                Logger.warning('${this}: ${errorMsg}');
+                validationMessages.push(errorMsg);
+                
+                if (console != null && validationMessages.length > 0) {
+                    console.appendText("Role validation failed:", true);
+                    for (msg in validationMessages) {
+                        console.appendText("- " + msg, true);
+                    }
+                }
+                
+                return false;
+            }
+            
+            return hasEnabledRole;
+        }
+        
+        // Original logic for built-in provisioners
+        var valid:Bool = false;
+        var validationMessages = new Array<String>();
+        
+        for (r in this._roles.value) {
+            if (r.enabled) {
+                valid = true;
+                if (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer)) {
+                    var errorMsg = 'Standard role ${r.value} is missing required installer file';
+                    Logger.warning('${this}: ${errorMsg}');
+                    validationMessages.push(errorMsg);
+                    
+                    if (console != null && validationMessages.length > 0) {
+                        console.appendText("Role validation failed:", true);
+                        for (msg in validationMessages) {
+                            console.appendText("- " + msg, true);
+                        }
+                    }
+                    
+                    return false;
                 }
             }
         }
-
+        
+        if (!valid) {
+            var errorMsg = 'No enabled roles found for standard provisioner';
+            Logger.warning('${this}: ${errorMsg}');
+            validationMessages.push(errorMsg);
+            
+            if (console != null && validationMessages.length > 0) {
+                console.appendText("Role validation failed:", true);
+                for (msg in validationMessages) {
+                    console.appendText("- " + msg, true);
+                }
+            }
+        }
+        
         return valid;
-
     }
 
     function _getVagrantName():String {
@@ -798,13 +1479,9 @@ class Server {
         var s = _provisioner.webAddress;
 
         if ( s == null ) {
-
-            Logger.info( '${this}: The web address file has invalid content or non-existent' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressinvalid' ) );
 
         } else {
-
-            Logger.info( '${this}: Web address file content: ${s}' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.webaddressvalue', s ) );
 
         }
@@ -842,7 +1519,6 @@ class Server {
 
         Vagrant.getInstance().onProvision.remove( _onVagrantProvision );
 
-        Logger.info( '${this}: _onVagrantProvision' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
 
@@ -851,7 +1527,6 @@ class Server {
     function _vagrantProvisionStandardOutputData( executor:AbstractExecutor, data:String ) {
 
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant provision: ${data}' );
 
     }
 
@@ -889,18 +1564,12 @@ class Server {
         if ( machine.serverId != this._id ) return;
 
         Vagrant.getInstance().onRSync.remove( _onVagrantRSync );
-
-        Logger.info( '${this}: _onVagrantRSync' );
         this._busy.value = false;
         this._status.value = ServerStatus.Running( false );
-
     }
 
     function _vagrantRSyncStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant rsync: ${data}' );
-
     }
 
     function _vagrantRSyncStandardErrorData( executor:AbstractExecutor, data:String ) {
@@ -915,9 +1584,69 @@ class Server {
     // Vagrant stop
     //
 
+    // Flag to indicate if provisioning was canceled
+    var _provisioningCanceled:Bool = false;
+    
     public function stop( forced:Bool = false ) {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
+
+        // If we're in the middle of provisioning, use a different approach
+        if (_vagrantUpExecutor != null && _vagrantUpExecutor.running) {
+            if (console != null) console.appendText("Stopping provisioning process...", true);
+            
+            // Mark that we're canceling provisioning
+            _provisioningCanceled = true;
+            
+            // Set current action and status
+            this._busy.value = true;
+            this.status.value = ServerStatus.Stopping(true); // true indicates forced
+            this._currentAction = ServerAction.Stop(false);
+            
+            // Clean up timers now
+            _stopVagrantUpElapsedTimer();
+            
+            // Try to forcefully stop the VM using VirtualBox directly
+            if (this.virtualBoxId != null) {
+                if (console != null) console.appendText("Using VirtualBox to forcefully power off the VM...", true);
+                
+                // Execute the VirtualBox poweroff command
+                try {
+                    // Register for the poweroff callback before executing
+                    if (!Lambda.has(VirtualBox.getInstance().onPowerOffVM, _onProvisioningPowerOffVM)) {
+                        VirtualBox.getInstance().onPowerOffVM.add(_onProvisioningPowerOffVM);
+                    }
+                    
+                    var powerOffExecutor = VirtualBox.getInstance().getPowerOffVM(
+                        this._combinedVirtualMachine.value.virtualBoxMachine
+                    );
+                    powerOffExecutor.execute(this._serverDir);
+                    
+                    if (console != null) console.appendText("VirtualBox poweroff command issued successfully", true);
+                } catch (e:Dynamic) {
+                    Logger.error('${this}: Error executing VirtualBox poweroff: ${e}');
+                    if (console != null) console.appendText('Error executing VirtualBox poweroff: ${e}', true);
+                    
+                    // If poweroff failed, manually set to Stopped with error state
+                    this._status.value = ServerStatus.Stopped(true);
+                }
+            } else {
+                Logger.warning('${this}: Cannot power off VM - virtualBoxId is null');
+                if (console != null) console.appendText("Cannot power off VM - machine ID is not available yet", true);
+                
+                // Even if VM ID is not available, set to Stopped with error state
+                this._status.value = ServerStatus.Stopped(true);
+            }
+            
+            // Also try to stop the Vagrant process directly
+            try {
+                _vagrantUpExecutor.stop(true);
+            } catch (e:Dynamic) {
+                Logger.error('${this}: Error stopping Vagrant process: ${e}');
+            }
+            
+            return; // Skip the regular vagrant halt process
+        }
 
         this._busy.value = true;
         this.status.value = ServerStatus.Stopping( forced );
@@ -941,25 +1670,36 @@ class Server {
         Vagrant.getInstance().onHalt.remove( _onVagrantHalt );
 
         if ( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 ) {
-
-            Logger.error( '${this}: Server cannot be stopped' );
-
-        } else {
-
-            Logger.info( '${this}: Server stopped' );
-
+            Logger.error( '${this}: Server cannot be stopped normally, will try VirtualBox direct method' );
+            
+            // Try to forcefully stop the VM using VirtualBox directly
+            if (this.virtualBoxId != null) {
+                if (console != null) console.appendText("Vagrant halt failed. Using VirtualBox to forcefully power off the VM...", true);
+                
+                // Execute the VirtualBox poweroff command
+                try {
+                    var powerOffExecutor = VirtualBox.getInstance().getPowerOffVM(
+                        this._combinedVirtualMachine.value.virtualBoxMachine
+                    );
+                    powerOffExecutor.execute(this._serverDir);
+                    
+                    if (console != null) console.appendText("VirtualBox poweroff command issued successfully", true);
+                } catch (e:Dynamic) {
+                    Logger.error('${this}: Error executing VirtualBox poweroff: ${e}');
+                    if (console != null) console.appendText('Error executing VirtualBox poweroff: ${e}', true);
+                }
+            } else {
+                Logger.warning('${this}: Cannot power off VM - virtualBoxId is null');
+                if (console != null) console.appendText("Cannot power off VM - machine ID is not available", true);
+            }
         }
 
         this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
         refreshVirtualBoxInfo();
-
     }
 
     function _vagrantHaltStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant halt: ${data}' );
-
     }
 
     function _vagrantHaltStandardErrorData( executor:AbstractExecutor, data:String ) {
@@ -1005,8 +1745,6 @@ class Server {
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspendederror' ), true );
 
         } else {
-
-            Logger.info( '${this}: Server suspended' );
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.suspended' ) );
 
         }
@@ -1025,7 +1763,10 @@ class Server {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroy' ) );
 
         this._busy.value = true;
-        this._status.value = ServerStatus.Destroying( this._status.value == ServerStatus.Aborted );
+        // Always set unregisterVM (second parameter) to true if:
+        // 1. Current status is Aborted OR
+        // 2. VM exists in VirtualBox
+        this._status.value = ServerStatus.Destroying( this._status.value == ServerStatus.Aborted || this.vmExistsInVirtualBox() );
 
         _provisioner.deleteWebAddressFile();
 
@@ -1040,37 +1781,123 @@ class Server {
     }
 
     function _vagrantDestroyStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null && !SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging ) console.appendText( data );
-        Logger.info( '${this}: Vagrant destroy: ${data}' );
-
     }
 
     function _vagrantDestroyStandardErrorData( executor:AbstractExecutor, data:String ) {
-
         if ( console != null ) console.appendText( data, true );
         Logger.error( '${this}: Vagrant destroy error: ${data}' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyerror' ), true );
-
     }
 
     function _onVagrantDestroy( machine:VagrantMachine ) {
+        try {
+            // Log that we're starting the destroy handler with machine info
+            var machineInfo = machine != null ? 
+                (machine.serverId != null ? 'machine with serverId=${machine.serverId}' : 'machine with null serverId') : 
+                'null machine';
 
-        if ( machine.serverId != this._id ) return;
+            // Validate machine parameter first to avoid null reference
+            if (machine == null) {
+                Logger.warning('${this}: Vagrant destroy callback received null machine');
+                
+                // Handle this case by manually updating status and VM info
+                try {
+                    // Ensure the status is safe
+                    this._status.value = ServerStatus.Unknown;
+                    this._busy.value = false;
+                    
+                    // Try to refresh VirtualBox info to recover
+                    if (this._combinedVirtualMachine != null && 
+                        this._combinedVirtualMachine.value != null && 
+                        this._combinedVirtualMachine.value.virtualBoxMachine != null) {
+                        refreshVirtualBoxInfo();
+                    }
+                } catch (e) {
+                    Logger.error('${this}: Failed to recover from null machine: ${e}');
+                }
+                return;
+            }
 
-        Vagrant.getInstance().onDestroy.remove( _onVagrantDestroy );
+            // Validate serverId match
+            if (machine.serverId != this._id) {
+                Logger.warning('${this}: Vagrant destroy callback for wrong server: ${machine.serverId} vs ${this._id}');
+                return;
+            }
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ) );
+            // First, safely remove the callback to prevent multiple triggers
+            try {
+                var vagrant = Vagrant.getInstance();
+                if (vagrant != null && vagrant.onDestroy != null) {
+                    vagrant.onDestroy.remove(_onVagrantDestroy);
+                }
+            } catch (e) {
+                Logger.warning('${this}: Error removing destroy callback: ${e}');
+            }
 
-        Logger.info( '${this}: destroyed' );
+            // Safe console access
+            if (console != null) {
+                try {
+                    console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.destroyed'));
+                } catch (e) {
+                    Logger.error('${this}: Error accessing console: ${e}');
+                }
+            }
 
-        this._provisioner.deleteProvisioningProofFile();
+            // Safely delete provisioning proof file
+            if (_provisioner != null) {
+                try {
+                    _provisioner.deleteProvisioningProofFile();
+                } catch (e) {
+                    Logger.error('${this}: Error deleting provisioning proof file: ${e}');
+                }
+            }
 
-        if ( this.status.value.match( ServerStatus.Destroying( true ) ) )
-            _unregisterVM()
-        else
-            refreshVirtualBoxInfo();
-
+            // Update server state based on current status - with safe null checks
+            try {
+                var curStatus = this.status != null ? this.status.value : null;
+                var isDestroying = curStatus != null && curStatus.match(ServerStatus.Destroying(true));
+                
+                if (isDestroying) {
+                    try {
+                        _unregisterVM();
+                    } catch (e) {
+                        Logger.error('${this}: Error unregistering VM: ${e}');
+                        try {
+                            // Force state update even if unregister fails
+                            this._status.value = ServerStatus.Unknown;
+                            this._busy.value = false;
+                            refreshVirtualBoxInfo();
+                        } catch (e2) {
+                            Logger.error('${this}: Critical error during recovery: ${e2}');
+                        }
+                    }
+                } else {
+                    refreshVirtualBoxInfo();
+                }
+            } catch (e) {
+                Logger.error('${this}: Error updating server state after destroy: ${e}');
+                
+                // Last resort recovery
+                try {
+                    this._status.value = ServerStatus.Unknown;
+                    this._busy.value = false;
+                } catch (e2) {
+                    Logger.error('${this}: Critical failure in recovery: ${e2}');
+                }
+            }
+        } catch (e) {
+            // Global try/catch for the entire method
+            Logger.error('${this}: Unhandled exception in _onVagrantDestroy: ${e}');
+            try {
+                // Force a final status update to prevent UI from hanging
+                this._status.value = ServerStatus.Unknown;
+                this._busy.value = false;
+            } catch (e2) {
+                // Nothing more we can do
+                Logger.error('${this}: Fatal error in recovery: ${e2}');
+            }
+        }
     }
 
     function _unregisterVM() {
@@ -1087,7 +1914,6 @@ class Server {
 
         if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
 
-        Logger.info('${this}: unregistered VM Id ' + machine.virtualBoxId);
         VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
 
         refreshVirtualBoxInfo();
@@ -1108,10 +1934,127 @@ class Server {
         _provisionedBeforeStart = this._provisioner.provisioned;
         this.status.value = ServerStatus.Start( this._provisioner.provisioned );
         //_provisioner.deleteWebAddressFile();
-        _provisioner.onProvisioningFileChanged.add( _onDemoTasksProvisioningFileChanged );
+        _provisioner.onProvisioningFileChanged.add( _onStandaloneProvisionerProvisioningFileChanged );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstart', '(provision:${_forceVagrantProvisioning})' ) );
 
+        // Check for the plugin first, then proceed to vagrant up
+        _checkAndInstallVagrantPlugin();
+    }
+    
+    /**
+     * Check if the vagrant-scp-sync plugin is installed, and install it if needed
+     */
+    function _checkAndInstallVagrantPlugin() {
+        if (console != null) console.appendText("Checking for vagrant-scp-sync plugin...");
+        
+        try {
+            // First check if the plugin is already installed
+            var pluginOutput = "";
+            var checkExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "list"]);
+            
+            // Collect the output as it comes
+            checkExecutor.onStdOut.add((executor:AbstractExecutor, data:String) -> {
+                pluginOutput += data;
+                if (console != null) console.appendText(data);
+            });
+            
+            checkExecutor.onStop.add((executor:AbstractExecutor) -> {
+                if (pluginOutput.indexOf("vagrant-scp-sync") >= 0) {
+                    // Plugin is already installed, proceed directly to vagrant up
+                    if (console != null) console.appendText("vagrant-scp-sync plugin already installed");
+                    _executeVagrantUp();
+                } else {
+                    // Plugin not found, install it
+                    _safeInstallVagrantPlugin();
+                }
+            });
+            
+            checkExecutor.execute();
+        } catch (e:Dynamic) {
+            // If anything goes wrong with the check, log it and continue with vagrant up
+            Logger.error('${this}: Error checking vagrant plugin: ${e}');
+            if (console != null) console.appendText('Error checking vagrant plugin: ${e}', true);
+            // Continue with vagrant up anyway
+            _executeVagrantUp();
+        }
+    }
+    
+    /**
+     * Install the vagrant-scp-sync plugin before running vagrant up for the first time,
+     * with additional error handling and fallback
+     */
+    function _safeInstallVagrantPlugin() {
+        if (console != null) console.appendText("Installing vagrant-scp-sync plugin...");
+        
+        try {
+            // Create a custom executor for the plugin installation command
+            var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", "vagrant-scp-sync"]);
+            
+            // Add event handlers with explicit null checks
+            if (pluginExecutor != null) {
+                if (pluginExecutor.onStart != null) 
+                    pluginExecutor.onStart.add(_pluginInstallStarted);
+                if (pluginExecutor.onStop != null) 
+                    pluginExecutor.onStop.add(_pluginInstallStopped);
+                if (pluginExecutor.onStdOut != null) 
+                    pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
+                if (pluginExecutor.onStdErr != null) 
+                    pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
+                
+                // Execute only if the executor was properly initialized
+                try {
+                    pluginExecutor.execute();
+                } catch (execError:Dynamic) {
+                    Logger.error('${this}: Error executing plugin installation: ${execError}');
+                    if (console != null) console.appendText('Error executing plugin installation: ${execError}', true);
+                    _executeVagrantUp();
+                }
+            } else {
+                Logger.error('${this}: Failed to create plugin installation executor');
+                if (console != null) console.appendText('Failed to create plugin installation executor', true);
+                _executeVagrantUp();
+            }
+        } catch (e:Dynamic) {
+            // If there's any exception, log it and continue with vagrant up
+            Logger.error('${this}: Exception during plugin installation setup: ${e}');
+            if (console != null) console.appendText('Exception during plugin installation setup: ${e}', true);
+            // Continue with vagrant up even if plugin installation fails
+            _executeVagrantUp();
+        }
+    }
+    
+    function _pluginInstallStarted(executor:AbstractExecutor) {
+        if (console != null) console.appendText("Vagrant plugin installation started");
+    }
+    
+    function _pluginInstallStopped(executor:AbstractExecutor) {
+        if (console != null) {
+            if (executor.exitCode == 0) {
+                console.appendText("Vagrant plugin installation completed successfully");
+            } else {
+                console.appendText("Vagrant plugin installation failed with exit code: ${executor.exitCode}", true);
+                console.appendText("Continuing without the plugin - some features may be limited", true);
+            }
+        }
+        
+        // Now proceed with vagrant up, regardless of whether the plugin installation succeeded
+        _executeVagrantUp();
+    }
+    
+    function _pluginInstallStandardOutputData(executor:AbstractExecutor, data:String) {
+        if (console != null) console.appendText(data);
+    }
+    
+    function _pluginInstallStandardErrorData(executor:AbstractExecutor, data:String) {
+        if (console != null) console.appendText(data, true);
+        Logger.error('${this}: Vagrant plugin installation error: ${data}');
+    }
+    
+    /**
+     * Execute the vagrant up command
+     */
+    function _executeVagrantUp() {
         _vagrantUpExecutor = Vagrant.getInstance().getUp( this._combinedVirtualMachine.value.vagrantMachine, _forceVagrantProvisioning, [] )
             .onStart.add( _vagrantUpStarted )
             .onStop.add( _vagrantUpStopped )
@@ -1121,100 +2064,99 @@ class Server {
         _vagrantUpExecutor.execute( _serverDir );
         _vagrantUpElapsedTime = 0;
         _startVagrantUpElapsedTimer();
-
     }
 
     function _vagrantUpStarted( executor:AbstractExecutor ) {
 
-        Logger.info( '${this}: Vagrant up started' );
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstarted' ) );
 
     }
 
     function _vagrantUpStopped( executor:AbstractExecutor ) {
+        
+        // Record if this was stopped due to user cancellation
+        var wasExplicitlyCanceled = _provisioningCanceled;
+        
+        // Always reset the cancellation flag
+        _provisioningCanceled = false;
 
-        if ( executor.exitCode > 0 ) {
-            Logger.error( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
-        } else {
-            Logger.info( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}' );
+        if ( executor.exitCode > 0 || wasExplicitlyCanceled ) {
+            Logger.error( '${this}: Vagrant up stopped with exitcode: ${executor.exitCode}${wasExplicitlyCanceled ? " (manually canceled by user)" : ""}' );
         }
 
         var elapsed = StrTools.timeToFormattedString( _vagrantUpElapsedTime );
-        Logger.info( '${this}: Vagrant up elapsed time: ${elapsed}' );
 
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ), elapsed ), executor.exitCode > 0 );
+        if ( console != null ) {
+            if (wasExplicitlyCanceled) {
+                console.appendText("Provisioning process was canceled by user.", true);
+                console.appendText("You can now destroy the VM if needed.", true);
+            }
+            console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstopped', Std.string( executor.exitCode ), elapsed ), executor.exitCode > 0 );
+        }
 
-        hasExecutionErrors = executor.hasErrors || executor.exitCode > 0;
+        // If it was explicitly canceled or had errors, mark as error state
+        hasExecutionErrors = wasExplicitlyCanceled || executor.hasErrors || executor.exitCode > 0;
         this._currentAction = ServerAction.Start( hasExecutionErrors );
 
+        // Clean up timers just to be sure
+        _stopVagrantUpElapsedTimer();
+        _provisioner.stopFileWatcher();
+
         if ( hasExecutionErrors ) {
-
-            // Vagrant up finished with either exitcode > 0, or an error happened during execution
-
-            if ( keepFailedServersRunning ) {
-
-                // Keeping the failed server running in its current state
-                Logger.info( '${this}: Server start was unsuccessful, keeping the server in its current status' );
+            // Special handling for user cancellation
+            if (wasExplicitlyCanceled) {
+                
+                // Force state to Stopped with errors to show destroy button
+                this._status.value = ServerStatus.Stopped(true);
+                this._busy.value = false;
+                
+                // Skip any auto-cleanup of the VM
+                refreshVirtualBoxInfo();
+            }
+            // Normal handling for non-cancellation errors
+            else if ( keepFailedServersRunning ) {
 
                 // Refreshing VirtualBox info
                 this._currentAction = ServerAction.GetStatus( true );
                 refreshVirtualBoxInfo();
-
             } else {
-
                 // Stop or destroy the server
-
                 if ( _provisionedBeforeStart ) {
-
-                    // The server was provisioned before, so 'vagrant halt' is needed
-                    Logger.info( '${this}: Server start was unsuccessful, stopping server' );
 
                     if ( !Lambda.has( Vagrant.getInstance().onHalt, _onVagrantUpHalt ) )
                         Vagrant.getInstance().onHalt.add( _onVagrantUpHalt );
             
                     this._currentAction = ServerAction.Stop( true );
                     Vagrant.getInstance().getHalt( this._combinedVirtualMachine.value.vagrantMachine, false ).execute( this._serverDir );
-
                 } else {
-
-                    // The server wasn't provisioned before, so 'vagrant destroy' is needed
-                    Logger.info( '${this}: First start was unsuccessful, destroying server' );
-                    //_provisioner.deleteWebAddressFile();
 
                     if ( !Lambda.has( Vagrant.getInstance().onDestroy, _onVagrantUpDestroy ) )
                         Vagrant.getInstance().onDestroy.add( _onVagrantUpDestroy );
 
                     this._currentAction = ServerAction.Destroy( true );
                     Vagrant.getInstance().getDestroy( this._combinedVirtualMachine.value.vagrantMachine, true ).execute( this._serverDir );
-
                 }
-
             }
-
         } else {
-
             // Vagrant up successfully finished without errors
             if ( this._openBrowser.value ) {
-
                 if ( _provisioner != null ) _provisioner.openWelcomePage();
-
             }
 
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );
             refreshVirtualBoxInfo();
-
         }
 
+        // Clean up the executor
+        _vagrantUpExecutor = null;
         executor.dispose();
-
     }
 
     function _vagrantUpStandardOutputData( executor:AbstractExecutor, data:String ) {
      
     		var vagrantLogging:Bool = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
         if ( console != null && !vagrantLogging ) console.appendText( new String( data ) );
-        Logger.info( '${this}: Vagrant up: ${data}' );
         _provisioner.updateTaskProgress( data );
         
     }
@@ -1225,12 +2167,63 @@ class Server {
         Logger.error( '${this}: Vagrant up error: ${data}' );
 
     }
+    
+    /**
+     * Callback for when the VirtualBox poweroff command completes after canceling provisioning
+     */
+    function _onProvisioningPowerOffVM( machine:VirtualBoxMachine ) {
+        // Make sure this is for our machine
+        if (machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId) return;
+        
+        // Remove the callback
+        VirtualBox.getInstance().onPowerOffVM.remove(_onProvisioningPowerOffVM);
+        
+        if (console != null) console.appendText("VM has been successfully powered off.", true);
+        
+        // Force delete the provisioning proof file to ensure it's marked as not provisioned
+        if (_provisioner != null) {
+            _provisioner.deleteProvisioningProofFile();
+            if (console != null) console.appendText("Marking server as corrupt since provisioning was interrupted.", true);
+        }
+        
+        // Keep the server in stopping state until cleanup is complete
+        this._status.value = ServerStatus.Stopping(true); // Keep in stopping state
+        this._busy.value = true; // Keep busy flag on to prevent state changes
+        
+        // Wait for 30 seconds to allow any Ruby provisioning processes to terminate
+        if (console != null) console.appendText("Waiting 30 seconds for provisioning processes to clean up...", true);
+        
+        // Create a timer for the 30-second delay
+        var cleanupTimer = new Timer(30000); // 30 seconds in milliseconds
+        cleanupTimer.run = () -> {
+            // Stop the timer after one execution
+            cleanupTimer.stop();
+            
+            // Delete the provisioning proof file again to be absolutely sure
+            if (_provisioner != null) {
+                _provisioner.deleteProvisioningProofFile();
+            }
+            
+            // Explicitly set state to Stopped with errors to make the destroy button appear
+            if (console != null) console.appendText("Cleanup completed. Setting server to stopped with error state...", true);
+            
+            this._status.value = ServerStatus.Stopped(true);
+            this._busy.value = false;
+            
+            // Wait a brief moment before refreshing the VirtualBox info to ensure UI state has updated
+            Timer.delay(() -> {
+                // Refresh VM info to update the UI
+                refreshVirtualBoxInfo();
+                
+                if (console != null) console.appendText("Server is now in a stopped and corrupt state. You can destroy the VM if needed.", true);
+            }, 500); // Small additional delay to ensure UI state updates first
+        };
+    }
 
     function _onVagrantUpDestroy( machine:VagrantMachine ) {
 
         if ( machine.serverId != this._id ) return;
 
-        Logger.info( '${this}: Vagrant destroy finished after server\'s first start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpDestroy );
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
@@ -1251,7 +2244,6 @@ class Server {
 
         if ( machine.serverId != this._id ) return;
 
-        Logger.info( '${this}: Vagrant halt finished after server start was unsuccessful' );
         Vagrant.getInstance().onDestroy.remove( _onVagrantUpHalt );
 
         //if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.destroyed' ), true );
@@ -1273,7 +2265,6 @@ class Server {
     public function refreshVirtualBoxInfo() {
         if ( _refreshingVirtualBoxVMInfo) return;
 
-        Logger.info( '${this}: Refreshing combined VM ${this._combinedVirtualMachine.value.virtualBoxMachine} and execute at ${this._serverDir}' );
 
         VirtualBox.getInstance().onShowVMInfo.add( _onVirtualBoxShowVMInfo );
         
@@ -1288,23 +2279,19 @@ class Server {
     }
 
     function _virtualMachineStarted( executor:AbstractExecutor ) {
-
         Logger.info( '${this}: Refreshed Virtual Machine started ' + executor.id );
     }
     
     function _virtualMachineStopped( executor:AbstractExecutor ) {
-
         Logger.info( '${this}: Refreshed Virtual Machine stopped ' + executor.id );
     }
     
     function _virtualMachineStandardOutputData( executor:AbstractExecutor, data:String ) {
-
         Logger.info( '${this}: Refreshed Virtual Machine standard output: ${data}');
     }
     
     function _virtualMachineStandardErrorData( executor:AbstractExecutor, data:String ) {
-
-    		Logger.info( '${this}: Refreshed Virtual Machine error: ${data}');
+    	Logger.info( '${this}: Refreshed Virtual Machine error: ${data}');
     }
     
     function _onVirtualBoxShowVMInfo( machine:VirtualBoxMachine ) {
@@ -1371,16 +2358,59 @@ class Server {
         this._status.value = ServerManager.getInstance().getRealStatus( this );
         this._currentAction = ServerAction.None( false );
 
-        this._hostname.locked = this._organization.locked = this._userSafeId.locked = this._roles.locked = this._networkBridge.locked = 
-        this._networkAddress.locked = this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = this._userEmail.locked = this._disableBridgeAdapter.locked =
-            ( this._provisioner != null && this._provisioner.provisioned == true );
-
+        // Determine if this is a custom provisioner
+        var isCustomProvisioner = (this._provisioner != null && 
+                                   this._provisioner.type != null &&
+                                   Std.string(this._provisioner.type) != Std.string(ProvisionerType.StandaloneProvisioner) && 
+                                   Std.string(this._provisioner.type) != Std.string(ProvisionerType.AdditionalProvisioner) && 
+                                   Std.string(this._provisioner.type) != Std.string(ProvisionerType.Default));
+        
+        Logger.verbose('${this}: Setting server status: isCustomProvisioner=${isCustomProvisioner}');
+        
+        // For custom provisioners, only lock hostname and networking fields
+        // Organization and SafeID fields don't apply to custom provisioners
+        if (isCustomProvisioner) {
+            // Fields to lock for custom provisioners when provisioned
+            this._hostname.locked = this._networkBridge.locked = 
+            this._networkAddress.locked = this._networkGateway.locked = 
+            this._networkNetmask.locked = this._dhcp4.locked = 
+            this._disableBridgeAdapter.locked = (this._provisioner != null && this._provisioner.provisioned == true);
+            
+            // Organization and safeID fields should not be locked for custom provisioners
+            this._organization.locked = false;
+            this._userSafeId.locked = false;
+            this._userEmail.locked = false;
+            
+            // Lock roles only if provisioned
+            this._roles.locked = (this._provisioner != null && this._provisioner.provisioned == true);
+        } else {
+            // Standard locking behavior for built-in provisioners
+            this._hostname.locked = this._organization.locked = this._userSafeId.locked = 
+            this._roles.locked = this._networkBridge.locked = this._networkAddress.locked = 
+            this._networkGateway.locked = this._networkNetmask.locked = this._dhcp4.locked = 
+            this._userEmail.locked = this._disableBridgeAdapter.locked = 
+                (this._provisioner != null && this._provisioner.provisioned == true);
+        }
     }
 
     function _serverStatusChanged( property:Property<ServerStatus> ) {
-
-        for ( f in _onStatusUpdate ) f( this, false );
-
+        try {
+            if (_onStatusUpdate == null) {
+                Logger.warning('${this}: Cannot update status - _onStatusUpdate is null');
+                return;
+            }
+            
+            for ( f in _onStatusUpdate ) {
+                try {
+                    f( this, false );
+                } catch (e) {
+                    Logger.error('${this}: Error in status update callback: ${e}');
+                    // Continue with other callbacks despite errors
+                }
+            }
+        } catch (e) {
+            Logger.error('${this}: Unhandled exception in _serverStatusChanged: ${e}');
+        }
     }
 
     public function setServerStatus() {
@@ -1400,7 +2430,7 @@ class Server {
 
     }
 
-    function _onDemoTasksProvisioningFileChanged() {
+    function _onStandaloneProvisionerProvisioningFileChanged() {
 
         if ( _vagrantUpExecutorStopTimer != null ) {
 

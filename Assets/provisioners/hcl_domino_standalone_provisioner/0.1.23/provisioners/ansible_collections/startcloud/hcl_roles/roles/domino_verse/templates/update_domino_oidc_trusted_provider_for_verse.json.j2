@@ -1,0 +1,28 @@
+{
+	"title": "Updating the OIDC Trusted Provider",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 2. Update OIDC Hostnames ---",
+			"databases": [
+				{
+					"action": "update",
+					"filePath": "idpcat.nsf",
+					"documents": [
+						{
+							"action": "update",
+							"search": {
+							   "formula":"Form=\"OIDCProvider\" & OIDCProviderName=\"Domino OIDC Provider\"",
+                                "number":0
+							},
+                            "computeWithForm": true,
+                            "items": {
+                                "OIDCHostname": [{% for hostname in oidc_hostnames_processed_for_verse.split() %}"{{ hostname }}"{% if not loop.last %},{% endif %}{% endfor %}]
+                            }
+						}
+					]
+				}
+			]
+		}
+	]
+}

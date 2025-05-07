@@ -31,6 +31,10 @@
 package superhuman.components;
 
 import genesis.application.components.GenesisFormRow;
+import feathers.controls.ScrollContainer;
+import feathers.layout.VerticalLayoutData;
+import lime.ui.FileDialog;
+import lime.ui.FileDialogType;
 import superhuman.server.SyncMethod;
 import superhuman.components.filesync.FileSyncSetting;
 import superhuman.application.ApplicationData;
@@ -38,6 +42,9 @@ import superhuman.components.applications.ApplicationsList;
 import feathers.data.ArrayCollection;
 import superhuman.components.browsers.BrowsersList;
 import superhuman.browser.BrowserData;
+import superhuman.managers.ProvisionerManager;
+import genesis.application.managers.ToastManager;
+import champaign.core.logging.Logger;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
@@ -45,14 +52,20 @@ import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.VerticalAlign;
+import feathers.layout.VerticalLayout;
 import genesis.application.components.GenesisForm;
 import genesis.application.components.GenesisFormButton;
 import genesis.application.components.GenesisFormCheckBox;
+import genesis.application.components.GenesisFormPupUpListView;
 import genesis.application.components.HLine;
 import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.theme.GenesisApplicationTheme;
+import prominic.sys.applications.oracle.BridgedInterface;
+import prominic.sys.applications.oracle.VirtualBox;
 import superhuman.events.SuperHumanApplicationEvent;
+import superhuman.server.cache.SuperHumanFileCache;
+import superhuman.theme.SuperHumanInstallerTheme;
 
 class SettingsPage extends Page {
 
@@ -79,6 +92,10 @@ class SettingsPage extends Page {
     var _fileSyncSetting:FileSyncSetting;
     var _rowBrowsers:GenesisFormRow;
     var _rowApplications:GenesisFormRow;
+    var _rowProvisioners:GenesisFormRow;
+    var _buttonImportProvisioner:GenesisFormButton;
+    var _rowNetworkInterface:GenesisFormRow;
+    var _dropdownNetworkInterface:GenesisFormPupUpListView;
 
     var _browsersList:BrowsersList;
     var _applicationsList:ApplicationsList;
@@ -116,8 +133,28 @@ class SettingsPage extends Page {
         line.width = _width;
         this.addChild( line );
 
+        // Create a scroll container for the content
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.variant = SuperHumanInstallerTheme.SCROLL_CONTAINER_DARK;
+        scrollContainer.layoutData = new VerticalLayoutData(100, 100);
+        scrollContainer.autoHideScrollBars = false;
+        scrollContainer.fixedScrollBars = true;
+        
+        // Set up vertical layout for the scroll container
+        var scrollLayout = new VerticalLayout();
+        scrollLayout.horizontalAlign = HorizontalAlign.CENTER;
+        scrollLayout.gap = GenesisApplicationTheme.GRID;
+        scrollLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingLeft = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingRight = GenesisApplicationTheme.GRID * 3; // Extra padding on right side for scrollbar
+        scrollContainer.layout = scrollLayout;
+        
+        // Add the scroll container to the page
+        this.addChild(scrollContainer);
+
         _form = new GenesisForm();
-        this.addChild( _form );
+        scrollContainer.addChild(_form);
 
         _rowApplicationWindow = new GenesisFormRow();
         _rowApplicationWindow.text = LanguageManager.getInstance().getString( 'settingspage.interface.title' );
@@ -160,6 +197,35 @@ class SettingsPage extends Page {
         _cbDisableVagrantLogging = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.disablevagrantlogging' ) );
         _rowAdvanced.content.addChild( _cbDisableVagrantLogging );
         _form.addChild( _rowAdvanced );
+        
+        _rowNetworkInterface = new GenesisFormRow();
+        _rowNetworkInterface.text = "Default Network Interface";
+        
+        // Create a custom collection with None option (empty string) first, followed by all interfaces
+        var originalCollection = VirtualBox.getInstance().bridgedInterfacesCollection;
+        var interfaceCollection = new feathers.data.ArrayCollection<BridgedInterface>();
+        
+        // Add None option (empty string)
+        interfaceCollection.add({ name: "" });
+        
+        // Add all original interfaces, excluding any that might have empty name
+        // This prevents duplicates of the "None" option
+        for (i in 0...originalCollection.length) {
+            var interfaceItem = originalCollection.get(i);
+            if (interfaceItem.name != "") {
+                interfaceCollection.add(interfaceItem);
+            }
+        }
+        
+        _dropdownNetworkInterface = new GenesisFormPupUpListView(interfaceCollection);
+        _dropdownNetworkInterface.itemToText = (item:BridgedInterface) -> {
+            if (item.name == "") return "None";
+            return item.name;
+        };
+        _dropdownNetworkInterface.selectedIndex = 0;
+        _dropdownNetworkInterface.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.prompt' );
+        _rowNetworkInterface.content.addChild( _dropdownNetworkInterface );
+        _form.addChild( _rowNetworkInterface );
 
         _rowKeepFailedServersRunning = new GenesisFormRow();
         _cbKeepFailedServersRunning = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'settingspage.advanced.keepfailedserversrunning' ) );
@@ -190,6 +256,48 @@ class SettingsPage extends Page {
         _applicationsList.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplication );
         _rowApplications.content.addChild(_applicationsList);
         _form.addChild(_rowApplications);
+        
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add provisioner management section
+        _rowProvisioners = new GenesisFormRow();
+        _rowProvisioners.text = "Provisioner Management";
+        
+        _buttonImportProvisioner = new GenesisFormButton("Import Provisioner");
+        _buttonImportProvisioner.addEventListener(TriggerEvent.TRIGGER, _importProvisioner);
+        _rowProvisioners.content.addChild(_buttonImportProvisioner);
+        
+        _form.addChild(_rowProvisioners);
+        
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add Global Secrets button
+        var _rowSecrets = new GenesisFormRow();
+        _rowSecrets.text = "Global Secrets";
+        
+        var _buttonGlobalSecrets = new GenesisFormButton("Manage Global Secrets");
+        _buttonGlobalSecrets.addEventListener(TriggerEvent.TRIGGER, _openGlobalSecrets);
+        _rowSecrets.content.addChild(_buttonGlobalSecrets);
+        
+        _form.addChild(_rowSecrets);
+        
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add File Cache Manager button
+        var _rowFileCache = new GenesisFormRow();
+        _rowFileCache.text = "Installer Files & Hashes";
+        
+        var _buttonHashManager = new GenesisFormButton("Manage Installer Files");
+        _buttonHashManager.addEventListener(TriggerEvent.TRIGGER, _openHashManager);
+        _rowFileCache.content.addChild(_buttonHashManager);
+        
+        _form.addChild(_rowFileCache);
         
         var line = new HLine();
         line.width = _width;
@@ -225,8 +333,38 @@ class SettingsPage extends Page {
         }
 
         if (_fileSyncSetting != null) {
-       	 	_fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
-		}
+            // Check if we're on Windows
+            var isWindows:Bool = openfl.system.Capabilities.os.toLowerCase().indexOf("windows") >= 0;
+            
+            if (isWindows) {
+                // On Windows: always default to rsync
+                _fileSyncSetting.selectedSyncMethod = SyncMethod.Rsync;
+                Logger.info('${this}: Setting rsync as default sync method for Windows');
+            } else {
+                // For Mac/other platforms: respect user preferences with compatibility check
+                _fileSyncSetting.selectedSyncMethod = SuperHumanInstaller.getInstance().config.preferences.syncmethod == SyncMethod.Rsync ? SyncMethod.Rsync : SyncMethod.SCP;
+                Logger.info('${this}: Using user-specified sync method: ${_fileSyncSetting.selectedSyncMethod}');
+            }
+            
+            // Set the disabled state based on the global flag
+            _fileSyncSetting.syncDisabled = superhuman.config.SuperHumanGlobals.IS_SYNC_DISABLED;
+        }
+        
+        if (_dropdownNetworkInterface != null) {
+            _dropdownNetworkInterface.selectedIndex = 0; // Default to "None"
+            
+            // If there is a default network interface set in preferences, select it
+            if (SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface != null) {
+                var defaultInterface = SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface;
+                for (i in 0..._dropdownNetworkInterface.dataProvider.length) {
+                    var d = _dropdownNetworkInterface.dataProvider.get(i);
+                    if (d.name == defaultInterface) {
+                        _dropdownNetworkInterface.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
      }
 
      public function setBrowsers(browsers:Array<BrowserData>) {
@@ -273,8 +411,53 @@ class SettingsPage extends Page {
         SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging = _cbDisableVagrantLogging.selected;
         SuperHumanInstaller.getInstance().config.preferences.keepfailedserversrunning = _cbKeepFailedServersRunning.selected;
         SuperHumanInstaller.getInstance().config.preferences.syncmethod = _fileSyncSetting.selectedSyncMethod;
+        
+        // Save the selected network interface
+        if (_dropdownNetworkInterface.selectedItem != null) {
+            SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface = _dropdownNetworkInterface.selectedItem.name;
+        } else {
+            SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface = "";
+        }
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
+    }
+    
+    /**
+     * Navigate to the Global Secrets page
+     * @param e The trigger event
+     */
+    function _openGlobalSecrets(e:TriggerEvent) {
+        dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_SECRETS_PAGE));
+    }
+    
+    /**
+     * Navigate to the provisioner import page when the Import Provisioner button is clicked
+     * @param e The trigger event
+     */
+    function _importProvisioner(e:TriggerEvent) {
+        // Dispatch event to open the provisioner import page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE);
+        Logger.info('${this}: Requesting to open provisioner import page');
+        this.dispatchEvent(event);
+    }
+    
+    /**
+     * Navigate to the hash manager page when the Manage Installer Files button is clicked
+     * @param e The trigger event
+     */
+    function _openHashManager(e:TriggerEvent) {
+        // Dispatch event to open the hash manager page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_HASH_MANAGER_PAGE);
+        Logger.info('${this}: Requesting to open hash manager page');
+        this.dispatchEvent(event);
+    }
+    
+    /**
+     * Handle cancel button click
+     */
+    override function _cancel(?e:Dynamic) {
+        // Dispatch the cancel event which will be handled by SuperHumanInstaller
+        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE));
     }
 }

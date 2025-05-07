@@ -1,0 +1,355 @@
+---
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Checking if has already been configured"
+      register: oidc_configured_check
+      ansible.builtin.stat:
+        path: "{{ completed_dir }}/oidc_configured_check"
+        get_md5: false
+
+    -
+      name: "Setting up Domino OIDC"
+      when: 
+        - domino_oidc_provider_enabled
+        - domino_major_version is version('14', '>=')
+        - not oidc_configured_check.stat.exists
+      block:
+        -
+          name: "Ensure cacert.pem exists"
+          ansible.builtin.file:
+            path: "{{ domino_home_dir }}/cacert.pem"
+            state: touch
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            mode: '0644'
+            modification_time: preserve
+            access_time: preserve
+
+        -
+          name: "Append CA certificate to cacert.pem"
+          ansible.builtin.blockinfile:
+            path: "{{ domino_home_dir }}/cacert.pem"
+            block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            mode: '0644'
+
+        -
+          name: "Setting up Domino OIDC for use with Self Signed Cert"
+          when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+          block:
+            -
+              name: "Setting Imported Self Signed CA as trusted via Genesis task"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_self_signed_ca_cert_verify.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_self_signed_ca_cert_verify.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_self_signed_ca_cert_verify"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_self_signed_ca_cert_verify.json"
+
+            -
+              name: "Checking if the CA was set to issued and activated via domino_oidc_self_signed_ca_cert_verify JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_self_signed_ca_cert_verify.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc
+              failed_when: presence_oidc is changed
+
+        -
+          name: "Setting up Domino OIDC Federation "
+          when: domino_oidc_provider_federation_enabled
+          block:
+            -
+              name: "Handing Genesis the IDVault Bearer Secuirty Policy Settings Modifications via JSON"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_federated_idvault_security_policy.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_federated_idvault_security_policy.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_federated_idvault_security_policy"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_idvault_security_policy.json"
+
+            -
+              name: "Checking if domino_oidc_federated_idvault_security_policy JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_idvault_security_policy.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_domino_oidc_federated_idvault_security_policy
+              failed_when: presence_domino_oidc_federated_idvault_security_policy is changed
+
+            ## Input the value bearer.vault.<Vault server hostname> into the Bearer token (JWT) approved OIDC provider configurations field
+            -
+              name: "Handing IDVault JWT Bearer Token Modifications JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_federated_idvault_bearer_configuration.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_federated_idvault_bearer_configuration.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_federated_idvault_bearer_configuration"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_idvault_bearer_configuration.json"
+
+            -
+              name: "Checking if domino_oidc_federated_idvault_bearer_configuration JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_federated_idvault_bearer_configuration.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_domino_oidc_federated_idvault_bearer_configuration
+              failed_when: presence_domino_oidc_federated_idvault_bearer_configuration is changed
+
+        ## Setting Login form via Domcfg
+        -
+          name: "Using Genesis to set Domcfg Login form via JSON"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_domcfg.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "domino_oidc_domcfg.json.j2"
+
+        -
+          name: "Waiting until Genesis returns OK after processing domino_oidc_domcfg"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_domcfg.json"
+
+        -
+          name: "Checking if domino_oidc_domcfg JSON applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_domcfg.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_domino_oidc_domcfg
+          failed_when: presence_domino_oidc_domcfg is changed
+
+        ## Creating a Internet Site Document for the Domino OIDC Auth Provider
+        -
+          name: "Using Genesis to create a Internet Site Document for the Domino OIDC Auth Provider via JSON"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_internet_site_auth.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "domino_oidc_internet_site_auth.json.j2"
+
+        -
+          name: "Waiting until Genesis returns OK after processing domino_oidc_internet_site_auth"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_internet_site_auth.json"
+
+        -
+          name: "Checking if domino_oidc_internet_site_auth JSON applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_internet_site_auth.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_domino_oidc_internet_site_auth
+          failed_when: presence_domino_oidc_internet_site_auth is changed
+
+        ## Creating a Domino OIDC Provider
+        -
+          name: "Using Genesis to create Domino OIDC Provider via JSON"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_provider.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "domino_oidc_provider.json.j2"
+
+        -
+          name: "Waiting until Genesis returns OK after processing domino_oidc_provider.json"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_provider.json"
+
+        -
+          name: "Checking if domino_oidc_provider.json JSON applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_provider.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_domino_oidc_provider
+          failed_when: presence_domino_oidc_provider is changed
+
+        -
+          name: "Updating Inet Site doc for Domino Web Apps"
+          when: domino_oidc_provider_web_enabled and domino_oidc_provider_federation_enabled
+          block:
+            -
+              name: "Using Genesis to create a Internet Site Document for WebApps via JSON"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_internet_site_web_apps.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_internet_site_web_apps.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_internet_site_web_apps.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_internet_site_web_apps.json"
+
+            -
+              name: "Checking if domino_oidc_internet_site_web_apps.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_internet_site_web_apps.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_domino_oidc_internet_site_web_apps
+              failed_when: presence_domino_oidc_internet_site_web_apps is changed
+
+        -
+          name: "Creating a Registered Auth Client for Domino Web Apps"
+          when: domino_oidc_provider_web_enabled and domino_oidc_provider_federation_enabled
+          block:
+            -
+              name: "Using Genesis to create a Registered Auth Client for WebApps via JSON"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_registered_client_web_apps.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_registered_client_web_apps.json.j2"
+
+            -
+              name: "Using Genesis to create a Registered Auth Client for WebApps via JSON"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/domino_oidc_registered_client_web_apps.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_registered_client_web_apps.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_registered_client_web_apps.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_registered_client_web_apps.json"
+
+            -
+              name: "Checking if domino_oidc_registered_client_web_apps.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_registered_client_web_apps.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_domino_oidc_registered_client_web_apps
+              failed_when: presence_domino_oidc_registered_client_web_apps is changed
+
+        ## Creating a Trusted OIDC Provider
+        -
+          name: "Using Genesis to create a Trusted OIDC provider via JSON"
+          ansible.builtin.template:
+            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_trusted_provider.json"
+            mode: "a+x"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+            src: "domino_oidc_trusted_provider.json.j2"
+
+        -
+          name: "Waiting until Genesis returns OK after processing domino_oidc_trusted_provider.json"
+          ansible.builtin.wait_for:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_trusted_provider.json"
+
+        -
+          name: "Checking if domino_oidc_trusted_provider.json JSON applied succesfully"
+          ansible.builtin.lineinfile:
+            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_trusted_provider.json"
+            line: "OK"
+            state: present
+          check_mode: true
+          register: presence_domino_oidc_trusted_provider
+          failed_when: presence_domino_oidc_trusted_provider is changed
+
+        -
+          name: "Adding Debugging for OIDC"
+          when: domino_oidc_debug
+          ansible.builtin.lineinfile:
+            dest: "{{ domino_home_dir }}/notes.ini"
+            line: "{{ item }}"
+            owner: "{{ domino_user }}"
+            group: "{{ domino_group }}"
+          loop:
+            - "DEBUG_OIDC_PROVIDER=4"
+            - "debug_oidc_login_redirect=1"
+            - "DEBUG_OIDCP_CLIENT_CACHE=1"
+            - "DEBUG_OIDC_CONFIG=4"
+            - "DEBUG_OIDC_VAULT=5"
+            - "DEBUG_OIDC_CACHE=5"
+            - "DEBUG_OIDCLOGIN=4"
+            - "DEBUG_OIDC_CURL_APIS=5"
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_oidc
+          until: domino_service_stopped_oidc.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          notify: Domino Started
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_oidc
+          until: domino_service_start_details_oidc.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let Domino HTTP fully configure"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Marking OIDC as Configured"
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+          with_items:
+            - "{{ completed_dir }}/oidc_configured_check"

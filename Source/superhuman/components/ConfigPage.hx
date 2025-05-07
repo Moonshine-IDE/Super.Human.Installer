@@ -30,6 +30,8 @@
 
 package superhuman.components;
 
+
+import champaign.core.logging.Logger;
 import genesis.application.components.GenesisFormRow;
 import feathers.controls.Check;
 import feathers.controls.Label;
@@ -85,6 +87,10 @@ class ConfigPage extends Page {
     var _rowPreviousSafeId:GenesisFormRow;
     var _rowSafeId:GenesisFormRow;
     var _rowRoles:GenesisFormRow;
+    
+    // Common variables fields
+    var _commonVariables:Map<String, GenesisFormTextInput> = new Map();
+    var _commonVariableRows:Map<String, GenesisFormRow> = new Map();
 
     var _server:Server;
     var _titleGroup:LayoutGroup;
@@ -108,7 +114,7 @@ class ConfigPage extends Page {
         this.addChild( _titleGroup );
 
         _label = new Label();
-        _label.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', Std.string( _server.id ) );
+        _label.text = LanguageManager.getInstance().getString( 'serverconfigpage.title', _server != null ? Std.string( _server.id ) : "" );
         _label.variant = GenesisApplicationTheme.LABEL_LARGE;
         _label.layoutData = new HorizontalLayoutData( 100 );
         _titleGroup.addChild( _label );
@@ -127,13 +133,13 @@ class ConfigPage extends Page {
 
         _rowCoreComponentVersion = new GenesisFormRow();
         _rowCoreComponentVersion.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.provisioner.text' );
-        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection(ProvisionerType.DemoTasks) );
+        _dropdownCoreComponentVersion = new GenesisFormPupUpListView( ProvisionerManager.getBundledProvisionerCollection(ProvisionerType.StandaloneProvisioner) );
         _dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
         _dropdownCoreComponentVersion.selectedIndex = 0;
-        for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).length ) {
-            var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.DemoTasks ).get( i );
+        for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.StandaloneProvisioner ).length ) {
+            var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.StandaloneProvisioner ).get( i );
             if ( d.data.version == _server.provisioner.version ) {
                 _dropdownCoreComponentVersion.selectedIndex = i;
                 break;
@@ -230,7 +236,7 @@ class ConfigPage extends Page {
         _buttonSave.addEventListener( TriggerEvent.TRIGGER, _saveButtonTriggered );
         _buttonSave.width = GenesisApplicationTheme.GRID * 20;
         _buttonCancel = new GenesisFormButton( LanguageManager.getInstance().getString( 'serverconfigpage.form.buttons.cancel' ) );
-        _buttonCancel.addEventListener( TriggerEvent.TRIGGER, _cancel );
+        _buttonCancel.addEventListener( TriggerEvent.TRIGGER, _buttonCancelTriggered );
         _buttonCancel.width = GenesisApplicationTheme.GRID * 20;
         _buttonGroup.addChild( _buttonSave );
         _buttonGroup.addChild( _buttonCancel );
@@ -246,9 +252,104 @@ class ConfigPage extends Page {
     }
 
     public function setServer( server:Server ) {
-
         _server = server;
-
+        
+        // Initialize common variables from server's customProperties
+        _initializeCommonVariables();
+    }
+    
+    /**
+     * Initialize common variables from the server's customProperties
+     */
+    private function _initializeCommonVariables() {
+        // Clear existing common variables
+        _commonVariables = new Map();
+        _commonVariableRows = new Map();
+        
+        // Remove existing common variable rows from the form
+        if (_form != null) {
+            for (row in _commonVariableRows) {
+                if (row != null && row.parent == _form) {
+                    _form.removeChild(row);
+                }
+            }
+        }
+        
+        // Check if server has customProperties
+        if (_server != null && _server.customProperties != null) {
+            // Check if this is a custom provisioner
+            var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                     _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                     _server.provisioner.type != ProvisionerType.Default);
+                                     
+            // Get common variables from appropriate source
+            var commonVars = new Map<String, String>();
+            
+            if (isCustomProvisioner) {
+                // For custom provisioners, primarily check dynamicCustomProperties
+                if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                    var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+                    if (dynamicProps != null) {
+                        for (field in Reflect.fields(dynamicProps)) {
+                            var value = Reflect.field(dynamicProps, field);
+                            if (value != null && Std.isOfType(value, String)) {
+                                commonVars.set(field, value);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // For standard provisioners, look at root customProperties
+                for (field in Reflect.fields(_server.customProperties)) {
+                    // Skip dynamicCustomProperties, dynamicAdvancedCustomProperties, and rolesProcessed
+                    if (field != "dynamicCustomProperties" && 
+                        field != "dynamicAdvancedCustomProperties" &&
+                        field != "provisionerDefinition" &&
+                        field != "serviceTypeData" &&
+                        field != "rolesProcessed") {
+                        
+                        var value = Reflect.field(_server.customProperties, field);
+                        if (value != null && Std.isOfType(value, String)) {
+                            commonVars.set(field, value);
+                        }
+                    }
+                }
+            }
+            
+            // Add common variable fields to the form
+            if (_form != null) {
+                for (field => value in commonVars) {
+                    _addCommonVariableField(field, value);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Add a common variable field to the form
+     * @param name The variable name
+     * @param value The variable value
+     */
+    private function _addCommonVariableField(name:String, value:String) {
+        if (_form == null) return;
+        
+        // Create a new row for the field
+        var row = new GenesisFormRow();
+        row.text = name; // Use the variable name as the label
+        
+        // Create a text input for the value
+        var input = new GenesisFormTextInput(value);
+        
+        // Add the input to the row
+        row.content.addChild(input);
+        
+        // Add the row to the form after the roles row
+        var roleIndex = _form.getChildIndex(_rowRoles);
+        _form.addChildAt(row, roleIndex + 1);
+        
+        // Store the input and row in the maps
+        _commonVariables.set(name, input);
+        _commonVariableRows.set(name, row);
     }
 
     override function updateContent( forced:Bool = false ) {
@@ -306,17 +407,38 @@ class ConfigPage extends Page {
             }
 
             _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
-
+            
+            // If forced update, reinitialize common variables
+            if (forced) {
+                _initializeCommonVariables();
+            }
         }
 
     }
 
     function _advancedLinkTriggered( e:MouseEvent ) {
-
+        // Check if server is still valid - it might have been removed if it was provisional
+        if (_server == null) {
+            return;
+        }
+        
+        // Store current form values to server object before navigating
+        // This preserves the data without creating file structure
+        _server.hostname.value = StringTools.trim(_inputHostname.text);
+        _server.organization.value = StringTools.trim(_inputOrganization.text);
+        
+        // Save the provisioner selection
+        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        _server.updateProvisioner(dvv.data);
+        
+        // Save common variables to the server's customProperties
+        _saveCommonVariables();
+        
+        Logger.info('${this}: Stored form data before navigating to advanced config page');
+        
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER );
         evt.server = _server;
         this.dispatchEvent( evt );
-
     }
 
     function _buttonSafeIdTriggered( e:TriggerEvent ) {
@@ -378,6 +500,17 @@ class ConfigPage extends Page {
         var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
         _server.updateProvisioner( dvv.data );
 
+        // Save common variables to server's customProperties
+        _saveCommonVariables();
+        
+        // EXPLICIT: Force the provisioner to copy files regardless of exists check
+        _server.provisioner.copyFiles();
+        
+        // Initialize server files - creates directory and initial configuration
+        if (_server.provisional) {
+            _server.initializeServerFiles();
+        }
+
         SuperHumanInstaller.getInstance().config.user.lastusedsafeid = _server.userSafeId.value;
         
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION );
@@ -397,5 +530,66 @@ class ConfigPage extends Page {
         _server.userSafeId.value = SuperHumanInstaller.getInstance().config.user.lastusedsafeid;
         _safeIdLocated();
 
+    }
+    
+    function _buttonCancelTriggered( e:TriggerEvent ) {
+        // Only remove the server if the server directory doesn't exist
+        // This ensures we only remove truly new servers that have never been saved
+        if (_server != null && !sys.FileSystem.exists(_server.serverDir)) {
+            // This is a truly new server that has never been saved - safe to remove
+            superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
+        }
+        // Dispatch the CANCEL_PAGE event to match what SuperHumanInstaller is listening for
+        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE));
+    }
+    
+    /**
+     * Save common variables to the server's customProperties
+     */
+    private function _saveCommonVariables() {
+        if (_server == null || _commonVariables.keys().hasNext() == false) {
+            return;
+        }
+        
+        // Check if this is a custom provisioner
+        var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                  _server.provisioner.type != ProvisionerType.Default);
+        
+        // Initialize customProperties if needed
+        if (_server.customProperties == null) {
+            _server.customProperties = {};
+        }
+        
+        if (isCustomProvisioner) {
+            // For custom provisioners, use the dynamicCustomProperties field
+            
+            // Initialize dynamicCustomProperties if needed
+            if (!Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+                Reflect.setField(_server.customProperties, "dynamicCustomProperties", {});
+            }
+            
+            // Get reference to dynamicCustomProperties
+            var dynamicProps = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            
+            // Save each common variable to dynamicCustomProperties
+            for (name => input in _commonVariables) {
+                var value = StringTools.trim(input.text);
+                // Save to dynamicCustomProperties
+                Reflect.setField(dynamicProps, name, value);
+            }
+        } else {
+            // For standard provisioners, save directly to customProperties root
+            
+            // Save each common variable
+            for (name => input in _commonVariables) {
+                var value = StringTools.trim(input.text);
+                // Save to root customProperties
+                Reflect.setField(_server.customProperties, name, value);
+            }
+        }
+        
+        // Force an immediate save to persist changes
+        _server.saveData();
     }
 }

@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<!DOCTYPE host SYSTEM "machineschema.dtd">
+<host>
+  <hostname>{{ pxe_client_hostname }}</hostname>
+  <mac>{{ pxe_client_mac }}</mac>
+  <rpool>{{ pxe_disks }}</rpool>
+  <timezone>{{ pxe_time_zone }}</timezone>
+  <dns>
+    <search>{{ pxe_dns_search }}</search>
+    <server>{{ pxe_dns1 }}</server>
+    <server>{{ pxe_dns2 }}</server>
+  </dns>
+    <gateway>{{ pxe_gateway }}</gateway>
+    <addr name="{{ pxe_default_interface }}">
+    <ip>{{ pxe_ipaddress }}/{{ pxe_subnet_mask }}</ip>
+  </addr>
+  <publisher name="{{ pxe_private_repo_name }}">
+    <add>{{ pxe_private_repo }}</add>
+  </publisher>
+  <publisher name="omnios">
+    <replace>{{ pxe_core_repo }}</replace>
+  </publisher>
+  <publisher name="extra.omnios">
+    <add>{{ pxe_extra_repo }}</add>
+  </publisher>
+  <user name="root">
+    <password>{{ pxe_root_pass }}</password>
+  </user>
+  <user name="{{ pxe_user }}">
+    <password>{{ pxe_user_pass }}</password>
+    <profile>Primary Administrator</profile>
+  </user>
+  <path>/opt/ooce/bin</path>
+  <pkg>
+        <install>Prominic.NET/Snapshoter</install>
+        <install>STARTcloud-cdp</install>
+        <install>ooce/file/lsof</install>
+        <install>system/storage/sasinfo</install>
+        <install>ooce/system/top</install>
+        <install>ooce/file/lsof</install>
+        <install>ooce/application/mc</install>
+        <install>ooce/runtime/expect</install>
+        <install>ooce/system/sg3_utils</install>
+        <install>ooce/system/smartmontools</install>
+  </pkg>
+</host>

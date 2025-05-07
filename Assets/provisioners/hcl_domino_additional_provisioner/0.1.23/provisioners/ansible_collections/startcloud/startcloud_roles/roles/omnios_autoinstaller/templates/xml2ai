@@ -1,0 +1,114 @@
+#!/usr/bin/env python2
+import os
+import sys
+import crypt
+import random
+import string
+import textwrap
+import xml.etree.ElementTree as ET
+
+def quote(parm):
+    return " "+parm.replace("$", "\$")
+
+def pwhash(name):
+    salt='$6$'
+    for _ in range(2):
+        salt += random.SystemRandom().choice(string.ascii_letters + string.digits + './')
+    return crypt.crypt(name,salt)
+
+def processXML(xml):
+    outFile = open(os.path.join(os.sep + 'var','kayak','kayak',xml.find('mac').text.upper()), 'w')
+    outFile.write('BuildRpool '+xml.find('rpool').text+'\n')
+    outFile.write('SetHostname '+xml.find('hostname').text+'\n')
+    outFile.write('SetTimezone '+xml.find('timezone').text+'\n')
+    outFile.write('EnableDNS '+xml.find('dns').find('search').text+'\n')
+
+    outFile.write('SetDNS')
+    for server in xml.find('dns').findall('server'):
+        outFile.write(' '+server.text)
+    outFile.write('\n')
+
+    #add IPs
+    for addr in xml.findall('addr'):
+        outFile.write("Postboot '/sbin/ipadm create-addr -T static -a ")
+        outFile.write(addr.find('ip').text+" "+addr.attrib['name']+"'\n")
+    outFile.write("Postboot '/sbin/route -p add default "+xml.find('gateway').text+"'")
+
+    #Need to delay for some machines
+    outFile.write('''\nPostboot 'echo "system will reboot once more, this may take a few minutes\\n" >/dev/console' ''')
+
+    #add/remove publishers
+    for publisher in xml.findall('publisher'):
+        outFile.write("\nPostboot 'pkg set-publisher ")
+        for mod in publisher.findall('add'):
+            outFile.write("-g "+mod.text+" ")
+        for mod in publisher.findall('remove'):
+            outFile.write("-G "+mod.text+" ")
+        for mod in publisher.findall('replace'):
+            outFile.write("-O "+mod.text+" ")
+        outFile.write(publisher.attrib['name']+"'")
+
+    #Setup home directories. Setup misc system settings.
+    #NOTE: this does not work completely on early releases, insofar as users do not each get their own
+    #      ZFS fs. it's still useable though.
+
+    #Holy fuck, the escaping horrific on the hostname echo line.
+     #Postboot 'svcadm disable autofs'
+     #Postboot "sed -i '/\/home/s/^/#/' /etc/auto_master"
+     #Postboot "rmdir /home; zfs create -o mountpoint=/home -o compression=on -o atime=off rpool/home"
+     #Postboot 'echo "MANAGE_ZFS=YES" >> /etc/default/useradd'
+    # Postboot "echo 'echo \\\"\\\\033]0;\\$(hostname)\\\\007\\\" ' >> /etc/profile"
+
+    # Postboot 'svcadm enable autofs'
+    outFile.write(textwrap.dedent('''
+Postboot 'pkg install autopass prominic-home-conf'
+Postboot 'mv /etc/skel/.profile /etc/skel/local.profile'
+Postboot 'grep -v PATH /etc/skel/local.profile > /etc/skel/.profile'
+Postboot 'rm /etc/skel/local.*'
+    '''))
+
+    #Set PATH
+    outFile.write("Postboot 'echo PATH=\$PATH")
+    for path in xml.findall('path'):
+        outFile.write(":"+path.text)
+    outFile.write(" >> /etc/profile'\nPostboot 'echo export PATH >> /etc/profile'\n")
+
+    #Add users
+    #NOTE: this cannot make changes other then password to users already on the system.
+    for user in xml.findall('user'):
+        if user.attrib['name'] != 'root':
+            outFile.write("Postboot 'useradd -m ")
+            if  user.find('profile').text:
+                outFile.write('-P "'+user.find('profile').text+'"')
+            outFile.write(' '+user.attrib['name']+"'\n")
+        outFile.write("Postboot 'autopass "+user.attrib['name']+" "+quote(pwhash(user.find('password').text))+"'\n")
+    outFile.write("Postboot 'pkg uninstall autopass'\n")
+
+    #uninstall packages (no longer works)
+#    if xml.find('pkg').find('uninstall') is not None:
+#        outFile.write("Postboot 'pkg uninstall")
+#        for pkg in xml.find('pkg').findall('uninstall'):
+#            outFile.write(" "+pkg.text)
+#        outFile.write("'\n")
+
+    #Update system to new BE
+    outFile.write("Postboot 'pkg install pkg:/package/pkg'\n")
+    #outFile.write("Postboot '{ pkg install pkg:/package/pkg ; pkg update --require-new-be --be-name omnios-final ; beadm mount omnios-final /mnt'\n")
+
+    #Install packages
+    if xml.find('pkg').find('install') is not None:
+        #outFile.write("Postboot 'pkg -R /mnt install")
+        for pkg in xml.find('pkg').findall('install'):
+            outFile.write("Postboot 'echo \""+pkg.text+"\" >> /install'\n")
+        #outFile.write("'\n")
+
+#    outFile.write("Postboot 'beadm umount omnios-final ; init 6 ; } &'\n")
+    outFile.write("Postboot 'pkg install prominic-config'")
+
+############
+### MAIN ###
+############
+if __name__ == "__main__":
+    if not os.geteuid() == 0:
+        sys.exit('please run with administrative permissions')
+    processXML(ET.parse(sys.stdin).getroot())

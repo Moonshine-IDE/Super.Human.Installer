@@ -1,0 +1,148 @@
+-
+  name: "Creating directory to hold debs"
+  ansible.builtin.file:
+    path: ~/packages/apt-repo/pool/main/
+    state: directory
+
+-
+  name: "Copying deb package into repository"
+  ansible.builtin.copy:
+    src: ~/packages/startcloud_0.0.1-1_amd64.deb
+    dest: ~/packages/apt-repo/pool/main/
+
+-
+  name: "Creating directory for package list and metadata"
+  ansible.builtin.file:
+    path: ~/packages/apt-repo/dists/stable/main/binary-amd64
+    state: directory
+
+-
+  name: "Generating Packages file"
+  ansible.builtin.shell: |
+    cd ~/packages/apt-repo
+    dpkg-scanpackages --arch amd64 pool/ > dists/stable/main/binary-amd64/Packages
+
+-
+  name: "Compressing Packages file"
+  ansible.builtin.shell: |
+    cat ~/packages/apt-repo/dists/stable/main/binary-amd64/Packages | gzip -9 > ~/packages/apt-repo/dists/stable/main/binary-amd64/Packages.gz
+
+-
+  name: "Copying generate-release.sh script"
+  ansible.builtin.copy:
+    content: |
+      #!/bin/sh
+      set -e
+      do_hash() {
+          HASH_NAME=$1
+          HASH_CMD=$2
+          echo "${HASH_NAME}:"
+          for f in $(find -type f); do 
+              f=$(echo $f | cut -c3-) # remove ./ prefix
+              if [ "$f" = "Release" ]; then
+                  continue
+              fi
+              echo " $(${HASH_CMD} ${f}  | cut -d" " -f1) $(wc -c $f)"
+          done
+      }
+      cat << EOF
+      Origin: Example Repository 
+      Label: Example
+      Suite: stable
+      Codename: stable
+      Version: 1.0
+      Architectures: amd64 arm64 arm7
+      Components: main
+      Description: An example software repository
+      Date: $(date -Ru)  
+      EOF
+      do_hash "MD5Sum" "md5sum"
+      do_hash "SHA1" "sha1sum"   
+      do_hash "SHA256" "sha256sum"
+    dest: ~/packages/generate-release.sh
+    mode: '0755'
+
+-
+  name: "Generating Release file"
+  ansible.builtin.shell: |
+    cd ~/packages/apt-repo/dists/stable
+    ~/packages/generate-release.sh > Release
+
+-
+  name: "Creating temporary GNUPGHOME directory"
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: pgpkeys
+  register: gnupghome
+
+-
+  name: "Setting GNUPGHOME environment variable"
+  ansible.builtin.set_fact:
+    gnupghome: "{{ gnupghome.path }}"
+
+-
+  name: "Generating PGP key pair"
+  ansible.builtin.shell: |
+    echo "%echo Generating an startcloud PGP key
+    Key-Type: RSA
+    Key-Length: 4096
+    Name-Real: startcloud
+    Name-Email: support@startcloud.com
+    Expire-Date: 0
+    %no-ask-passphrase
+    %no-protection
+    %commit" > /tmp/startcloud-pgp-key.batch
+    gpg --no-tty --batch --gen-key /tmp/startcloud-pgp-key.batch
+  environment:
+    GNUPGHOME: "{{ gnupghome }}"
+
+-
+  name: "Exporting public PGP key"
+  ansible.builtin.shell: |
+    gpg --armor --export startcloud > ~/packages/pgp-key.public
+  environment:
+    GNUPGHOME: "{{ gnupghome }}"
+
+-
+  name: "Exporting private PGP key"
+  ansible.builtin.shell: |
+    gpg --armor --export-secret-keys startcloud > ~/packages/pgp-key.private
+  environment:
+    GNUPGHOME: "{{ gnupghome }}"
+
+-
+  name: "Signing Release file"
+  ansible.builtin.shell: |
+    cat ~/packages/apt-repo/dists/stable/Release | gpg --default-key startcloud -abs > ~/packages/apt-repo/dists/stable/Release.gpg
+  environment:
+    GNUPGHOME: "{{ gnupghome }}"
+
+-
+  name: "Creating InRelease file"
+  ansible.builtin.shell: |  
+    cat ~/packages/apt-repo/dists/stable/Release | gpg --default-key startcloud -abs --clearsign > ~/packages/apt-repo/dists/stable/InRelease
+  environment:
+    GNUPGHOME: "{{ gnupghome }}"
+
+-
+  name: "Adding signed-by attribute to apt repo"
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by={{ lookup('env','HOME') }}/packages/pgp-key.public] http://127.0.0.1:8000/apt-repo stable main"
+    filename: example
+    state: present
+
+-
+  name: "Cleaning apt cache"
+  ansible.builtin.apt:
+    autoclean: yes
+
+-
+  name: "Updating apt cache"
+  ansible.builtin.apt:
+    update_cache: yes
+
+-
+  name: "Installing startcloud package"
+  ansible.builtin.apt:  
+    name: startcloud
+    state: present

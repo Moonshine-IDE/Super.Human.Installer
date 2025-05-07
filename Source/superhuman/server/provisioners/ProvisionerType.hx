@@ -34,6 +34,6 @@ enum abstract ProvisionerType( String ) from String to String {
 
     var Custom = "custom";
     var Default = "default";
-    var DemoTasks = "hcl_domino_standalone_provisioner";
+    var StandaloneProvisioner = "hcl_domino_standalone_provisioner";
     var AdditionalProvisioner = "hcl_domino_additional_provisioner";
 }

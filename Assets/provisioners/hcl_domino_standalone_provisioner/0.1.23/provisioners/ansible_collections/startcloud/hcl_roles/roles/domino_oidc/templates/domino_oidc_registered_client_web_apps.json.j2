@@ -1,0 +1,36 @@
+{
+	"title": "Creating Registered OAuth client for Domino Web Apps",
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Creating Registered OAuth client for Domino Web Apps ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "idpcat.nsf", 
+                    "documents":[
+                        { 
+                            "action": "create", 
+                            "computeWithForm": true,
+                            "items": {
+                                "Form": "RegisteredOAuthClient",
+                                "RC_ProviderName": "{{ domino_oidc_install_proxy_url }}",
+                                "RC_client_id": "{{ domino_oidc_client_id }}",
+                                "RC_auth_method": "2",
+                                "RC_client_secret": "{{ domino_oidc_client_secret }}",
+                                "RC_Name": "Web",
+                                "RC_redirect_uris": ["https://{{ domino_install_proxy_url }}/auth/protocol/oidc", "https://{{ settings.hostname }}.{{ settings.domain }}/auth/protocol/oidc"],
+                                "RC_aud": "{{ domino_organization }}-O={{ id_vault_name }}",
+                                "RC_scope": "openid email Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",
+                                "RC_AllowedWebOrigins": "",
+                                "RC_post_logout_redirect_uris": "",
+                                "BearerAllowedClientIDs": "{{ domino_oidc_bearer_allowed_client_ids }}",
+                                "OIDCLogLevel": "{{ domino_oidc_log_level }}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

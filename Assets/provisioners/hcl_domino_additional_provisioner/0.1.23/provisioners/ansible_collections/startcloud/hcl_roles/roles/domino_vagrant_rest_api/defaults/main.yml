@@ -1,0 +1,22 @@
+---
+run_tasks: true
+rest_app_home_dir: "/opt/rest-interface"
+rest_config_file: "/config/application.yml"
+rest_vagrant_crud_version: 1.2.0
+rest_vagrant_crud_archive: VagrantCRUD_centos7.zip
+rest_interface_jar: rest-interface-1.2.0.jar
+rest_vagrant_crud_git_repo: https://github.com/Moonshine-IDE/Vagrant-REST-Interface/releases/download/
+domino_vagrant_rest_api_port_forwards:
+  -
+    guest: 8080
+    url: "restapi"
+domino_vagrant_rest_api_proxy_url: "{{ domino_vagrant_rest_api_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+# Legacy directories needed for the capabilities for Moonshine-IDE
+domino_vagrant_restapi_supporting_dirs:
+  - /opt/restinterface/userfiles
+  - /opt/restinterface/public/uploads/
+
+# option to replace the {{ rest_interface_jar }} with a custom file
+# If enabled, put the file at installers/custom_restapi_jar/{{ rest_interface_jar }}
+use_custom_rest_interface_jar: false

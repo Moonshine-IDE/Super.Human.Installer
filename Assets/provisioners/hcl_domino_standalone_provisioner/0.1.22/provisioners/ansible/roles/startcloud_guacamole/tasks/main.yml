@@ -1,0 +1,283 @@
+---
+-
+  name: "Checking if Guacamole is installed: {{ guacamole_version }}"
+  register: guacamole_installed_check
+  ansible.builtin.stat:
+    path: "{{ completed_dir }}/guacamole_install"
+    get_md5: false
+
+-
+  name: "Installing extra dependencies for Guacamole"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.apt:
+    name:
+      - openjdk-11-jdk
+      - build-essential
+      - libcairo2-dev
+      - libjpeg62-turbo-dev
+      - libjpeg-dev
+      - libpng-dev
+      - libtool-bin
+      - libossp-uuid-dev
+      - libavutil-dev
+      - libswscale-dev
+      - freerdp2-dev
+      - libpango1.0-dev
+      - libpango1.0-0
+      - libssh2-1-dev
+      - libvncserver-dev
+      - libtelnet-dev
+      - libwebsockets-dev
+      - libwebsockets16
+      - libwebsocketpp-dev
+      - libssl-dev
+      - libvorbis-dev
+      - libwebp-dev
+      - libpulse-dev
+      - libavcodec-dev
+      - libavformat-dev
+      - openssl
+      - gcc
+      - make
+      - tzdata
+
+-
+  name: "Checking Build Environment"
+  register: folder_stats
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  with_items:
+    -
+      - "/etc/guacamole"
+      - "/usr/local/src/guacamole/{{ guacamole_version }}/client"
+      - "/etc/guacamole/extensions"
+      - "/etc/guacamole/lib"
+
+-
+  name: "Creating Directories"
+  ansible.builtin.file:
+    group: root
+    mode: 493
+    owner: root
+    path: "{{ item.item }}"
+    state: directory
+  when: not item.stat.exists
+  with_items:
+    - "{{ folder_stats.results }}"
+
+-
+  name: "Downloading MySQL Connector {{ mariadb_mysql_java_connector_version }}"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.get_url:
+    mode: "0755"
+    dest: "/tmp/mysql-connector-j-{{ mariadb_mysql_java_connector_version }}.tar.gz"
+    url: "https://cdn.mysql.com//Downloads/Connector-J/mysql-connector-j-{{ mariadb_mysql_java_connector_version }}.tar.gz"
+
+-
+  name: "Unpacking MySQL Connector {{ mariadb_mysql_java_connector_version }}"
+  when: not guacamole_installed_check.stat.exists
+  register: asterisk_archive_contents
+  ansible.builtin.unarchive:
+    copy: false
+    dest: "/vagrant/ansible/roles/{{ role_name }}/files/"
+    list_files: true
+    src: "/tmp/mysql-connector-j-{{ mariadb_mysql_java_connector_version }}.tar.gz"
+
+-
+  name: "Installing MySQL Connector {{ mariadb_mysql_java_connector_version }}"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.copy:
+    mode: "0755"
+    dest: "/etc/guacamole/lib/mysql-connector-j-{{ mariadb_mysql_java_connector_version }}.jar"
+    src: "mysql-connector-j-{{ mariadb_mysql_java_connector_version }}.jar"
+
+-
+  name: "Downloading Guacamole Server"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.git:  # noqa: latest
+    dest: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
+    repo: "https://github.com/apache/guacamole-server"
+
+-
+  name: "Downloading Guacamole Client"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.git:  # noqa: latest
+    dest: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
+    repo: "https://github.com/apache/guacamole-client"
+
+-
+  name: "Preparing Guacamole Source for Compilation"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.shell: "autoreconf -fi && ./configure --with-systemd-dir=/etc/systemd/system"
+  args:
+    chdir: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
+
+-
+  name: "Compiling Guacamole Server from Source"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.shell: "make && make install && ldconfig"
+  args:
+    chdir: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-server"
+
+-
+  name: "Building Guacamole Client"
+  when: not guacamole_installed_check.stat.exists
+  become: true
+  ansible.builtin.shell: "{{ item.shell }}"
+  args:
+    chdir: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client"
+    executable: "/bin/bash"
+  environment:
+    JAVA_HOME: "/usr/lib/jvm/java-11-openjdk-amd64"
+  with_items:
+    - {shell: "mvn clean package -U" }
+
+-
+  name: "Moving Guacamole-client to Guacamole Working Directory"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.copy:
+    mode: "0755"
+    dest: "{{ item.dest }}"
+    src: "{{ item.path }}"
+    remote_src: true
+  with_items:
+    -
+      path: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client/guacamole/target/guacamole-{{ guacamole_version }}.war"
+      dest: "/var/lib/tomcat9/webapps/ROOT.war"
+
+-
+  name: "Creating Guacamole Configuration File"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.blockinfile:
+    block: |
+        # Hostname and port of guacamole proxy
+        guacd-hostname: localhost
+        guacd-port: {{ startcloud_guacamole_port_forwards[1].guest }}
+        # MySQL properties
+        mysql-hostname: {{ netoutput.stdout }}
+        mysql-port: {{ startcloud_mariadb_port_forwards[0].guest }}
+        mysql-database: {{ guacamole_mariadb_db }}
+        mysql-username: {{ guacamole_mariadb_db_admin_user }}
+        mysql-password: {{ guacamole_mariadb_db_admin_pass }}
+        mysql-default-max-connections-per-user: 0
+        mysql-default-max-group-connections-per-user: 0
+    create: true
+    mode: "0755"
+    path: "/etc/guacamole/guacamole.properties"
+
+-
+  name: "Marking Guacamole as installed"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.file:
+    mode: "0755"
+    path: "{{ item }}"
+    state: touch
+  with_items:
+    - "{{ completed_dir }}/guacamole_install"
+
+-
+  name: "Removing Test Site"
+  when: not guacamole_installed_check.stat.exists
+  ansible.builtin.file:
+    mode: "0755"
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - "/var/lib/tomcat9/webapps/ROOT"
+
+-
+  name: "Copying JDBC Driver to Guacamole Working Directory"
+  ansible.builtin.copy:
+    mode: "0755"
+    dest: "{{ item.dest }}"
+    src: "{{ item.path }}"
+  with_items:
+    -
+      path: "/usr/local/src/guacamole/{{ guacamole_version }}/guacamole-client/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/target/guacamole-auth-jdbc-mysql-{{ guacamole_version }}.jar"
+      dest: "/etc/guacamole/extensions/guacamole-auth-jdbc-mysql-{{ guacamole_version }}.jar"
+
+-
+  name: Adding Branding
+  ansible.builtin.copy:
+    mode: "0755"
+    src: branding.jar
+    dest: /etc/guacamole/extensions/branding.jar
+
+-
+  name: Adding extension
+  ansible.builtin.copy:
+    mode: "0755"
+    src: "guacamole-auth-domino-{{ auth_domino_version }}.jar"
+    dest: "/etc/guacamole/extensions/guacamole-auth-domino-{{ auth_domino_version }}.jar"
+
+-
+  name: "Downloading additional Jar Dependencies - log4j version {{ log4j_version }}"
+  ansible.builtin.get_url:
+    mode: "0755"
+    dest: "/etc/guacamole/lib/log4j-{{ log4j_version }}.jar"
+    url: "https://archive.apache.org/dist/logging/log4j/{{ log4j_version }}/log4j-{{ log4j_version }}.jar"
+
+-
+  name: "Downloading additional Jar Dependencies - httpcomponents version {{ httpcomponents_version }}"
+  ansible.builtin.get_url:
+    mode: "0755"
+    dest: "/tmp/httpcomponents-client-{{ httpcomponents_version }}-bin.tar.gz"
+    url: "https://archive.apache.org/dist/httpcomponents/httpclient/binary/httpcomponents-client-{{ httpcomponents_version }}-bin.tar.gz"
+
+-
+  name: "Unpacking Dependencies"
+  ansible.builtin.unarchive:
+    copy: false
+    dest: /tmp
+    src: "/tmp/httpcomponents-client-{{ httpcomponents_version }}-bin.tar.gz"
+
+-
+  name: "Adding SSO Dependency extension"
+  ansible.posix.synchronize:
+    src: "/tmp/httpcomponents-client-{{ httpcomponents_version }}/lib/"
+    dest: "/etc/guacamole/lib/"
+
+-
+  name: "Creating Guacamole Database {{ guacamole_mariadb_db }}"
+  community.mysql.mysql_db:
+    login_password: "{{ mariadb_admin_pass }}"
+    login_user: "{{ mariadb_admin_user }}"
+    name: "{{ guacamole_mariadb_db }}"
+    state: present
+
+-
+  name: "Create database user with all database privileges for {{ guacamole_mariadb_db }}"
+  community.mysql.mysql_user:
+    login_password: "{{ mariadb_admin_pass }}"
+    login_user: "{{ mariadb_admin_user }}"
+    name: "{{ guacamole_mariadb_db_admin_user }}"
+    password: "{{ guacamole_mariadb_db_admin_pass }}"
+    priv: "{{ guacamole_mariadb_db }}.*:ALL,GRANT"
+    host: "%"
+    state: present
+
+-
+  name: "Fixing bug with JDBC Driver over Version 8"
+  ansible.builtin.shell: "mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u{{ mariadb_admin_user }} mysql -p{{ mariadb_admin_pass }}"
+
+-
+  name: "Import Schema into database {{ guacamole_mariadb_db }}"
+  community.mysql.mysql_db:
+    login_password: "{{ mariadb_admin_pass }}"
+    login_user: "{{ mariadb_admin_user }}"
+    name: "{{ guacamole_mariadb_db }}"
+    state: import
+    target: "{{ item.srcdir }}{{ guacamole_version }}/guacamole-client/extensions/guacamole-auth-jdbc/modules/guacamole-auth-jdbc-mysql/schema/{{ item.file }}"
+  with_items:
+    - { file: "001-create-schema.sql", srcdir: "/usr/local/src/guacamole/"}
+    - { file: "002-create-admin-user.sql", srcdir: "/usr/local/src/guacamole/"}
+
+-
+  name: "Restarting Services"
+  ansible.builtin.systemd:
+    enabled: true
+    name: "{{ item }}"
+    state: restarted
+  with_items:
+    - guacd
+    - "tomcat{{ tomcat_version }}"

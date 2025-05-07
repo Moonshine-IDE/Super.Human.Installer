@@ -321,14 +321,26 @@ class Shell extends AbstractApp {
         #end
 
         #if windows
-        var r:EReg = ~/([a-z0-9]{32})/gmi;
+        // Updated regex to handle newlines in certutil output
+        var r:EReg = ~/MD5 hash of [^:]+:[\s\r\n]*([a-f0-9]{32})/i;
         var p = new Process( "certutil", [ "-hashfile", path, "MD5" ] );
         var b = p.stdout.readAll();
         var e = p.exitCode();
         var a = b.toString();
+        Logger.verbose('${this}: CertUtil output: ${a}');
         if ( r.match( a ) ) {
-            return r.matched( 1 );
+            var hash = r.matched( 1 );
+            Logger.verbose('${this}: Successfully extracted hash: ${hash}');
+            return hash;
         }
+        // Fallback to simpler regex (any 32-character hex string)
+        var simpleR:EReg = ~/([a-f0-9]{32})/i;
+        if ( simpleR.match( a ) ) {
+            var hash = simpleR.matched( 1 );
+            Logger.verbose('${this}: Extracted hash with fallback regex: ${hash}');
+            return hash;
+        }
+        Logger.error('${this}: Failed to extract MD5 hash from certutil output: ${a}');
         return null;
         #end
 

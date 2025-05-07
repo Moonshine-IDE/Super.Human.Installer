@@ -31,7 +31,8 @@
 package superhuman.components;
 
 import superhuman.server.provisioners.AdditionalProvisioner;
-import superhuman.server.provisioners.DemoTasks;
+import superhuman.server.provisioners.StandaloneProvisioner;
+import superhuman.server.provisioners.ProvisionerType;
 import feathers.controls.BitmapImage;
 import openfl.Assets;
 import champaign.core.logging.Logger;
@@ -85,6 +86,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
@@ -164,6 +166,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonOpenBrowser:GenesisButton;
     var _buttonSSH:GenesisButton;
     var _buttonOpenDir:GenesisButton;      
+    var _buttonOpenTerminal:GenesisButton;
     var _buttonDelete:GenesisButton;  
     var _buttonFtp:GenesisButton;    
            
@@ -235,6 +238,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         this.addChild( buttonGroup );
 
         _buttonStart = new GenesisButton();
+        _buttonStart.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonStart.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_START );
         _buttonStart.width = CONTROL_BUTTON_WIDTH;
         _buttonStart.height = CONTROL_BUTTON_HEIGHT;
@@ -244,6 +248,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonStart );
 
         _buttonStop = new GenesisButton();
+        _buttonStop.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonStop.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_STOP );
         _buttonStop.width = CONTROL_BUTTON_WIDTH;
         _buttonStop.height = CONTROL_BUTTON_HEIGHT;
@@ -253,6 +258,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonStop );
 
         _buttonSuspend = new GenesisButton();
+        _buttonSuspend.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonSuspend.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SUSPEND );
         _buttonSuspend.width = CONTROL_BUTTON_WIDTH;
         _buttonSuspend.height = CONTROL_BUTTON_HEIGHT;
@@ -262,6 +268,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonSuspend );
 
         _buttonSync = new GenesisButton();
+        _buttonSync.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonSync.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_UPLOAD );
         _buttonSync.width = CONTROL_BUTTON_WIDTH;
         _buttonSync.height = CONTROL_BUTTON_HEIGHT;
@@ -271,6 +278,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonSync );
 
         _buttonProvision = new GenesisButton();
+        _buttonProvision.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonProvision.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_REFRESH );
         _buttonProvision.width = CONTROL_BUTTON_WIDTH;
         _buttonProvision.height = CONTROL_BUTTON_HEIGHT;
@@ -280,6 +288,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonProvision );
 
         _buttonDestroy = new GenesisButton();
+        _buttonDestroy.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonDestroy.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DESTROY );
         _buttonDestroy.width = CONTROL_BUTTON_WIDTH;
         _buttonDestroy.height = CONTROL_BUTTON_HEIGHT;
@@ -289,6 +298,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonDestroy );
 
         _buttonConsole = new GenesisButton();
+        _buttonConsole.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonConsole.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OUTPUT );
         _buttonConsole.width = CONTROL_BUTTON_WIDTH;
         _buttonConsole.height = CONTROL_BUTTON_HEIGHT;
@@ -297,6 +307,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonConsole );
 
         _buttonOpenBrowser = new GenesisButton();
+        _buttonOpenBrowser.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonOpenBrowser.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WEB );
         _buttonOpenBrowser.width = CONTROL_BUTTON_WIDTH;
         _buttonOpenBrowser.height = CONTROL_BUTTON_HEIGHT;
@@ -306,7 +317,8 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonOpenBrowser );
 
         _buttonSSH = new GenesisButton();
-        _buttonSSH.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CONSOLE );
+        _buttonSSH.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
+        _buttonSSH.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SSH );
         _buttonSSH.width = CONTROL_BUTTON_WIDTH;
         _buttonSSH.height = CONTROL_BUTTON_HEIGHT;
         _buttonSSH.enabled = false;
@@ -315,6 +327,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonSSH );
 
         _buttonOpenDir = new GenesisButton();
+        _buttonOpenDir.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonOpenDir.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_FOLDER );
         _buttonOpenDir.width = CONTROL_BUTTON_WIDTH;
         _buttonOpenDir.height = CONTROL_BUTTON_HEIGHT;
@@ -322,7 +335,17 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonOpenDir.addEventListener( TriggerEvent.TRIGGER, _buttonOpenDirTriggered );
         buttonGroup.addChild( _buttonOpenDir );
 
+        _buttonOpenTerminal = new GenesisButton();
+        _buttonOpenTerminal.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
+        _buttonOpenTerminal.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_CONSOLE );
+        _buttonOpenTerminal.width = CONTROL_BUTTON_WIDTH;
+        _buttonOpenTerminal.height = CONTROL_BUTTON_HEIGHT;
+        _buttonOpenTerminal.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.terminal' );
+        _buttonOpenTerminal.addEventListener( TriggerEvent.TRIGGER, _buttonOpenTerminalTriggered );
+        buttonGroup.addChild( _buttonOpenTerminal );
+
         _buttonDelete = new GenesisButton();
+        _buttonDelete.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonDelete.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_DELETE );
         _buttonDelete.width = CONTROL_BUTTON_WIDTH;
         _buttonDelete.height = CONTROL_BUTTON_HEIGHT;
@@ -331,6 +354,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( _buttonDelete );
 
         _buttonFtp = new GenesisButton();
+        _buttonFtp.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonFtp.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_FILEZILLA );
         _buttonFtp.width = CONTROL_BUTTON_WIDTH;
         _buttonFtp.height = CONTROL_BUTTON_HEIGHT;
@@ -343,6 +367,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         buttonGroup.addChild( spacer );
 
         _buttonConfigure = new GenesisButton();
+        _buttonConfigure.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
         _buttonConfigure.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_SETTINGS );
         _buttonConfigure.width = CONTROL_BUTTON_WIDTH;
         _buttonConfigure.height = CONTROL_BUTTON_HEIGHT;
@@ -446,6 +471,15 @@ class ServerItem extends LayoutGroupItemRenderer {
     function _buttonOpenDirTriggered( e:TriggerEvent ) {
     	
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY );
+        event.provisionerType = _server.provisioner.type;
+        event.server = _server;
+        this.dispatchEvent( event );
+        
+    }
+    
+    function _buttonOpenTerminalTriggered( e:TriggerEvent ) {
+    	
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL );
         event.provisionerType = _server.provisioner.type;
         event.server = _server;
         this.dispatchEvent( event );
@@ -556,31 +590,144 @@ class ServerItem extends LayoutGroupItemRenderer {
     }
 
     function _getServerRoleNames():String {
-
         var s:String = "";
         var a:Array<String> = [];
 
-        for ( role in SuperHumanInstaller.getInstance().serverRolesCollection ) {
-
-            for ( subrole in _server.roles.value ) {
-
-                if ( subrole.value == role.role.value && subrole.enabled ) a.push( role.name );
-
+        // Check if this is a custom provisioner (not one of the standard types)
+        var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                 _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                 _server.provisioner.type != ProvisionerType.Default);
+        
+        // Log role data for debugging
+        for (i in 0..._server.roles.value.length) {
+            var role = _server.roles.value[i];
+        }
+        
+        // Create a map of valid role names for custom provisioners based on metadata
+        var validCustomRoles = new Map<String, Bool>();
+        if (isCustomProvisioner && _server.customProperties != null) {
+            if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                    Reflect.field(provDef, "metadata") != null) {
+                    
+                    var metadata = Reflect.field(provDef, "metadata");
+                    if (Reflect.hasField(metadata, "roles")) {
+                        var rolesObj = Reflect.field(metadata, "roles");
+                        // Cast Dynamic to Array<Dynamic> to make it iterable
+                        var metadataRoles:Array<Dynamic> = cast rolesObj;
+                        
+                        if (metadataRoles != null) {
+                            for (metaRole in metadataRoles) {
+                                if (metaRole != null && Reflect.hasField(metaRole, "name")) {
+                                    var roleName = Reflect.field(metaRole, "name");
+                                    validCustomRoles.set(roleName, true);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-
+        }
+        
+        if (isCustomProvisioner) {
+            // For custom provisioners, directly use the server's enabled roles
+            // But only if they're found in the metadata for custom provisioners
+            for (role in _server.roles.value) {
+                if (role.enabled) {
+                    // Only include roles that are valid for this custom provisioner
+                    // or if we couldn't determine the valid roles (fall back to showing all)
+                    var isValidRole = validCustomRoles.exists(role.value) || validCustomRoles.keys().hasNext() == false;
+                    
+                    if (isValidRole) {
+                        // For custom roles, we can directly use the role value as the name
+                        // Look for a more human-readable name in customProperties if available
+                        var displayName = role.value;
+                        
+                        // Try to find a better display name in the provisioner metadata
+                        if (_server.customProperties != null) {
+                            if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+                                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+                                if (provDef != null && Reflect.hasField(provDef, "metadata") && 
+                                    Reflect.field(provDef, "metadata") != null) {
+                                    
+                                    var metadata = Reflect.field(provDef, "metadata");
+                                    if (Reflect.hasField(metadata, "roles")) {
+                                        var rolesObj = Reflect.field(metadata, "roles");
+                                        // Cast Dynamic to Array<Dynamic> to make it iterable
+                                        var roles:Array<Dynamic> = cast rolesObj;
+                                        
+                                        if (roles != null) {
+                                            for (metaRole in roles) {
+                                                if (metaRole != null && 
+                                                    Reflect.hasField(metaRole, "name") && 
+                                                    Reflect.field(metaRole, "name") == role.value &&
+                                                    Reflect.hasField(metaRole, "label")) {
+                                                    
+                                                    displayName = Reflect.field(metaRole, "label");
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        a.push(displayName);
+                    }
+                }
+            }
+        } else {
+            // For standard provisioner types, use the global serverRolesCollection
+            for (role in SuperHumanInstaller.getInstance().serverRolesCollection) {
+                for (subrole in _server.roles.value) {
+                    if (subrole.value == role.role.value && subrole.enabled) a.push(role.name);
+                }
+            }
         }
 
-        s = ( a.length > 0 ) ? a.join( ", " ) : "None";
+        s = (a.length > 0) ? a.join(", ") : "None";
         return s;
-
     }
 
     function _updateServer( server:Server, requiresSave:Bool ) {
-
-        _labelTitle.text = '#${_server.id}: ${_server.fqdn}';
+        // Determine if this is a custom provisioner
+        var isCustomProvisioner = (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  _server.provisioner.type != ProvisionerType.AdditionalProvisioner &&
+                                  _server.provisioner.type != ProvisionerType.Default);
+        
+        // For custom provisioners, check if organization is empty to avoid showing trailing slash
+        var serverTitle = "";
+        if (isCustomProvisioner && (_server.organization == null || _server.organization.value == null || _server.organization.value == "")) {
+            // Without organization, just show hostname.domain without trailing slash
+            serverTitle = '#${_server.id}: ${_server.url.hostname}.${_server.url.domainName}';
+        } else {
+            // With organization or for standard provisioners, show full FQDN
+            serverTitle = '#${_server.id}: ${_server.fqdn}';
+        }
+        
+        _labelTitle.text = serverTitle;
         _labelRoles.text = LanguageManager.getInstance().getString( 'serverpage.server.roles', _getServerRoleNames() );
         var cpu:String = ( _server.numCPUs.value == 1 ) ? "CPU" : "CPUs";
-        var prov:String = '${_server.provisioner.type} v${_server.provisioner.version}';
+        
+        // Determine the provisioner version to display
+        var provVersion = _server.provisioner.version;
+        
+        // For custom provisioners, use serverProvisionerId as source of truth for version
+        if (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+            _server.provisioner.type != ProvisionerType.AdditionalProvisioner) {
+            
+            if (_server.serverProvisionerId != null && 
+                _server.serverProvisionerId.value != null && 
+                _server.serverProvisionerId.value != "" && 
+                _server.serverProvisionerId.value != "0.0.0") {
+                
+                provVersion = _server.serverProvisionerId.value;
+            }
+        }
+        
+        var prov:String = '${_server.provisioner.type} v${provVersion}';
         _labelInfo.text = LanguageManager.getInstance().getString( 'serverpage.server.sysinfo', prov, Std.string( _server.numCPUs.value ), cpu, Std.string( _server.memory.value ) );
         if ( _server.diskUsage.value != 0 ) _labelInfo.text += '  •  Est. disk usage: ${ StrTools.autoFormatBytes( _server.diskUsage.value )}';
 
@@ -591,6 +738,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = false;
         _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = false;
         _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = false;
+        _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = false;
         _buttonFtp.enabled = _buttonFtp.includeInLayout = _buttonFtp.visible = false;
         _buttonProvision.enabled = _buttonProvision.includeInLayout = _buttonProvision.visible = false;
         _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = false;
@@ -606,16 +754,15 @@ class ServerItem extends LayoutGroupItemRenderer {
 
         if ( !Vagrant.getInstance().exists || !VirtualBox.getInstance().exists ) return;
 
-        Logger.info('${this}: _updateServer Server status: ${_server.status.value}');
-        Logger.info('${this}: _updateServer Server provisioned: ${_server.provisioned}');
         switch ( _server.status.value ) {
 
             case ServerStatus.Stopped( hasError ):
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
-                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned;
-                _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = !_server.provisioned;
+                _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = _server.provisioned || _server.vmExistsInVirtualBox();
+                _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true; // Always show delete button for stopped servers
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+                _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
@@ -623,6 +770,10 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Start( provisionedBefore ):
             		_buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+            		_buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
+                    // Show the stop button during provisioning
+                    _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
+                    
                 if ( provisionedBefore ) {
 
                     _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.start' );
@@ -642,6 +793,7 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Running( hasError ):
             	    _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+            	    _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
             	    _buttonFtp.enabled = _buttonFtp.includeInLayout = _buttonFtp.visible = true;
                 _buttonOpenBrowser.enabled = _buttonOpenBrowser.includeInLayout = _buttonOpenBrowser.visible = true;
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
@@ -649,22 +801,53 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = true;
 
                 var ipAddress:String = "";
+                var provisionerVersion:String = "";
+                
+                // Get IP address based on provisioner type
                 switch (_server.provisioner.type)
                 {
                     case AdditionalProvisioner:
                         {
-                            ipAddress = cast(_server.provisioner, DemoTasks).ipAddress;
-
-                        }
-                        default:
-                        {
                             ipAddress = cast(_server.provisioner, AdditionalProvisioner).ipAddress;
                         }
+                    case ProvisionerType.StandaloneProvisioner:
+                        {
+                            ipAddress = cast(_server.provisioner, StandaloneProvisioner).ipAddress;
+                        }
+                    default:
+                        {
+                            // For custom provisioners, try to get IP if possible
+                            try {
+                                var customProvisioner = cast(_server.provisioner, StandaloneProvisioner);
+                                ipAddress = customProvisioner.ipAddress;
+                            } catch (e) {
+                                // If casting fails, just use empty string
+                                ipAddress = "";
+                            }
+                        }
                 }
+                
+                // For custom provisioners, use serverProvisionerId as source of truth for version
+                if (_server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                    _server.provisioner.type != ProvisionerType.AdditionalProvisioner) {
+                    
+                    if (_server.serverProvisionerId != null && 
+                        _server.serverProvisionerId.value != null && 
+                        _server.serverProvisionerId.value != "" && 
+                        _server.serverProvisionerId.value != "0.0.0") {
+                        
+                        provisionerVersion = ' v${_server.serverProvisionerId.value}';
+                    } else {
+                        provisionerVersion = ' v${_server.provisioner.version}';
+                    }
+                }
+                
                 if (hasError) {
-                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.runningwitherrors', (_server.provisioned) ? '(IP: ${ipAddress})' : '');
+                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.runningwitherrors', 
+                        (_server.provisioned) ? '(IP: ${ipAddress}${provisionerVersion})' : '');
                 } else {
-                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.running', (_server.provisioned) ? '(IP: ${ipAddress})' : '');
+                    _statusLabel.text = LanguageManager.getInstance().getString('serverpage.server.status.running', 
+                        (_server.provisioned) ? '(IP: ${ipAddress}${provisionerVersion})' : '');
                 }
 
             case ServerStatus.Unconfigured:
@@ -672,11 +855,13 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+                _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unconfigured' );
 
             case ServerStatus.Ready:
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
+                _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );
@@ -726,13 +911,28 @@ class ServerItem extends LayoutGroupItemRenderer {
             {
                 case AdditionalProvisioner:
                     {
-                        numberOfStartedTasks = cast(_server.provisioner, DemoTasks).numberOfStartedTasks;
-                        numberOfTasks = cast(_server.provisioner, DemoTasks).numberOfTasks;
+                        numberOfStartedTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfStartedTasks;
+                        numberOfTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfTasks;
                     }
-                    default:
+                case ProvisionerType.StandaloneProvisioner:
                     {
-                        numberOfStartedTasks = cast(_server.provisioner, AdditionalProvisioner).numberOfStartedTasks;
-                        numberOfTasks = cast(_server.provisioner, AdditionalProvisioner).numberOfTasks;  
+                        numberOfStartedTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfStartedTasks;
+                        numberOfTasks = cast(_server.provisioner, StandaloneProvisioner).numberOfTasks;
+                    }
+                default:
+                    {
+                        // For custom provisioners, default to 0 - they may not support tasks
+                        numberOfStartedTasks = 0;
+                        numberOfTasks = 0;
+                        
+                        // Try to cast to StandaloneProvisioner if possible (many custom provisioners extend it)
+                        try {
+                            var customProvisioner = cast(_server.provisioner, StandaloneProvisioner);
+                            numberOfStartedTasks = customProvisioner.numberOfStartedTasks;
+                            numberOfTasks = customProvisioner.numberOfTasks;
+                        } catch (e) {
+                            // If casting fails, just use default values
+                        }
                     }
             }
             //var percentage = StrTools.calculatePercentage( _server.provisioner.numberOfStartedTasks, _server.provisioner.numberOfTasks );

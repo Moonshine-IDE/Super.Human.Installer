@@ -64,7 +64,25 @@ Section "MainSection" SEC01
   !cd "Templates/installer/"
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
-  CreateShortCut "$DESKTOP\S${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+  CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_EXE}"
+SectionEnd
+
+; Copy provisioners to the common directory
+Section "Provisioners" SEC02
+  ; Create the provisioners directory in the user's application data folder
+  CreateDirectory "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners"
+  
+; Copy provisioners from the installer to the common directory
+  !cd "..\..\"
+  
+  ; Use robocopy to handle long paths for provisioners
+  DetailPrint "Copying provisioners using robocopy for long path support..."
+  SetOutPath "$EXEDIR"
+  ExecWait 'cmd.exe /c robocopy "Assets\provisioners" "$LOCALAPPDATA\${PRODUCT_NAME}\provisioners" /E /R:1 /W:1 /NFL /NDL /NJH /NJS' $0
+  DetailPrint "Robocopy exit code: $0"
+  
+  !cd "Templates/installer/"
+  
 SectionEnd
 
 Section -AdditionalIcons
@@ -109,3 +127,8 @@ Section Uninstall
   DeleteRegKey HKCU "${PRODUCT_DIR_REGKEY}"
   SetAutoClose true
 SectionEnd
+
+Function .onInit
+  ; Enable long path support
+  System::Call 'kernel32::SetProcessWorkingSetSize(i -1, i -1, i -1)'
+FunctionEnd

@@ -33,7 +33,14 @@ package superhuman.server.provisioners;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import genesis.application.managers.LanguageManager;
+import haxe.io.Bytes;
+import haxe.io.BytesInput;
+import haxe.io.BytesOutput;
 import haxe.io.Path;
+import haxe.zip.Entry;
+import haxe.zip.Reader;
+import haxe.zip.Tools;
+import haxe.zip.Writer;
 import lime.system.FileWatcher;
 import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
@@ -44,9 +51,45 @@ import sys.io.File;
 
 class AbstractProvisioner {
 
-    static final _SCRIPTS_ROOT:String = "scripts/";
+    static final _SCRIPTS_ROOT:String = "";
     static final _TEMPLATES_ROOT:String = "templates/";
-    static final _CORE_ROOT:String = _SCRIPTS_ROOT + "core/";
+    static final _CORE_ROOT:String = "core/";
+    
+    /**
+     * Convert a path to the platform-specific format with long path support for Windows
+     * @param path The original path 
+     * @return The platform-appropriate path
+     */
+    #if windows
+    private function _getWindowsLongPath(path:String):String {
+        // Only apply the prefix if the path is long and doesn't already have it
+        if (path.length > 240 && !StringTools.startsWith(path, "\\\\?\\")) {
+            // Make sure path is absolute and uses backslashes
+            var normalizedPath = StringTools.replace(Path.normalize(path), "/", "\\");
+            
+            // Check if it's a UNC path (network share)
+            if (StringTools.startsWith(normalizedPath, "\\\\")) {
+                return "\\\\?\\UNC\\" + normalizedPath.substr(2);
+            } else if (Path.isAbsolute(normalizedPath)) {
+                return "\\\\?\\" + normalizedPath;
+            }
+        }
+        return path;
+    }
+    #end
+
+    /**
+     * Convert a path to the platform-specific format
+     * @param path The original path
+     * @return The platform-appropriate path
+     */
+    private function _getPlatformPath(path:String):String {
+        #if windows
+        return _getWindowsLongPath(path);
+        #else
+        return path;
+        #end
+    }
     
     var _exists:Bool = false;
     var _fileWatcher:FileWatcher;
@@ -96,6 +139,7 @@ class AbstractProvisioner {
 
     public function clearTargetDirectory() {
 
+        Logger.info('${this}: Deleting target directory: ${_targetPath}');
         FileTools.deleteDirectory( _targetPath );
         FileSystem.createDirectory( _targetPath );
 
@@ -104,30 +148,189 @@ class AbstractProvisioner {
     public function copyFiles( ?callback:()->Void ) {
 
         if ( exists ) {
-
             if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "(not required, skipping)" ) );
             if ( callback != null ) callback();
             return;
-
         }
 
-        Logger.info( '${this}: Copying server configuration files to ${_targetPath}' );
-        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "" ) );
-        FileTools.copyDirectory( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT, _targetPath, FileOverwriteRule.Always, callback );
+        // Create target directory if it doesn't exist
+        createTargetDirectory();
 
+        Logger.info( '${this}: Copying server configuration files to ${_targetPath} using zip/unzip method' );
+        if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "" ) );
+        
+        try {
+            // First zip the scripts directory
+            var zipBytes = _zipDirectory( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT );
+            
+            // Then unzip to the target directory
+            _unzipToDirectory( zipBytes, _targetPath );
+            
+            Logger.info( '${this}: Successfully copied files using zip/unzip method' );
+            if ( callback != null ) callback();
+            
+        } catch ( e ) {
+            Logger.error( '${this}: Error copying files using zip/unzip: ${e}' );
+            if ( console != null ) console.appendText( 'Error copying provisioner files: ${e}', true );
+            
+            // Fall back to direct copy if zip/unzip fails
+            Logger.info( '${this}: Falling back to direct copy method' );
+            if ( console != null ) console.appendText( 'Falling back to direct copy method', true );
+            
+            try {
+                FileTools.copyDirectory( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT, _targetPath, FileOverwriteRule.Always, callback );
+            } catch ( e ) {
+                Logger.error( '${this}: Error during fallback direct copy: ${e}' );
+                if ( console != null ) console.appendText( 'Error during fallback direct copy: ${e}', true );
+            }
+        }
+    }
+    
+    /**
+     * Zip a directory and return the zipped bytes
+     * @param directory The directory to zip
+     * @return Bytes The zipped content
+     */
+    private function _zipDirectory( directory:String ):Bytes {
+        Logger.info( '${this}: Zipping directory: ${directory}' );
+        var entries:List<Entry> = new List<Entry>();
+        _addDirectoryToZip( directory, "", entries );
+        
+        var out = new BytesOutput();
+        var writer = new Writer( out );
+        writer.write( entries );
+        
+        return out.getBytes();
+    }
+    
+    /**
+     * Helper function to recursively add files to a zip archive
+     * Uses no compression to avoid ZLib errors with deeply nested paths
+     * @param directory The base directory
+     * @param path The current path within the zip
+     * @param entries The list of zip entries
+     */
+    private function _addDirectoryToZip( directory:String, path:String, entries:List<Entry> ):Void {
+        try {
+            // Use platform-specific path for directory operations
+            var platformDirectory = _getPlatformPath(directory);
+            var items = FileSystem.readDirectory(platformDirectory);
+            
+            for ( item in items ) {
+                var itemPath = Path.addTrailingSlash(directory) + item;
+                var platformItemPath = _getPlatformPath(itemPath);
+                var zipPath = path.length > 0 ? path + "/" + item : item;
+                
+                if ( FileSystem.isDirectory(platformItemPath) ) {
+                    // Add directory entry
+                    var entry:Entry = {
+                        fileName: zipPath + "/",
+                        fileSize: 0,
+                        fileTime: Date.now(),
+                        compressed: false,
+                        dataSize: 0,
+                        data: Bytes.alloc( 0 ),
+                        crc32: 0
+                    };
+                    entries.add( entry );
+                    
+                    // Recursively add directory contents
+                    _addDirectoryToZip( itemPath, zipPath, entries );
+                } else {
+                    // Add file entry without compression
+                    try {
+                        var data = File.getBytes(platformItemPath);
+                        var entry:Entry = {
+                            fileName: zipPath,
+                            fileSize: data.length,
+                            fileTime: FileSystem.stat(platformItemPath).mtime,
+                            compressed: false, // No compression
+                            dataSize: data.length,
+                            data: data,
+                            crc32: haxe.crypto.Crc32.make( data )
+                        };
+                        entries.add( entry );
+                    } catch ( e ) {
+                        Logger.warning( '${this}: Could not add file to zip: ${itemPath} - ${e}' );
+                    }
+                }
+            }
+        } catch ( e ) {
+            Logger.error( '${this}: Error reading directory: ${directory} - ${e}' );
+            throw e;
+        }
+    }
+    
+    /**
+     * Unzip bytes to a directory
+     * @param zipBytes The zipped content
+     * @param directory The directory to unzip to
+     */
+    private function _unzipToDirectory( zipBytes:Bytes, directory:String ):Void {
+        Logger.info( '${this}: Unzipping to directory: ${directory}' );
+        var entries = Reader.readZip( new BytesInput( zipBytes ) );
+        
+        for ( entry in entries ) {
+            var fileName = entry.fileName;
+            
+            // Skip directory entries
+            if ( fileName.length > 0 && fileName.charAt( fileName.length - 1 ) == "/" ) {
+                var dirPath = Path.addTrailingSlash( directory ) + fileName;
+                _createDirectoryRecursive( dirPath );
+                continue;
+            }
+            
+            // Create parent directories if needed
+            var filePath = Path.addTrailingSlash( directory ) + fileName;
+            var parentDir = Path.directory( filePath );
+            _createDirectoryRecursive( parentDir );
+            
+            // Extract file
+            try {
+                var data = entry.data;
+                if ( entry.compressed ) {
+                    Tools.uncompress( entry );
+                }
+                var platformFilePath = _getPlatformPath(filePath);
+                File.saveBytes( platformFilePath, entry.data );
+            } catch ( e ) {
+                Logger.warning( '${this}: Could not extract file from zip: ${fileName} - ${e}' );
+            }
+        }
+        Logger.info( '${this}: Unzip completed' );
+    }
+    
+    /**
+     * Create a directory and all parent directories if they don't exist
+     * @param directory The directory path to create
+     */
+    private function _createDirectoryRecursive( directory:String ):Void {
+        if ( directory == null || directory == "" ) {
+            return;
+        }
+        
+        var platformDir = _getPlatformPath(directory);
+        if ( FileSystem.exists(platformDir) ) {
+            return;
+        }
+        
+        _createDirectoryRecursive( Path.directory( directory ) );
+        FileSystem.createDirectory( platformDir );
     }
 
     public function createTargetDirectory() {
 
-        if ( !FileSystem.exists( _targetPath ) ) FileSystem.createDirectory( _targetPath );
+        if ( !FileSystem.exists( _getPlatformPath(_targetPath) ) ) {
+            FileSystem.createDirectory( _getPlatformPath(_targetPath) );
+        }
 
     }
 
     public function deleteFileInTargetDirectory( path:String ):Bool {
 
         try {
-            
-            FileSystem.deleteFile( Path.addTrailingSlash( _targetPath ) + path );
+            var fullPath = Path.addTrailingSlash( _targetPath ) + path;
+            FileSystem.deleteFile( _getPlatformPath(fullPath) );
             return true;
 
         } catch( e ) {}
@@ -149,22 +352,25 @@ class AbstractProvisioner {
 
     public function fileExists( path:String ):Bool {
 
-        return FileSystem.exists( Path.addTrailingSlash( _targetPath ) + path );
+        var fullPath = Path.addTrailingSlash( _targetPath ) + path;
+        return FileSystem.exists( _getPlatformPath(fullPath) );
 
     }
 
     public function getFileContentFromSourceScriptsDirectory( path:String ):String {
-
-        if ( !FileSystem.exists( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT + path ) ) return null;
+    // This supports both traditional directory structures and GitHub nested directory structures
+        var fullPath = Path.addTrailingSlash( _sourcePath ) + path;
         
-        try {
-
-            return File.getContent( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT + path );
-
-        } catch( e ) {}
-
+        // First try the direct path (for root-level files)
+        if ( FileSystem.exists( _getPlatformPath(fullPath) ) ) {
+            try {
+                return File.getContent( _getPlatformPath(fullPath) );
+            } catch( e ) {
+                Logger.error('Error reading file at ${fullPath}: ${e}');
+            }
+        }
+        
         return null;
-
     }
 
     public function getFileContentFromSourceTemplateDirectory( path:String ):String {
@@ -172,22 +378,21 @@ class AbstractProvisioner {
     		var srcPath:String = Path.addTrailingSlash( _sourcePath );
     		var tmplRoot:String = _TEMPLATES_ROOT;
     		var p:String = path;
-    		try
-    		{
-			if ( !FileSystem.exists( srcPath + _TEMPLATES_ROOT + path ) ) 
-			{
+    		
+    		var fullPath = srcPath + _TEMPLATES_ROOT + path;
+    		var platformPath = _getPlatformPath(fullPath);
+    		
+    		try {
+			if ( !FileSystem.exists( platformPath ) ) {
 				return null;
 			}
     		}
-       	catch( e ) 
-       	{
+       	catch( e ) {
        		return null;
        	}
         
         try {
-
-            return File.getContent( Path.addTrailingSlash( _sourcePath ) + _TEMPLATES_ROOT + path );
-
+            return File.getContent( platformPath );
         } catch( e ) {}
 
         return null;
@@ -196,12 +401,11 @@ class AbstractProvisioner {
 
     public function getFileContentFromTargetDirectory( path:String ):String {
 
-        if ( !FileSystem.exists( Path.addTrailingSlash( _targetPath ) + path ) ) return null;
+        var fullPath = Path.addTrailingSlash( _targetPath ) + path;
+        if ( !FileSystem.exists( _getPlatformPath(fullPath) ) ) return null;
         
         try {
-
-            return File.getContent( Path.addTrailingSlash( _targetPath ) + path );
-
+            return File.getContent( _getPlatformPath(fullPath) );
         } catch( e ) {}
 
         return null;
@@ -218,10 +422,9 @@ class AbstractProvisioner {
     public function saveContentToFileInTargetDirectory( path:String, content:String ):Bool {
 
         try {
-
-            File.saveContent( Path.addTrailingSlash( _targetPath ) + path, content );
+            var fullPath = Path.addTrailingSlash( _targetPath ) + path;
+            File.saveContent( _getPlatformPath(fullPath), content );
             return true;
-
         } catch( e ) {}
 
         return false;

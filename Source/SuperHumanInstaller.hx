@@ -34,15 +34,22 @@ import superhuman.server.AdditionalServer;
 import openfl.Assets;
 import champaign.core.primitives.VersionInfo;
 import superhuman.server.SyncMethod;
+import haxe.io.Path;
+#if windows
+import hxwindowmode.WindowColorMode;
+#end
 import superhuman.components.applications.SetupApplicationsPage;
 import superhuman.components.additionals.AdditionalServerPage;
+import superhuman.components.SecretsPage;
 import openfl.desktop.ClipboardFormats;
 import openfl.desktop.Clipboard;
 import haxe.io.Bytes;
 import superhuman.server.data.ServiceTypeData;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.components.serviceType.ServiceTypePage;
+import superhuman.components.HashManagerPage;
 import superhuman.components.browsers.SetupBrowserPage;
+import superhuman.components.ProvisionerImportPage;
 import superhuman.browser.Browsers;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
@@ -60,6 +67,7 @@ import openfl.events.UncaughtErrorEvent;
 import openfl.system.Capabilities;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
+import prominic.sys.applications.git.Git;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.io.AbstractExecutor;
@@ -70,11 +78,14 @@ import prominic.sys.tools.StrTools;
 import prominic.sys.tools.SysTools.CPUArchitecture;
 import superhuman.components.AdvancedConfigPage;
 import superhuman.components.ConfigPage;
+import superhuman.components.DynamicAdvancedConfigPage;
+import superhuman.components.DynamicConfigPage;
 import superhuman.components.HelpPage;
 import superhuman.components.LoadingPage;
 import superhuman.components.RolePage;
 import superhuman.components.ServerPage;
 import superhuman.components.SettingsPage;
+import superhuman.components.ProvisionerImportPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
@@ -93,6 +104,8 @@ import sys.io.File;
 import superhuman.application.ApplicationData;
 import superhuman.application.Applications;
 import superhuman.server.data.ServerUIType;
+import superhuman.server.definitions.ProvisionerDefinition;
+import sys.io.Process;
 using champaign.core.tools.ObjectTools;
 
 class SuperHumanInstaller extends GenesisApplication {
@@ -116,11 +129,12 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_ROLES = "page-roles";
 	static public final PAGE_SERVER = "page-server";
 	static public final PAGE_SETTINGS = "page-settings";
+	static public final PAGE_SECRETS = "page-secrets";
 	static public final PAGE_SETUP_BROWSERS = "page-setup-browsers";
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
+	static public final PAGE_PROVISIONER_IMPORT = "page-provisioner-import";
+	static public final PAGE_HASH_MANAGER = "page-hash-manager";
 	
-	static public final DEMO_TASKS_PATH:String = "assets/vagrant/hcl_domino_standalone_provisioner/";
-
 	static var _instance:SuperHumanInstaller;
 
 	public static function getInstance():SuperHumanInstaller {
@@ -145,6 +159,8 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _configPage:ConfigPage;
 	var _defaultRoles:Map<String, RoleData>;
 	var _defaultServerConfigData:ServerData;
+	var _dynamicConfigPage:DynamicConfigPage;
+	var _dynamicAdvancedConfigPage:DynamicAdvancedConfigPage;
 	var _helpPage:HelpPage;
 	var _loadingPage:LoadingPage;
 	var _processId:Null<Int>;
@@ -156,6 +172,9 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _setupBrowserPage:SetupBrowserPage;
 	var _setupApplicationsPage:SetupApplicationsPage;
 	var _additionalServerPage:AdditionalServerPage;
+	var _secretsPage:SecretsPage;
+	var _provisionerImportPage:ProvisionerImportPage;
+	var _hashManagerPage:HashManagerPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -180,9 +199,13 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info( '${this}: Bundled Provisioners: ${ProvisionerManager.getBundledProvisioners()}' );
 
+		// Initialize the hash registry after Logger is set up
+		SuperHumanHashes.initialize();
+		Logger.info( '${this}: Hash registry initialized' );
+
 		ServerManager.getInstance().serverRootDirectory = System.applicationStorageDirectory + "servers/";
 
-		_defaultRoles = superhuman.server.provisioners.DemoTasks.getDefaultProvisionerRoles();
+		_defaultRoles = superhuman.server.provisioners.StandaloneProvisioner.getDefaultProvisionerRoles();
 
 		var dominoHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino");
 		var dominoHotFixHashes:Array<String> = SuperHumanHashes.getHotFixesHashes("domino");
@@ -193,7 +216,6 @@ class SuperHumanInstaller extends GenesisApplication {
 		var travelerHashes:Array<String> = SuperHumanHashes.getInstallersHashes("traveler");
 		var travelerFixPacksHashes:Array<String> = SuperHumanHashes.getFixPacksHashes("traveler");
 		var verseHashes:Array<String> = SuperHumanHashes.getInstallersHashes("verse");
-		var appdevpackHashes:Array<String> = SuperHumanHashes.getInstallersHashes("appdevpack");
 		var restApiHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino-rest-api");
 		
 		_serverRolesCollection = [
@@ -203,7 +225,6 @@ class SuperHumanInstaller extends GenesisApplication {
 			new ServerRoleImpl( "Leap (formerly Volt)", LanguageManager.getInstance().getString( 'rolepage.roles.leap.desc' ), _defaultRoles.get( "leap" ), leapHashes, "(hcl.dleap-1.1.7.29.zip)" ),
 			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), travelerHashes, null, travelerFixPacksHashes, "(Traveler_14.0.0FP2_Linux_ML.tar.gz)" ),
 			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), verseHashes, "(HCL_Verse_3.0.0.zip)" ),
-			new ServerRoleImpl( "AppDev Pack for Node.js", LanguageManager.getInstance().getString( 'rolepage.roles.appdevpack.desc' ), _defaultRoles.get( "appdevpack" ), appdevpackHashes, "(domino-appdev-pack-1.0.15.tgz)" ),
 			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), restApiHashes, "(Domino_REST_API_V1_Installer.tar.gz)" ),
 
 		];
@@ -257,6 +278,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			var server = ServerManager.getInstance().createServer( s, s.provisioner.type );
 			server.onUpdate.add( onServerPropertyChanged );
+			
+			// Mark servers loaded from config as non-provisional
+			Reflect.setField(server, "_provisional", false);
 
 		}
 
@@ -274,23 +298,78 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
 	
-		_serviceTypesCollection = [
-			{value: "Standalone Domino Server", 
-			 description: "A new, independent Domino Server", 
-			 provisionerType: ProvisionerType.DemoTasks,
-			 serverType: ServerUIType.Domino,
-			 isEnabled: true},
-			{value: "Additional Domino Server", 
-			 description: "Join a new server to an existing Domino environment", 
-			 provisionerType: ProvisionerType.AdditionalProvisioner,
-			 serverType: ServerUIType.AdditionalDomino,
-			 isEnabled: true},
-			{value: "Volt MX Go Foundry Server", 
-			 description: "Coming soon!", 
-			 provisionerType: "",
-			 serverType: "",
-			 isEnabled: false}
-		];
+		// Initialize service types collection
+	_serviceTypesCollection = [];
+	
+	// Get all available provisioners
+	var allProvisioners:Array<ProvisionerDefinition> = ProvisionerManager.getBundledProvisioners();
+	Logger.info('${this}: Available provisioners: ${allProvisioners.length}');
+	
+	// Group provisioners by type to avoid duplicates
+	var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
+	
+	for (provisioner in allProvisioners) {
+		var type:String = provisioner.data.type;
+		if (!provisionersByType.exists(type)) {
+			provisionersByType.set(type, []);
+		}
+		provisionersByType.get(type).push(provisioner);
+	}
+	
+	// Create a service type entry for each unique provisioner type
+	for (type in provisionersByType.keys()) {
+		// Get the newest version of this provisioner type
+		var provisioners = provisionersByType.get(type);
+		
+		if (provisioners.length > 0) {
+			var provisioner = provisioners[0];
+			
+			// Check if this is a valid provisioner or a disabled placeholder
+			// The placeholder will have version 0.0.0
+			var isValidProvisioner = provisioner.data.version.toString() != "0.0.0";
+			
+			// Add detailed logging
+			Logger.info('Creating service type entry for provisioner: ${provisioner.name}');
+			Logger.info('  - Type: ${type}');
+			Logger.info('  - Version: ${provisioner.data.version}');
+			Logger.info('  - Valid: ${isValidProvisioner}');
+			
+			// Determine server UI type based on naming convention
+			// Default to Domino for unknown types
+			var serverType = type.indexOf("additional") >= 0 ? 
+				ServerUIType.AdditionalDomino : ServerUIType.Domino;
+			
+			// Read the provisioner metadata to get the description
+			var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
+			var description = metadata != null ? metadata.description : provisioner.name;
+			
+			// If this is a disabled placeholder, mark it with "(INVALID)" suffix in the description
+			if (!isValidProvisioner) {
+				description += " (INVALID - missing provisioner.yml in version directories)";
+				Logger.warning('Adding invalid provisioner to service types: ${provisioner.name}');
+			}
+			
+			// Get the base name without version
+			var baseName = provisioner.name;
+			var versionIndex = baseName.lastIndexOf(" v");
+			if (versionIndex > 0) {
+				baseName = baseName.substring(0, versionIndex);
+			}
+			
+	// Add to service types collection
+	_serviceTypesCollection.push({
+		value: provisioner.name,
+		description: description,
+		provisionerType: type,
+		serverType: serverType,
+		isEnabled: isValidProvisioner, // Only enable if it's a valid provisioner
+		provisioner: provisioner // Store the actual provisioner definition
+	});
+	
+	// Log the service type that was added
+	Logger.info('Added service type: ${provisioner.name}, enabled: ${isValidProvisioner}');
+		}
+	}
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
 		Shell.getInstance().findProcessId( 'SuperHumanInstaller', null, _processIdFound );
@@ -332,9 +411,24 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		super.initialize();
 
-		Theme.setTheme( new SuperHumanInstallerTheme( #if lighttheme ThemeMode.Light #end ) );
+		// Set the window to dark mode (Windows only)
+		#if windows
+		try {
+			WindowColorMode.setDarkMode();
+			WindowColorMode.redrawWindowHeader();
+		} catch(e:Dynamic) {
+			Logger.warning('${this}: Error setting window dark mode: ${e}');
+		}
+		#end
+		
+		// Always use dark theme for application UI
+		Theme.setTheme( new SuperHumanInstallerTheme() );
 
 		this._header.logo = Assets.getPath( SuperHumanInstallerTheme.IMAGE_ICON );
+
+		// Initialize provisioners directory and cache
+		_initializeProvisionersDirectory();
+		ProvisionerManager.initializeCache();
 
 		ExecutorManager.getInstance().onExecutorListChanged.add( _onExecutorListChanged );
 
@@ -352,6 +446,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_BROWSER_SERVER_ADDRESS, _openBrowserServerAddress );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VAGRANT_SSH, _openVagrantSSH );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _openServerDir );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _openServerTerminal );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DELETE_SERVER, _deleteServer );
 						
 		_serverPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_SERVER, _configureServer );
@@ -371,7 +466,10 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serviceTypePage = new ServiceTypePage(_serviceTypesCollection);
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_SERVER, _createServer);
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_ADDITIONAL_DOMINO_SERVER, _createAdditionalDominoServer );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER, _createCustomServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage );
 		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
 		
 		_configPage = new ConfigPage();
@@ -394,13 +492,23 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.addPage( _additionalServerPage, PAGE_ADDITIONAL_SERVER );
 
 		_settingsPage = new SettingsPage();
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
-		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
-		_settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplicationPage);
-		_settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSettings );
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+        _settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_BROWSER, _configureBrowserPage);
+        _settingsPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_APPLICATION, _configureApplicationPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_SECRETS_PAGE, _openSecretsPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_HASH_MANAGER_PAGE, _openHashManagerPage);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
+		
+        _secretsPage = new SecretsPage();
+        _secretsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelSecrets );
+        _secretsPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+        _secretsPage.addEventListener( SuperHumanApplicationEvent.OPEN_EXTERNAL_URL, _openExternalUrl );
+		this.addPage( _secretsPage, PAGE_SECRETS );
 
 		_rolePage = new RolePage();
 		_rolePage.addEventListener( SuperHumanApplicationEvent.CLOSE_ROLES, _closeRolePage );
@@ -420,6 +528,17 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
 		this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
 		
+		_provisionerImportPage = new ProvisionerImportPage();
+		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
+		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.CLOSE_PROVISIONER_IMPORT_PAGE, _closeProvisionerImportPage );
+		this.addPage( _provisionerImportPage, PAGE_PROVISIONER_IMPORT );
+		
+		_hashManagerPage = new HashManagerPage();
+		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _closeHashManagerPage );
+		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
+		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.OPEN_FILE_CACHE_DIRECTORY, _openFileCacheDirectory );
+		this.addPage( _hashManagerPage, PAGE_HASH_MANAGER );
+		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
 
@@ -435,7 +554,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		Vagrant.getInstance().onDestroy.add( _vagrantDestroyed );
 		Vagrant.getInstance().onUp.add( _vagrantUped );
 		VirtualBox.getInstance().onInit.add( _virtualBoxInitialized );
-		ParallelExecutor.create().add( Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit() ).onStop.add( _checkAppsInitialized ).execute();
+		Git.getInstance().onInit.add( _gitInitialized );
+		ParallelExecutor.create().add( Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit(), Git.getInstance().getInit() ).onStop.add( _checkAppsInitialized ).execute();
 
 	}
 
@@ -448,13 +568,16 @@ class SuperHumanInstaller extends GenesisApplication {
 				Vagrant.getInstance().onGlobalStatus.add( _vagrantGlobalStatusFinished ).onVersion.add( _vagrantVersionUpdated );
 				VirtualBox.getInstance().onVersion.add( _virtualBoxVersionUpdated ).onListVMs.add( _virtualBoxListVMsUpdated );
 
+				Git.getInstance().onVersion.add( _gitVersionUpdated );
+				
 				var pe = ParallelExecutor.create();
 				pe.add( 
 					Vagrant.getInstance().getVersion(),
 					VirtualBox.getInstance().getBridgedInterfaces(),
 					VirtualBox.getInstance().getHostInfo(),
 					VirtualBox.getInstance().getVersion(),
-					VirtualBox.getInstance().getListVMs( true )
+					VirtualBox.getInstance().getListVMs( true ),
+					Git.getInstance().getVersion()
 				 );
 
 				var rsyncExecutor = Vagrant.getInstance().getRsyncVersion();
@@ -535,10 +658,26 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 	}
+	
+	function _gitInitialized( a:AbstractApp ) {
+		
+		if ( Git.getInstance().exists ) {
+			Logger.info( '${this}: Git is installed at ${Git.getInstance().path}' );
+		} else {
+			Logger.warning( '${this}: Git is not installed' );
+		}
+		
+	}
 
 	function _virtualBoxVersionUpdated() {
 
 		Logger.info( '${this}: VirtualBox version: ${VirtualBox.getInstance().version}' );
+
+	}
+	
+	function _gitVersionUpdated() {
+
+		Logger.info( '${this}: Git version: ${Git.getInstance().version}' );
 
 	}
 
@@ -576,22 +715,220 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _advancedConfigureServer( e:SuperHumanApplicationEvent ) {
+		// Store the server reference to ensure we're working with the same server
+		var server = e.server;
 		
-		_advancedConfigPage.setServer( e.server );
-		_advancedConfigPage.updateContent();
-		this.selectedPageId = PAGE_CONFIG_ADVANCED;
-
+		// First check if the server still exists
+		if (server == null) {
+			Logger.warning('${this}: Cannot configure advanced server settings - server is null');
+			// Return to server overview page
+			this.selectedPageId = PAGE_SERVER;
+			return;
+		}
+		
+		// Check if this is a custom provisioner
+		// We can use either the event's provisionerType or the server's provisioner type
+		var provisionerType = e.provisionerType != null ? e.provisionerType : 
+		                      (server.provisioner != null ? server.provisioner.type : null);
+		
+		// Make sure we have a valid provisioner type before proceeding
+		if (provisionerType == null) {
+			Logger.warning('${this}: Cannot determine provisioner type - provisioner is null');
+			// Return to server overview page
+			this.selectedPageId = PAGE_SERVER;
+			return;
+		}
+		
+		var isCustomProvisioner = provisionerType != ProvisionerType.StandaloneProvisioner && 
+								  provisionerType != ProvisionerType.AdditionalProvisioner &&
+								  provisionerType != ProvisionerType.Default;
+		
+		Logger.info('${this}: Advanced configure server with provisioner type: ${provisionerType}, isCustom: ${isCustomProvisioner}');
+		
+		if (isCustomProvisioner) {
+			// Initialize the dynamic advanced config page if it doesn't exist
+			if (_dynamicAdvancedConfigPage == null) {
+				_dynamicAdvancedConfigPage = new DynamicAdvancedConfigPage();
+				_dynamicAdvancedConfigPage.addEventListener(SuperHumanApplicationEvent.CANCEL_PAGE, _cancelAdvancedConfigureServer);
+				_dynamicAdvancedConfigPage.addEventListener(SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION, _saveAdvancedServerConfiguration);
+				this.addPage(_dynamicAdvancedConfigPage, "page-dynamic-advanced-config");
+			}
+			
+			// Get the provisioner definition for the custom provisioner
+			var provisionerDefinition = null;
+			
+			// First check if we have a provisioner definition name in the event data
+			if (e.data != null && e.data is String) {
+				var provisionerName:String = e.data;
+				Logger.info('${this}: Looking for provisioner definition by name: ${provisionerName}');
+				
+				// Try to find the provisioner definition by name
+				var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+				for (provisioner in allProvisioners) {
+					if (provisioner.name == provisionerName) {
+						provisionerDefinition = provisioner;
+						Logger.info('${this}: Found provisioner definition by name: ${provisioner.name}');
+						break;
+					}
+				}
+			}
+			
+			// If we didn't find a provisioner definition by name, try to find it by version
+			if (provisionerDefinition == null) {
+				var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+				if (allProvisioners.length > 0) {
+					// Find the exact provisioner version that matches the server's provisioner
+					for (provisioner in allProvisioners) {
+						if (provisioner.data.version == server.provisioner.version) {
+							provisionerDefinition = provisioner;
+							Logger.info('${this}: Found provisioner definition by version: ${provisioner.data.version}');
+							break;
+						}
+					}
+					
+					// If no exact match, use the first one
+					if (provisionerDefinition == null && allProvisioners.length > 0) {
+						provisionerDefinition = allProvisioners[0];
+						Logger.info('${this}: Using first available provisioner definition: ${provisionerDefinition.name}');
+					}
+				}
+			}
+			
+			// Set the server and provisioner definition for the dynamic advanced config page
+			_dynamicAdvancedConfigPage.setServer(server);
+			if (provisionerDefinition != null) {
+				_dynamicAdvancedConfigPage.setProvisionerDefinition(provisionerDefinition);
+				Logger.info('${this}: Using provisioner definition for advanced config: ${provisionerDefinition.name}');
+			} else {
+				Logger.warning('${this}: No provisioner definition found for advanced config');
+			}
+			_dynamicAdvancedConfigPage.updateContent();
+			
+			// Show the dynamic advanced config page
+			this.selectedPageId = "page-dynamic-advanced-config";
+		} else {
+			// Use the standard advanced config page for built-in provisioners
+			_advancedConfigPage.setServer(server);
+			_advancedConfigPage.updateContent();
+			this.selectedPageId = PAGE_CONFIG_ADVANCED;
+		}
 	}
 
 	function _configureServer( e:SuperHumanApplicationEvent ) {
-
-		switch ( e.provisionerType ) {
-			case ProvisionerType.AdditionalProvisioner:
-				_showConfigureAdditionalServer( cast(e.server, AdditionalServer) );
-			default:
-				_showConfigureServer( e.server );
+		// Get the provisioner type from the event or the server
+		var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+		
+		// Get the actual class name of the provisioner to determine its type
+		var provisionerClassName = Type.getClassName(Type.getClass(e.server.provisioner));
+		Logger.info('${this}: Configure server with provisioner class: ${provisionerClassName}, type: ${provisionerType}');
+		
+		// Check if this is a standard provisioner by class name first (most reliable)
+		var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
+								   provisionerClassName == "superhuman.server.provisioners.AdditionalProvisioner");
+		
+		// Also check by type as a fallback
+		if (!isStandardProvisioner) {
+			isStandardProvisioner = (provisionerType == ProvisionerType.StandaloneProvisioner || 
+								   provisionerType == ProvisionerType.AdditionalProvisioner ||
+								   provisionerType == ProvisionerType.Default);
 		}
-
+		
+		// If it's a standard provisioner, it should NEVER use the custom config page
+		var isCustomProvisioner = !isStandardProvisioner;
+		
+		Logger.info('${this}: Configure server with provisioner type: ${provisionerType}, isStandard: ${isStandardProvisioner}, isCustom: ${isCustomProvisioner}');
+		
+		if (isCustomProvisioner) {
+			// For custom provisioners, use the dynamic config page
+			_showConfigureCustomServer(e.server);
+		} else {
+			// For built-in provisioner types, use the standard config pages
+			switch (provisionerType) {
+				case ProvisionerType.AdditionalProvisioner:
+					_showConfigureAdditionalServer(cast(e.server, AdditionalServer));
+				default:
+					_showConfigureServer(e.server);
+			}
+		}
+	}
+	
+	/**
+	 * Show the dynamic configuration page for custom provisioners
+	 * @param server The server to configure
+	 */
+	function _showConfigureCustomServer(server:Server) {
+		// Initialize the dynamic config page if it doesn't exist
+		if (_dynamicConfigPage == null) {
+			_dynamicConfigPage = new DynamicConfigPage();
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER, _advancedConfigureServer);
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer);
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles);
+			_dynamicConfigPage.addEventListener(SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION, _saveServerConfiguration);
+			this.addPage(_dynamicConfigPage, "page-dynamic-config");
+		}
+		
+		// Set the server for the dynamic config page
+		_dynamicConfigPage.setServer(server);
+		
+		// Get the provisioner definition for the current server
+		var provisionerDefinition = null;
+		
+		// Check if we have a stored provisioner definition in the server's userData
+		if (server.userData != null && Reflect.hasField(server.userData, "provisionerDefinition")) {
+			provisionerDefinition = Reflect.field(server.userData, "provisionerDefinition");
+			Logger.info('${this}: Found provisioner definition in server userData: ${provisionerDefinition.name}');
+		} else {
+			// Try to find the provisioner definition by type and version
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(server.provisioner.type);
+			if (allProvisioners.length > 0) {
+				// Find the exact provisioner version that matches the server's provisioner
+				for (provisioner in allProvisioners) {
+					if (provisioner.data.version == server.provisioner.version) {
+						provisionerDefinition = provisioner;
+						Logger.info('${this}: Found provisioner definition by version: ${provisioner.data.version}');
+						break;
+					}
+				}
+				
+				// If no exact match, use the first one
+				if (provisionerDefinition == null && allProvisioners.length > 0) {
+					provisionerDefinition = allProvisioners[0];
+					Logger.info('${this}: Using first available provisioner definition: ${provisionerDefinition.name}');
+				}
+			}
+		}
+		
+		// Force the updateContent call with a delay to ensure the UI is ready
+		haxe.Timer.delay(function() {
+			// Force the dropdown to be populated with all provisioners of this type
+			if (_dynamicConfigPage._dropdownCoreComponentVersion != null) {
+				var provisionerCollection = ProvisionerManager.getBundledProvisionerCollection(server.provisioner.type);
+				Logger.info('${this}: Setting dropdown data provider with ${provisionerCollection.length} items');
+				_dynamicConfigPage._dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+				
+				// Select the current provisioner version if available
+				if (provisionerDefinition != null) {
+					for (i in 0...provisionerCollection.length) {
+						var d = provisionerCollection.get(i);
+						if (d.data.version == provisionerDefinition.data.version) {
+							_dynamicConfigPage._dropdownCoreComponentVersion.selectedIndex = i;
+							break;
+						}
+					}
+				}
+			}
+			
+			// Set the provisioner definition to generate form fields
+			if (provisionerDefinition != null) {
+				_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
+			}
+			
+			// Update the content with forced=true to ensure all fields are created
+			_dynamicConfigPage.updateContent(true);
+		}, 100);
+		
+		// Show the dynamic config page
+		this.selectedPageId = "page-dynamic-config";
 	}
 
 	function _showConfigureServer( server:Server ) {
@@ -615,6 +952,15 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelConfigureServer( e:SuperHumanApplicationEvent ) {
+		// If this server is provisional (has never been saved/confirmed),
+		// remove it completely from the system
+		if (e.server != null && e.server.provisional) {
+			Logger.info('${this}: Removing provisional server ${e.server.id} - configuration was cancelled before saving');
+			// Remove from server manager using the proper method
+			ServerManager.getInstance().removeProvisionalServer(e.server);
+			// Save config to ensure it's removed from the .shi-config file
+			_saveConfig();
+		}
 
 		if (this.previousPageId != PAGE_SERVICE_TYPE)
 		{
@@ -627,31 +973,142 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _cancelAdvancedConfigureServer( e:SuperHumanApplicationEvent ) {
-
-		switch ( e.server.provisioner.type ) {
+		// For advanced config, we don't remove provisional servers on cancel
+		// We just return to the basic config page with no changes
+		
+		// Safely get provisioner type, with multiple fallbacks
+		var provisionerType = null;
+		
+		// Try to get from event first (most reliable)
+		if (e.provisionerType != null) {
+			provisionerType = e.provisionerType;
+			Logger.info('${this}: Got provisioner type from event: ${provisionerType}');
+		} 
+		// If not available, try to get from server if it exists
+		else if (e.server != null && e.server.provisioner != null) {
+			provisionerType = e.server.provisioner.type;
+			Logger.info('${this}: Got provisioner type from server: ${provisionerType}');
+		}
+		
+		// If we still don't have a type or server is null, default to the server page
+		if (provisionerType == null || e.server == null) {
+			Logger.warning('${this}: Cannot determine provisioner type or server is null, returning to server list');
+			this.selectedPageId = PAGE_SERVER;
+			return;
+		}
+		
+		// Now determine which page to navigate to based on the provisioner type
+		Logger.info('${this}: Navigating back to basic config for provisioner type: ${provisionerType}');
+		
+		// Instead of navigating based only on provisioner type, also check the previousPageId
+		// This helps maintain proper navigation history
+		switch (provisionerType) {
 			case ProvisionerType.AdditionalProvisioner:
-				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+				// For additional provisioners, go to the additional server page
+				if (_additionalServerPage != null && e.server != null) {
+					// First set the server to ensure the page has the correct data
+					_additionalServerPage.setServer(cast(e.server, AdditionalServer));
+					// Force content update to refresh the UI
+					_additionalServerPage.updateContent(true);
+					// Then navigate to the page
+					this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+					Logger.info('${this}: Navigating to AdditionalServerPage for server ${e.server.id}');
+				} else {
+					this.selectedPageId = PAGE_SERVER;
+					Logger.warning('${this}: Could not navigate to AdditionalServerPage - missing page or server');
+				}
+				
+			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default:
+				// For built-in provisioner types, go to the standard config page
+				if (_configPage != null && e.server != null) {
+					// First set the server to ensure the page has the correct data
+					_configPage.setServer(e.server);
+					// Force content update to refresh the UI
+					_configPage.updateContent(true);
+					// Then navigate to the page
+					this.selectedPageId = PAGE_CONFIG;
+					Logger.info('${this}: Navigating to ConfigPage for server ${e.server.id}');
+				} else {
+					this.selectedPageId = PAGE_SERVER;
+					Logger.warning('${this}: Could not navigate to ConfigPage - missing page or server');
+				}
+				
 			default:
-				this.selectedPageId = PAGE_CONFIG;
+				// For custom provisioner types, go to the dynamic config page
+				if (_dynamicConfigPage != null && e.server != null) {
+					// First set the server to ensure the page has the correct data
+					_dynamicConfigPage.setServer(e.server);
+					// Force content update to refresh the UI
+					_dynamicConfigPage.updateContent(true);
+					// Then navigate to the page
+					this.selectedPageId = "page-dynamic-config";
+					Logger.info('${this}: Navigating to DynamicConfigPage for server ${e.server.id}');
+				} else {
+					this.selectedPageId = PAGE_SERVER;
+					Logger.warning('${this}: Could not navigate to DynamicConfigPage - missing page or server');
+				}
 		}
 	}
 
 	function _cancelSettings( e:SuperHumanApplicationEvent ) {
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS) {
-			this.selectedPageId = this.previousPageId;
-		} else {
-			this.selectedPageId = PAGE_SERVER;
-		}
+		this.selectedPageId = PAGE_SERVER;
 	}
+	
+	function _cancelSecrets( e:SuperHumanApplicationEvent ) {
+		this.selectedPageId = PAGE_SETTINGS;
+	}
+	
+	function _openSecretsPage( e:SuperHumanApplicationEvent ) {
+		this.selectedPageId = PAGE_SECRETS;
+	}
+	
+    /**
+     * Navigate to the provisioner import page
+     * @param e The event
+     */
+    function _openProvisionerImportPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Opening provisioner import page');
+        this.selectedPageId = PAGE_PROVISIONER_IMPORT;
+    }
+    
+    /**
+     * Navigate to the hash manager page
+     * @param e The event
+     */
+    function _openHashManagerPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Opening hash manager page');
+        this.selectedPageId = PAGE_HASH_MANAGER;
+    }
+    
+    /**
+     * Close the hash manager page
+     * @param e The event
+     */
+    function _closeHashManagerPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Closing hash manager page');
+        // Return to previous page if it exists, otherwise go to settings page
+        if (this.previousPageId != null && this.previousPageId != PAGE_HASH_MANAGER) {
+            this.selectedPageId = this.previousPageId;
+        } else {
+            this.selectedPageId = PAGE_SETTINGS;
+        }
+    }
+    
+    /**
+     * Open the file cache directory in the system file explorer
+     * @param e The event
+     */
+    function _openFileCacheDirectory( e:SuperHumanApplicationEvent ) {
+        var cacheDir = superhuman.server.cache.SuperHumanFileCache.getCacheDirectory();
+        Logger.info('${this}: Opening file cache directory: ${cacheDir}');
+        Shell.getInstance().open([cacheDir]);
+        ToastManager.getInstance().showToast("Opening cache directory");
+    }
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {
 
 		_saveConfig();
-		if (this.previousPageId != PAGE_SETUP_BROWSERS && this.previousPageId != PAGE_SETUP_APPLICATIONS) {
-			this.selectedPageId = this.previousPageId;
-		} else {
-			this.selectedPageId = PAGE_SERVER;
-		}
+		this.selectedPageId = PAGE_SERVER;
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.settingssaved' ) );
 
 	}
@@ -732,6 +1189,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		super._onWindowFocusOut();
 
 	}
+	
+	// We don't need an OS theme change handler when using setDarkMode directly
 
 	override function _onWindowResize( w:Int, h:Int ) {
 
@@ -758,6 +1217,15 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 		Browsers.openLink(e.server.webAddress);
 	}
+	
+	function _openExternalUrl( e:SuperHumanApplicationEvent ) {
+		if (e.url != null && e.url.length > 0) {
+			Logger.info('${this}: Opening external URL: ${e.url}');
+			Browsers.openLink(e.url);
+		} else {
+			Logger.warning('${this}: Cannot open external URL - URL is null or empty');
+		}
+	}
 
 	function _saveConfig() {
 
@@ -766,11 +1234,16 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		_config.servers = [];
 
+		// Only save non-provisional servers to config
 		for ( server in ServerManager.getInstance().servers ) {
+			// Skip servers that are still provisional (user hasn't saved them yet)
+			if (server.provisional) {
+				Logger.info('${this}: Skipping provisional server ${server.id} when saving config');
+				continue;
+			}
 
 			_config.servers.push( server.getData() );
 			server.saveData();
-
 		}
 
 		if (_config.browsers == null) 
@@ -795,35 +1268,142 @@ class SuperHumanInstaller extends GenesisApplication {
 		_browsersCollection = null;
 		
 		try {
-
 			var conf = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
 			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
 			Logger.info( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
-
 		} catch ( e ) {
-
 			Logger.error( '${this}: Configuration cannot be saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
-
 		}
 
 	}
 
-	function _saveServerConfiguration( e:SuperHumanApplicationEvent ) {
-
-		e.server.saveHostsFile();
-		_saveConfig();
-		
-		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverconfigsaved' ) );
-		this.selectedPageId = PAGE_SERVER;
-
-	}
+    function _saveServerConfiguration( e:SuperHumanApplicationEvent ) {
+        // Check if this is a custom provisioner 
+        var isCustomProvisioner = (e.server.provisioner.type != ProvisionerType.StandaloneProvisioner && 
+                                  e.server.provisioner.type != ProvisionerType.AdditionalProvisioner);
+        
+        Logger.info('${this}: Saving server configuration for server ${e.server.id}, custom provisioner: ${isCustomProvisioner}');
+        
+        // Try to save hosts file first, with detailed logging
+        try {
+            // Force update of any fields before saving
+            e.server.saveData();
+            
+            // Explicitly save hosts file to ensure it's created
+            e.server.saveHostsFile();
+            
+            // Set server status after saving hosts file to ensure it's in the correct state
+            e.server.setServerStatus();
+            
+            Logger.info('${this}: Successfully saved hosts file for server ${e.server.id}');
+        } catch(ex) {
+            Logger.error('${this}: Error saving hosts file: ${ex}');
+            
+            if (e.server.console != null) {
+                e.server.console.appendText('Error saving hosts file: ${ex}', true);
+            }
+        }
+        
+        // Save the global config
+        _saveConfig();
+        
+        ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverconfigsaved' ) );
+        this.selectedPageId = PAGE_SERVER;
+    }
 
 	function _configureRoles( e:SuperHumanApplicationEvent ) {
-
+		// Set the server for the role page
 		_rolePage.setServer( e.server );
+		
+		// Get the actual class name of the provisioner to determine its type
+		var provisionerClassName = Type.getClassName(Type.getClass(e.server.provisioner));
+		Logger.info('${this}: Configure roles with provisioner class: ${provisionerClassName}');
+		
+		// Check if this is a standard provisioner by class name first (most reliable)
+		var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
+								   provisionerClassName == "superhuman.server.provisioners.AdditionalProvisioner");
+		
+		// Also check by type as a fallback
+		if (!isStandardProvisioner) {
+			var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+			isStandardProvisioner = (provisionerType == ProvisionerType.StandaloneProvisioner || 
+								   provisionerType == ProvisionerType.AdditionalProvisioner ||
+								   provisionerType == ProvisionerType.Default);
+		}
+		
+		// If it's a standard provisioner, it should NEVER use custom roles
+		var isCustomProvisioner = !isStandardProvisioner;
+		
+		Logger.info('${this}: Configure roles with isStandard: ${isStandardProvisioner}, isCustom: ${isCustomProvisioner}');
+		
+		// Log the provisioner type information
+		Logger.info('${this}: Configure roles - isStandardProvisioner: ${isStandardProvisioner}');
+		
+		// Check if the event contains a provisioner definition name in data field
+		if (isCustomProvisioner && e.data != null && Std.isOfType(e.data, String)) {
+			var provisionerName:String = cast e.data;
+			Logger.info('${this}: Got provisioner name from event: ${provisionerName}');
+			
+			// Look up the provisioner definition by name
+			var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+			var foundProvisioner = null;
+			
+			// Find the provisioner that matches the name
+			for (provisioner in allProvisioners) {
+				if (provisioner.name == provisionerName) {
+					foundProvisioner = provisioner;
+					Logger.info('${this}: Found matching provisioner definition: ${provisioner.name}');
+					break;
+				}
+			}
+			
+			// If we found a provisioner, set it on the role page
+			if (foundProvisioner != null) {
+				Reflect.setField(_rolePage, "_provisionerDefinition", foundProvisioner);
+				Logger.info('${this}: Setting provisioner definition on RolePage: ${foundProvisioner.name}');
+			} else {
+				// Clear any existing provisioner definition if we couldn't find a match
+				Reflect.setField(_rolePage, "_provisionerDefinition", null);
+				Logger.warning('${this}: Could not find provisioner definition with name: ${provisionerName}');
+			}
+		} else if (isCustomProvisioner) {
+			// For custom provisioners without a definition name, try to find by type and version
+			var provisionerType = e.provisionerType != null ? e.provisionerType : e.server.provisioner.type;
+			var allProvisioners = ProvisionerManager.getBundledProvisioners(provisionerType);
+			
+			if (allProvisioners.length > 0) {
+				// Find the exact provisioner version that matches the server's provisioner
+				var foundProvisioner = null;
+				for (provisioner in allProvisioners) {
+					if (provisioner.data.version == e.server.provisioner.version) {
+						foundProvisioner = provisioner;
+						Logger.info('${this}: Found provisioner definition by version: ${provisioner.data.version}');
+						break;
+					}
+				}
+				
+				// If no exact match, use the first one
+				if (foundProvisioner == null) {
+					foundProvisioner = allProvisioners[0];
+					Logger.info('${this}: Using first available provisioner definition: ${foundProvisioner.name}');
+				}
+				
+				Reflect.setField(_rolePage, "_provisionerDefinition", foundProvisioner);
+			} else {
+				// Clear any existing provisioner definition
+				Reflect.setField(_rolePage, "_provisionerDefinition", null);
+				Logger.info('${this}: No provisioner definitions found for type: ${provisionerType}');
+			}
+		} else {
+			// For standard provisioners, clear any existing provisioner definition
+			Reflect.setField(_rolePage, "_provisionerDefinition", null);
+			Logger.info('${this}: Standard provisioner, clearing provisioner definition');
+		}
+		
+		// Update the role page content and navigate to it
 		_rolePage.updateContent();
 		this.selectedPageId = PAGE_ROLES;
-
 	}
 
 	function _closeRolePage( e:SuperHumanApplicationEvent ) {
@@ -868,9 +1448,121 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.selectedPageId = this.previousPageId;	
 	}
 	
-	function _closeSetupAppPage(e:SuperHumanApplicationEvent) {
-		this.selectedPageId = this.previousPageId;
-	}
+    function _closeSetupAppPage(e:SuperHumanApplicationEvent) {
+        this.selectedPageId = this.previousPageId;
+    }
+    
+    function _closeProvisionerImportPage(e:SuperHumanApplicationEvent) {
+        // Return to the previous page or the settings page, depending on where we came from
+        if (this.previousPageId != null && this.previousPageId != PAGE_PROVISIONER_IMPORT) {
+            this.selectedPageId = this.previousPageId;
+        } else {
+            // Default to settings page if we can't determine the previous page
+            this.selectedPageId = PAGE_SETTINGS;
+        }
+        
+        Logger.info('${this}: Closing provisioner import page, returning to ${this.selectedPageId}');
+    }
+    
+    /**
+     * Handle the provisioner imported event
+     * @param e The event
+     */
+    function _provisionerImported(e:SuperHumanApplicationEvent) {
+        // Refresh the list of available provisioners
+        var allProvisioners:Array<ProvisionerDefinition> = ProvisionerManager.getBundledProvisioners();
+        Logger.info('${this}: Available provisioners after import: ${allProvisioners.length}');
+        
+        // Reinitialize service types collection
+        _serviceTypesCollection = [];
+        
+        // Group provisioners by type to avoid duplicates
+        var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
+        
+        for (provisioner in allProvisioners) {
+            var type:String = provisioner.data.type;
+            if (!provisionersByType.exists(type)) {
+                provisionersByType.set(type, []);
+            }
+            provisionersByType.get(type).push(provisioner);
+        }
+        
+        // Create a service type entry for each unique provisioner type
+        for (type in provisionersByType.keys()) {
+            // Get the newest version of this provisioner type
+            var provisioners = provisionersByType.get(type);
+            
+            if (provisioners.length > 0) {
+                var provisioner = provisioners[0];
+                
+                // Determine server UI type based on naming convention or content
+                var serverType = ServerUIType.Domino; // Default to standard Domino
+                
+                // Check if this is an additional server provisioner
+                if (type.indexOf("additional") >= 0) {
+                    serverType = ServerUIType.AdditionalDomino;
+                } else if (type != ProvisionerType.StandaloneProvisioner && type != ProvisionerType.AdditionalProvisioner) {
+                    // This is a custom provisioner type
+                    Logger.info('${this}: Detected custom provisioner type: ${type}');
+                }
+                
+                // Read the provisioner metadata to get the description
+                var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
+                var description = metadata != null ? metadata.description : provisioner.name;
+                
+                // Get the base name without version
+                var baseName = provisioner.name;
+                var versionIndex = baseName.lastIndexOf(" v");
+                if (versionIndex > 0) {
+                    baseName = baseName.substring(0, versionIndex);
+                }
+                
+	// Add to service types collection
+	_serviceTypesCollection.push({
+		value: provisioner.name, // Keep the full name with version in the value
+		description: description,
+		provisionerType: type,
+		serverType: serverType,
+		isEnabled: true,
+		provisioner: provisioner // Store the actual provisioner definition
+	});
+                
+                Logger.info('${this}: Added provisioner to service types: ${baseName}, type: ${type}, serverType: ${serverType}');
+            }
+        }
+        
+        // Always update the service types collection in the page
+        if (_serviceTypePage != null) {
+            // Log current page for debugging
+            Logger.info('${this}: Current page: ${this.selectedPageId}, checking if on SERVICE_TYPE page: ${this.selectedPageId == PAGE_SERVICE_TYPE}');
+            
+            // Update with the latest collection
+            _serviceTypePage.updateServiceTypes(_serviceTypesCollection);
+            
+            // If we're currently on the service type page, dispatch an event to refresh the UI
+            if (this.selectedPageId == PAGE_SERVICE_TYPE) {
+                Logger.info('${this}: On ServiceTypePage, dispatching refresh event');
+                
+                // Create a new event for provisioner data update
+                var refreshEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_DATA_UPDATED);
+                
+                // Dispatch to the service type page to trigger a refresh
+                _serviceTypePage.dispatchEvent(refreshEvent);
+            }
+        }
+        
+        // Refresh the server page to show the new provisioner
+        if (_serverPage != null) {
+            // Force a refresh of the server page
+            for (server in ServerManager.getInstance().servers) {
+                server.setServerStatus();
+            }
+        }
+        
+        Logger.info('${this}: Provisioner imported successfully');
+        
+        // The ServiceTypePage already shows a toast notification, so we don't need one here
+    }
 	
 	function _initializeApplicationsCollection() {
 		if (this.previousPageId != PAGE_SETUP_APPLICATIONS) {
@@ -901,17 +1593,54 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _saveAdvancedServerConfiguration( e:SuperHumanApplicationEvent ) {
-
+		// Save changes to the server
 		e.server.saveHostsFile();
 		_saveConfig();
 
+		// Show success message
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.advancedserverconfigsaved' ) );
 
+		// Log the navigation event
+		Logger.info('${this}: Advanced configuration saved, returning to basic config page');
+		
+		// Return to the appropriate basic configuration page based on provisioner type
 		switch ( e.server.provisioner.type ) {
 			case ProvisionerType.AdditionalProvisioner:
-				this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+				// For additional provisioners, go to the additional server page
+				if (_additionalServerPage != null) {
+					_additionalServerPage.setServer(cast(e.server, AdditionalServer));
+					_additionalServerPage.updateContent(true); // Force refresh the UI
+					this.selectedPageId = PAGE_ADDITIONAL_SERVER;
+					Logger.info('${this}: Returning to AdditionalServerPage for server ${e.server.id}');
+				} else {
+					// Fallback if page isn't available
+					this.selectedPageId = PAGE_SERVER;
+				}
+				
+			case ProvisionerType.StandaloneProvisioner, ProvisionerType.Default:
+				// For built-in provisioner types, go to the standard config page
+				if (_configPage != null) {
+					_configPage.setServer(e.server);
+					_configPage.updateContent(true); // Force refresh the UI
+					this.selectedPageId = PAGE_CONFIG;
+					Logger.info('${this}: Returning to ConfigPage for server ${e.server.id}');
+				} else {
+					// Fallback if page isn't available
+					this.selectedPageId = PAGE_SERVER;
+				}
+				
 			default:
-				this.selectedPageId = PAGE_CONFIG;
+				// For custom provisioner types, go back to the dynamic config page
+				if (_dynamicConfigPage != null) {
+					_dynamicConfigPage.setServer(e.server);
+					_dynamicConfigPage.updateContent(true); // Force refresh the UI
+					this.selectedPageId = "page-dynamic-config";
+					Logger.info('${this}: Returning to DynamicConfigPage for server ${e.server.id}');
+				} else {
+					// Fallback to server page if dynamic config page is not available
+					this.selectedPageId = PAGE_SERVER;
+					Logger.error('${this}: No suitable config page found, returning to server list');
+				}
 		}
 	}
 
@@ -974,12 +1703,54 @@ class SuperHumanInstaller extends GenesisApplication {
 				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
 
 				var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
-				var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
-
-				_footer.sysInfo = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version} ${rsyncVersion}';
-
-				if (rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9")
-				{
+				
+				// Check if running on Windows
+				var isWindows:Bool = Capabilities.os.toLowerCase().indexOf("windows") >= 0;
+				
+				// Create base system info without rsync
+				var sysInfoBase = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
+				
+				// Add Git information if available
+				if (Git.getInstance().exists && Git.getInstance().version != null) {
+					sysInfoBase += ' | Git: ${Git.getInstance().version}';
+				}
+				
+				// Only add rsync info for non-Windows systems
+				if (!isWindows) {
+					var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
+					_footer.sysInfo = sysInfoBase + ' ' + rsyncVersion;
+				} else {
+					_footer.sysInfo = sysInfoBase;
+				}
+				
+				// Determine if we're on a Mac system
+				var isMac:Bool = Capabilities.os.toLowerCase().indexOf("mac") >= 0;
+				
+				// Define the rsync compatibility check once
+				var rsyncIncompatibleVersion:Bool = rsyncVersionInfo > "0.0.0" && rsyncVersionInfo <= "2.6.9";
+				
+				// Determine if system has incompatible rsync (Mac-specific issue)
+				var isRsyncIncompatible:Bool = isMac && rsyncIncompatibleVersion;
+				
+				// Set global flag for disabling the sync toggle
+				SuperHumanGlobals.IS_SYNC_DISABLED = isRsyncIncompatible;
+				
+				// If on Mac with incompatible rsync, force SCP but remember user preference
+				if (isRsyncIncompatible) {
+					// Store original preference if not already saved
+					if (_config.preferences.userPreferredSyncMethod == null) {
+						_config.preferences.userPreferredSyncMethod = _config.preferences.syncmethod;
+					}
+					// Force SCP for Mac with incompatible rsync
+					_config.preferences.syncmethod = SyncMethod.SCP;
+				} else if (_config.preferences.userPreferredSyncMethod != null) {
+					// Restore user preference if we're not on an incompatible system
+					_config.preferences.syncmethod = _config.preferences.userPreferredSyncMethod;
+					_config.preferences.userPreferredSyncMethod = null;
+				}
+				
+				// Show warning for any non-Windows system with incompatible rsync
+				if (!isWindows && rsyncIncompatibleVersion) {
 					_footer.warning = LanguageManager.getInstance().getString( 'serverconfigpage.form.syncmethod.warning' );
 				}
 
@@ -1026,6 +1797,12 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Logger.info('${this}: _openServerDir path: ${e.server.path.value}');
 		Shell.getInstance().open( [ e.server.path.value ] );
+
+	}
+	
+	function _openServerTerminal( e:SuperHumanApplicationEvent ) {
+
+		Logger.info('${this}: _openServerTerminal path: ${e.server.path.value}');
 		Shell.getInstance().openTerminal( e.server.path.value, false );
 
 	}
@@ -1064,11 +1841,88 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 	}
 
+	// Tracking for server deletion
+	private var _pendingDeleteServer:Server = null;
+	private var _pendingDeleteFiles:Bool = false;
+	
 	function _vagrantDestroyed( machine:VagrantMachine ) {
+		// Check if we're waiting to delete a server
+		if (_pendingDeleteServer != null) {
+			Logger.info('${this}: VM destroyed, now proceeding with server deletion');
+			
+			// Cache the server and delete flag, then clear pending state
+			var server = _pendingDeleteServer;
+			var deleteFiles = _pendingDeleteFiles;
+			
+			// Reset pending state
+			_pendingDeleteServer = null;
+			_pendingDeleteFiles = false;
+			
+		// Now complete the server deletion
+		server.dispose();
+		ServerManager.getInstance().servers.remove(server);
+		
+		if (deleteFiles) {
+			#if windows
+			// On Windows, use rd /s /q command to handle long paths better
+			try {
+				var serverPath = server.path.value;
+				
+				// Convert path to Windows format with backslashes
+				var windowsPath = StringTools.replace(serverPath, "/", "\\");
+				var command = 'rd /s /q "' + windowsPath + '"';
+				
+				Logger.info('${this}: Using Windows rd command to delete directory: ${command}');
+				
+				// Execute the command
+				var process = new Process(command);
+				var exitCode = process.exitCode();
+				var error = process.stderr.readAll().toString();
+				process.close();
+				
+				if (exitCode == 0) {
+					Logger.info('${this}: Successfully deleted server directory using rd command');
+				} else {
+					Logger.warning('${this}: rd command returned non-zero exit code: ${exitCode}');
+					if (error.length > 0) {
+						Logger.warning('${this}: rd error output: ${error}');
+					}
+					
+					// Fall back to FileTools if rd fails
+					try {
+						FileTools.deleteDirectory(serverPath);
+						Logger.info('${this}: Deleted server directory using FileTools fallback');
+					} catch (ftError) {
+						Logger.error('${this}: Error deleting server directory with FileTools: ${ftError}');
+					}
+				}
+			} catch (e) {
+				Logger.error('${this}: Error using rd command: ${e}');
+				
+				// Fall back to FileTools on error
+				try {
+					FileTools.deleteDirectory(server.path.value);
+				} catch (ftError) {
+					Logger.error('${this}: Error deleting server directory: ${ftError}');
+				}
+			}
+			#else
+			// Use standard FileTools on non-Windows platforms
+			try {
+				FileTools.deleteDirectory(server.path.value);
+			} catch (e) {
+				Logger.error('${this}: Error deleting server directory: ${e}');
+			}
+			#end
+		}
 
-		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdestroyed' ) );
-		_saveConfig();
-
+			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdeleted'));
+			_saveConfig();
+		} else {
+			// Normal destroy operation, not part of server deletion
+			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdestroyed'));
+			_saveConfig();
+		}
 	}
 
 	function _vagrantUped( machine:VagrantMachine, exitCode:Float ) {
@@ -1098,6 +1952,13 @@ class SuperHumanInstaller extends GenesisApplication {
 			_settingsPage.setApplications(_applicationsCollection);
 			
 			_settingsPage.updateData();
+		}
+		else if ( _selectedPageId == PAGE_SERVICE_TYPE )
+		{
+			// Make sure the service types list is always refreshed when navigating to this page
+			if (_serviceTypePage != null) {
+				_serviceTypePage.updateServiceTypes(_serviceTypesCollection);
+			}
 		}
 	}
 
@@ -1137,38 +1998,236 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	function _deleteServerInstance( server:Server, deleteFiles:Bool = false ) {
-
 		Logger.info( '${this}: Deleting ${server} deleteFiles:${deleteFiles}' );
 
+		// Check if we need to destroy the VM first
+		if (server.vmExistsInVirtualBox()) {
+			Logger.info( '${this}: Server has a VM that needs to be destroyed first' );
+			
+			try {
+				// Set pending delete to be handled in the _vagrantDestroyed callback
+				// This ensures deletion only proceeds after VM destruction is complete
+				_pendingDeleteServer = server;
+				_pendingDeleteFiles = deleteFiles;
+				
+				// Start VM destruction and return - we'll finish the deletion
+				// when the _vagrantDestroyed callback fires
+				server.destroy();
+				
+				// Notify user that we're destroying the VM first
+				ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdestroying', 'VM will be destroyed before deletion' ) );
+				
+				// The rest of the deletion will be handled in the _vagrantDestroyed callback
+				return;
+			} catch (e) {
+				// If VM destruction fails, log error and proceed with deletion anyway
+				Logger.error('${this}: Failed to destroy VM before deletion: ${e}, proceeding with deletion anyway');
+				if (server.console != null) {
+					server.console.appendText('Failed to destroy VM before deletion: ${e}, proceeding with deletion anyway', true);
+				}
+				
+				// Reset pending state since we're proceeding directly
+				_pendingDeleteServer = null;
+				_pendingDeleteFiles = false;
+			}
+		}
+
+		// No VM to destroy, proceed with immediate deletion
 		server.dispose();
 		ServerManager.getInstance().servers.remove( server );
 		
 		if ( deleteFiles ) {
-
-			FileTools.deleteDirectory( server.path.value );
-
+			try {
+				FileTools.deleteDirectory( server.path.value );
+			} catch (e) {
+				Logger.error('${this}: Error deleting server directory: ${e}');
+			}
 		}
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdeleted' ) );
-
 		_saveConfig();
-
 	}
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
-		Logger.info( '${this}: Creating new server...' );
+		Logger.info( '${this}: Creating new server with provisioner type: ${e.provisionerType}' );
 
-		var server:Server = _createServerAndSaveConfig( e.provisionerType );
+		// ALWAYS use the standard standalone provisioner type for this method
+		// This way we maintain consistency regardless of what was passed
+		var provisionerType = ProvisionerType.StandaloneProvisioner;
+		
+		// Log that we're forcing the type for clarity
+		if (Std.string(e.provisionerType) != Std.string(ProvisionerType.StandaloneProvisioner)) {
+			Logger.warning( '${this}: Forcing provisioner type to StandaloneProvisioner (was: ${e.provisionerType})' );
+		} else {
+			Logger.info( '${this}: Using StandaloneProvisioner type' );
+		}
+
+		var server:Server = _createServerAndSaveConfig( provisionerType );
+		
+		// Ensure the server was created with the correct type
+		Logger.info( '${this}: Verifying server provisioner type: ${server.provisioner.type}' );
+		if (Std.string(server.provisioner.type) != Std.string(ProvisionerType.StandaloneProvisioner)) {
+			Logger.warning( '${this}: Server was created with incorrect type: ${server.provisioner.type}, should be ${ProvisionerType.StandaloneProvisioner}' );
+		}
 
 		_showConfigureServer( server );
 	}
 
 	function _createAdditionalDominoServer( e:SuperHumanApplicationEvent ) {
-		Logger.info( '${this}: Creating Additional Domino server...' );
+		Logger.info( '${this}: Creating Additional Domino server with provisioner type: ${e.provisionerType}' );
 
-		var server:AdditionalServer = cast(_createServerAndSaveConfig( e.provisionerType ), AdditionalServer);
+		// Make sure we're using the correct provisioner type string from the event
+		var provisionerType = e.provisionerType;
+		
+		// Verify this is actually an additional provisioner
+		if (Std.string(provisionerType) != Std.string(ProvisionerType.AdditionalProvisioner)) {
+			Logger.warning( '${this}: Expected additional provisioner but got: ${provisionerType}, correcting to ${ProvisionerType.AdditionalProvisioner}' );
+			provisionerType = ProvisionerType.AdditionalProvisioner;
+		}
+
+		var server:AdditionalServer = cast(_createServerAndSaveConfig( provisionerType ), AdditionalServer);
 
 		_showConfigureAdditionalServer( server );
+	}
+	
+	function _createCustomServer( e:SuperHumanApplicationEvent ) {
+		Logger.info( '${this}: Creating custom server with provisioner type: ${e.provisionerType}' );
+		
+		// Get the provisioner definition for the custom provisioner
+		var provisionerDefinition = null;
+		var allProvisioners = ProvisionerManager.getBundledProvisioners(e.provisionerType);
+		Logger.info('${this}: Found ${allProvisioners.length} provisioners of type ${e.provisionerType}');
+		
+		// Log all available provisioners for debugging
+		for (i in 0...allProvisioners.length) {
+			var p = allProvisioners[i];
+			Logger.info('${this}: Provisioner ${i}: name=${p.name}, type=${p.data.type}, version=${p.data.version}, root=${p.root}');
+			
+			if (p.metadata != null) {
+				Logger.info('${this}: Metadata: name=${p.metadata.name}, type=${p.metadata.type}, version=${p.metadata.version}');
+			} else {
+				Logger.warning('${this}: No metadata for provisioner ${p.name}');
+			}
+		}
+		
+		// If we have a specific service type data, use that to find the provisioner
+		if (e.serviceTypeData != null) {
+			Logger.info('${this}: Using service type data: ${e.serviceTypeData.value}, ${e.serviceTypeData.provisionerType}');
+			
+			// First check if the service type data has a provisioner field
+			if (e.serviceTypeData.provisioner != null) {
+				provisionerDefinition = e.serviceTypeData.provisioner;
+				Logger.info('${this}: Using provisioner directly from service type data: ${provisionerDefinition.name}');
+			} else {
+				// Find the provisioner that matches the service type data
+				for (provisioner in allProvisioners) {
+					if (provisioner.name == e.serviceTypeData.value) {
+						provisionerDefinition = provisioner;
+						Logger.info('${this}: Found matching provisioner by name: ${provisioner.name}');
+						break;
+					}
+				}
+			}
+		}
+		
+		// If we didn't find a specific provisioner, use the first one
+		if (provisionerDefinition == null && allProvisioners.length > 0) {
+			provisionerDefinition = allProvisioners[0];
+			Logger.info('${this}: Using first available provisioner: ${provisionerDefinition.name}');
+		}
+		
+		// Create a new server data with the correct provisioner type
+		var newServerData = ServerManager.getInstance().getDefaultServerData(ProvisionerType.StandaloneProvisioner);
+		
+		// Override the provisioner type and version with the custom provisioner
+		if (provisionerDefinition != null) {
+			newServerData.provisioner = {
+				type: e.provisionerType,
+				version: provisionerDefinition.data.version
+			};
+			Logger.info('${this}: Set provisioner type to ${e.provisionerType} and version to ${provisionerDefinition.data.version}');
+		} else {
+			newServerData.provisioner = {
+				type: e.provisionerType,
+				version: null
+			};
+			Logger.info('${this}: Set provisioner type to ${e.provisionerType} but no version available');
+		}
+		
+		// Create the server with the custom provisioner type
+		var server = ServerManager.getInstance().createServer(newServerData, e.provisionerType);
+		server.onUpdate.add(onServerPropertyChanged);
+		
+		Logger.info('${this}: New ${server} created with provisioner type ${e.provisionerType}');
+		
+		ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.servercreated', 'with id ${server.id}'));
+		
+		_saveConfig();
+		
+		// Store the service type data in the server's userData for later use
+		if (e.serviceTypeData != null) {
+			// Initialize userData if needed
+			server.userData = server.userData != null ? server.userData : {};
+			
+			// Store the service type data
+			Reflect.setField(server.userData, "serviceTypeData", e.serviceTypeData);
+			Logger.info('${this}: Stored service type data in server userData: ${e.serviceTypeData.value}');
+		}
+		
+		// Initialize the dynamic config page if it doesn't exist
+		if (_dynamicConfigPage == null) {
+			_dynamicConfigPage = new DynamicConfigPage();
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER, _advancedConfigureServer );
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _cancelConfigureServer );
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.CONFIGURE_ROLES, _configureRoles );
+			_dynamicConfigPage.addEventListener( SuperHumanApplicationEvent.SAVE_SERVER_CONFIGURATION, _saveServerConfiguration );
+			this.addPage( _dynamicConfigPage, "page-dynamic-config" );
+		}
+		
+		// Set the server for the dynamic config page
+		_dynamicConfigPage.setServer(server);
+		
+		// Store the provisioner definition and type in the server's userData for later use
+		if (provisionerDefinition != null) {
+			// Initialize userData if needed
+			server.userData = server.userData != null ? server.userData : {};
+			
+			// Store the provisioner definition
+			Reflect.setField(server.userData, "provisionerDefinition", provisionerDefinition);
+			Logger.info('${this}: Stored provisioner definition in server userData: ${provisionerDefinition.name}');
+		}
+		
+		// Force the updateContent call with a delay to ensure the UI is ready
+		haxe.Timer.delay(function() {
+			// Force the dropdown to be populated with all provisioners of this type
+			if (_dynamicConfigPage._dropdownCoreComponentVersion != null) {
+				var provisionerCollection = ProvisionerManager.getBundledProvisionerCollection(e.provisionerType);
+				Logger.info('${this}: Setting dropdown data provider with ${provisionerCollection.length} items');
+				_dynamicConfigPage._dropdownCoreComponentVersion.dataProvider = provisionerCollection;
+				
+				// Select the current provisioner version if available
+				if (provisionerDefinition != null) {
+					for (i in 0...provisionerCollection.length) {
+						var d = provisionerCollection.get(i);
+						if (d.data.version == provisionerDefinition.data.version) {
+							_dynamicConfigPage._dropdownCoreComponentVersion.selectedIndex = i;
+							break;
+						}
+					}
+				}
+			}
+			
+			// Set the provisioner definition to generate form fields
+			if (provisionerDefinition != null) {
+				_dynamicConfigPage.setProvisionerDefinition(provisionerDefinition);
+			}
+			
+			// Update the content with forced=true to ensure all fields are created
+			_dynamicConfigPage.updateContent(true);
+		}, 100); // Small delay to ensure UI is ready
+		
+		// Show the dynamic config page
+		this.selectedPageId = "page-dynamic-config";
 	}
 
 	function _copyToClipboard( e:SuperHumanApplicationEvent ) {
@@ -1244,10 +2303,36 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	/**
+	 * Get the RolePage instance
+	 * This allows other components to interact with the RolePage directly
+	 * @return The RolePage instance
+	 */
+	public function getRolesPage():RolePage {
+		return _rolePage;
+	}
+
 	public override function toString():String {
 
 		return '[Super.Human.Installer]';
 
+	}
+
+	/**
+	 * Initialize the provisioners directory
+	 * This ensures the directory exists and is ready for use
+	 */
+	function _initializeProvisionersDirectory() {
+		var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+		
+		if (!FileSystem.exists(provisionersDir)) {
+			try {
+				FileSystem.createDirectory(provisionersDir);
+				Logger.info('Created provisioners directory at ${provisionersDir}');
+			} catch (e) {
+				Logger.error('Failed to create provisioners directory at ${provisionersDir}: ${e}');
+			}
+		}
 	}
 
 	function _onExecutorListChanged() {

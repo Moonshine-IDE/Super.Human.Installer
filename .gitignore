@@ -2,11 +2,9 @@
 **/.vscode/*
 **/Export/*
 **/Ignored/*
-**/Docs/*
 **/Dist/*
 **/dump/*
 *.code-workspace
-
 # Include files despite the parent folder being ignored
 !**/.vscode/*.local.*
 .shi-config

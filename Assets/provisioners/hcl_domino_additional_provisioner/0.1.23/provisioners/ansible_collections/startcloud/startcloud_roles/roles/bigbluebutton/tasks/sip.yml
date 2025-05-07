@@ -1,0 +1,53 @@
+---
+- name: Create external SIP provider configuration for FreeSWITCH
+  ansible.builtin.template:
+    src: templates/sip_provider.xml.j2
+    dest: /opt/freeswitch/conf/sip_profiles/external/{{ item.key }}.xml
+    owner: freeswitch
+    group: daemon
+    backup: true
+  loop: "{{ bbb_sip_providers | dict2items }}"
+  register: sip_profile_config
+  no_log: true
+  tags:
+    - bbb-add-sip-provider-config
+
+- name: Create dialplan for SIP provider
+  ansible.builtin.template:
+    src: templates/sip_dialplan.xml.j2
+    dest: /opt/freeswitch/conf/dialplan/{{ item.value.context | default("public") }}/{{ item.key }}.xml
+    owner: freeswitch
+    group: daemon
+    backup: true
+  loop: "{{ bbb_sip_providers | dict2items }}"
+  register: sip_dialin_config
+  no_log: true
+  tags:
+    - bbb-add-sip-provider-config
+
+- name: Restart FreeSWITCH to activate SIP changes
+  ansible.builtin.systemd:
+    name: freeswitch
+    state: restarted
+  when:
+    sip_profile_config.changed or sip_dialin_config.changed
+  tags:
+    - bbb-add-sip-provider-config
+
+- name: Configure default dial-in number
+  ansible.builtin.replace:
+    path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
+    regexp: '^defaultDialAccessNumber=.*'
+    replace: 'defaultDialAccessNumber={{ bbb_sip_default_dialin | default("+" + (bbb_sip_providers.values() | first).extension) }}'
+    backup: true
+  tags:
+    - bbb-add-sip-dialin-config
+
+- name: Configure dial-in numbers in welcome footer
+  ansible.builtin.replace:
+    path: "/usr/share/bbb-web/WEB-INF/classes/bigbluebutton.properties"
+    regexp: '^defaultWelcomeMessageFooter=.*'
+    replace: 'defaultWelcomeMessageFooter={{ bbb_sip_welcome_footer | default("<br><br>To join this meeting by phone, dial:<br>  %%DIALNUM%%<br>Then enter %%CONFNUM%% as the conference PIN number.") }}'
+    backup: true
+  tags:
+    - bbb-add-sip-dialin-config

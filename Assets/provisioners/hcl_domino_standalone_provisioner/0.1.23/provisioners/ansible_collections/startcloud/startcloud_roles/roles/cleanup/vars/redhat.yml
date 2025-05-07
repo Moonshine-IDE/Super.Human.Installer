@@ -1,0 +1,5 @@
+---
+packages:
+  - ppp
+  - wireless-tools
+  - linux-firmware

@@ -30,9 +30,15 @@
 
 package superhuman.theme;
 
+import feathers.controls.HScrollBar;
 import feathers.controls.ToggleButtonState;
 import feathers.controls.LayoutGroup;
+import feathers.controls.ScrollContainer;
 import feathers.controls.TextInputState;
+import feathers.controls.VScrollBar;
+import feathers.graphics.CreateGradientBoxMatrix;
+import feathers.graphics.FillStyle;
+import feathers.graphics.LineStyle;
 import feathers.layout.AnchorLayout;
 import feathers.layout.AnchorLayoutData;
 import feathers.layout.HorizontalAlign;
@@ -43,6 +49,7 @@ import feathers.layout.VerticalLayoutData;
 import feathers.skins.RectangleSkin;
 import feathers.text.TextFormat;
 import genesis.application.theme.GenesisApplicationTheme;
+import openfl.display.GradientType;
 import superhuman.components.Console;
 import superhuman.components.ServerList;
 import superhuman.components.SystemInfoBox;
@@ -60,6 +67,7 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
     public static final TEXT_AREA_CONSOLE:String = "text-area-console";
     public static final GRID_VIEW_HEADER_VARIANT:String = "grid-view-header-variant";
 	public static final GRID_VIEW_COLUMN_VARIANT:String = "grid-view-column-variant";
+    public static final SCROLL_CONTAINER_DARK:String = "scroll-container-dark";
 
     static var _instance:SuperHumanInstallerTheme;
 
@@ -97,6 +105,9 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         this.styleProvider.setStyleFunction( WarningBox, null, _setWarningBoxStyles );
 		this.styleProvider.setStyleFunction( GridViewHeader, GRID_VIEW_HEADER_VARIANT, _setGridViewHeaderStyles);
 		this.styleProvider.setStyleFunction( GridViewColumnMultiline, GRID_VIEW_COLUMN_VARIANT, _setGridViewColumnStyles);
+        this.styleProvider.setStyleFunction( ScrollContainer, SCROLL_CONTAINER_DARK, _setScrollContainerDarkStyles);
+        this.styleProvider.setStyleFunction( HScrollBar, null, _setHScrollBarStyles );
+        this.styleProvider.setStyleFunction( VScrollBar, null, _setVScrollBarStyles );
     }
 
     function _setConsoleStyles( console:Console ) {
@@ -161,7 +172,7 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 
     function _setGridViewHeaderStyles( box:GridViewHeader ) {
 		var backgroundSkin = new RectangleSkin();
-			backgroundSkin.fill = SolidColor(0x444444);
+			backgroundSkin.fill = FillStyle.SolidColor(0x444444);
 	
 			box.backgroundSkin = backgroundSkin;
 			box.minHeight = 35;
@@ -169,9 +180,9 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
 	
 	function _setGridViewColumnStyles( box:GridViewColumnMultiline ) {
 		var backgroundSkin = new RectangleSkin();
-			backgroundSkin.fill = SolidColor(0x222222);
-			backgroundSkin.selectedFill = SolidColor(0x666666);
-			backgroundSkin.disabledFill = SolidColor(0x222222);
+			backgroundSkin.fill = FillStyle.SolidColor(0x222222);
+			backgroundSkin.selectedFill = FillStyle.SolidColor(0x666666);
+			backgroundSkin.disabledFill = FillStyle.SolidColor(0x222222);
 			
 			box.backgroundSkin = backgroundSkin;
 			box.minHeight = 35;
@@ -220,6 +231,52 @@ class SuperHumanInstallerTheme extends GenesisApplicationTheme {
         layout.gap = GenesisApplicationTheme.GRID * 2;
         box.layout = layout;
 
+    }
+    
+    function _setScrollContainerDarkStyles( container:ScrollContainer ) {
+        // Apply dark theme styling to match the ServerList
+        container.autoHideScrollBars = false;
+        container.fixedScrollBars = true;
+        
+        // Make the container itself transparent to let the main app gradient show through
+        container.backgroundSkin = null;
+        
+        // Note: We'll style the form inside the container directly in each page
+        // to allow the gradient to scroll with the content
+    }
+    
+    function _setHScrollBarStyles( scrollBar:HScrollBar ) {
+        // Basic minimal configuration with bright white thumb on transparent track
+        
+        // Completely transparent track
+        var trackSkin = new RectangleSkin(FillStyle.SolidColor(0x000000, 0));
+        scrollBar.trackSkin = trackSkin;
+        
+        // Bright white thumb with larger width and rounded corners
+        var thumbSkin = new RectangleSkin(FillStyle.SolidColor(0xFFFFFF));
+        thumbSkin.width = 12; // Wider for better visibility
+        thumbSkin.cornerRadius = 6; // Round corners (half of width/height for pill shape)
+        scrollBar.thumbSkin = thumbSkin;
+        
+        // Set explicit dimensions
+        scrollBar.height = 12;
+    }
+    
+    function _setVScrollBarStyles( scrollBar:VScrollBar ) {
+        // Basic minimal configuration with bright white thumb on transparent track
+        
+        // Completely transparent track
+        var trackSkin = new RectangleSkin(FillStyle.SolidColor(0x000000, 0));
+        scrollBar.trackSkin = trackSkin;
+        
+        // Bright white thumb with larger width and rounded corners
+        var thumbSkin = new RectangleSkin(FillStyle.SolidColor(0xFFFFFF));
+        thumbSkin.width = 12; // Wider for better visibility
+        thumbSkin.cornerRadius = 6; // Round corners (half of width/height for pill shape)
+        scrollBar.thumbSkin = thumbSkin;
+        
+        // Set explicit dimensions
+        scrollBar.width = 12;
     }
 
 }

@@ -5,7 +5,12 @@
 	<include path="Genesis/GenesisApplication.xml"/>
 	<!-- Override properties, add new ones below -->
 
-	<meta version="0.8.22"/>
+	<section if="windows">
+		<haxelib name="flixel" />
+		<haxelib name="hxWindowColorMode" />
+	</section>
+
+	<meta version="0.1.95"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
 	<meta title="Super.Human.Installer Development" if="debug"/>
 
@@ -23,7 +28,6 @@
 		
 	<app path="${exportdir}" main="SuperHumanInstaller" file="${appfile}"/>
 
-
 	<icon path="Assets/icon.png"/>
 
 	<source path="Source"/>
@@ -32,11 +36,17 @@
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
+	<assets rename="assets/config" path="Assets/config" include="*"/>
+  <assets rename="assets/provisioners" path="Assets/provisioners" include="*" if="mac || linux"/>
 	<assets rename="assets/bin" path="Assets/bin/mac" include="*" if="mac"/>
 	<assets rename="assets/bin" path="Assets/bin/windows" include="*" if="windows"/>
 	<assets rename="assets/bin" path="Assets/bin/linux" include="*" if="linux"/>
 
 	<template path="Templates"/>
+	
+	<section if="windows">
+		<template path="Templates/windows/app.manifest" rename="${appfile}.exe.manifest"/>
+	</section>
 
 	<section if="neko">
 		<app path="${exportdir}/neko-macos" if="mac"/>

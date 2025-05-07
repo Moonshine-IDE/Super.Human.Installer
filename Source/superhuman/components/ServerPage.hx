@@ -216,6 +216,7 @@ class ServerPage extends Page {
         _serverList.addEventListener( SuperHumanApplicationEvent.SUSPEND_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
         _serverList.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
+        _serverList.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _forwardEvent );
         #if debug
         _serverList.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
         #end
@@ -268,7 +269,7 @@ class ServerPage extends Page {
     function _createServerButtonTriggered( e:TriggerEvent ) {
 		
         /*var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CREATE_SERVER );
-        		event.provisionerType = ProvisionerType.DemoTasks;
+        		event.provisionerType = ProvisionerType.StandaloneProvisioner;
         this.dispatchEvent( event );*/
 		
         this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.START_CONFIGURE_SERVER));

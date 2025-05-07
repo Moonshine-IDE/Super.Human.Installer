@@ -1,0 +1,83 @@
+---
+- name: Enable https support for apt
+  ansible.builtin.apt:
+    name: apt-transport-https
+    state: present
+  tags:
+    - apt_transport_https
+    - docker
+
+- name: Check Docker apt key is present
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  tags:
+    - docker-apt_key
+    - docker
+
+- name: Check Docker repo is enabled
+  ansible.builtin.apt_repository: repo="deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable" state=present
+  tags:
+    - docker-repositories
+    - repositories
+    - docker
+
+- name: Check Docker packages are installed
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+  tags:
+    - install_docker
+    - docker
+
+- name: Enable Docker daemon on startup
+  ansible.builtin.systemd:
+    name: "docker"
+    enabled: true
+    state: started
+  tags:
+    - enable_docker
+    - docker
+
+- name: Set download location for desired docker-compose version
+  ansible.builtin.set_fact:
+    docker_compose_download_url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+  when: docker_compose_version is defined and docker_compose_version != "latest"
+  tags:
+    - docker-compose
+
+- name: Determine latest upstream release for docker-compose
+  ansible.builtin.uri:
+    url: https://api.github.com/repos/docker/compose/releases/latest
+  register: docker_compose_latest_json
+  when: docker_compose_download_url is undefined
+  tags:
+    - docker-compose
+
+- name: Extract download location for latest docker-compose
+  ansible.builtin.set_fact:
+    docker_compose_download_url: "{{ docker_compose_latest_json.json.assets | selectattr('name', 'equalto', 'docker-compose-Linux-x86_64') | map(attribute='browser_download_url') | first | string }}"
+  when: docker_compose_download_url is undefined
+  tags:
+    - docker-compose
+
+- name: Install up-to-date docker-compose
+  ansible.builtin.get_url:
+    url: "{{ docker_compose_download_url }}"
+    dest: "/usr/local/bin/docker-compose"
+    owner: root
+    group: root
+    mode: 0755
+    force: true
+  tags:
+    - docker-compose
+
+- name: Remove outdated docker-compose from distribution
+  ansible.builtin.apt:
+    name: docker-compose
+    state: absent
+  tags:
+    - docker-compose
