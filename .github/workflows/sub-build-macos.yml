@@ -40,7 +40,7 @@ env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
   app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
   haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
-  haxe_version: 4.3.6
+  haxe_version: 4.3.7
   bin_path: Export/${{ inputs.env }}/macos/bin/
 
 jobs:
@@ -82,13 +82,13 @@ jobs:
       - name: Fix Library Paths with install_name_tool
         run: |
           # Check the current library paths
-          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/haxelib
+          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.7/x64/haxelib
           
           # Fix the paths using install_name_tool
-          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/haxelib
+          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.7/x64/haxelib
           
           # Verify the change
-          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/haxelib
+          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.7/x64/haxelib
 
       - name: Show haxe info
         run: |
@@ -114,7 +114,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.88
           pushd .
-          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.6/x64/lib/hxcpp/git/tools/hxcpp
+          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/4.3.7/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
 
