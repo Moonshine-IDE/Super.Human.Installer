@@ -42,9 +42,9 @@ kramdown:
   syntax_highlighter: rouge # Use Rouge for syntax highlighting
 
 # Plugins (if using any beyond the theme)
-# plugins:
-#   - jekyll-seo-tag
-#   - jekyll-sitemap
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
 
 # Enable Mermaid diagrams
 mermaid:
