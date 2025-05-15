@@ -12,6 +12,7 @@ Welcome to the Super.Human.Installer documentation wiki. This wiki provides comp
 
 Super.Human.Installer (SHI) is a cross-platform application built with Haxe, OpenFL, and Feathers UI. It allows you to easily create and manage virtual machines using Vagrant, VirtualBox, and Ansible. Initially designed for HCL Domino environments, SHI has evolved to support custom provisioners, enabling deployment and management of various server types.
 
+[Get started now](https://superhumaninstaller.com/){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View on GitHub](https://github.com/Moonshine-IDE/Super.Human.Installer){: .btn .btn-blue }
 
 SHI empowers developers, administrators, and testers to:
@@ -55,3 +56,18 @@ SHI empowers developers, administrators, and testers to:
 ## About This Documentation
 
 This documentation is designed to help both new and experienced users get the most out of Super.Human.Installer. If you find any issues or have suggestions for improvement, please feel free to contribute or report issues in the GitHub repository.
+
+### Contributing
+
+When contributing to this repository, please first discuss the change you wish to make via issue,
+email, or any other method with the owners of this repository before making a change. Read more about becoming a contributor in [our GitHub repo](https://github.com/just-the-docs/just-the-docs#contributing).
+
+#### Thank you to the contributors of Just the Docs!
+
+<ul class="list-style-none">
+{% for contributor in site.github.contributors %}
+  <li class="d-inline-block mr-1">
+     <a href="{{ contributor.html_url }}"><img src="{{ contributor.avatar_url }}" width="32" height="32" alt="{{ contributor.login }}"></a>
+  </li>
+{% endfor %}
+</ul>
