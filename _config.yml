@@ -4,7 +4,8 @@ description: Documentation for the Super.Human.Installer application.
 baseurl: "" # Keep empty for hosting at the root of the domain
 url: "https://docs.superhumaninstaller.com" # Your custom domain
 repository: Moonshine-IDE/Super.Human.Installer # for github-metadata
-# github_username: Prominic # Optional: Your GitHub username/org
+
+permalink: pretty
 
 # Logo and favicon settings
 logo: "/Assets/logo.png"
@@ -52,7 +53,7 @@ exclude:
   - Genesis/
   - DevOps/
   - Build/
-  - Assets/
+  - Assets/provisioners/
 
 
 # Theme settings
