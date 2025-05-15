@@ -69,7 +69,7 @@ aux_links:
 aux_links_new_tab: true
 
 # Footer content (optional)
-footer_content: "Copyright &copy; 2025 <a href="https://www.prominic.net">Prominic.NET</a>, Inc. Distributed under the SSPL license."
+footer_content: 'Copyright &copy; 2025 <a href="https://www.prominic.net">Prominic.NET</a>, Inc. Distributed under the SSPL license.'
 
 # Back to top link
 back_to_top: true
