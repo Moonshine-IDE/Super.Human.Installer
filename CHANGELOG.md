@@ -3,6 +3,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) 
 
+## Super Human Installer [1.4.0]
+
+The 1.4.0 release of Super.Human.Installer adds support for custom provisioners, fixes critical bugs, and improves overall stability and functionality.
+
+### Added
+* Added action to generate additional Domino server ID ([#124](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/124))
+* Added support for custom provisioners ([#143](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/143))
+* Added ability to cancel provisioning process ([#149](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/149))
+
+### Changed
+* Updated Haxe to version 4.3.7 for improved performance and compatibility ([#152](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/152))
+* Updated hxcpp to version 4.3.88 to fix local build issues on Mac ([#152](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/152))
+
+### Fixed
+* Fixed long path issue during Haxe/OpenFL build on GitHub Actions for Windows ([#129](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/129))
+* Fixed bug where stopped server is deleted without deleting Vagrant instance ([#131](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/131))
+* Fixed issue where rsync is not found on Windows despite being included in Vagrant's embedded binaries ([#137](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/137))
+
 ## Super Human Installer [1.3.0]
 
 The 1.3.0 release of Super.Human.Installer fixes critical bugs related to application stability and server configuration.
