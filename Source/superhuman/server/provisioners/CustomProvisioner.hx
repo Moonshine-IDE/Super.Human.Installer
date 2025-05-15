@@ -38,8 +38,6 @@ import haxe.io.BytesOutput;
 import haxe.io.Path;
 import haxe.zip.Entry;
 import haxe.zip.Writer;
-import prominic.sys.applications.hashicorp.Vagrant;
-import prominic.sys.applications.oracle.VirtualBox;
 import prominic.sys.io.FileTools;
 import superhuman.managers.ProvisionerManager;
 import superhuman.server.data.ProvisionerData;
@@ -49,8 +47,6 @@ import superhuman.server.definitions.ProvisionerDefinition;
 import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
-import yaml.Yaml;
-import yaml.util.ObjectMap;
 import StringTools;
 
 /**
@@ -1264,6 +1260,9 @@ override public function saveHostsFile() {
         result = _replaceVariable(result, roleUpper + "_INSTALLER", "");
         result = _replaceVariable(result, roleUpper + "_HASH", "");
         result = _replaceVariable(result, roleUpper + "_INSTALLER_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_MAJOR_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_MINOR_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_PATCH_VERSION", "");
         
         // Fixpack variables
         result = _replaceVariable(result, roleUpper + "_FP_INSTALL", "false");
@@ -1276,7 +1275,6 @@ override public function saveHostsFile() {
         result = _replaceVariable(result, roleUpper + "_HF_INSTALLER", "");
         result = _replaceVariable(result, roleUpper + "_HF_INSTALLER_VERSION", "");
         result = _replaceVariable(result, roleUpper + "_HF_HASH", "");
-        
         
         return result;
     }
