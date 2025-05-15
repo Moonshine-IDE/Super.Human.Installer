@@ -3,6 +3,7 @@ title: Super.Human.Installer Documentation
 description: Documentation for the Super.Human.Installer application.
 baseurl: "" # Keep empty for hosting at the root of the domain
 url: "https://docs.superhumaninstaller.com" # Your custom domain
+repository: Moonshine-IDE/Super.Human.Installer # for github-metadata
 # github_username: Prominic # Optional: Your GitHub username/org
 
 # Logo and favicon settings
@@ -41,6 +42,9 @@ gh_edit_branch: "main" # the branch that your docs is served from
 # gh_edit_source: docs # the source that your files originate from
 gh_edit_view_mode: "tree" # "tree" or "edit" if you want the user to jump into the editor immediately
 
+liquid:
+  error_mode: strict
+  strict_filters: true
 
 # Navigation structure (can be controlled via front matter in markdown files)
 # See Just the Docs documentation for advanced navigation configuration if needed
