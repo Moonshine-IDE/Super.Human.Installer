@@ -7,7 +7,7 @@ repository: Moonshine-IDE/Super.Human.Installer # for github-metadata
 # github_username: Prominic # Optional: Your GitHub username/org
 
 # Logo and favicon settings
-logo: "/assets/icon.png"
+logo: "/assets/logo.png"
 favicon_ico: "/assets/favicon.ico"
 
 # Theme settings
