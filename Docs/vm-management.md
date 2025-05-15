@@ -13,7 +13,7 @@ Super.Human.Installer (SHI) provides a comprehensive interface for creating and 
 
 The main "Servers" page is your central hub. It displays all configured server instances, their current status (obtained from Vagrant and VirtualBox), and provides controls for managing their lifecycle.
 
-![Server Management Interface](../assets/start-screen.png)
+![Server Management Interface](../Assets/images/docs/start-screen.png)
 
 ### Server States
 

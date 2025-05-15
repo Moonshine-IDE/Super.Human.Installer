@@ -7,8 +7,53 @@ repository: Moonshine-IDE/Super.Human.Installer # for github-metadata
 # github_username: Prominic # Optional: Your GitHub username/org
 
 # Logo and favicon settings
-logo: "/assets/logo.png"
-favicon_ico: "/assets/favicon.ico"
+logo: "/Assets/logo.png"
+favicon_ico: "/Assets/setup.ico"
+
+defaults:
+  - scope:
+      path: "Docs" # an empty string here means all files in the project
+      type: "pages"
+    values:
+      layout: "default"
+
+exclude:
+  # from https://github.com/jekyll/jekyll/blob/master/lib/site_template/_config.yml:
+  - .sass-cache/
+  - .jekyll-cache/
+  - gemfiles/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  # specific to the theme website:
+  - bin/
+  - lib/
+  - "*.gemspec"
+  - "*.gem"
+  - LICENSE.md
+  - package.json
+  - package-lock.json
+  - Rakefile
+  - README.md
+  - CODE_OF_CONDUCT.md
+  - docker-compose.yml
+  - Dockerfile
+  # theme test code
+  - fixtures/
+  - Super.Human.Installer.hxproj
+  - project.xml
+  - build-app.hxml
+  - Templates/
+  - Source/
+  - Genesis/
+  - DevOps/
+  - Build/
+  - Assets/
+
 
 # Theme settings
 theme: just-the-docs
@@ -24,7 +69,7 @@ aux_links:
 aux_links_new_tab: true
 
 # Footer content (optional)
-footer_content: "Copyright &copy; 2025 Prominic.NET, Inc. Distributed under the SSPL license."
+footer_content: "Copyright &copy; 2025 <a href="https://www.prominic.net">Prominic.NET</a>, Inc. Distributed under the SSPL license."
 
 # Back to top link
 back_to_top: true
@@ -38,8 +83,8 @@ last_edit_time_format: "%b %e %Y at %I:%M %p" # uses ruby's time format: https:/
 gh_edit_link: true # show or hide edit this page link
 gh_edit_link_text: "Edit this page on GitHub"
 gh_edit_repository: "https://github.com/Moonshine-IDE/Super.Human.Installer" # the github URL for your repo
-gh_edit_branch: "main" # the branch that your docs is served from
-# gh_edit_source: docs # the source that your files originate from
+gh_edit_branch: "master" # the branch that your docs is served from
+gh_edit_source: Docs # the source that your files originate from
 gh_edit_view_mode: "tree" # "tree" or "edit" if you want the user to jump into the editor immediately
 
 liquid:
@@ -68,7 +113,6 @@ plugins:
   - jekyll-github-metadata
   - jekyll-include-cache
   - jekyll-sitemap
-
 
 # Enable or disable heading anchors
 heading_anchors: true

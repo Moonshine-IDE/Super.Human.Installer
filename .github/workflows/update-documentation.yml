@@ -46,18 +46,14 @@ jobs:
           rbenv install ${{ env.RUBY_VERSION }} --skip-existing
           echo "Ruby ${{ env.RUBY_VERSION }} installation checked/completed."
 
-      - name: Set Ruby version for Docs directory
+      - name: Set Ruby version
         run: rbenv local ${{ env.RUBY_VERSION }}
-        working-directory: ./Docs # Set the version specifically for the Docs folder
 
       - name: Rehash rbenv shims
         # Rehash is needed after install and setting local version
         run: rbenv rehash
 
       - name: Install Bundler and Gems
-        # Install bundler and then install gems from Docs/Gemfile
-        # Bundler will use the version set by `rbenv local`
-        # Configure path to install gems locally within Docs/vendor/bundle
         run: |
           eval "$(rbenv init - bash)" # Initialize rbenv for this shell session
           echo "--- Checking Ruby version in Gem Install step ---"
@@ -67,7 +63,6 @@ jobs:
           gem install bundler -v '~> 2.3' # Install a specific bundler version if needed
           bundle config path vendor/bundle
           bundle install --jobs 4 --retry 3
-        working-directory: ./Docs # Run bundle install within the Docs directory
 
       - name: Setup Pages
         id: pages
@@ -75,7 +70,6 @@ jobs:
 
       - name: Build with Jekyll
         # Run Jekyll build using the rbenv-selected Ruby and Bundler
-        # Run from within the Docs directory to ensure correct context
         run: |
           eval "$(rbenv init - bash)" # Ensure rbenv is active for this step too
           echo "--- Checking Ruby version in Jekyll Build step ---"
@@ -83,12 +77,10 @@ jobs:
           ruby -v
           echo "------------------------------------------------"
           bundle exec jekyll build --destination ../_site # Source and config default to current dir (.)
-        working-directory: ./Docs # Run jekyll build within the Docs directory
         env:
           JEKYLL_ENV: production
 
       - name: Generate versioninfo and place in site output
-        # Run the python script AFTER jekyll build and move the output to the built site directory
         run: |
           python3 DevOps/generate-vinfo.py
           # Ensure _site directory exists before moving
@@ -96,7 +88,6 @@ jobs:
           mv versioninfo.json ./_site/versioninfo.json
 
       - name: Upload artifact
-        # Upload the built site (_site directory)
         uses: actions/upload-pages-artifact@v3
         with:
           path: './_site' # Upload the Jekyll build output from the root

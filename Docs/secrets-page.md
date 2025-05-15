@@ -16,7 +16,7 @@ Sensitive information like API keys should not be hardcoded. The Secrets page al
 
 Access this page via **Settings -> Manage Global Secrets**.
 
-![Secrets Management](../assets/secrets.png)
+![Secrets Management](../Assets/images/docs/secrets.png)
 
 ## Git API Keys / Personal Access Tokens (PATs)
 

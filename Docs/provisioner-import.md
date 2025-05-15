@@ -12,7 +12,7 @@ The Provisioner Import page allows you to extend Super.Human.Installer (SHI) wit
 
 Access this page via **Settings -> Import Provisioner**.
 
-![Provisioner Import Page](../assets/import-provisioner.png)
+![Provisioner Import Page](../Assets/images/docs/import-provisioner.png)
 
 ## Overview
 

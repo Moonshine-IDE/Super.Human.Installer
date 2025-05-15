@@ -16,7 +16,7 @@ Access this page via **Settings -> Manage Installer Files**.
 
 Provisioners often require specific installer files (e.g., `.tar`, `.zip` files for Domino, Traveler, Verse) to perform software installation within the VMs. SHI maintains a local cache of these files to avoid repeated downloads and to verify their integrity. This manager helps organize these files and ensures the correct ones are used during provisioning.
 
-![File Cache Manager](../assets/file-cache.png)
+![File Cache Manager](../Assets/images/docs/file-cache.png)
 
 ## Features
 

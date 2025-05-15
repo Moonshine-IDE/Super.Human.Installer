@@ -55,7 +55,7 @@ When you first launch Super.Human.Installer:
 3.  The application initializes its configuration files and directories within your user's application storage location.
 4.  The main Server Management interface is displayed.
 
-![Start Screen](../assets/start-screen.png)
+![Start Screen](../Assets/images/docs/start-screen.png)
 
 ## Creating Your First Server
 

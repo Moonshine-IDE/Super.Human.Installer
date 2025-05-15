@@ -21,7 +21,7 @@ This page details the process of creating a new server instance in Super.Human.I
 *   Select the desired provisioner type for your new server (e.g., "HCL Domino Standalone Provisioner", "My Custom Web Server").
 *   Click "**Configure Server**".
 
-![Service Type Selection Screen](../assets/server-provisioner-selection.png)
+![Service Type Selection Screen](../Assets/images/docs/server-provisioner-selection.png)
 
 ## 3. Basic Configuration
 
@@ -40,7 +40,7 @@ Fill in the required fields:
 *   **Existing Domino Server Name / IP Address**: *(Specific to Additional Provisioner)* Enter the FQDN and IP address of the primary Domino server this additional server will join.
 *   ***Custom Fields***: *(Specific to Custom Provisioners)* The `DynamicConfigPage` will display input fields based on the `basicFields` defined in the selected custom provisioner's `provisioner.yml` metadata. Fill these out according to the provisioner's requirements.
 
-![Basic Configuration Page](../assets/standalone-provisioner-basic-settings.png)
+![Basic Configuration Page](../Assets/images/docs/standalone-provisioner-basic-settings.png)
 
 ## 4. Configuring Roles (`RolePage.hx`)
 
@@ -50,7 +50,7 @@ Fill in the required fields:
 *   **Locate Installer Files**: For roles that require specific installer files (as defined in the provisioner's metadata), click the "Locate File..." button next to the role. Select the corresponding installer, fixpack, or hotfix file from your local machine. SHI will verify the file using its hash (if known) and associate it with the role for this server instance. Ensure required files are managed via the [File Cache & Hashes](file-cache) manager.
 *   Click "**Close**" to return to the main configuration page. The "Configure Roles" button should now indicate if the role configuration is valid (e.g., required files located).
 
-![Role Selection Page](../assets/standalone-role-selection-page.png)
+![Role Selection Page](../Assets/images/docs/standalone-role-selection-page.png)
 
 ## 5. Advanced Configuration (Optional)
 
@@ -71,7 +71,7 @@ Fill in the required fields:
 *   ***Custom Fields***: *(Specific to Custom Provisioners)* The `DynamicAdvancedConfigPage` will display input fields based on the `advancedFields` defined in the selected custom provisioner's `provisioner.yml`.
 *   Click "**Save**" to apply advanced settings and return to the basic configuration page, or "Cancel" to discard changes.
 
-![Advanced Configuration Page](../assets/advanced-settings-page.png)
+![Advanced Configuration Page](../Assets/images/docs/advanced-settings-page.png)
 
 ## 6. Saving the Server
 

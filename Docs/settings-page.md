@@ -5,11 +5,20 @@ nav_order: 6 # Adjusted order
 has_children: true # This page has sub-pages
 ---
 
+<details open markdown="block">
+  <summary>
+    Table of contents
+  </summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
 # Settings & Management
 
 The Settings page in Super.Human.Installer (SHI) provides access to application-wide configuration options and specialized management interfaces.
 
-![Settings Page](../assets/settings.png)
+![Settings Page](../Assets/images/docs/settings.png)
 
 ## Overview
 
@@ -42,14 +51,6 @@ The main Settings page includes options for configuring:
 
 *   **Browsers List**: Configure external web browsers used by SHI (e.g., when clicking the "Web" button for a server). Set a default browser.
 *   **Applications List**: Configure paths to external applications used by SHI features (e.g., FileZilla for the "FTP" button).
-
-## Subpage Navigation
-
-The Settings page provides buttons to access specialized management interfaces:
-
-1.  **[Secrets Management](secrets-page)**: Manage sensitive credentials like Git API tokens used for importing provisioners from private repositories.
-2.  **[File Cache & Hashes](file-cache)**: Manage locally cached installer files (Domino, Traveler, etc.), verify their integrity using SHA256 hashes, and download missing files.
-3.  **[Provisioner Import](provisioner-import)**: Import custom provisioners from local directories or GitHub repositories.
 
 ## Relevant Files
 

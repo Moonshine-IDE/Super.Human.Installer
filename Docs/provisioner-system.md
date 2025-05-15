@@ -5,6 +5,15 @@ nav_order: 8 # Adjusted order to place it after main usage sections
 has_children: true # This page has sub-pages
 ---
 
+<details open markdown="block">
+  <summary>
+    Table of contents
+  </summary>
+  {: .text-delta }
+1. TOC
+{:toc}
+</details>
+
 # Provisioner System
 
 The provisioner system is the core mechanism in Super.Human.Installer (SHI) responsible for defining how virtual machines are configured and provisioned with software.
