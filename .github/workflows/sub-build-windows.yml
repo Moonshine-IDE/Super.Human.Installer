@@ -246,11 +246,9 @@ jobs:
           Set-Location -Path $rootPath
 
       - name: Setup signing certificate
-        shell: cmd
         run: |
-          echo ${{ secrets.SM_CLIENT_CERT_FILE_B64 }} > encoded.txt
-          certutil -decode encoded.txt D:\Certificate_pkcs12.p12
-          del encoded.txt
+          [System.IO.File]::WriteAllBytes("D:\Certificate_pkcs12.p12", [Convert]::FromBase64String("${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"))
+        shell: powershell
 
       - name: Set signing variables
         id: variables
