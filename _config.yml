@@ -55,7 +55,7 @@ exclude:
   - Build/
   - Assets/provisioners/
   - Assets/provisioners
-  - **/provisioners/
+  - "**/provisioners/"
 
 
 # Theme settings
