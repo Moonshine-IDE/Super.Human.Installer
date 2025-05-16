@@ -30,7 +30,6 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
-  # specific to the theme website:
   - bin/
   - lib/
   - "*.gemspec"
@@ -43,8 +42,6 @@ exclude:
   - CODE_OF_CONDUCT.md
   - docker-compose.yml
   - Dockerfile
-  # theme test code
-  - fixtures/
   - Super.Human.Installer.hxproj
   - project.xml
   - build-app.hxml
@@ -53,9 +50,8 @@ exclude:
   - Genesis/
   - DevOps/
   - Build/
-  - Assets/provisioners/
   - Assets/provisioners
-  - "**/provisioners/"
+  - Assets/provisioners/**/*
 
 
 # Theme settings
