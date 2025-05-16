@@ -67,13 +67,14 @@ jobs:
         run: |
           eval "$(rbenv init - bash)"
           bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
+        working-directory: ./
         env:
           JEKYLL_ENV: production
 
       - name: Generate versioninfo and place in site output
         run: |
           python3 DevOps/generate-vinfo.py
-          mv versioninfo.json _site/versioninfo.json
+          mv versioninfo.json ./_site/versioninfo.json
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

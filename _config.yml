@@ -52,7 +52,8 @@ exclude:
   - Build/
   - Assets/provisioners
   - Assets/provisioners/**/*
-
+  - "Assets/provisioners/"
+  - "Assets/provisioners/*"
 
 # Theme settings
 theme: just-the-docs
