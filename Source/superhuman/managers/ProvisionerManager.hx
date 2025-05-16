@@ -198,8 +198,8 @@ class ProvisionerManager {
                             var versionPath = Path.addTrailingSlash(fullPath) + versionDir;
                             var versionMetadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
                             var hasVersionMetadata = FileSystem.exists(versionMetadataPath);
-                            var hasScriptsDir = FileSystem.exists(Path.addTrailingSlash(versionPath) + "scripts") && 
-                                               FileSystem.isDirectory(Path.addTrailingSlash(versionPath) + "scripts");
+                            var hasProvisionersDir = FileSystem.exists(Path.addTrailingSlash(versionPath) + "provisioners") && 
+                                               FileSystem.isDirectory(Path.addTrailingSlash(versionPath) + "provisioners");
                             
                             // Check content of version metadata file if it exists
                             if (hasVersionMetadata) {
@@ -280,10 +280,10 @@ class ProvisionerManager {
                     continue;
                 }
                 
-                // For future provisioners, scripts files will be in the main directory
-                // For backwards compatibility, we'll check for scripts directory but not require it
-                var scriptsPath = Path.addTrailingSlash(versionPath) + "scripts";
-                var hasScriptsDir = FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath);
+                // For future provisioners, provisioners files will be in the main directory
+                // For backwards compatibility, we'll check for provisioners directory but not require it
+                var provisionersPath = Path.addTrailingSlash(versionPath) + "provisioners";
+                var hasProvisionersDir = FileSystem.exists(provisionersPath) && FileSystem.isDirectory(provisionersPath);
                 
                 // Check for version-specific metadata file - MUST EXIST
                 var versionMetadataPath = Path.addTrailingSlash(versionPath) + VERSION_METADATA_FILENAME;
@@ -1304,7 +1304,7 @@ class ProvisionerManager {
     
     /**
      * Import a specific provisioner version into an existing or new collection
-     * @param sourcePath Path to the version directory containing provisioner.yml and scripts
+     * @param sourcePath Path to the version directory containing provisioner.yml and provisioners
      * @return Bool Success or failure
      */
     static public function importProvisionerVersion(sourcePath:String):Bool {
@@ -1321,10 +1321,10 @@ class ProvisionerManager {
             return false;
         }
         
-        // For backward compatibility, check for scripts directory but don't require it
-        var scriptsDir = Path.addTrailingSlash(sourcePath) + "scripts";
-        var hasScriptsDir = FileSystem.exists(scriptsDir) && FileSystem.isDirectory(scriptsDir);
-        Logger.info('Version directory ${hasScriptsDir ? "has" : "does not have"} scripts folder: ${scriptsDir}');
+        // For backward compatibility, check for provisioners directory but don't require it
+        var provisionersDir = Path.addTrailingSlash(sourcePath) + "provisioners";
+        var hasProvisionersDir = FileSystem.exists(provisionersDir) && FileSystem.isDirectory(provisionersDir);
+        Logger.info('Version directory ${hasProvisionersDir ? "has" : "does not have"} provisioners folder: ${provisionersDir}');
         
         // Read the version metadata
         var versionMetadata = readProvisionerVersionMetadata(sourcePath);
@@ -2006,7 +2006,7 @@ class ProvisionerManager {
         }
         
         // Check for version structure - just need provisioner.yml 
-        // Future provisioners will have scripts moved up to main directory
+        // Future provisioners will have provisioners moved up to main directory
         var hasVersionMetadata = FileSystem.exists(Path.addTrailingSlash(directoryPath) + VERSION_METADATA_FILENAME);
         
         // If we have the metadata file, consider it a valid provisioner directory
@@ -2196,10 +2196,10 @@ class ProvisionerManager {
                 if (FileSystem.exists(versionMetadataPath)) {
                     validVersions.push(item);
                     
-                    // Log whether it has a scripts folder (for backward compatibility info)
-                    var scriptsPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + "scripts";
-                    var hasScriptsDir = FileSystem.exists(scriptsPath) && FileSystem.isDirectory(scriptsPath);
-                    Logger.info('Valid version directory: ${item} (has scripts folder: ${hasScriptsDir})');
+                    // Log whether it has a provisioners folder (for backward compatibility info)
+                    var provisionersPath = Path.addTrailingSlash(provisionerPath) + Path.addTrailingSlash(item) + "provisioners";
+                    var hasProvisionersDir = FileSystem.exists(provisionersPath) && FileSystem.isDirectory(provisionersPath);
+                    Logger.info('Valid version directory: ${item} (has provisioners folder: ${hasProvisionersDir})');
                 } else {
                     Logger.warning('Invalid version directory (no provisioner.yml file): ${item}');
                 }

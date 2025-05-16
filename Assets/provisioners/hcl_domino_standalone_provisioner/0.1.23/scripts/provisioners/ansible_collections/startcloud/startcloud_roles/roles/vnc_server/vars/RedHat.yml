@@ -1,4 +1,0 @@
----
-# The TigerVNC package names
-vnc_package_names:
-  - tigervnc-server

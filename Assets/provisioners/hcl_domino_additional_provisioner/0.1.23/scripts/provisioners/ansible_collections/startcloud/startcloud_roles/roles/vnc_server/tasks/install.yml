@@ -1,4 +1,0 @@
----
-- name: Install TigerVNC server
-  ansible.builtin.package:
-    name: "{{ vnc_package_names }}"

@@ -1,6 +1,0 @@
----
--   name: restart haproxy
-    service: name=rh-haproxy18-haproxy state=restarted
-
--   name: reload haproxy
-    service: name=rh-haproxy18-haproxy state=reloaded

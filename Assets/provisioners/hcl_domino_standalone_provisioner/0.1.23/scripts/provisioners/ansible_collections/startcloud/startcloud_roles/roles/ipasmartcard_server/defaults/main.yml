@@ -1,5 +1,0 @@
----
-run_tasks: true
-# defaults file for ipasmartcard_server role
-
-ipaserver_install_packages: yes

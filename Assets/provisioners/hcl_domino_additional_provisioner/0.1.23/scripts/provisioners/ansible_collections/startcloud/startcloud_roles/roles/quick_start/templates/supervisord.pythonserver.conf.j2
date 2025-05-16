@@ -1,9 +1,0 @@
-[program:python_server]
-directory={{ service_home_dir }}
-command=python3 {{ service_home_dir }}/.local/bin/uploadserver --directory {{ python_simple_web_server_path }} --theme dark --server-certificate {{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}-self-signed.pem -b :: {{ startcloud_quick_start_port_forwards[0].guest }}
-autostart=true
-autorestart=true
-stdout_logfile=/var/log/python_server.log
-stderr_logfile=/var/log/python_server_err.log
-user={{ service_user }}
-environment=PATH="{{ service_home_dir }}/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",PYTHONPATH="{{ service_home_dir }}/.local/lib/python3.11/site-packages"

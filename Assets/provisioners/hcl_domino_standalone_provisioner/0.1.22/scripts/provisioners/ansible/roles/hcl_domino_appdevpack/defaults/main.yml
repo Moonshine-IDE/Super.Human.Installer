@@ -1,9 +1,0 @@
----
-appdevpack_archive: domino-appdev-pack-1.0.15.tgz
-appdevpack_version: 1.0.15
-appdevpack_debug: true
-domino_appdevpack_port_forwards:
-  -
-    guest: 8080
-    url: "appdevwebpack"
-domino_appdevpack_proxy_url: "{{ domino_appdevpack_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

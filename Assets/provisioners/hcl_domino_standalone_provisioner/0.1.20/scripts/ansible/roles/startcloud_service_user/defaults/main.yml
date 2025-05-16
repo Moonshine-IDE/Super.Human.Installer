@@ -1,6 +1,0 @@
----
-service_user: java_user
-service_group: java_group
-service_home_dir: /local/notesjava
-service_user_soft_limit: "60000"
-service_user_hard_limit: "80000"

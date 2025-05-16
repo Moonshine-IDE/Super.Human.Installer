@@ -349,7 +349,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = "Select a directory containing a specific provisioner version with a provisioner.yml file and a 'scripts' directory. " +
+        descLabel.text = "Select a directory containing a specific provisioner version with a provisioner.yml file and a 'provisioners' directory. " +
                          "The version will be added to an existing collection if found, or a new collection will be created.";
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
@@ -417,7 +417,7 @@ class ProvisionerImportPage extends Page {
         
         var descLabel = new Label();
         descLabel.text = "Import a provisioner directly from GitHub. The repository must contain a valid provisioner structure " +
-                         "with a provisioner.yml file and 'scripts' directory at the root or in a subfolder.";
+                         "with a provisioner.yml file and 'provisioners' directory at the root or in a subfolder.";
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -788,7 +788,7 @@ class ProvisionerImportPage extends Page {
             // Close the page
             _closeImportPage();
         } else {
-            ToastManager.getInstance().showToast("Failed to import provisioner collection. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and scripts.");
+            ToastManager.getInstance().showToast("Failed to import provisioner collection. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and provisioners.");
         }
     }
 
@@ -816,7 +816,7 @@ class ProvisionerImportPage extends Page {
             // Close the page
             _closeImportPage();
         } else {
-            ToastManager.getInstance().showToast("Failed to import provisioner version. Check that the directory contains a valid provisioner.yml file and scripts directory.");
+            ToastManager.getInstance().showToast("Failed to import provisioner version. Check that the directory contains a valid provisioner.yml file and provisioners directory.");
         }
     }
 

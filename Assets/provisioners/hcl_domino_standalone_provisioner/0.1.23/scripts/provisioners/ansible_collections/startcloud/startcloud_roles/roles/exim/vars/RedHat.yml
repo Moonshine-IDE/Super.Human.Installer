@@ -1,4 +1,0 @@
----
-exim_package: exim
-exim_daemon: exim
-exim_configuration_file: /etc/exim/exim.conf

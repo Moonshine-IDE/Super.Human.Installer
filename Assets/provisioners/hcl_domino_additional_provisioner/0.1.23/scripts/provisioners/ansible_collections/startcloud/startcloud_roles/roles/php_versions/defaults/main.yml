@@ -1,7 +1,0 @@
----
-run_tasks: true
-# The PHP version to be installed.
-php_version: '8.2'
-
-# For Debian OSes only.
-php_versions_install_recommends: false

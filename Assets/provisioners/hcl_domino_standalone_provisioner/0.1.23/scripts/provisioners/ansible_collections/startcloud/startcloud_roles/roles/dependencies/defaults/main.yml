@@ -1,8 +1,0 @@
----
-run_tasks: true
-extra_packages:
-  - htop
-  - dos2unix
-packages:
-
-use_proxy: false

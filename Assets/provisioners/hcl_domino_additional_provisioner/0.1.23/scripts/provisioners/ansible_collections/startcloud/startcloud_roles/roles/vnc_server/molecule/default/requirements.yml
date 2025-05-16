@@ -1,3 +1,0 @@
----
-- name: upgrade
-  src: https://github.com/cisagov/ansible-role-upgrade

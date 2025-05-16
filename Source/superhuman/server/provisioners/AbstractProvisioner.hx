@@ -160,7 +160,7 @@ class AbstractProvisioner {
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.copyvagrantfiles', _targetPath, "" ) );
         
         try {
-            // First zip the scripts directory
+            // First zip the provisioners directory
             var zipBytes = _zipDirectory( Path.addTrailingSlash( _sourcePath ) + _SCRIPTS_ROOT );
             
             // Then unzip to the target directory

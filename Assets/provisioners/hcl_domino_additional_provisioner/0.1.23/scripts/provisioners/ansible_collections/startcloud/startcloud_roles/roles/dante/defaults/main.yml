@@ -1,6 +1,0 @@
----
-run_tasks: true
-dante_user: dante
-dante_pass: dante24@!
-packages:
-  - dante-server

@@ -1,6 +1,0 @@
----
-run_tasks: true
-genesis_packages_debug: false
-genesis_packages:
-  - netmonitor
-  - SuperHumanPortal

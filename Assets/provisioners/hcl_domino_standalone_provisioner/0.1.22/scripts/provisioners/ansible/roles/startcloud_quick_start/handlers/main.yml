@@ -1,8 +1,0 @@
----
--
-  name: Zip Support Bundle
-  community.general.archive:
-    mode: '0777'
-    path: "/vagrant/support-bundle"
-    dest: "{{ python_simple_web_server_path }}/support-bundle.zip"
-    format: zip

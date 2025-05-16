@@ -1,6 +1,0 @@
----
-- 
-  name: Restart Web-Terminal
-  ansible.builtin.service:
-    name: web-terminal
-    state: restarted
