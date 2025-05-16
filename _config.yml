@@ -54,7 +54,8 @@ exclude:
   - DevOps/
   - Build/
   - Assets/provisioners/
-  - provisioners/
+  - Assets/provisioners
+  - **/provisioners/
 
 
 # Theme settings
