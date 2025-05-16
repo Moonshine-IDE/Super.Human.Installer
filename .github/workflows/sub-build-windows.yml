@@ -246,22 +246,24 @@ jobs:
           Set-Location -Path $rootPath
 
       - name: Setup signing certificate
+        shell: cmd
         run: |
-          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
-        shell: bash
+          echo %SM_CLIENT_CERT_FILE_B64% > encoded.txt
+          certutil -decode encoded.txt D:\Certificate_pkcs12.p12
+          del encoded.txt
 
       - name: Set signing variables
         id: variables
         run: |
-          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV" 
-          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV" 
-          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV" 
-          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
-          echo "SM_KEYPAIR_ALIAS=${{ secrets.SM_KEYPAIR_ALIAS }}" >> "$GITHUB_ENV"
-          echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH 
-          echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH 
-          echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
-        shell: bash
+          echo SM_HOST=%SM_HOST%>> %GITHUB_ENV%
+          echo SM_API_KEY=%SM_API_KEY%>> %GITHUB_ENV%
+          echo SM_CLIENT_CERT_FILE=D:\Certificate_pkcs12.p12>> %GITHUB_ENV%
+          echo SM_CLIENT_CERT_PASSWORD=%SM_CLIENT_CERT_PASSWORD%>> %GITHUB_ENV%
+          echo SM_KEYPAIR_ALIAS=%SM_KEYPAIR_ALIAS%>> %GITHUB_ENV%
+          echo C:\Program Files (x86)\Windows Kits\10\App Certification Kit>> %GITHUB_PATH%
+          echo C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools>> %GITHUB_PATH%
+          echo C:\Program Files\DigiCert\DigiCert One Signing Manager Tools>> %GITHUB_PATH%
+        shell: cmd
 
       - name: Cache smtools
         id: cache-smtools
@@ -296,7 +298,7 @@ jobs:
           /fd SHA256 `
           Templates/installer/${{ env.app_name }}-Setup.exe
 
-            signtool.exe verify `
+          signtool.exe verify `
           /v `
           /pa `
           Templates/installer/${{ env.app_name }}-Setup.exe
