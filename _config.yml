@@ -54,6 +54,7 @@ exclude:
   - Assets/provisioners/**/*
   - "Assets/provisioners/"
   - "Assets/provisioners/*"
+  - /home/startcloud/SuperHumanInstaller-runner/_work/Super.Human.Installer/Super.Human.Installer/Assets/provisioners
 
 # Theme settings
 theme: just-the-docs
