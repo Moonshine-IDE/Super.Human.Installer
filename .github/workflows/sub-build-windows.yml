@@ -64,13 +64,13 @@ jobs:
       - name: Setup Git settings
         run: |
           git config --global core.longpaths true
-          git config --system core.longpaths true 
+          git config --system core.longpaths true
 
       - name: Checkout repo
         uses: actions/checkout@v4
       #  with:
       #    lfs: true
-#
+      #
       #- name: Checkout LFS objects
       #  run: git lfs checkout
 
@@ -141,7 +141,7 @@ jobs:
         run: haxelib list
 
       - name: Build
-      #  if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        #  if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         shell: pwsh
         run: |
           haxelib run openfl build project.xml windows ${{ env.haxe_flag }} -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
@@ -153,23 +153,23 @@ jobs:
         shell: pwsh
         run: |
           echo "Compressing provisioners directory to avoid path length issues"
-          
+
           # Create installer assets directory if it doesn't exist
           if (-not (Test-Path "Assets\installer")) {
             New-Item -ItemType Directory -Path "Assets\installer" -Force
           }
-          
+
           # Change directory to the provisioners directory to avoid extra nesting
           Push-Location "Assets\provisioners"
-          
+
           # Compress provisioners using 7zip
           # Using -mx=9 for maximum compression
           # The '.' specifies current directory contents without creating extra nesting
           7z a -t7z -mx=9 "..\..\Assets\installer\provisioners.7z" "."
-          
+
           # Return to previous directory
           Pop-Location
-          
+
           # Verify compression worked
           if (Test-Path "Assets\installer\provisioners.7z") {
             $fileSize = (Get-Item "Assets\installer\provisioners.7z").Length / 1MB
@@ -178,7 +178,7 @@ jobs:
             Write-Error "Failed to compress provisioners"
             exit 1
           }
-          
+
           # Only need to copy the provisioners.7z file
           # 7za binaries are already in Assets/bin/windows and will be included automatically
           $destDir = "${{ env.bin_path }}\assets"
@@ -190,7 +190,7 @@ jobs:
         with:
           name: ${{ env.app_name }}-windows-bin
           path: ${{ env.bin_path }}
-          
+
       - name: "Uploading bin to prominic.net"
         run: |
           $env:HOME = "D:\GA\SHI\_work\Super.Human.Installer\Super.Human.Installer"; cygwin
@@ -210,7 +210,7 @@ jobs:
           # Remove trailing slash if present to avoid double slashes
           $binPath = "${{ env.bin_path }}".TrimEnd('\', '/')
           $binPathAbs = Join-Path -Path $rootPath -ChildPath $binPath
-          
+
           # Enable Windows long path support for current process
           Write-Host "Enabling long path support for current process"
           & {
@@ -226,7 +226,7 @@ jobs:
               Write-Host "Long paths enabled in Windows registry."
             }
           }
-          
+
           # Set environment variables for Inno Setup script
           $env:PRODUCT_NAME="${{ env.app_name }}"
           $env:PRODUCT_VERSION="${{ inputs.version }}"
@@ -235,26 +235,72 @@ jobs:
           $env:BIN_PATH="$binPathAbs"
           $env:PRODUCT_EXE="${{ env.app_name }}.exe"
           $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
-          
+
           # Show paths for debugging
           Write-Host "Root Path: $rootPath"
           Write-Host "Bin Path: $binPathAbs"
-          
+
           # Compile Inno Setup script with working directory set to the script's location
           Set-Location -Path "Templates/installer"
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
           Set-Location -Path $rootPath
 
-      - name: Sign installer
-        if: ${{ inputs.env == 'Production' }}
-        uses: Moonshine-IDE/digicert-sign-action@v1.0
+      - name: Setup signing certificate
+        run: |
+          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+        shell: bash
+
+      - name: Set signing variables
+        id: variables
+        run: |
+          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV" 
+          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV" 
+          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV" 
+          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "SM_KEYPAIR_ALIAS=${{ secrets.SM_KEYPAIR_ALIAS }}" >> "$GITHUB_ENV"
+          echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH 
+          echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH 
+          echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Cache smtools
+        id: cache-smtools
+        uses: actions/cache@v3
         with:
-          bin-path: Templates/installer/${{ env.app_name }}-Setup.exe
-          sm-host: ${{ secrets.SM_HOST }}
-          sm-api-key: ${{ secrets.SM_API_KEY }}
-          sm-client-cert-file-b64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
-          sm-client-cert-password: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-          sm-code-signing-cert-sha1-hash: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
+          path: smtools-windows-x64.msi
+          key: smtools-windows
+
+      - name: Download smtools
+        run: |
+          curl ^
+          -X GET https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download ^
+          -H "x-api-key:${{ secrets.SM_API_KEY }}" ^
+          -o smtools-windows-x64.msi
+        shell: cmd
+
+      - name: Setup SSM KSP for signing
+        run: |
+          msiexec /i smtools-windows-x64.msi /quiet /qn 
+          smksp_registrar.exe list
+          smctl windows certsync --keypair-alias=${{ secrets.SM_KEYPAIR_ALIAS }}
+          smctl.exe keypair ls
+          smctl healthcheck
+        shell: cmd
+
+      - name: Signing using Signtool
+        run: |
+          signtool.exe sign `
+          /sha1 ${{ secrets.SM_THUMBPRINT }} `
+          /tr http://timestamp.digicert.com `
+          /td SHA256 `
+          /fd SHA256 `
+          Templates/installer/${{ env.app_name }}-Setup.exe
+
+            signtool.exe verify `
+          /v `
+          /pa `
+          Templates/installer/${{ env.app_name }}-Setup.exe
+        shell: powershell
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -263,7 +309,7 @@ jobs:
           name: ${{ env.app_name }}-windows-installer
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
-          
+
       - name: "Uploading installer to prominic.net"
         run: |
           echo "Uploading installer to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe"
@@ -299,7 +345,7 @@ jobs:
         with:
           name: ${{ env.app_name }}-Choco
           path: Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg
-          
+
       - name: "Uploading choco package to prominic.net"
         env:
           choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
