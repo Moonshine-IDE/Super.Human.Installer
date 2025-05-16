@@ -8,8 +8,8 @@ repository: Moonshine-IDE/Super.Human.Installer # for github-metadata
 permalink: pretty
 
 # Logo and favicon settings
-logo: "/Assets/logo.png"
-favicon_ico: "/Assets/setup.ico"
+logo: "/Assets/images/logo.png"
+favicon_ico: "/Assets/images/setup.ico"
 
 defaults:
   - scope:
