@@ -16,15 +16,25 @@ The 1.4.0 release of Super.Human.Installer adds support for custom provisioners,
 * Added action to generate additional Domino server ID ([#124](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/124))
 * Added support for custom provisioners ([#143](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/143))
 * Added ability to cancel provisioning process ([#149](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/149))
+* Added file cache and HCL Download Portal integration ([#155](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/155))
+* Added global reusable secrets page for better security management ([#154](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/154))
+* Added ability to view/edit Hosts.yml and Provisioner files before 'vagrant up' is issued ([#130](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/130))
+* Added display of server path to Hosts.yml and Provisioners scripts during server creation ([#102](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/102))
+* Added VirtualBox information display on the Servers page ([#30](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/30))
 
 ### Changed
 * Updated Haxe to version 4.3.7 for improved performance and compatibility ([#152](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/152))
 * Updated hxcpp to version 4.3.88 to fix local build issues on Mac ([#152](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/152))
+* Improved documentation for using the application and development ([#156](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/156))
+* Enhanced provisioner customization options with better documentation ([#84](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/84))
+* Expanded support for additional provisioners ([#83](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/83))
 
 ### Fixed
 * Fixed long path issue during Haxe/OpenFL build on GitHub Actions for Windows ([#129](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/129))
 * Fixed bug where stopped server is deleted without deleting Vagrant instance ([#131](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/131))
 * Fixed issue where rsync is not found on Windows despite being included in Vagrant's embedded binaries ([#137](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/137))
+* Fixed issue where deleted servers were still flagged as provisioned ([#106](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/106))
+* Fixed Windows build process and testing procedures ([#16](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/16))
 
 ## Super Human Installer [1.3.0]
 
