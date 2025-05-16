@@ -51,10 +51,6 @@ exclude:
   - DevOps/
   - Build/
   - Assets/provisioners
-  - Assets/provisioners/**/*
-  - "Assets/provisioners/"
-  - "Assets/provisioners/*"
-  - /home/startcloud/SuperHumanInstaller-runner/_work/Super.Human.Installer/Super.Human.Installer/Assets/provisioners
 
 # Theme settings
 theme: just-the-docs
@@ -95,12 +91,6 @@ liquid:
 # Navigation structure (can be controlled via front matter in markdown files)
 # See Just the Docs documentation for advanced navigation configuration if needed
 # https://just-the-docs.com/docs/navigation-structure/
-
-# Exclude files from Jekyll build process
-exclude:
-  - Gemfile
-  - Gemfile.lock
-  # Add other files/folders to exclude if necessary
 
 # Markdown processor (kramdown is default and recommended)
 markdown: kramdown
