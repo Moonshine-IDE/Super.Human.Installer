@@ -245,63 +245,16 @@ jobs:
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
           Set-Location -Path $rootPath
 
-      - name: Setup signing certificate
-        run: |
-          [System.IO.File]::WriteAllBytes("D:\Certificate_pkcs12.p12", [Convert]::FromBase64String("${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"))
-        shell: powershell
-
-      - name: Set signing variables
-        id: variables
-        run: |
-          echo SM_HOST=${{ secrets.SM_HOST }}>> %GITHUB_ENV%
-          echo SM_API_KEY=${{ secrets.SM_API_KEY }}>> %GITHUB_ENV%
-          echo SM_CLIENT_CERT_FILE=D:\Certificate_pkcs12.p12>> %GITHUB_ENV%
-          echo SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}>> %GITHUB_ENV%
-          echo SM_KEYPAIR_ALIAS=${{ secrets.SM_KEYPAIR_ALIAS }}>> %GITHUB_ENV%
-          echo C:\Program Files (x86)\Windows Kits\10\App Certification Kit>> %GITHUB_PATH%
-          echo C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools>> %GITHUB_PATH%
-          echo C:\Program Files\DigiCert\DigiCert One Signing Manager Tools>> %GITHUB_PATH%
-        shell: cmd
-
-      - name: Cache smtools
-        id: cache-smtools
-        uses: actions/cache@v3
+      - name: Sign installer
+        uses: Moonshine-IDE/digicert-signing-action@main
         with:
-          path: smtools-windows-x64.msi
-          key: smtools-windows
-
-      - name: Download smtools
-        run: |
-          curl ^
-          -X GET https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download ^
-          -H "x-api-key:${{ secrets.SM_API_KEY }}" ^
-          -o smtools-windows-x64.msi
-        shell: cmd
-
-      - name: Setup SSM KSP for signing
-        run: |
-          msiexec /i smtools-windows-x64.msi /quiet /qn 
-          smksp_registrar.exe list
-          smctl windows certsync --keypair-alias=${{ secrets.SM_KEYPAIR_ALIAS }}
-          smctl.exe keypair ls
-          smctl healthcheck
-        shell: cmd
-
-      - name: Signing using Signtool
-        run: |
-          signtool.exe sign `
-          /sha1 ${{ secrets.SM_THUMBPRINT }} `
-          /tr http://timestamp.digicert.com `
-          /td SHA256 `
-          /fd SHA256 `
-          /debug `
-          Templates/installer/${{ env.app_name }}-Setup.exe
-
-          signtool.exe verify `
-          /v `
-          /pa `
-          Templates/installer/${{ env.app_name }}-Setup.exe
-        shell: powershell
+          bin-path: "Templates/installer/${{ env.app_name }}-Setup.exe"
+          sm-host: ${{ secrets.SM_HOST }}
+          sm-api-key: ${{ secrets.SM_API_KEY }}
+          sm-client-cert-file-b64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
+          sm-client-cert-password: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          sm-thumbprint: ${{ secrets.SM_THUMBPRINT }}
+          sm-keypair-alias: ${{ secrets.SM_KEYPAIR_ALIAS }}
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
