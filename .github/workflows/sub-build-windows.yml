@@ -295,6 +295,7 @@ jobs:
           /tr http://timestamp.digicert.com `
           /td SHA256 `
           /fd SHA256 `
+          /debug `
           Templates/installer/${{ env.app_name }}-Setup.exe
 
           signtool.exe verify `
