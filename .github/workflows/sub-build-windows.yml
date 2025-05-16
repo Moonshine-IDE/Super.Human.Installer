@@ -245,11 +245,12 @@ jobs:
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
           Set-Location -Path $rootPath
 
-      - name: Decode Certificate
+      - name: Setup signing certificate
+        shell: cmd
         run: |
-          $base64Content = $env:SM_CLIENT_CERT_FILE_B64
-          [System.IO.File]::WriteAllBytes("D:\Certificate_pkcs12.p12", [System.Convert]::FromBase64String($base64Content))
-        shell: powershell
+          echo %SM_CLIENT_CERT_FILE_B64% > encoded.txt
+          certutil -decode encoded.txt D:\Certificate_pkcs12.p12
+          del encoded.txt
 
       - name: Set signing variables
         id: variables
