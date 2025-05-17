@@ -14,11 +14,11 @@ on:
         description: "A Version"
         required: true
         type: string
-      caching:
-        description: "Use caching"
-        required: true
-        type: boolean
-        default: false
+      # caching:
+      #   description: "Use caching"
+      #   required: true
+      #   type: boolean
+      #   default: false
 
   workflow_call:
     inputs:
@@ -30,11 +30,11 @@ on:
         description: "A Version"
         required: true
         type: string
-      caching:
-        description: "Use caching"
-        required: true
-        type: boolean
-        default: false
+      # caching:
+      #   description: "Use caching"
+      #   required: true
+      #   type: boolean
+      #   default: false
 
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
@@ -106,16 +106,16 @@ jobs:
       - name: Update haxelib
         run: haxelib --global update haxelib
 
-      - name: Cache Binaries
-        id: cache-bin
-        if: ${{ inputs.caching }}
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.bin_path }}
-          key: ${{ env.app_name }}-windows-bin
+      # - name: Cache Binaries
+      #   id: cache-bin
+      #   if: ${{ inputs.caching }}
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ${{ env.bin_path }}
+      #     key: ${{ env.app_name }}-windows-bin
 
       - name: Install dependencies
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.89
@@ -141,7 +141,7 @@ jobs:
         run: haxelib list
 
       - name: Build
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         shell: pwsh
         run: |
           haxelib run openfl build project.xml windows ${{ env.haxe_flag }} -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
@@ -244,11 +244,6 @@ jobs:
           Set-Location -Path "Templates/installer"
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
           Set-Location -Path $rootPath
-
-      - name: Setup signing certificate
-        run: |
-          [System.IO.File]::WriteAllBytes("D:\Certificate_pkcs12.p12", [Convert]::FromBase64String("${{ secrets.SM_CLIENT_CERT_FILE_B64 }}"))
-        shell: powershell
 
       - name: Sign installer
         uses: moonshine-ide/digicert-sign-action@main
