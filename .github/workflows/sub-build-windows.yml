@@ -246,7 +246,7 @@ jobs:
           Set-Location -Path $rootPath
 
       - name: Sign installer
-        uses: moonshine-ide/digicert-sign-action@main
+        uses: moonshine-ide/digicert-sign-action@v1.1
         with:
           bin-path: "Templates/installer/${{ env.app_name }}-Setup.exe"
           sm-host: ${{ secrets.SM_HOST }}
