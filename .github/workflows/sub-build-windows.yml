@@ -246,6 +246,7 @@ jobs:
           Set-Location -Path $rootPath
 
       - name: Sign installer
+        if: ${{ inputs.env == 'Production' }}
         uses: moonshine-ide/digicert-sign-action@v1.1
         with:
           bin-path: "Templates/installer/${{ env.app_name }}-Setup.exe"
