@@ -141,7 +141,7 @@ jobs:
         run: haxelib list
 
       - name: Build
-        #  if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         shell: pwsh
         run: |
           haxelib run openfl build project.xml windows ${{ env.haxe_flag }} -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
