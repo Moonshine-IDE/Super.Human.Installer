@@ -14,11 +14,6 @@ on:
         description: "A Version"
         required: true
         type: string
-      # caching:
-      #   description: "Use caching"
-      #   required: true
-      #   type: boolean
-      #   default: false
 
   workflow_call:
     inputs:
@@ -30,11 +25,6 @@ on:
         description: "A Version"
         required: true
         type: string
-      # caching:
-      #   description: "Use caching"
-      #   required: true
-      #   type: boolean
-      #   default: false
 
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}

@@ -14,11 +14,6 @@ on:
         description: "A Version"
         required: true
         type: string
-      caching:
-        description: "Use caching"
-        required: true
-        type: boolean
-        default: false
 
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
@@ -34,7 +29,6 @@ jobs:
     with:
       env: ${{ inputs.env }}
       version: ${{ inputs.version }}
-      caching: ${{ inputs.caching }}
 
   build-windows:
     name: Build on Windows
@@ -43,7 +37,6 @@ jobs:
     with:
       env: ${{ inputs.env }}
       version: ${{ inputs.version }}
-      caching: ${{ inputs.caching }}
 
   build-macos:
     name: Build on MacOS
@@ -52,7 +45,6 @@ jobs:
     with:
       env: ${{ inputs.env }}
       version: ${{ inputs.version }}
-      caching: ${{ inputs.caching }}
 
   release:
     name: Draft Release
