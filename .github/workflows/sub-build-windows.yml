@@ -14,11 +14,11 @@ on:
         description: "A Version"
         required: true
         type: string
-      caching:
-        description: "Use caching"
-        required: true
-        type: boolean
-        default: false
+      # caching:
+      #   description: "Use caching"
+      #   required: true
+      #   type: boolean
+      #   default: false
 
   workflow_call:
     inputs:
@@ -30,11 +30,11 @@ on:
         description: "A Version"
         required: true
         type: string
-      caching:
-        description: "Use caching"
-        required: true
-        type: boolean
-        default: false
+      # caching:
+      #   description: "Use caching"
+      #   required: true
+      #   type: boolean
+      #   default: false
 
 env:
   app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
@@ -64,13 +64,13 @@ jobs:
       - name: Setup Git settings
         run: |
           git config --global core.longpaths true
-          git config --system core.longpaths true 
+          git config --system core.longpaths true
 
       - name: Checkout repo
         uses: actions/checkout@v4
       #  with:
       #    lfs: true
-#
+      #
       #- name: Checkout LFS objects
       #  run: git lfs checkout
 
@@ -106,16 +106,16 @@ jobs:
       - name: Update haxelib
         run: haxelib --global update haxelib
 
-      - name: Cache Binaries
-        id: cache-bin
-        if: ${{ inputs.caching }}
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.bin_path }}
-          key: ${{ env.app_name }}-windows-bin
+      # - name: Cache Binaries
+      #   id: cache-bin
+      #   if: ${{ inputs.caching }}
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ${{ env.bin_path }}
+      #     key: ${{ env.app_name }}-windows-bin
 
       - name: Install dependencies
-        if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.89
@@ -141,7 +141,7 @@ jobs:
         run: haxelib list
 
       - name: Build
-      #  if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
+        # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         shell: pwsh
         run: |
           haxelib run openfl build project.xml windows ${{ env.haxe_flag }} -Dlogverbose -Dlogcolor -Dgitsha=${{ github.sha }} -Dgitbranch=${{ github.ref_name }}
@@ -153,23 +153,23 @@ jobs:
         shell: pwsh
         run: |
           echo "Compressing provisioners directory to avoid path length issues"
-          
+
           # Create installer assets directory if it doesn't exist
           if (-not (Test-Path "Assets\installer")) {
             New-Item -ItemType Directory -Path "Assets\installer" -Force
           }
-          
+
           # Change directory to the provisioners directory to avoid extra nesting
           Push-Location "Assets\provisioners"
-          
+
           # Compress provisioners using 7zip
           # Using -mx=9 for maximum compression
           # The '.' specifies current directory contents without creating extra nesting
           7z a -t7z -mx=9 "..\..\Assets\installer\provisioners.7z" "."
-          
+
           # Return to previous directory
           Pop-Location
-          
+
           # Verify compression worked
           if (Test-Path "Assets\installer\provisioners.7z") {
             $fileSize = (Get-Item "Assets\installer\provisioners.7z").Length / 1MB
@@ -178,7 +178,7 @@ jobs:
             Write-Error "Failed to compress provisioners"
             exit 1
           }
-          
+
           # Only need to copy the provisioners.7z file
           # 7za binaries are already in Assets/bin/windows and will be included automatically
           $destDir = "${{ env.bin_path }}\assets"
@@ -190,7 +190,7 @@ jobs:
         with:
           name: ${{ env.app_name }}-windows-bin
           path: ${{ env.bin_path }}
-          
+
       - name: "Uploading bin to prominic.net"
         run: |
           $env:HOME = "D:\GA\SHI\_work\Super.Human.Installer\Super.Human.Installer"; cygwin
@@ -210,7 +210,7 @@ jobs:
           # Remove trailing slash if present to avoid double slashes
           $binPath = "${{ env.bin_path }}".TrimEnd('\', '/')
           $binPathAbs = Join-Path -Path $rootPath -ChildPath $binPath
-          
+
           # Enable Windows long path support for current process
           Write-Host "Enabling long path support for current process"
           & {
@@ -226,7 +226,7 @@ jobs:
               Write-Host "Long paths enabled in Windows registry."
             }
           }
-          
+
           # Set environment variables for Inno Setup script
           $env:PRODUCT_NAME="${{ env.app_name }}"
           $env:PRODUCT_VERSION="${{ inputs.version }}"
@@ -235,26 +235,26 @@ jobs:
           $env:BIN_PATH="$binPathAbs"
           $env:PRODUCT_EXE="${{ env.app_name }}.exe"
           $env:PRODUCT_INSTALLER="${{ env.app_name }}-Setup"
-          
+
           # Show paths for debugging
           Write-Host "Root Path: $rootPath"
           Write-Host "Bin Path: $binPathAbs"
-          
+
           # Compile Inno Setup script with working directory set to the script's location
           Set-Location -Path "Templates/installer"
           & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' "inno-installer.iss"
           Set-Location -Path $rootPath
 
       - name: Sign installer
-        if: ${{ inputs.env == 'Production' }}
-        uses: Moonshine-IDE/digicert-sign-action@v1.0
+        uses: moonshine-ide/digicert-sign-action@v1.1
         with:
-          bin-path: Templates/installer/${{ env.app_name }}-Setup.exe
+          bin-path: "Templates/installer/${{ env.app_name }}-Setup.exe"
           sm-host: ${{ secrets.SM_HOST }}
           sm-api-key: ${{ secrets.SM_API_KEY }}
           sm-client-cert-file-b64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
           sm-client-cert-password: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-          sm-code-signing-cert-sha1-hash: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
+          sm-thumbprint: ${{ secrets.SM_THUMBPRINT }}
+          sm-keypair-alias: ${{ secrets.SM_KEYPAIR_ALIAS }}
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
@@ -263,7 +263,7 @@ jobs:
           name: ${{ env.app_name }}-windows-installer
           path: Templates/installer/${{ env.app_name }}-Setup.exe
           if-no-files-found: error
-          
+
       - name: "Uploading installer to prominic.net"
         run: |
           echo "Uploading installer to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.exe"
@@ -299,7 +299,7 @@ jobs:
         with:
           name: ${{ env.app_name }}-Choco
           path: Templates/${{ env.choco_dir }}/${{ env.app_name }}-Choco.nupkg
-          
+
       - name: "Uploading choco package to prominic.net"
         env:
           choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}
