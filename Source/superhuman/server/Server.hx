@@ -372,7 +372,7 @@ class Server {
      * Gets the effective network interface to use, checking for default value
      * If the server's network interface is empty/"" (default), this returns the global default
      * Otherwise returns the server's configured value
-     * @return The effective network interface name to use
+     * @return The effective network interface name to use with quotes
      */
     public function getEffectiveNetworkInterface():String {
         // If the server's network interface is empty (default), use the global preference
@@ -385,7 +385,7 @@ class Server {
         }
         
         // Otherwise return the server's configured network interface
-        return _networkBridge.value;
+        return "\"" + _networkBridge.value + "\"";
     }
     
     public var networkAddress( get, never ):ValidatingProperty;
@@ -707,6 +707,9 @@ class Server {
     }
 
     public function isValid():Bool {
+        if (this.provisioner == null) {
+            return false;
+        }
         // Check if this is a custom provisioner
         var isCustomProvisioner = (this.provisioner.type != ProvisionerType.StandaloneProvisioner && 
                                    this.provisioner.type != ProvisionerType.AdditionalProvisioner &&
