@@ -1288,6 +1288,11 @@ override public function saveHostsFile() {
         result = _replaceVariable(result, roleUpper + "_HF_INSTALLER", "");
         result = _replaceVariable(result, roleUpper + "_HF_INSTALLER_VERSION", "");
         result = _replaceVariable(result, roleUpper + "_HF_HASH", "");
+
+        result = _replaceVariable(result, "NOMADWEB_VERSION", "");
+
+        result = _replaceVariable(result,  "APPDEVPACK_INSTALLER", "");
+        result = _replaceVariable(result,  "APPDEVPACK_INSTALLER_VERSION", "");
         
         return result;
     }
