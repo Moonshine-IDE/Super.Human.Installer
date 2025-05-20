@@ -1256,6 +1256,9 @@ override public function saveHostsFile() {
     private function _initializeStandardVariables(content:String, roleUpper:String):String {
         var result = content;
         
+        // Cluster variables
+        result = _replaceVariable(result, roleUpper + "_SERVER_CLUSTERMATES", "");
+        
         // Main installer variables
         result = _replaceVariable(result, roleUpper + "_INSTALLER", "");
         result = _replaceVariable(result, roleUpper + "_HASH", "");
@@ -1263,6 +1266,16 @@ override public function saveHostsFile() {
         result = _replaceVariable(result, roleUpper + "_INSTALLER_MAJOR_VERSION", "");
         result = _replaceVariable(result, roleUpper + "_INSTALLER_MINOR_VERSION", "");
         result = _replaceVariable(result, roleUpper + "_INSTALLER_PATCH_VERSION", "");
+        
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK_INSTALL", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK", "");
+
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_HOTFIX_INSTALL", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_HOTFIX_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_HOTFIX", "");
+        
+        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK", "");
         
         // Fixpack variables
         result = _replaceVariable(result, roleUpper + "_FP_INSTALL", "false");
@@ -1291,7 +1304,6 @@ override public function saveHostsFile() {
         // Ensure value is never null - use empty string if null
         if (value == null) value = "";
         
-        var originalName = name;
         var result = content;
         var replaced = false;
         
