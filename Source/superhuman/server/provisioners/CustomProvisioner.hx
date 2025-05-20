@@ -1260,6 +1260,9 @@ override public function saveHostsFile() {
         result = _replaceVariable(result, roleUpper + "_SERVER_CLUSTERMATES", "");
         
         // Main installer variables
+        result = _replaceVariable(result, roleUpper + "_MAJOR_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_MINOR_VERSION", "");
+        result = _replaceVariable(result, roleUpper + "_PATCH_VERSION", "");
         result = _replaceVariable(result, roleUpper + "_INSTALLER", "");
         result = _replaceVariable(result, roleUpper + "_HASH", "");
         result = _replaceVariable(result, roleUpper + "_INSTALLER_VERSION", "");
