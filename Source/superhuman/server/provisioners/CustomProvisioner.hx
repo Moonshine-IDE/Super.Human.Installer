@@ -1293,7 +1293,23 @@ override public function saveHostsFile() {
 
         result = _replaceVariable(result,  "APPDEVPACK_INSTALLER", "");
         result = _replaceVariable(result,  "APPDEVPACK_INSTALLER_VERSION", "");
-        
+
+        // Roles placeholders
+        result = _replaceVariable(result, "ROLE_DOMINO_RESET", "");
+        result = _replaceVariable(result, "ROLE_LEAP", "");
+        result = _replaceVariable(result, "ROLE_NOMADWEB", "");
+        result = _replaceVariable(result, "ROLE_TRAVELER", "");
+        result = _replaceVariable(result, "ROLE_TRAVELER_HTMO", "");
+        result = _replaceVariable(result, "ROLE_VERSE", "");
+        result = _replaceVariable(result, "ROLE_APPDEVPACK", "");
+        result = _replaceVariable(result, "ROLE_RESTAPI", "");
+        result = _replaceVariable(result, "ROLE_MARIADB", "");
+        result = _replaceVariable(result, "ROLE_DOCKER", "");
+        result = _replaceVariable(result, "ROLE_VOLTMX_DOCKER", "");
+        result = _replaceVariable(result, "ROLE_VOLTMX", "");
+        result = _replaceVariable(result, "ROLE_STARTCLOUD_HAPROXY", "");
+        result = _replaceVariable(result, "ROLE_STARTCLOUD_VAGRANT_README", "");
+
         return result;
     }
 
