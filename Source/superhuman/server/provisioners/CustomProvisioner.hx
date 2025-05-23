@@ -48,6 +48,8 @@ import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
 import StringTools;
+import haxe.Template;
+import haxe.Json;
 
 /**
  * CustomProvisioner is a provisioner implementation for custom provisioner types.
@@ -682,377 +684,244 @@ override public function get_data():ProvisionerData {
  * @return The generated Hosts.yml content
  */
 override public function generateHostsFileContent():String {
-        // Try to get the template content from several potential locations
-        var templatePath = Path.addTrailingSlash(_sourcePath) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
-        
-        // First try to get the template from the normal source template directory method
-        _hostsTemplate = getFileContentFromSourceTemplateDirectory(StandaloneProvisioner.HOSTS_TEMPLATE_FILE);
-        
-        // Log template status
-        if (_hostsTemplate == null || _hostsTemplate.length == 0) {
-            Logger.warning('${this}: Template not found using standard method, will try alternative location');
-            
-            // Try to fall back to the standalone provisioner template
-            if (_hostsTemplate == null || _hostsTemplate.length == 0) {
-                // Get the latest standalone provisioner definition
-                var standaloneProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.StandaloneProvisioner);
-                if (standaloneProvisioners != null && standaloneProvisioners.length > 0) {
-                    var latestStandaloneProvisioner = standaloneProvisioners[0];
-                    var standalonePath = Path.addTrailingSlash(latestStandaloneProvisioner.root) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
-                    
-                    if (FileSystem.exists(standalonePath)) {
-                        try {
-                            _hostsTemplate = File.getContent(standalonePath);
-                        } catch (e) {
-                            Logger.error('${this}: Error reading fallback template at ${standalonePath}: ${e}');
-                        }
-                    }
+    // Try to get the template content from several potential locations
+    var templatePath = Path.addTrailingSlash(_sourcePath) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
+    
+    _hostsTemplate = getFileContentFromSourceTemplateDirectory(StandaloneProvisioner.HOSTS_TEMPLATE_FILE);
+    
+    if (_hostsTemplate == null || _hostsTemplate.length == 0) {
+        Logger.warning('${this}:generateHostsFileContent: Template not found using standard method, will try alternative location'); 
+        var standaloneProvisioners = ProvisionerManager.getBundledProvisioners(ProvisionerType.StandaloneProvisioner);
+        if (standaloneProvisioners != null && standaloneProvisioners.length > 0) {
+            var latestStandaloneProvisioner = standaloneProvisioners[0];
+            var standalonePath = Path.addTrailingSlash(latestStandaloneProvisioner.root) + "templates/" + StandaloneProvisioner.HOSTS_TEMPLATE_FILE;
+            if (FileSystem.exists(standalonePath)) {
+                try { _hostsTemplate = File.getContent(standalonePath); } catch (e) {
+                    Logger.error('${this}:generateHostsFileContent: Error reading fallback template at ${standalonePath}: ${e}');
                 }
             }
         }
-        
-        // Log the final template state
-        if (_hostsTemplate == null || _hostsTemplate.length == 0) {
-            Logger.error('${this}: Could not find any valid template for Hosts.yml');
-            if (console != null) {
-                console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.error', 'Could not find template for Hosts.yml'), true);
-            }
-            
-            // Return a basic template as last resort
-            return "hosts:\n  - name: \"::SERVER_HOSTNAME::.::SERVER_ORGANIZATION::.com\"\n    settings:\n      description: \"Custom provisioner host\"\n      ram: ::SERVER_MEMORY::\n      cpus: ::SERVER_CPUS::\n      dhcp4: ::SERVER_DHCP::\n";
-        }
-        
-        // Create a simple hosts file generator for custom provisioners
-        // This is a simplified version that just does basic variable substitution
-        var content = _hostsTemplate;
-        
-        // Initialize variables for ALL roles from the provisioner definition
-        if (_server != null && _server.customProperties != null && 
-            Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
-            
-            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
-            if (provDef != null && Reflect.hasField(provDef, "metadata") && 
-                Reflect.hasField(provDef.metadata, "roles")) {
-                
-                var rolesList:Dynamic = Reflect.field(provDef.metadata, "roles");
-                if (rolesList != null) {
-                    // Cast the dynamic rolesList to Array<Dynamic> or iterate using indices
-                    var rolesArray:Array<Dynamic> = cast(rolesList, Array<Dynamic>);
-                    
-                    for (i in 0...rolesArray.length) {
-                        var roleInfo = rolesArray[i];
-                        if (roleInfo != null && Reflect.hasField(roleInfo, "name")) {
-                            var roleName = Reflect.field(roleInfo, "name");
-                            var roleUpper = roleName.toUpperCase();
-                            roleUpper = StringTools.replace(roleUpper, "-", "_");
-                            
-                            // Initialize all standard variables for this role
-                            content = _initializeStandardVariables(content, roleUpper);
-                            
-                            // Set role enablement to false by default
-                            content = _replaceVariable(content, roleName, "false");
-                        }
-                    }
-                }
-            }
-        }
-     
-        // Extract just the hostname part (before the first dot)
-        var fullHostname = _server.hostname.value;
-        var hostnameOnly = fullHostname;
-        var dotIndex = fullHostname.indexOf(".");
-        if (dotIndex > 0) {
-            hostnameOnly = fullHostname.substring(0, dotIndex);
-        }
-        
-        // Replace variables with server values
-        content = _replaceVariable(content, "SERVER_HOSTNAME", hostnameOnly);
-        content = _replaceVariable(content, "SERVER_DOMAIN", _server.url.domainName);
-        content = _replaceVariable(content, "SERVER_ORGANIZATION", _server.organization.value);
-        content = _replaceVariable(content, "SERVER_ID", Std.string(_server.id));
-        content = _replaceVariable(content, "RESOURCES_RAM", Std.string(_server.memory.value) + "G");
-        content = _replaceVariable(content, "SERVER_MEMORY", Std.string(_server.memory.value));
-        content = _replaceVariable(content, "RESOURCES_CPU", Std.string(_server.numCPUs.value));
-        content = _replaceVariable(content, "SERVER_CPUS", Std.string(_server.numCPUs.value));
-        content = _replaceVariable(content, "NETWORK_DHCP4", _server.dhcp4.value ? "true" : "false");
-        content = _replaceVariable(content, "SERVER_DHCP", _server.dhcp4.value ? "true" : "false");
-        
-        // Network settings
-        if (!_server.dhcp4.value) {
-            content = _replaceVariable(content, "NETWORK_ADDRESS", _server.networkAddress.value);
-            content = _replaceVariable(content, "NETWORK_GATEWAY", _server.networkGateway.value);
-            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_1", _server.nameServer1.value);
-            content = _replaceVariable(content, "NETWORK_DNS1", _server.nameServer1.value);
-            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_2", _server.nameServer2.value);
-            content = _replaceVariable(content, "NETWORK_DNS2", _server.nameServer2.value);
-        } else {
-            // Provide default values for DHCP mode
-            content = _replaceVariable(content, "NETWORK_ADDRESS", "192.168.2.1");
-            content = _replaceVariable(content, "NETWORK_NETMASK", "255.255.255.0");
-            content = _replaceVariable(content, "NETWORK_GATEWAY", "");
-            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_1", "1.1.1.1");
-            content = _replaceVariable(content, "NETWORK_DNS1", "1.1.1.1");
-            content = _replaceVariable(content, "NETWORK_DNS_NAMESERVER_2", "1.0.0.1");
-            content = _replaceVariable(content, "NETWORK_DNS2", "1.0.0.1");
-        }
-        
-        // Bridge adapter
-        content = _replaceVariable(content, "NETWORK_BRIDGE", _server.getEffectiveNetworkInterface());
-        content = _replaceVariable(content, "DISABLE_BRIDGE_ADAPTER", _server.disableBridgeAdapter.value ? "true" : "false");
-        
-        // User settings
-        content = _replaceVariable(content, "USER_EMAIL", _server.userEmail.value);
-        
-        // Server default settings
-        content = _replaceVariable(content, "SERVER_DEFAULT_USER", "startcloud");
-        content = _replaceVariable(content, "SERVER_DEFAULT_USER_PASS", "STARTcloud24@!");
-        content = _replaceVariable(content, "BOX_URL", "https://boxvault.startcloud.com");
-        content = _replaceVariable(content, "SHOW_CONSOLE", "false");
-        content = _replaceVariable(content, "POST_PROVISION", "true");
-        content = _replaceVariable(content, "ENV_SETUP_WAIT", Std.string(_server.setupWait.value));
-        content = _replaceVariable(content, "SYNC_METHOD", Std.string(_server.syncMethod));
-        
-        // Process all roles with their exact names - no prefixes
-        for (role in _server.roles.value) {
-            var roleValue = role.enabled ? "true" : "false";
-            var roleName = role.value;
-            
-            // Set the basic role enablement variable
-            content = _replaceVariable(content, roleName, roleValue);
-            
-            // Set standard variables for all roles
-            var roleUpper = roleName.toUpperCase();
-            
-            // Handle role name that contains hyphens
-            roleUpper = StringTools.replace(roleUpper, "-", "_");
-            
-            // Initialize all standard variables with default values
-            content = _initializeStandardVariables(content, roleUpper);
-            
-            // Process installer file information for standard roles
-            if (role.files != null) {
-                // Main installer
-                if (role.files.installer != null) {
-                    var installerFileName = role.files.installerFileName;
-                    var installerHash = role.files.installerHash;
-                    var installerVersion = role.files.installerVersion;
-                    
-                    // Override with actual values if they exist
-                    // Main installer
-                    if (installerFileName != null) {
-                        content = _replaceVariable(content, roleUpper + "_INSTALLER", installerFileName);
-                    }
-                    
-                    if (installerHash != null) {
-                        content = _replaceVariable(content, roleUpper + "_HASH", installerHash);
-                    }
-                    
-                    if (installerVersion != null) {
-                        var fullVersion = null;
-                        if (Reflect.hasField(installerVersion, "fullVersion"))
-                            fullVersion = Reflect.field(installerVersion, "fullVersion");
-                        
-                        if (fullVersion != null) {
-                            content = _replaceVariable(content, roleUpper + "_INSTALLER_VERSION", fullVersion);
-                            
-                            // Special handling for domino version fields
-                            if (roleName == "domino") {
-                                var majorVersion = null;
-                                var minorVersion = null;
-                                var patchVersion = null;
-                                
-                                if (Reflect.hasField(installerVersion, "majorVersion"))
-                                    majorVersion = Reflect.field(installerVersion, "majorVersion");
-                                if (Reflect.hasField(installerVersion, "minorVersion"))
-                                    minorVersion = Reflect.field(installerVersion, "minorVersion");
-                                if (Reflect.hasField(installerVersion, "patchVersion"))
-                                    patchVersion = Reflect.field(installerVersion, "patchVersion");
-                                
-                                if (majorVersion != null) {
-                                    content = _replaceVariable(content, "DOMINO_INSTALLER_MAJOR_VERSION", majorVersion);
-                                    content = _replaceVariable(content, "DOMINO_MAJOR_VERSION", majorVersion);
-                                }
-                                
-                                if (minorVersion != null) {
-                                    content = _replaceVariable(content, "DOMINO_INSTALLER_MINOR_VERSION", minorVersion);
-                                    content = _replaceVariable(content, "DOMINO_MINOR_VERSION", minorVersion);
-                                }
-                                
-                                if (patchVersion != null) {
-                                    content = _replaceVariable(content, "DOMINO_INSTALLER_PATCH_VERSION", patchVersion);
-                                    content = _replaceVariable(content, "DOMINO_PATCH_VERSION", patchVersion);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Process hotfixes using standardized variables
-                if (role.files.hotfixes != null && role.files.hotfixes.length > 0) {
-                    var hotfixPath = new Path(role.files.hotfixes[0]);
-                    var hotfixFileName = hotfixPath.file + "." + hotfixPath.ext;
-                    var roleUpper = roleName.toUpperCase();
-                    roleUpper = StringTools.replace(roleUpper, "-", "_");
-                    
-                    // Set standard hotfix variables
-                    content = _replaceVariable(content, roleUpper + "_HF_INSTALL", "true");
-                    content = _replaceVariable(content, roleUpper + "_HF_INSTALLER", hotfixFileName);
-                    
-                    if (role.files.installerHotFixVersion != null) {
-                        var fullVersion = null;
-                        if (Reflect.hasField(role.files.installerHotFixVersion, "fullVersion"))
-                            fullVersion = Reflect.field(role.files.installerHotFixVersion, "fullVersion");
-                        
-                        if (fullVersion != null) {
-                            content = _replaceVariable(content, roleUpper + "_HF_INSTALLER_VERSION", fullVersion);
-                        }
-                    }
-                    
-                    if (role.files.installerHotFixHash != null) {
-                        content = _replaceVariable(content, roleUpper + "_HF_HASH", role.files.installerHotFixHash);
-                    }
-                }
-                
-                // Process fixpacks using standardized variables
-                if (role.files.fixpacks != null && role.files.fixpacks.length > 0) {
-                    var fixpackPath = new Path(role.files.fixpacks[0]);
-                    var fixpackFileName = fixpackPath.file + "." + fixpackPath.ext;
-                    var roleUpper = roleName.toUpperCase();
-                    roleUpper = StringTools.replace(roleUpper, "-", "_");
-                    
-                    // Set standard fixpack variables
-                    content = _replaceVariable(content, roleUpper + "_FP_INSTALL", "true");
-                    content = _replaceVariable(content, roleUpper + "_FP_INSTALLER", fixpackFileName);
-                    
-                    if (role.files.installerFixpackVersion != null) {
-                        var fullVersion = null;
-                        if (Reflect.hasField(role.files.installerFixpackVersion, "fullVersion"))
-                            fullVersion = Reflect.field(role.files.installerFixpackVersion, "fullVersion");
-                        
-                        if (fullVersion != null) {
-                            content = _replaceVariable(content, roleUpper + "_FP_INSTALLER_VERSION", fullVersion);
-                        }
-                    }
-                    
-                    if (role.files.installerFixpackHash != null) {
-                        content = _replaceVariable(content, roleUpper + "_FP_HASH", role.files.installerFixpackHash);
-                    }
-                    
-
-                }
-            }
-        }
-
-        // Add custom properties if available
-        if (_server.customProperties != null) {
-            // Helper function to convert a value to string safely
-            function safeToString(value:Dynamic):String {
-                if (value == null) return "";
-                return switch(Type.typeof(value)) {
-                    case TBool: value ? "true" : "false";
-                    case TFloat: Std.string(value);
-                    case TInt: Std.string(value);
-                    case TClass(String): value;
-                    case _: try { Std.string(value); } catch(e) { ""; }
-                }
-            }
-            
-            // Prepare a map of all custom properties for template variable substitution
-            var allCustomProps = new Map<String, String>();
-
-            
-            // Get default field values from the provisioner definition if available
-            if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
-                var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
-                if (provDef != null && Reflect.hasField(provDef, "metadata") && 
-                    Reflect.hasField(provDef.metadata, "configuration")) {
-                    
-                    var config = provDef.metadata.configuration;
-                    
-                    // Extract default values from basic fields
-                    if (Reflect.hasField(config, "basicFields")) {
-                        var fields = Reflect.field(config, "basicFields");
-                        if (fields != null) {
-                            for (i in 0...fields.length) {
-                                var field = fields[i];
-                                if (field != null && Reflect.hasField(field, "name")) {
-                                    var fieldName = Reflect.field(field, "name");
-                                    var defaultValue = "";
-                                    if (Reflect.hasField(field, "defaultValue") && 
-                                        Reflect.field(field, "defaultValue") != null) {
-                                        defaultValue = safeToString(Reflect.field(field, "defaultValue"));
-                                    }
-                                    allCustomProps.set(fieldName, defaultValue);
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Extract default values from advanced fields
-                    if (Reflect.hasField(config, "advancedFields")) {
-                        var fields = Reflect.field(config, "advancedFields");
-                        if (fields != null) {
-                            for (i in 0...fields.length) {
-                                var field = fields[i];
-                                if (field != null && Reflect.hasField(field, "name")) {
-                                    var fieldName = Reflect.field(field, "name");
-                                    var defaultValue = "";
-                                    if (Reflect.hasField(field, "defaultValue") && 
-                                        Reflect.field(field, "defaultValue") != null) {
-                                        defaultValue = safeToString(Reflect.field(field, "defaultValue"));
-                                    }
-                                    allCustomProps.set(fieldName, defaultValue);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Now prioritize values from dynamicCustomProperties (highest priority)
-            if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
-                var props = Reflect.field(_server.customProperties, "dynamicCustomProperties");
-                if (props != null) {
-                    
-                    for (field in Reflect.fields(props)) {
-                        // Skip internal fields
-                        if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
-                        
-                        var value = Reflect.field(props, field);
-                        if (value != null) {
-                            allCustomProps.set(field, safeToString(value));
-                        }
-                    }
-                }
-            }
-            
-            // Then check dynamicAdvancedCustomProperties (also high priority)
-            if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
-                var props = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
-                if (props != null) {
-                    
-                    for (field in Reflect.fields(props)) {
-                        // Skip internal fields
-                        if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
-                        
-                        var value = Reflect.field(props, field);
-                        if (value != null) {
-                            allCustomProps.set(field, safeToString(value));
-                        }
-                    }
-                }
-            }
-            
-            // Replace all variables in the template
-            for (field => value in allCustomProps) {
-                content = _replaceVariable(content, field, value);
-            }
-        } else {
-            Logger.warning('${this}: No customProperties available on server');
-        }
-        
-        return content;
     }
+    
+    if (_hostsTemplate == null || _hostsTemplate.length == 0) {
+        Logger.error('${this}:generateHostsFileContent: Could not find any valid template for Hosts.yml');
+        if (console != null) {
+            console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.error', 'Could not find template for Hosts.yml'), true);
+        }
+        return "hosts:\n  - name: \"::SERVER_HOSTNAME::.::SERVER_ORGANIZATION::.com\"\n    settings:\n      description: \"Custom provisioner host\"\n      ram: ::SERVER_MEMORY::\n      cpus: ::SERVER_CPUS::\n      dhcp4: ::SERVER_DHCP::\n";
+    }
+
+    var replacementMap = new Map<String, String>();
+    var contextObject:Dynamic = {}; // Use a Dynamic object for haxe.Template
+
+    // Helper for adding to map, ensuring value is not null and key is uppercase for template
+    function addToContext(key:String, value:Dynamic) {
+        Reflect.setField(contextObject, key.toUpperCase(), value == null ? "" : Std.string(value));
+    }
+    function addBoolToContext(key:String, value:Bool) {
+        Reflect.setField(contextObject, key.toUpperCase(), value ? "true" : "false");
+    }
+
+    // Populate General Server Settings
+    var fullHostname = _server.hostname.value;
+    var hostnameOnly = fullHostname;
+    var dotIndex = fullHostname.indexOf(".");
+    if (dotIndex > 0) {
+        hostnameOnly = fullHostname.substring(0, dotIndex);
+    }
+    addToContext("SERVER_HOSTNAME", hostnameOnly);
+    addToContext("SERVER_DOMAIN", _server.url.domainName);
+    addToContext("SERVER_ORGANIZATION", _server.organization.value);
+    addToContext("SERVER_ID", _server.id);
+    addToContext("RESOURCES_RAM", Std.string(_server.memory.value) + "G");
+    addToContext("SERVER_MEMORY", _server.memory.value); // For older template compatibility
+    addToContext("RESOURCES_CPU", _server.numCPUs.value);
+    addToContext("SERVER_CPUS", _server.numCPUs.value); // For older template compatibility
+    
+    addBoolToContext("NETWORK_DHCP4", _server.dhcp4.value);
+    addBoolToContext("SERVER_DHCP", _server.dhcp4.value); // For older template compatibility
+
+    if (!_server.dhcp4.value) {
+        addToContext("NETWORK_ADDRESS", _server.networkAddress.value);
+        addToContext("NETWORK_GATEWAY", _server.networkGateway.value);
+        addToContext("NETWORK_DNS_NAMESERVER_1", _server.nameServer1.value);
+        addToContext("NETWORK_DNS1", _server.nameServer1.value); // For older template compatibility
+        addToContext("NETWORK_DNS_NAMESERVER_2", _server.nameServer2.value);
+        addToContext("NETWORK_DNS2", _server.nameServer2.value); // For older template compatibility
+        addToContext("NETWORK_NETMASK", _server.networkNetmask.value);
+    } else {
+        addToContext("NETWORK_ADDRESS", "192.168.2.1");
+        addToContext("NETWORK_NETMASK", "255.255.255.0");
+        addToContext("NETWORK_GATEWAY", "");
+        addToContext("NETWORK_DNS_NAMESERVER_1", "1.1.1.1");
+        addToContext("NETWORK_DNS1", "1.1.1.1");
+        addToContext("NETWORK_DNS_NAMESERVER_2", "1.0.0.1");
+        addToContext("NETWORK_DNS2", "1.0.0.1");
+    }
+    addToContext("NETWORK_BRIDGE", _server.getEffectiveNetworkInterface());
+    addBoolToContext("DISABLE_BRIDGE_ADAPTER", _server.disableBridgeAdapter.value);
+    addToContext("USER_EMAIL", _server.userEmail.value);
+    addToContext("SERVER_DEFAULT_USER", "startcloud");
+    addToContext("SERVER_DEFAULT_USER_PASS", "STARTcloud24@!");
+    addToContext("BOX_URL", "https://boxvault.startcloud.com");
+    addBoolToContext("SHOW_CONSOLE", false);
+    addBoolToContext("POST_PROVISION", true);
+    addToContext("ENV_SETUP_WAIT", _server.setupWait.value);
+    addToContext("SYNC_METHOD", Std.string(_server.syncMethod));
+
+    // Populate Role-Specific Data
+    if (_server.customProperties != null && Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+        var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+        if (provDef != null && Reflect.hasField(provDef, "metadata") && Reflect.hasField(provDef.metadata, "roles")) {
+            var metadataRolesArray:Array<Dynamic> = cast(Reflect.field(provDef.metadata, "roles"), Array<Dynamic>);
+            var selectedRolesMap = new Map<String, RoleData>();
+            for (sr in _server.roles.value) {
+                selectedRolesMap.set(sr.value, sr);
+            }
+
+            for (metadataRoleInfo in metadataRolesArray) {
+                if (metadataRoleInfo == null || !Reflect.hasField(metadataRoleInfo, "name")) continue;
+                
+                var roleName = Std.string(Reflect.field(metadataRoleInfo, "name"));
+                var roleUpper = StringTools.replace(roleName.toUpperCase(), "-", "_");
+
+                // Default initialization for this role's sub-variables
+                // Note: Main role enablement (e.g., ::domino::) is handled separately below.
+                addToContext(roleUpper + "_INSTALLER", "");
+                addToContext(roleUpper + "_HASH", "");
+                addToContext(roleUpper + "_INSTALLER_VERSION", "");
+                addToContext(roleUpper + "_INSTALLER_MAJOR_VERSION", "");
+                addToContext(roleUpper + "_INSTALLER_MINOR_VERSION", "");
+                addToContext(roleUpper + "_INSTALLER_PATCH_VERSION", "");
+                addBoolToContext(roleUpper + "_FP_INSTALL", false);
+                addToContext(roleUpper + "_FP_INSTALLER", "");
+                addToContext(roleUpper + "_FP_INSTALLER_VERSION", "");
+                addToContext(roleUpper + "_FP_HASH", "");
+                addBoolToContext(roleUpper + "_HF_INSTALL", false);
+                addToContext(roleUpper + "_HF_INSTALLER", "");
+                addToContext(roleUpper + "_HF_INSTALLER_VERSION", "");
+                addToContext(roleUpper + "_HF_HASH", "");
+
+                var selectedRoleData:RoleData = selectedRolesMap.get(roleName);
+                var isRoleEnabled = (selectedRoleData != null && selectedRoleData.enabled);
+                
+                // Set main role enablement variable (e.g. ::domino:: or ::DOMINO::)
+                // The template might use lowercase ::rolename:: or uppercase ::ROLENAME::
+                // We set both to be safe, Haxe template will pick the one that exists.
+                addBoolToContext(roleName.toLowerCase(), isRoleEnabled);
+                addBoolToContext(roleUpper, isRoleEnabled);
+
+                if (isRoleEnabled && selectedRoleData != null && selectedRoleData.files != null) {
+                    var files = selectedRoleData.files;
+                    if (files.installer != null && files.installerFileName != null) {
+                        addToContext(roleUpper + "_INSTALLER", files.installerFileName);
+                        addToContext(roleUpper + "_HASH", files.installerHash);
+                        if (files.installerVersion != null) {
+                            var v = files.installerVersion;
+                            if (Reflect.hasField(v, "fullVersion")) addToContext(roleUpper + "_INSTALLER_VERSION", Reflect.field(v, "fullVersion"));
+                            
+                            // General handling for installer version parts
+                            if (Reflect.hasField(v, "majorVersion")) {
+                                addToContext(roleUpper + "_INSTALLER_MAJOR_VERSION", Reflect.field(v, "majorVersion"));
+                            }
+                            if (Reflect.hasField(v, "minorVersion")) {
+                                addToContext(roleUpper + "_INSTALLER_MINOR_VERSION", Reflect.field(v, "minorVersion"));
+                            }
+                            if (Reflect.hasField(v, "patchVersion")) {
+                                addToContext(roleUpper + "_INSTALLER_PATCH_VERSION", Reflect.field(v, "patchVersion"));
+                            }
+                        }
+                    }
+                    if (files.hotfixes != null && files.hotfixes.length > 0) {
+                        var hotfixPath = new Path(files.hotfixes[0]);
+                        addBoolToContext(roleUpper + "_HF_INSTALL", true);
+                        addToContext(roleUpper + "_HF_INSTALLER", hotfixPath.file + "." + hotfixPath.ext);
+                        addToContext(roleUpper + "_HF_HASH", files.installerHotFixHash);
+                        if (files.installerHotFixVersion != null && Reflect.hasField(files.installerHotFixVersion, "fullVersion")) {
+                            addToContext(roleUpper + "_HF_INSTALLER_VERSION", Reflect.field(files.installerHotFixVersion, "fullVersion"));
+                        }
+                    }
+                    if (files.fixpacks != null && files.fixpacks.length > 0) {
+                        var fixpackPath = new Path(files.fixpacks[0]);
+                        addBoolToContext(roleUpper + "_FP_INSTALL", true);
+                        addToContext(roleUpper + "_FP_INSTALLER", fixpackPath.file + "." + fixpackPath.ext);
+                        addToContext(roleUpper + "_FP_HASH", files.installerFixpackHash);
+                        if (files.installerFixpackVersion != null && Reflect.hasField(files.installerFixpackVersion, "fullVersion")) {
+                            addToContext(roleUpper + "_FP_INSTALLER_VERSION", Reflect.field(files.installerFixpackVersion, "fullVersion"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Populate with Custom Properties (allowing overrides)
+    // These keys in the template are expected to be UPPERCASE by convention (e.g., ::MY_CUSTOM_FIELD::)
+    if (_server.customProperties != null) {
+        function safeToString(value:Dynamic):String { // Local helper
+            if (value == null) return "";
+            return switch(Type.typeof(value)) {
+                case TBool: value ? "true" : "false";
+                case TFloat: Std.string(value);
+                case TInt: Std.string(value);
+                case TClass(String): value;
+                case _: try { Std.string(value); } catch(e) { ""; }
+            }
+        }
+        
+        // Process fields from provisioner.yml metadata.configuration
+        if (Reflect.hasField(_server.customProperties, "provisionerDefinition")) {
+            var provDef = Reflect.field(_server.customProperties, "provisionerDefinition");
+            if (provDef != null && Reflect.hasField(provDef, "metadata") && Reflect.hasField(provDef.metadata, "configuration")) {
+                var config = provDef.metadata.configuration;
+                if (Reflect.hasField(config, "basicFields")) {
+                    var fields:Array<Dynamic> = cast Reflect.field(config, "basicFields");
+                    if (fields != null) for (field in fields) if (field != null && Reflect.hasField(field, "name")) {
+                        var fieldName = Std.string(Reflect.field(field, "name"));
+                        var defaultValue = (Reflect.hasField(field, "defaultValue") && Reflect.field(field, "defaultValue") != null) ? safeToString(Reflect.field(field, "defaultValue")) : "";
+                        addToContext(fieldName, defaultValue); // Key will be uppercased by addToContext
+                    }
+                }
+                if (Reflect.hasField(config, "advancedFields")) {
+                     var fields:Array<Dynamic> = cast Reflect.field(config, "advancedFields");
+                    if (fields != null) for (field in fields) if (field != null && Reflect.hasField(field, "name")) {
+                        var fieldName = Std.string(Reflect.field(field, "name"));
+                        var defaultValue = (Reflect.hasField(field, "defaultValue") && Reflect.field(field, "defaultValue") != null) ? safeToString(Reflect.field(field, "defaultValue")) : "";
+                        addToContext(fieldName, defaultValue); // Key will be uppercased by addToContext
+                    }
+                }
+            }
+        }
+        // Override with dynamicCustomProperties
+        if (Reflect.hasField(_server.customProperties, "dynamicCustomProperties")) {
+            var props = Reflect.field(_server.customProperties, "dynamicCustomProperties");
+            if (props != null) for (field in Reflect.fields(props)) {
+                if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+                var value = Reflect.field(props, field);
+                if (value != null) addToContext(field, safeToString(value)); // Key will be uppercased
+            }
+        }
+        if (Reflect.hasField(_server.customProperties, "dynamicAdvancedCustomProperties")) {
+            var props = Reflect.field(_server.customProperties, "dynamicAdvancedCustomProperties");
+            if (props != null) for (field in Reflect.fields(props)) {
+                if (field == "provisionerDefinition" || field == "serviceTypeData") continue;
+                var value = Reflect.field(props, field);
+                if (value != null) addToContext(field, safeToString(value)); // Key will be uppercased
+            }
+        }
+    }
+    
+    var template = new haxe.Template(_hostsTemplate);
+    var finalContent:String;
+    try {
+        finalContent = template.execute(contextObject);
+    } catch (e:Dynamic) {
+        Logger.error('${this}:generateHostsFileContent: Error executing Haxe template: ${e}');
+        finalContent = "Error generating content from template: " + Std.string(e); 
+    }
+    
+    return finalContent;
+}
     
 /**
  * Clear the target directory using robocopy on Windows for long paths
@@ -1245,116 +1114,6 @@ override public function saveHostsFile() {
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfileerror', Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE, '${e.details()} Message: ${e.message}'), true);
     }
 }
-
-    /**
-     * Initialize standard variables for a role using the standardized naming pattern
-     * This ensures all roles have consistent default values for all potential variables
-     * @param content The template content to operate on 
-     * @param roleUpper The uppercase role name (with hyphens converted to underscores)
-     * @return The content with variables initialized
-     */
-    private function _initializeStandardVariables(content:String, roleUpper:String):String {
-        var result = content;
-        
-        // Cluster variables
-        result = _replaceVariable(result, roleUpper + "_SERVER_CLUSTERMATES", "");
-        
-        // Main installer variables
-        result = _replaceVariable(result, roleUpper + "_MAJOR_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_MINOR_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_PATCH_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER", "");
-        result = _replaceVariable(result, roleUpper + "_HASH", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_MAJOR_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_MINOR_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_PATCH_VERSION", "");
-        
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK_INSTALL", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK", "");
-
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_HOTFIX_INSTALL", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_HOTFIX_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_HOTFIX", "");
-        
-        result = _replaceVariable(result, roleUpper + "_INSTALLER_FIXPACK", "");
-        
-        // Fixpack variables
-        result = _replaceVariable(result, roleUpper + "_FP_INSTALL", "false");
-        result = _replaceVariable(result, roleUpper + "_FP_INSTALLER", "");
-        result = _replaceVariable(result, roleUpper + "_FP_INSTALLER_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_FP_HASH", "");
-        
-        // Hotfix variables
-        result = _replaceVariable(result, roleUpper + "_HF_INSTALL", "false");
-        result = _replaceVariable(result, roleUpper + "_HF_INSTALLER", "");
-        result = _replaceVariable(result, roleUpper + "_HF_INSTALLER_VERSION", "");
-        result = _replaceVariable(result, roleUpper + "_HF_HASH", "");
-
-        result = _replaceVariable(result, "NOMADWEB_VERSION", "");
-
-        result = _replaceVariable(result,  "APPDEVPACK_INSTALLER", "");
-        result = _replaceVariable(result,  "APPDEVPACK_INSTALLER_VERSION", "");
-
-        // Roles placeholders
-        result = _replaceVariable(result, "ROLE_DOMINO_RESET", "");
-        result = _replaceVariable(result, "ROLE_LEAP", "");
-        result = _replaceVariable(result, "ROLE_NOMADWEB", "");
-        result = _replaceVariable(result, "ROLE_TRAVELER", "");
-        result = _replaceVariable(result, "ROLE_TRAVELER_HTMO", "");
-        result = _replaceVariable(result, "ROLE_VERSE", "");
-        result = _replaceVariable(result, "ROLE_APPDEVPACK", "");
-        result = _replaceVariable(result, "ROLE_RESTAPI", "");
-        result = _replaceVariable(result, "ROLE_MARIADB", "");
-        result = _replaceVariable(result, "ROLE_DOCKER", "");
-        result = _replaceVariable(result, "ROLE_VOLTMX_DOCKER", "");
-        result = _replaceVariable(result, "ROLE_VOLTMX", "");
-        result = _replaceVariable(result, "ROLE_STARTCLOUD_HAPROXY", "");
-        result = _replaceVariable(result, "ROLE_STARTCLOUD_VAGRANT_README", "");
-
-        return result;
-    }
-
-    /**
-     * Helper method to replace variables in the template using the ::VARIABLENAME:: format
-     * Also attempts common variations of the variable name for better compatibility
-     * @param content The template content
-     * @param name The variable name
-     * @param value The replacement value
-     * @return String The content with replaced variables
-     */
-    private function _replaceVariable(content:String, name:String, value:String):String {
-        // Ensure value is never null - use empty string if null
-        if (value == null) value = "";
-        
-        var result = content;
-        var replaced = false;
-        
-        // Create an array of case variations to try
-        var variations = [
-            name,               // Original case
-            name.toUpperCase(), // Uppercase
-            name.toLowerCase()  // Lowercase
-        ];
-        
-        // Try each variation
-        for (variation in variations) {
-            var pattern = "::" + variation + "::";
-            var before = result;
-            
-            // Use StringTools.replace to replace all occurrences
-            result = StringTools.replace(result, pattern, value);
-            
-            // Check if any replacements were made
-            if (before != result) {
-                replaced = true;
-            }
-        }
-        
-
-        return result;
-    }
     
     /**
      * Get the string representation of the provisioner
