@@ -273,6 +273,9 @@
             },
             "domino-rest-api":{
                 "desc":"The HCL Domino REST APIs (previously known as HCL Project KEEP) provide secure REST APIs with access to HCL Domino servers and databases."
+            },
+            "jedi":{
+                "desc": "Disable/Enable JEDI"
             }
         }
     },
@@ -389,6 +392,54 @@
                 "unconfigured": "Status: Not configured. Please configure your server",
                 "unknown": "Status: Unknown. Please delete the server"
             }
+        }
+    },
+    "provisionerimportpage":{
+        "title": "Import Provisioner",
+        "tabs": {
+            "collection": "Import Collection",
+            "version": "Import Version",
+            "github": "Import from GitHub"
+        },
+        "collection": {
+            "description": "Select a directory containing a provisioner collection with a provisioner-collection.yml file and one or more version subdirectories.",
+            "path": "Collection Path:"
+        },
+        "version": {
+            "description": "Select a directory containing a specific provisioner version with a provisioner.yml file and a 'provisioners' directory. The version will be added to an existing collection if found, or a new collection will be created.",
+            "path": "Version Path:"
+        },
+        "github": {
+            "description": "Import a provisioner directly from GitHub. The repository must contain a valid provisioner structure with a provisioner.yml file and 'provisioners' directory at the root or in a subfolder.",
+            "organization": "Organization/User:",
+            "repository": "Repository:",
+            "branch": "Branch:",
+            "token": "GitHub Token:",
+            "downloadmethod": "Download Method:",
+            "http": "HTTP",
+            "gitclone": "Git Clone"
+        },
+        "buttons": {
+            "browse": "Browse...",
+            "import": "Import",
+            "cancel": "Cancel"
+        },
+        "dialog": {
+            "selectcollection": "Select Provisioner Collection Directory",
+            "selectversion": "Select Provisioner Version Directory"
+        },
+        "toast": {
+            "selectcollection": "Please select a provisioner collection directory",
+            "collectionimportsuccess": "Provisioner collection imported successfully",
+            "collectionimportfail": "Failed to import provisioner collection. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and provisioners.",
+            "selectversion": "Please select a provisioner version directory",
+            "versionimportsuccess": "Provisioner version imported successfully",
+            "versionimportfail": "Failed to import provisioner version. Check that the directory contains a valid provisioner.yml file and provisioners directory.",
+            "importinprogress": "Import already in progress...",
+            "enterorganization": "Please enter a GitHub organization or username",
+            "enterrepository": "Please enter a repository name",
+            "gitclonerequired": "Async import requires using the 'Git Clone' download method. Please enable it.",
+            "startinggithubimport": "Starting GitHub import..."
         }
     },
     "settingspage":{

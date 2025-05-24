@@ -159,7 +159,7 @@ class ProvisionerImportPage extends Page {
 
         // Title label
         _label = new Label();
-        _label.text = "Import Provisioner";
+        _label.text = LanguageManager.getInstance().getString("provisionerimportpage.title");
         _label.variant = GenesisApplicationTheme.LABEL_LARGE;
         _label.layoutData = new HorizontalLayoutData(100);
         _titleGroup.addChild(_label);
@@ -176,9 +176,9 @@ class ProvisionerImportPage extends Page {
     private function _initializeTabBar() {
         _tabBar = new TabBar();
         _tabBar.dataProvider = new ArrayCollection([
-            { text: "Import Collection", icon: null },
-            { text: "Import Version", icon: null },
-            { text: "Import from GitHub", icon: null }
+            { text: LanguageManager.getInstance().getString("provisionerimportpage.tabs.collection"), icon: null },
+            { text: LanguageManager.getInstance().getString("provisionerimportpage.tabs.version"), icon: null },
+            { text: LanguageManager.getInstance().getString("provisionerimportpage.tabs.github"), icon: null }
         ]);
         
         // Set the itemToText function to properly display tab text
@@ -283,7 +283,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = "Select a directory containing a provisioner collection with a provisioner-collection.yml file and one or more version subdirectories.";
+        descLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.collection.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -294,7 +294,7 @@ class ProvisionerImportPage extends Page {
         
         // Path row
         var pathRow = new GenesisFormRow();
-        pathRow.text = "Collection Path:";
+        pathRow.text = LanguageManager.getInstance().getString("provisionerimportpage.collection.path");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var label = cast(pathRow.getChildAt(0), feathers.core.FeathersControl);
@@ -313,7 +313,7 @@ class ProvisionerImportPage extends Page {
         _collectionPathInput.enabled = false;
         
         _buttonBrowseCollection = new Button();
-        _buttonBrowseCollection.text = "Browse...";
+        _buttonBrowseCollection.text = LanguageManager.getInstance().getString("provisionerimportpage.buttons.browse");
         _buttonBrowseCollection.width = GenesisApplicationTheme.GRID * 15; // Increased width
         _buttonBrowseCollection.addEventListener(TriggerEvent.TRIGGER, _browseCollectionButtonTriggered);
         
@@ -349,8 +349,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = "Select a directory containing a specific provisioner version with a provisioner.yml file and a 'provisioners' directory. " +
-                         "The version will be added to an existing collection if found, or a new collection will be created.";
+        descLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.version.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -361,7 +360,7 @@ class ProvisionerImportPage extends Page {
         
         // Path row
         var pathRow = new GenesisFormRow();
-        pathRow.text = "Version Path:";
+        pathRow.text = LanguageManager.getInstance().getString("provisionerimportpage.version.path");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var label = cast(pathRow.getChildAt(0), feathers.core.FeathersControl);
@@ -380,7 +379,7 @@ class ProvisionerImportPage extends Page {
         _versionPathInput.enabled = false;
         
         _buttonBrowseVersion = new Button();
-        _buttonBrowseVersion.text = "Browse...";
+        _buttonBrowseVersion.text = LanguageManager.getInstance().getString("provisionerimportpage.buttons.browse");
         _buttonBrowseVersion.width = GenesisApplicationTheme.GRID * 15; // Increased width
         _buttonBrowseVersion.addEventListener(TriggerEvent.TRIGGER, _browseVersionButtonTriggered);
         
@@ -416,8 +415,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = "Import a provisioner directly from GitHub. The repository must contain a valid provisioner structure " +
-                         "with a provisioner.yml file and 'provisioners' directory at the root or in a subfolder.";
+        descLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.github.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -428,7 +426,7 @@ class ProvisionerImportPage extends Page {
         
         // GitHub organization/user
         var orgRow = new GenesisFormRow();
-        orgRow.text = "Organization/User:";
+        orgRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.organization");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var orgLabel = cast(orgRow.getChildAt(0), feathers.core.FeathersControl);
@@ -444,7 +442,7 @@ class ProvisionerImportPage extends Page {
         
         // GitHub repository
         var repoRow = new GenesisFormRow();
-        repoRow.text = "Repository:";
+        repoRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.repository");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var repoLabel = cast(repoRow.getChildAt(0), feathers.core.FeathersControl);
@@ -459,7 +457,7 @@ class ProvisionerImportPage extends Page {
         
         // GitHub branch
         var branchRow = new GenesisFormRow();
-        branchRow.text = "Branch:";
+        branchRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.branch");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var branchLabel = cast(branchRow.getChildAt(0), feathers.core.FeathersControl);
@@ -474,7 +472,7 @@ class ProvisionerImportPage extends Page {
         
         // GitHub token selection
         var tokenRow = new GenesisFormRow();
-        tokenRow.text = "GitHub Token:";
+        tokenRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.token");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var tokenLabel = cast(tokenRow.getChildAt(0), feathers.core.FeathersControl);
@@ -501,7 +499,7 @@ class ProvisionerImportPage extends Page {
         
         // Download method toggle (similar to FileSyncSetting)
         var gitRow = new GenesisFormRow();
-        gitRow.text = "Download Method:";
+        gitRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.downloadmethod");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var gitLabel = cast(gitRow.getChildAt(0), feathers.core.FeathersControl);
@@ -518,7 +516,7 @@ class ProvisionerImportPage extends Page {
         
         // HTTP label (left side)
         var httpLabel = new Label();
-        httpLabel.text = "HTTP";
+        httpLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.github.http");
         httpLabel.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         
         // Create a styled toggle checkbox resembling the FileSyncSetting
@@ -526,7 +524,7 @@ class ProvisionerImportPage extends Page {
         
         // Git label (right side)
         var gitLabel = new Label();
-        gitLabel.text = "Git Clone";
+        gitLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.github.gitclone");
         gitLabel.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         
         // Add components to toggle container
@@ -575,12 +573,12 @@ class ProvisionerImportPage extends Page {
         _buttonGroup.layout = buttonLayout;
         
         // Import button
-        _buttonImport = new GenesisFormButton("Import");
+        _buttonImport = new GenesisFormButton(LanguageManager.getInstance().getString("provisionerimportpage.buttons.import"));
         _buttonImport.addEventListener(TriggerEvent.TRIGGER, _importButtonTriggered);
         _buttonImport.width = GenesisApplicationTheme.GRID * 20;
         
         // Cancel button
-        _buttonCancel = new GenesisFormButton("Cancel");
+        _buttonCancel = new GenesisFormButton(LanguageManager.getInstance().getString("provisionerimportpage.buttons.cancel"));
         _buttonCancel.addEventListener(TriggerEvent.TRIGGER, _cancelButtonTriggered);
         _buttonCancel.width = GenesisApplicationTheme.GRID * 20;
         
@@ -708,7 +706,7 @@ class ProvisionerImportPage extends Page {
             _fd = null;
         });
         
-        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, "Select Provisioner Collection Directory");
+        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, LanguageManager.getInstance().getString("provisionerimportpage.dialog.selectcollection"));
     }
 
     /**
@@ -728,7 +726,7 @@ class ProvisionerImportPage extends Page {
             _fd = null;
         });
         
-        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, "Select Provisioner Version Directory");
+        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, LanguageManager.getInstance().getString("provisionerimportpage.dialog.selectversion"));
     }
 
     /**
@@ -771,7 +769,7 @@ class ProvisionerImportPage extends Page {
         var path = _collectionPathInput.text;
         
         if (path == null || StringTools.trim(path) == "") {
-            ToastManager.getInstance().showToast("Please select a provisioner collection directory");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.selectcollection"));
             return;
         }
         
@@ -779,7 +777,7 @@ class ProvisionerImportPage extends Page {
         var success = ProvisionerManager.importProvisioner(path);
         
         if (success) {
-            ToastManager.getInstance().showToast("Provisioner collection imported successfully");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.collectionimportsuccess"));
             
             // Dispatch event to notify the application that a provisioner was imported
             var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
@@ -788,7 +786,7 @@ class ProvisionerImportPage extends Page {
             // Close the page
             _closeImportPage();
         } else {
-            ToastManager.getInstance().showToast("Failed to import provisioner collection. Check that the directory contains a valid provisioner-collection.yml file and at least one version directory with provisioner.yml and provisioners.");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.collectionimportfail"));
         }
     }
 
@@ -799,7 +797,7 @@ class ProvisionerImportPage extends Page {
         var path = _versionPathInput.text;
         
         if (path == null || StringTools.trim(path) == "") {
-            ToastManager.getInstance().showToast("Please select a provisioner version directory");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.selectversion"));
             return;
         }
         
@@ -807,7 +805,7 @@ class ProvisionerImportPage extends Page {
         var success = ProvisionerManager.importProvisionerVersion(path);
         
         if (success) {
-            ToastManager.getInstance().showToast("Provisioner version imported successfully");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.versionimportsuccess"));
             
             // Dispatch event to notify the application that a provisioner was imported
             var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
@@ -816,7 +814,7 @@ class ProvisionerImportPage extends Page {
             // Close the page
             _closeImportPage();
         } else {
-            ToastManager.getInstance().showToast("Failed to import provisioner version. Check that the directory contains a valid provisioner.yml file and provisioners directory.");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.versionimportfail"));
         }
     }
 
@@ -826,7 +824,7 @@ class ProvisionerImportPage extends Page {
     private function _importFromGitHub() {
         // Prevent multiple imports at once
         if (_isImporting) {
-            ToastManager.getInstance().showToast("Import already in progress...");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.importinprogress"));
             return;
         }
         
@@ -836,12 +834,12 @@ class ProvisionerImportPage extends Page {
         var useGit = _githubUseGit.selected;
         
         if (org == null || StringTools.trim(org) == "") {
-            ToastManager.getInstance().showToast("Please enter a GitHub organization or username");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.enterorganization"));
             return;
         }
         
         if (repo == null || StringTools.trim(repo) == "") {
-            ToastManager.getInstance().showToast("Please enter a repository name");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.enterrepository"));
             return;
         }
         
@@ -852,7 +850,7 @@ class ProvisionerImportPage extends Page {
         
         // Only Git clone is supported for async currently
         if (!useGit) {
-            ToastManager.getInstance().showToast("Async import requires using the 'Git Clone' download method. Please enable it.");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.gitclonerequired"));
             return;
         }
         
@@ -871,7 +869,7 @@ class ProvisionerImportPage extends Page {
             _spinner.visible = true; // Show spinner
             _spinner.includeInLayout = true;
             _spinner.start(); // Start spinner animation
-            ToastManager.getInstance().showToast("Starting GitHub import...");
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.startinggithubimport"));
             
             // Execute the clone process
             executor.execute();
