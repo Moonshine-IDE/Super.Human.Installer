@@ -34,20 +34,16 @@ import genesis.application.components.GenesisFormPupUpListView;
 import feathers.controls.Check;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
-import feathers.controls.TextInput;
 import feathers.controls.TabBar;
 import feathers.data.ArrayCollection;
 import StringTools;
 import feathers.events.TriggerEvent;
-import feathers.layout.AnchorLayout;
-import feathers.layout.AnchorLayoutData;
 import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.VerticalAlign;
 import feathers.layout.VerticalLayout;
 import feathers.layout.VerticalLayoutData;
-import genesis.application.components.GenesisButton;
 import genesis.application.components.GenesisForm;
 import genesis.application.components.GenesisFormButton;
 import genesis.application.components.GenesisFormRow;
@@ -57,24 +53,16 @@ import genesis.application.components.Page;
 import genesis.application.managers.LanguageManager;
 import genesis.application.managers.ToastManager;
 import genesis.application.theme.GenesisApplicationTheme;
-import haxe.io.Path;
 import lime.ui.FileDialog;
 import lime.ui.FileDialogType;
-import superhuman.config.SuperHumanSecrets;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
-import superhuman.theme.SuperHumanInstallerTheme;
 import feathers.controls.ToggleButton;
-import feathers.controls.ToggleButtonState;
 import feathers.utils.DisplayObjectRecycler;
 import openfl.events.Event;
-import feathers.graphics.FillStyle;
-import feathers.graphics.LineStyle;
 import feathers.skins.RectangleSkin;
 import openfl.text.TextFormat;
-import superhuman.config.SuperHumanGlobals;
 import prominic.sys.io.AbstractExecutor; // Added for async import
-import openfl.Lib; // Added for next frame dispatch
 import genesis.application.components.ProgressIndicator; // Added for spinner
 
 /**
@@ -699,6 +687,7 @@ class ProvisionerImportPage extends Page {
         
         _fd.onSelect.add(path -> {
             _collectionPathInput.text = path;
+            _collectionPathInput.toolTip = path;
             _fd = null;
         });
         
@@ -719,6 +708,7 @@ class ProvisionerImportPage extends Page {
         
         _fd.onSelect.add(path -> {
             _versionPathInput.text = path;
+            _versionPathInput.toolTip = path;
             _fd = null;
         });
         
