@@ -308,7 +308,7 @@ class ProvisionerImportPage extends Page {
         pathLayout.verticalAlign = VerticalAlign.MIDDLE;
         pathContainer.layout = pathLayout;
         
-        _collectionPathInput = new GenesisFormTextInput("", "Select a collection directory path...");
+        _collectionPathInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.collection.placeholder"));
         _collectionPathInput.width = (_width * 0.8) - 150 - GenesisApplicationTheme.GRID * 17; // Reduced to give more space to browse button
         _collectionPathInput.enabled = false;
         
@@ -374,7 +374,7 @@ class ProvisionerImportPage extends Page {
         pathLayout.verticalAlign = VerticalAlign.MIDDLE;
         pathContainer.layout = pathLayout;
         
-        _versionPathInput = new GenesisFormTextInput("", "Select a version directory path...");
+        _versionPathInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.version.placeholder"));
         _versionPathInput.width = (_width * 0.8) - 150 - GenesisApplicationTheme.GRID * 17; // Reduced to give more space to browse button
         _versionPathInput.enabled = false;
         
@@ -434,7 +434,7 @@ class ProvisionerImportPage extends Page {
         if (orgLabel != null) orgLabel.layoutData = new HorizontalLayoutData(20);
         if (orgContent != null) orgContent.layoutData = new HorizontalLayoutData(80);
         
-        _githubOrgInput = new GenesisFormTextInput("", "e.g., prominic");
+        _githubOrgInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.github.organizationPlaceholder"));
         // Set width to match the other input fields
         _githubOrgInput.width = (_width * 0.8) - 150;
         orgRow.content.addChild(_githubOrgInput);
@@ -450,7 +450,7 @@ class ProvisionerImportPage extends Page {
         if (repoLabel != null) repoLabel.layoutData = new HorizontalLayoutData(20);
         if (repoContent != null) repoContent.layoutData = new HorizontalLayoutData(80);
         
-        _githubRepoInput = new GenesisFormTextInput("", "e.g., provisioner-example");
+        _githubRepoInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.github.repositoryPlaceholder"));
         _githubRepoInput.width = (_width * 0.8) - 150;
         repoRow.content.addChild(_githubRepoInput);
         _githubForm.addChild(repoRow);
@@ -465,7 +465,7 @@ class ProvisionerImportPage extends Page {
         if (branchLabel != null) branchLabel.layoutData = new HorizontalLayoutData(20);
         if (branchContent != null) branchContent.layoutData = new HorizontalLayoutData(80);
         
-        _githubBranchInput = new GenesisFormTextInput("main", "e.g., main");
+        _githubBranchInput = new GenesisFormTextInput("main", LanguageManager.getInstance().getString("provisionerimportpage.github.branchPlaceholder"));
         _githubBranchInput.width = (_width * 0.8) - 150;
         branchRow.content.addChild(_githubBranchInput);
         _githubForm.addChild(branchRow);

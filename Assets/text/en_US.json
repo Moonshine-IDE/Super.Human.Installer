@@ -403,17 +403,22 @@
         },
         "collection": {
             "description": "Select a directory containing a provisioner collection with a provisioner-collection.yml file and one or more version subdirectories.",
-            "path": "Collection Path:"
+            "path": "Collection Path:",
+            "placeholder": "Select a collection directory path..."
         },
         "version": {
             "description": "Select a directory containing a specific provisioner version with a provisioner.yml file and a 'provisioners' directory. The version will be added to an existing collection if found, or a new collection will be created.",
-            "path": "Version Path:"
+            "path": "Version Path:",
+            "placeholder": "Select a version directory path..."
         },
         "github": {
             "description": "Import a provisioner directly from GitHub. The repository must contain a valid provisioner structure with a provisioner.yml file and 'provisioners' directory at the root or in a subfolder.",
             "organization": "Organization/User:",
+            "organizationPlaceholder": "e.g., prominic",
             "repository": "Repository:",
+            "repositoryPlaceholder": "e.g., provisioner-example",
             "branch": "Branch:",
+            "branchPlaceholder": "e.g., main",
             "token": "GitHub Token:",
             "downloadmethod": "Download Method:",
             "http": "HTTP",
