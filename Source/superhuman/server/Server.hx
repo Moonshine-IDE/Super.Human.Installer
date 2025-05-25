@@ -1993,7 +1993,7 @@ class Server {
                             
                             if (!hasUTMPlugin) {
                                 // Install UTM plugin and then proceed with vagrant up
-                                _safeInstallVagrantPlugin("vagrant-utm");
+                                _safeInstallVagrantPlugin("vagrant_utm");
                             } else {
                                 // UTM plugin already installed, proceed with vagrant up
                                 _executeVagrantUp();
@@ -2006,7 +2006,7 @@ class Server {
                 } else if (needsUTMPlugin && !hasUTMPlugin) {
                     // Only need to install UTM plugin
                     if (console != null) console.appendText("Need to install vagrant-utm plugin for ARM Mac");
-                    _safeInstallVagrantPlugin("vagrant-utm");
+                    _safeInstallVagrantPlugin("vagrant_utm");
                 } else {
                     // Fallback - should never reach here
                     _executeVagrantUp();
