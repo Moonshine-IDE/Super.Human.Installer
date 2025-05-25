@@ -1976,7 +1976,7 @@ class Server {
                 
                 // Determine which plugins are missing
                 var hasSCPPlugin = pluginOutput.indexOf("vagrant-scp-sync") >= 0;
-                var hasUTMPlugin = pluginOutput.indexOf("vagrant-utm") >= 0;
+                var hasUTMPlugin = pluginOutput.indexOf("vagrant_utm") >= 0;
                 
                 if (hasSCPPlugin && (!needsUTMPlugin || hasUTMPlugin)) {
                     // All required plugins are installed
