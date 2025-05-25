@@ -191,14 +191,43 @@ class UTM extends AbstractApp {
         
         // Read the UTM version directly from the Info.plist file
         try {
-            var plist = PListUtil.readFromFile("/Applications/UTM.app/Contents/Info.plist");
+            var plistPath = "/Applications/UTM.app/Contents/Info.plist";
+            Logger.info('${this}: Attempting to read plist from ${plistPath}');
+            
+            var plist = PListUtil.readFromFile(plistPath);
             if (plist != null) {
-                // Get the CFBundleShortVersionString value
+                Logger.info('${this}: Successfully read plist file');
+                
+                // Try different approaches to get the version
+                // 1. Using the typed PListEntryId
                 var versionEntry = plist.get(PListEntryId.CFBundleShortVersionString);
                 if (versionEntry != null) {
                     this._version = versionEntry.value;
-                    Logger.info('${this}: Found UTM version from plist: ${this._version}');
+                    Logger.info('${this}: Found UTM version from plist using PListEntryId: ${this._version}');
+                } else {
+                    // 2. Try using string directly as fallback
+                    try {
+                        var stringKeyEntry = plist.get("CFBundleShortVersionString");
+                        if (stringKeyEntry != null) {
+                            this._version = stringKeyEntry.value;
+                            Logger.info('${this}: Found UTM version from plist using string key: ${this._version}');
+                        } else {
+                            Logger.warning('${this}: CFBundleShortVersionString not found in plist');
+                        }
+                    } catch (e) {
+                        Logger.error('${this}: Error getting version with string key: ${e}');
+                    }
                 }
+                
+                // Additional debug output
+                try {
+                    // Log all keys for debugging
+                    Logger.info('${this}: Plist contents: ${plist}');
+                } catch (e) {
+                    Logger.error('${this}: Error logging plist: ${e}');
+                }
+            } else {
+                Logger.error('${this}: Plist file could not be read from ${plistPath}');
             }
         } catch (e) {
             Logger.error('${this}: Error reading UTM version from plist: ${e}');
