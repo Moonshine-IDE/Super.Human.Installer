@@ -1770,6 +1770,11 @@ class SuperHumanInstaller extends GenesisApplication {
 					sysInfoBase += ' | Git: ${Git.getInstance().version}';
 				}
 				
+				// Add UTM information if on ARM Mac
+				if (_cpuArchitecture == CPUArchitecture.Arm64 && UTM.getInstance().exists && UTM.getInstance().version != null) {
+					sysInfoBase += ' | UTM: ${UTM.getInstance().version}';
+				}
+				
 				// Only add rsync info for non-Windows systems
 				if (!isWindows) {
 					var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";

@@ -242,12 +242,18 @@ class SettingsPage extends Page {
         // Only show UTM options on Mac - using class variable
         _cbUseUTM = new GenesisFormCheckBox("Use UTM for virtualization (recommended for ARM Macs)");
         _cbUseUTM.selected = superhuman.config.SuperHumanGlobals.USE_UTM;
-        
-        var _buttonDownloadUTM = new GenesisFormButton("Download UTM");
-        _buttonDownloadUTM.addEventListener(TriggerEvent.TRIGGER, _downloadUTM);
-        
         _rowUTM.content.addChild(_cbUseUTM);
-        _rowUTM.content.addChild(_buttonDownloadUTM);
+        
+        // Only show download button if UTM is not installed
+        if (!prominic.sys.applications.utm.UTM.getInstance().exists) {
+            var _buttonDownloadUTM = new GenesisFormButton("Download UTM");
+            _buttonDownloadUTM.addEventListener(TriggerEvent.TRIGGER, _downloadUTM);
+            
+            // Create a separate row for the download button
+            var _rowUTMDownload = new GenesisFormRow();
+            _rowUTMDownload.content.addChild(_buttonDownloadUTM);
+            _form.addChild(_rowUTMDownload);
+        }
         _form.addChild(_rowUTM);
         #end
         
