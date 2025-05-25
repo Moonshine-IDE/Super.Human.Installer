@@ -27,7 +27,6 @@
  *  exception statement from all source files in the program, then also delete
  *  it in the license file.
  */
-
 package;
 
 import superhuman.server.AdditionalServer;
@@ -70,6 +69,7 @@ import prominic.sys.applications.bin.Shell;
 import prominic.sys.applications.git.Git;
 import prominic.sys.applications.hashicorp.Vagrant;
 import prominic.sys.applications.oracle.VirtualBox;
+import prominic.sys.applications.utm.UTM;
 import prominic.sys.io.AbstractExecutor;
 import prominic.sys.io.ExecutorManager;
 import prominic.sys.io.FileTools;
@@ -554,31 +554,56 @@ class SuperHumanInstaller extends GenesisApplication {
 		Vagrant.getInstance().onDestroy.add( _vagrantDestroyed );
 		Vagrant.getInstance().onUp.add( _vagrantUped );
 		VirtualBox.getInstance().onInit.add( _virtualBoxInitialized );
+		UTM.getInstance().onInit.add( _utmInitialized );
 		Git.getInstance().onInit.add( _gitInitialized );
-		ParallelExecutor.create().add( Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit(), Git.getInstance().getInit() ).onStop.add( _checkAppsInitialized ).execute();
+		ParallelExecutor.create().add( Vagrant.getInstance().getInit(), VirtualBox.getInstance().getInit(), UTM.getInstance().getInit(), Git.getInstance().getInit() ).onStop.add( _checkAppsInitialized ).execute();
 
 	}
 
 	function _checkAppsInitialized( executor:AbstractExecutor ) {
 
-		if( Vagrant.getInstance().initialized && VirtualBox.getInstance().initialized ) {
+		if( Vagrant.getInstance().initialized && VirtualBox.getInstance().initialized && UTM.getInstance().initialized ) {
+			// Check CPU architecture to decide which virtualization software to use
+			var cpuArch = prominic.sys.tools.SysTools.getCPUArchitecture();
+			if (cpuArch == CPUArchitecture.Arm64) {
+				// On ARM Macs, prefer UTM if it exists
+				SuperHumanGlobals.USE_UTM = UTM.getInstance().exists;
+				Logger.info('${this}: ARM architecture detected, setting USE_UTM=${SuperHumanGlobals.USE_UTM}');
+			}
 
-			if ( VirtualBox.getInstance().exists && Vagrant.getInstance().exists ) {
+			// Initialize based on available virtualization software
+			if ((SuperHumanGlobals.USE_UTM && UTM.getInstance().exists) || 
+				(VirtualBox.getInstance().exists && Vagrant.getInstance().exists)) {
 
 				Vagrant.getInstance().onGlobalStatus.add( _vagrantGlobalStatusFinished ).onVersion.add( _vagrantVersionUpdated );
 				VirtualBox.getInstance().onVersion.add( _virtualBoxVersionUpdated ).onListVMs.add( _virtualBoxListVMsUpdated );
+				UTM.getInstance().onVersion.add( _utmVersionUpdated ).onListVMs.add( _utmListVMsUpdated );
 
 				Git.getInstance().onVersion.add( _gitVersionUpdated );
 				
 				var pe = ParallelExecutor.create();
 				pe.add( 
 					Vagrant.getInstance().getVersion(),
-					VirtualBox.getInstance().getBridgedInterfaces(),
-					VirtualBox.getInstance().getHostInfo(),
-					VirtualBox.getInstance().getVersion(),
-					VirtualBox.getInstance().getListVMs( true ),
 					Git.getInstance().getVersion()
-				 );
+				);
+				
+				// Add UTM operations if it exists
+				if (UTM.getInstance().exists) {
+					pe.add(
+						UTM.getInstance().getVersion(),
+						UTM.getInstance().getListVMs()
+					);
+				}
+				
+				// Add VirtualBox operations if it exists
+				if (VirtualBox.getInstance().exists) {
+					pe.add(
+						VirtualBox.getInstance().getBridgedInterfaces(),
+						VirtualBox.getInstance().getHostInfo(),
+						VirtualBox.getInstance().getVersion(),
+						VirtualBox.getInstance().getListVMs(true)
+					);
+				}
 
 				var rsyncExecutor = Vagrant.getInstance().getRsyncVersion();
 				if (rsyncExecutor != null)
@@ -659,6 +684,16 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 	
+	function _utmInitialized( a:AbstractApp ) {
+		
+		if ( UTM.getInstance().exists ) {
+			Logger.info( '${this}: UTM is installed at ${UTM.getInstance().path}' );
+		} else {
+			Logger.warning( '${this}: UTM is not installed' );
+		}
+		
+	}
+	
 	function _gitInitialized( a:AbstractApp ) {
 		
 		if ( Git.getInstance().exists ) {
@@ -672,6 +707,12 @@ class SuperHumanInstaller extends GenesisApplication {
 	function _virtualBoxVersionUpdated() {
 
 		Logger.info( '${this}: VirtualBox version: ${VirtualBox.getInstance().version}' );
+
+	}
+	
+	function _utmVersionUpdated() {
+
+		Logger.info( '${this}: UTM version: ${UTM.getInstance().version}' );
 
 	}
 	
@@ -711,6 +752,21 @@ class SuperHumanInstaller extends GenesisApplication {
 		}
 
 		if ( _serverPage != null ) _serverPage.virtualBoxMachines = VirtualBox.getInstance().virtualBoxMachines;
+
+	}
+	
+	function _utmListVMsUpdated() {
+
+		UTM.getInstance().onListVMs.remove( _utmListVMsUpdated );
+
+		Logger.info( '${this}: UTM machines: ${UTM.getInstance().utmMachines}' );
+
+		// We will need to enhance the ServerManager and CombinedVirtualMachine classes
+		// to support UTM machines in Phase 2, for now just log the machines
+		
+		if ( _serverPage != null && UTM.getInstance().utmMachines != null ) {
+			// We will need to enhance the SystemInfoBox to display UTM machines in Phase 2
+		}
 
 	}
 
@@ -1646,12 +1702,11 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _startServer( e:SuperHumanApplicationEvent ) {
 
-		if ( _cpuArchitecture == CPUArchitecture.Arm64 ) {
-
-			Logger.warning( '${this}: CPU Architecture ${_cpuArchitecture} is not supported' );
+		if ( _cpuArchitecture == CPUArchitecture.Arm64 && !SuperHumanGlobals.USE_UTM ) {
+			// Only block ARM architecture if UTM is not available
+			Logger.warning( '${this}: ARM CPU Architecture without UTM is not supported' );
 			_showCPUArchitectureNotSupportedWarning();
 			return;
-
 		}
 
 		Logger.info( '${this}: Starting server: ${e.server.id}' );
@@ -2248,8 +2303,13 @@ class SuperHumanInstaller extends GenesisApplication {
 	
 	function _showCPUArchitectureNotSupportedWarning() {
 
+		var message = LanguageManager.getInstance().getString( 'alert.notsupportedcpu.text', Std.string( _cpuArchitecture ) );
+		if (_cpuArchitecture == CPUArchitecture.Arm64) {
+			message += " Please install UTM from " + SuperHumanGlobals.UTM_DOWNLOAD_URL;
+		}
+		
 		Alert.show(
-			LanguageManager.getInstance().getString( 'alert.notsupportedcpu.text', Std.string( _cpuArchitecture ) ),
+			message,
 			LanguageManager.getInstance().getString( 'alert.notsupportedcpu.title' ),
 			[ LanguageManager.getInstance().getString( 'alert.notsupportedcpu.buttonok' ) ]
 		);

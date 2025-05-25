@@ -27,7 +27,6 @@
  *  exception statement from all source files in the program, then also delete
  *  it in the license file.
  */
-
 package superhuman.components;
 
 import genesis.application.components.GenesisFormRow;
@@ -232,6 +231,23 @@ class SettingsPage extends Page {
         _rowKeepFailedServersRunning.content.addChild( _cbKeepFailedServersRunning );
         _form.addChild( _rowKeepFailedServersRunning );
         
+        #if mac
+        // Add UTM settings section for Mac
+        var _rowUTM = new GenesisFormRow();
+        _rowUTM.text = "UTM Settings";
+        
+        // Only show UTM options on Mac
+        var _cbUseUTM = new GenesisFormCheckBox("Use UTM for virtualization (recommended for ARM Macs)");
+        _cbUseUTM.selected = superhuman.config.SuperHumanGlobals.USE_UTM;
+        
+        var _buttonDownloadUTM = new GenesisFormButton("Download UTM");
+        _buttonDownloadUTM.addEventListener(TriggerEvent.TRIGGER, _downloadUTM);
+        
+        _rowUTM.content.addChild(_cbUseUTM);
+        _rowUTM.content.addChild(_buttonDownloadUTM);
+        _form.addChild(_rowUTM);
+        #end
+        
         spacer = new LayoutGroup();
         spacer.height = GenesisApplicationTheme.SPACER;
         _form.addChild( spacer );
@@ -418,6 +434,13 @@ class SettingsPage extends Page {
         } else {
             SuperHumanInstaller.getInstance().config.preferences.defaultNetworkInterface = "";
         }
+        
+        #if mac
+        // Save UTM preference
+        if (_cbUseUTM != null) {
+            superhuman.config.SuperHumanGlobals.USE_UTM = _cbUseUTM.selected;
+        }
+        #end
 
         this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION ) );
 
@@ -459,5 +482,15 @@ class SettingsPage extends Page {
     override function _cancel(?e:Dynamic) {
         // Dispatch the cancel event which will be handled by SuperHumanInstaller
         this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CANCEL_PAGE));
+    }
+    
+    /**
+     * Open the UTM download page
+     * @param e The trigger event
+     */
+    function _downloadUTM(e:TriggerEvent) {
+        var url = superhuman.config.SuperHumanGlobals.UTM_DOWNLOAD_URL;
+        Logger.info('${this}: Opening UTM download URL: ${url}');
+        superhuman.browser.Browsers.openLink(url);
     }
 }

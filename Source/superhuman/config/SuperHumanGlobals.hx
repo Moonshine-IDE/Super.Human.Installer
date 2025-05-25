@@ -27,7 +27,6 @@
  *  exception statement from all source files in the program, then also delete
  *  it in the license file.
  */
-
 package superhuman.config;
 
 import champaign.core.primitives.VersionInfo;
@@ -87,6 +86,12 @@ class SuperHumanGlobals {
 
     // VirtualBox download url
     static public final VIRTUALBOX_DOWNLOAD_URL:String = "https://www.virtualbox.org/wiki/Downloads";
+    
+    // UTM url
+    static public final UTM_URL:String = "https://mac.getutm.app/";
+
+    // UTM download url
+    static public final UTM_DOWNLOAD_URL:String = "https://mac.getutm.app/";
 
     // YAML Wikipedia page url
     static public final YAML_WIKI_URL:String = "https://en.wikipedia.org/wiki/YAML";
@@ -96,5 +101,8 @@ class SuperHumanGlobals {
     
     // Flag to disable sync method toggle when on Mac with incompatible rsync
     static public var IS_SYNC_DISABLED:Bool = false;
+    
+    // Flag to indicate if UTM should be used instead of VirtualBox (mainly for ARM Macs)
+    static public var USE_UTM:Bool = false;
 
 }
