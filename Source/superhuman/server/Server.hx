@@ -34,6 +34,7 @@ import superhuman.server.provisioners.AbstractProvisioner;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.application.ApplicationData;
 import prominic.sys.io.Executor;
+import prominic.sys.tools.SysTools.CPUArchitecture;
 import genesis.application.managers.LanguageManager;
 import haxe.Json;
 import haxe.Timer;
