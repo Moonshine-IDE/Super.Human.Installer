@@ -101,6 +101,9 @@ class SettingsPage extends Page {
 
     var _titleGroup:LayoutGroup;
     
+    // Add UTM checkbox as class variable
+    var _cbUseUTM:GenesisFormCheckBox;
+    
     var _browsers:ArrayCollection<BrowserData>;
     var _applications:ArrayCollection<ApplicationData>;
     
@@ -234,17 +237,44 @@ class SettingsPage extends Page {
         #if mac
         // Add UTM settings section for Mac
         var _rowUTM = new GenesisFormRow();
-        _rowUTM.text = "UTM Settings";
+        _rowUTM.text = "Virtualization";
         
-        // Only show UTM options on Mac
-        var _cbUseUTM = new GenesisFormCheckBox("Use UTM for virtualization (recommended for ARM Macs)");
+        var _toggleContainer = new LayoutGroup();
+        var _toggleLayout = new HorizontalLayout();
+        _toggleLayout.horizontalAlign = HorizontalAlign.LEFT;
+        _toggleLayout.verticalAlign = VerticalAlign.MIDDLE;
+        _toggleLayout.gap = GenesisApplicationTheme.GRID * 2;
+        _toggleContainer.layout = _toggleLayout;
+        
+        // Add VirtualBox label on the left
+        var _lblVirtualBox = new Label();
+        _lblVirtualBox.text = "VirtualBox";
+        _lblVirtualBox.variant = GenesisApplicationTheme.LABEL_DEFAULT;
+        _toggleContainer.addChild(_lblVirtualBox);
+        
+        // Add toggle in the middle (with empty text)
+        _cbUseUTM = new GenesisFormCheckBox("");
         _cbUseUTM.selected = superhuman.config.SuperHumanGlobals.USE_UTM;
+        _toggleContainer.addChild(_cbUseUTM);
         
-        var _buttonDownloadUTM = new GenesisFormButton("Download UTM");
-        _buttonDownloadUTM.addEventListener(TriggerEvent.TRIGGER, _downloadUTM);
+        // Add UTM label on the right
+        var _lblUTM = new Label();
+        _lblUTM.text = "UTM";
+        _lblUTM.variant = GenesisApplicationTheme.LABEL_DEFAULT;
+        _toggleContainer.addChild(_lblUTM);
         
-        _rowUTM.content.addChild(_cbUseUTM);
-        _rowUTM.content.addChild(_buttonDownloadUTM);
+        _rowUTM.content.addChild(_toggleContainer);
+        
+        // Only show download button if UTM is not installed
+        if (!prominic.sys.applications.utm.UTM.getInstance().exists) {
+            var _buttonDownloadUTM = new GenesisFormButton("Download UTM");
+            _buttonDownloadUTM.addEventListener(TriggerEvent.TRIGGER, _downloadUTM);
+            
+            // Create a separate row for the download button
+            var _rowUTMDownload = new GenesisFormRow();
+            _rowUTMDownload.content.addChild(_buttonDownloadUTM);
+            _form.addChild(_rowUTMDownload);
+        }
         _form.addChild(_rowUTM);
         #end
         

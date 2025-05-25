@@ -32,6 +32,7 @@ package prominic.sys.applications.utm;
 
 import champaign.core.ds.ChainedList;
 import champaign.core.logging.Logger;
+import prominic.helpers.PListUtil;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.io.AbstractExecutor;
@@ -183,11 +184,36 @@ class UTM extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( UTMExecutorContext.Version ) )
             return ExecutorManager.getInstance().get( UTMExecutorContext.Version );
 
-        final executor = new Executor( this.path + this._executable, [ "version" ] );
-        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
+        // Create a minimal executor that will just trigger the version event
+        final executor = new Executor( this.path + this._executable, [ "list" ] );
+        executor.onStop.add( _versionExecutorStopped );
         ExecutorManager.getInstance().set( UTMExecutorContext.Version, executor );
+        
+        // Read the UTM version directly from the Info.plist file
+        try {
+            var plistPath = "/Applications/UTM.app/Contents/Info.plist";
+            var plist = PListUtil.readFromFile(plistPath);
+            
+            if (plist != null) {
+                // Extract the version directly from the plist toString representation
+                var plistContent = Std.string(plist);
+                
+                // Parse with regex to extract the exact version
+                var versionRegex = ~/CFBundleShortVersionString => ([0-9]+\.[0-9]+\.[0-9]+)/;
+                if (versionRegex.match(plistContent)) {
+                    this._version = versionRegex.matched(1);
+                    Logger.info('${this}: Found UTM version: ${this._version}');
+                } else {
+                    Logger.warning('${this}: Could not extract version from plist');
+                }
+            } else {
+                Logger.error('${this}: Could not read UTM plist file');
+            }
+        } catch (e) {
+            Logger.error('${this}: Error reading UTM version: ${e}');
+        }
+        
         return executor;
-
     }
 
     public function getVirtualMachineByName( name:String ):UTMMachine {
@@ -210,21 +236,6 @@ class UTM extends AbstractApp {
 
     }
 
-    function _versionExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
-
-        var a = data.split( SysTools.lineEnd );
-
-        if ( data.length > 0 && a.length > 0 ) {
-
-            if ( _versionPattern.match( a[ 0 ] ) ) {
-
-                this._version = _versionPattern.matched( 0 );
-
-            }
-
-        }
-
-    }
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         

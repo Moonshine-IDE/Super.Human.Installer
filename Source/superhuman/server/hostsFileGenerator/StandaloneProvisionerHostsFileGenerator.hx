@@ -387,6 +387,9 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
 
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,
+            
+            // Set the vagrant provider based on the UTM setting
+            VAGRANT_PROVIDER: superhuman.config.SuperHumanGlobals.USE_UTM ? "utm" : "virtualbox",
         };
         
         // Copy all secret fields into the template values object

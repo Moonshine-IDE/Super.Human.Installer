@@ -221,6 +221,7 @@ class PListEntry<T> {
 enum abstract PListEntryId( String ) to String {
 
     var CFBundleExecutable;
+    var CFBundleShortVersionString;
 
 }
 
