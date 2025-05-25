@@ -801,6 +801,7 @@ override public function generateHostsFileContent():String {
                 addToContext(roleUpper + "_HF_INSTALLER", "");
                 addToContext(roleUpper + "_HF_INSTALLER_VERSION", "");
                 addToContext(roleUpper + "_HF_HASH", "");
+                addToContext("VAGRANT_PROVIDER", superhuman.config.SuperHumanGlobals.USE_UTM ? "utm" : "virtualbox");
 
                 var selectedRoleData:RoleData = selectedRolesMap.get(roleName);
                 var isRoleEnabled = (selectedRoleData != null && selectedRoleData.enabled);
