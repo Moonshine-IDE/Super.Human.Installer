@@ -1,0 +1,294 @@
+name: SUB - Build on macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: choice
+        options:
+          - Development
+          - Production
+      version:
+        description: "A Version"
+        required: true
+        type: string
+
+  workflow_call:
+    inputs:
+      env:
+        description: "An Environment"
+        required: true
+        type: string
+      version:
+        description: "A Version"
+        required: true
+        type: string
+
+env:
+  app_name: ${{ inputs.env == 'Production' && 'SuperHumanInstaller' || 'SuperHumanInstallerDev' }}
+  app_id: net.prominic.genesis.${{ inputs.env == 'Production' && 'superhumaninstaller' || 'superhumaninstallerdev' }}
+  haxe_flag: ${{ inputs.env == 'Production' && '-final' || '-debug -Dverbose_logs -Ddebug_logs' }}
+  haxe_version: 4.3.7
+  bin_path: Export/${{ inputs.env }}/macos/bin/
+
+jobs:
+  build:
+    runs-on: [self-hosted, macOS]
+
+    steps:
+      - name: Build info
+        run: |
+          echo "Ref: ${{ github.ref_name }}"
+          echo "Env: ${{ inputs.env }}"
+          echo "Version: ${{ inputs.version }}"
+          echo "App Name: ${{ env.app_name }}"
+          echo "App ID: ${{ env.app_id }}"
+          echo "Haxe Env Flag: ${{ env.haxe_flag }}"
+
+      - name: "Cleanup build folder"
+        run: |
+          ls -la ./
+          rm -rf ./* || true
+          rm -rf ./.??* || true
+          ls -la ./
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Override project.xml version
+        uses: Moonshine-IDE/xml-replace-action@v2.0
+        with:
+          filepath: "project.xml"
+          xpath: "/project/meta/@version"
+          replace: "${{ inputs.version }}"
+
+      - name: Set up Haxe
+        uses: Moonshine-IDE/setup-haxe-action@master
+        with:
+          haxe-version: ${{ env.haxe_version }}
+
+      - name: Fix Library Paths with install_name_tool
+        run: |
+          # Check the current library paths
+          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+
+          # Fix the paths using install_name_tool
+          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+
+          # Verify the change
+          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+
+      - name: Show haxe info
+        run: |
+          echo "Haxe version:"
+          haxe -version
+          echo "Haxe lib path:"
+          haxelib config
+
+      - name: Update haxelib
+        run: haxelib --global update haxelib
+
+      - name: Installing hxcpp
+        working-directory: Build
+        run: |
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.89
+          pushd .
+          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
+          haxe compile.hxml
+          popd
+
+      - name: Installing dependencies
+        working-directory: Build
+        run: |
+          haxelib install lime 8.2.2
+          haxelib install format
+          haxelib install hxp
+          haxelib git yaml https://github.com/Sword352/hx-yaml master
+          haxelib git lime-samples https://github.com/openfl/lime-samples
+
+      - name: Installing OpenFL
+        working-directory: Build
+        run: |
+          haxelib install openfl 9.4.1
+
+      - name: Configuring OpenFL
+        working-directory: Build
+        run: |
+          haxelib run openfl setup -y
+
+      - name: Installing Additional Dependencies
+        working-directory: Build
+        run: |
+          haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git
+          haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git
+          haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git
+          haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git
+
+      - name: List dependencies
+        run: haxelib list
+
+      - name: Build
+        run: >
+          haxelib run openfl build project.xml mac 
+          ${{ env.haxe_flag }} 
+          -Dlogverbose 
+          -Dlogcolor 
+          -Dgitsha=${{ github.sha }} 
+          -Dgitbranch=${{ github.ref_name }}
+
+      - name: Show Build
+        run: ls -r ${{ env.bin_path }}
+
+      - name: Upload bin
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ env.app_name }}-macos-x64-bin
+          path: ${{ env.bin_path }}
+
+      - name: "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/"
+        run: |
+          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-x64-bin"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          echo "${{ secrets.MAC_KEYCHAIN_PASS }}" > /tmp/keychain_pass
+          echo "${{ secrets.MAC_APPLICATION_CERTKEY }}"  >> /tmp/keychain_pass
+          echo "${{ secrets.MAC_CERTKEY_PASS }}"  >> /tmp/keychain_pass
+          rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-x64-bin
+
+      - name: Comprehensive keychain cleanup
+        run: |
+          echo "Performing comprehensive keychain cleanup..."
+
+          # Check and delete from security's perspective
+          if security list-keychains | grep -q "build.keychain"; then
+            echo "Found build.keychain in security list, attempting to delete..."
+            security delete-keychain build.keychain || true
+          fi
+
+          # Direct file removal (using full path since it's most reliable)
+          echo "Removing keychain file directly..."
+          rm -f /Users/prominic/Library/Keychains/build.keychain-db || true
+
+          # Reset the keychain list to ensure clean state
+          echo "Resetting keychain list to default..."
+          security list-keychains -s login.keychain
+
+          # CRITICAL FIX: Reset the default keychain (this addresses the phantom keychain issue)
+          echo "Resetting default keychain to login.keychain..."
+          security default-keychain -s login.keychain
+
+          # Verify the cleanup worked
+          echo "Current keychain list after cleanup:"
+          security list-keychains
+
+          echo "Current default keychain:"
+          security default-keychain
+
+          # Check system preferences to verify default keychain was reset
+          echo "Checking system preferences for default keychain:"
+          defaults read com.apple.security DefaultKeychain 2>/dev/null || echo "No DefaultKeychain found in preferences"
+
+          echo "Checking if build.keychain-db file still exists:"
+          if [ -f /Users/prominic/Library/Keychains/build.keychain-db ]; then
+            echo "WARNING: build.keychain-db still exists despite cleanup attempts"
+            ls -la /Users/prominic/Library/Keychains/build.keychain-db
+          else
+            echo "Confirmed: build.keychain-db has been removed"
+          fi
+
+      - name: Unlock login keychain before signing
+        run: |
+          echo "Unlocking login keychain for code signing..."
+
+          # NOTE: This requires storing the macOS user's login password as a secret
+          # Alternatively, you could configure the self-hosted runner to not require a password for the keychain
+          if [[ -n "${{ secrets.LOGIN_KEYCHAIN_PASSWORD }}" ]]; then
+            # Unlock the login keychain with the user's password
+            security unlock-keychain -p "${{ secrets.LOGIN_KEYCHAIN_PASSWORD }}" login.keychain || true
+            echo "Login keychain unlocked with provided password"
+          else
+            echo "No LOGIN_KEYCHAIN_PASSWORD secret found - keychain might remain locked"
+            echo "For self-hosted runners, you may need to run: security set-keychain-settings -u login.keychain"
+            echo "Or add LOGIN_KEYCHAIN_PASSWORD to your repository secrets"
+          fi
+
+          # Set the keychain to stay unlocked for a longer period
+          security set-keychain-settings -u login.keychain || true
+
+          # Ensure the login keychain is in the search list
+          security list-keychains -s login.keychain
+
+          # Show current keychain state
+          echo "Current keychain list:"
+          security list-keychains
+
+          # Show available identities
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning || true
+
+      - name: Sign app with debugging
+        id: sign_app
+        uses: Moonshine-IDE/macos-sign-app-action@main
+        with:
+          app-path: ${{ env.bin_path }}/${{ env.app_name }}.app
+          mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
+          mac-application-certkey: ${{ secrets.MAC_APPLICATION_CERTKEY }}
+          mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
+        continue-on-error: true
+
+      - name: Diagnostics if signing fails
+        if: steps.sign_app.outcome != 'success'
+        run: |
+          echo "Signing failed. Performing diagnostics..."
+          echo "Available keychains:"
+          security list-keychains
+
+          echo "Available identities in build.keychain (if exists):"
+          security find-identity -v build.keychain || true
+
+          echo "Attempting manual codesign with full paths and explicit identity..."
+          security find-identity -v -p codesigning
+
+      - name: Create installer
+        run: |
+          productbuild \
+            --version ${{ inputs.version }} \
+            --product Templates/installer/SuperHumanInstaller.template.plist \
+            --identifier ${{ env.app_id }} \
+            --component ${{ env.bin_path }}/${{ env.app_name }}.app \
+            /Applications \
+            ./${{ env.app_name }}-Setup-x64-Unsigned.pkg
+
+      - name: Sign installer
+        uses: Moonshine-IDE/macos-sign-installer-action@v1.0
+        with:
+          unsigned-pkg-path: ./${{ env.app_name }}-Setup-x64-Unsigned.pkg
+          signed-pkg-path: ./${{ env.app_name }}-x64-Setup.pkg
+          mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
+          mac-installer-certkey: ${{ secrets.MAC_INSTALLER_CERTKEY }}
+          mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
+
+      - name: Notarize installer
+        uses: Moonshine-ide/macos-notarize-action@v1.0
+        with:
+          app-path: ./${{ env.app_name }}-x64-Setup.pkg
+          mac-notarization-apple-id: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
+          mac-notarization-team-id: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
+          mac-notarization-pass: ${{ secrets.MAC_NOTARIZATION_PASS }}
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ env.app_name }}-macos-x64-installer
+          path: ./${{ env.app_name }}-x64-Setup.pkg
+          if-no-files-found: error
+
+      - name: "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer"
+        id: uploading-artifact
+        run: |
+          echo "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-x64-Setup.pkg"
+          ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
+          rsync -avz ${{ env.app_name }}-x64-Setup.pkg  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-x64-Setup.pkg

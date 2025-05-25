@@ -72,13 +72,13 @@ jobs:
       - name: Fix Library Paths with install_name_tool
         run: |
           # Check the current library paths
-          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/arm64/haxelib
 
           # Fix the paths using install_name_tool
-          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/arm64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/arm64/haxelib
 
           # Verify the change
-          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+          otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/arm64/haxelib
 
       - name: Show haxe info
         run: |
@@ -95,7 +95,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.89
           pushd .
-          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
+          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/arm64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           popd
 
@@ -145,17 +145,17 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: ${{ env.app_name }}-macos-bin
+          name: ${{ env.app_name }}-macos-arm64-bin
           path: ${{ env.bin_path }}
 
       - name: "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/"
         run: |
-          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin"
+          echo "Uploading bin to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-arm64-bin"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
           echo "${{ secrets.MAC_KEYCHAIN_PASS }}" > /tmp/keychain_pass
           echo "${{ secrets.MAC_APPLICATION_CERTKEY }}"  >> /tmp/keychain_pass
           echo "${{ secrets.MAC_CERTKEY_PASS }}"  >> /tmp/keychain_pass
-          rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-bin
+          rsync -avz ${{ env.bin_path }}  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-macos-arm64-bin
 
       - name: Comprehensive keychain cleanup
         run: |
@@ -259,13 +259,13 @@ jobs:
             --identifier ${{ env.app_id }} \
             --component ${{ env.bin_path }}/${{ env.app_name }}.app \
             /Applications \
-            ./${{ env.app_name }}-Setup-Unsigned.pkg
+            ./${{ env.app_name }}-Setup-arm64-Unsigned.pkg
 
       - name: Sign installer
         uses: Moonshine-IDE/macos-sign-installer-action@v1.0
         with:
-          unsigned-pkg-path: ./${{ env.app_name }}-Setup-Unsigned.pkg
-          signed-pkg-path: ./${{ env.app_name }}-Setup.pkg
+          unsigned-pkg-path: ./${{ env.app_name }}-Setup-arm64-Unsigned.pkg
+          signed-pkg-path: ./${{ env.app_name }}-arm64-Setup.pkg
           mac-keychain-pass: ${{ secrets.MAC_KEYCHAIN_PASS }}
           mac-installer-certkey: ${{ secrets.MAC_INSTALLER_CERTKEY }}
           mac-certkey-pass: ${{ secrets.MAC_CERTKEY_PASS }}
@@ -273,7 +273,7 @@ jobs:
       - name: Notarize installer
         uses: Moonshine-ide/macos-notarize-action@v1.0
         with:
-          app-path: ./${{ env.app_name }}-Setup.pkg
+          app-path: ./${{ env.app_name }}-arm64-Setup.pkg
           mac-notarization-apple-id: ${{ secrets.MAC_NOTARIZATION_APPLE_ID }}
           mac-notarization-team-id: ${{ secrets.MAC_NOTARIZATION_TEAM_ID }}
           mac-notarization-pass: ${{ secrets.MAC_NOTARIZATION_PASS }}
@@ -282,13 +282,13 @@ jobs:
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: ${{ env.app_name }}-macos-installer
-          path: ./${{ env.app_name }}-Setup.pkg
+          name: ${{ env.app_name }}-macos-arm64-installer
+          path: ./${{ env.app_name }}-arm64-Setup.pkg
           if-no-files-found: error
 
       - name: "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer"
         id: uploading-artifact
         run: |
-          echo "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg"
+          echo "Uploading Artifact to https://public-artifacts.prominic.net/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-arm64-Setup.pkg"
           ssh startcloud@public-artifacts.prominic.net "mkdir -p /local/www/Super.Human.Installer/${{ inputs.version }}"
-          rsync -avz ${{ env.app_name }}-Setup.pkg  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-Setup.pkg
+          rsync -avz ${{ env.app_name }}-arm64-Setup.pkg  startcloud@public-artifacts.prominic.net:/local/www/Super.Human.Installer/${{ inputs.version }}/${{ env.app_name }}-arm64-Setup.pkg
