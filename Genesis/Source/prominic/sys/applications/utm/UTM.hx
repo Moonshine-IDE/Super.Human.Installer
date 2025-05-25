@@ -32,6 +32,7 @@ package prominic.sys.applications.utm;
 
 import champaign.core.ds.ChainedList;
 import champaign.core.logging.Logger;
+import prominic.helpers.PListUtil;
 import prominic.sys.applications.AbstractApp;
 import prominic.sys.applications.bin.Shell;
 import prominic.sys.io.AbstractExecutor;
@@ -183,11 +184,27 @@ class UTM extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( UTMExecutorContext.Version ) )
             return ExecutorManager.getInstance().get( UTMExecutorContext.Version );
 
-        final executor = new Executor( this.path + this._executable, [ "version" ] );
-        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
+        // Create a minimal executor that will just trigger the version event
+        final executor = new Executor( this.path + this._executable, [ "list" ] );
+        executor.onStop.add( _versionExecutorStopped );
         ExecutorManager.getInstance().set( UTMExecutorContext.Version, executor );
+        
+        // Read the UTM version directly from the Info.plist file
+        try {
+            var plist = PListUtil.readFromFile("/Applications/UTM.app/Contents/Info.plist");
+            if (plist != null) {
+                // Get the CFBundleShortVersionString value
+                var versionEntry = plist.get(PListEntryId.CFBundleShortVersionString);
+                if (versionEntry != null) {
+                    this._version = versionEntry.value;
+                    Logger.info('${this}: Found UTM version from plist: ${this._version}');
+                }
+            }
+        } catch (e) {
+            Logger.error('${this}: Error reading UTM version from plist: ${e}');
+        }
+        
         return executor;
-
     }
 
     public function getVirtualMachineByName( name:String ):UTMMachine {
@@ -210,21 +227,6 @@ class UTM extends AbstractApp {
 
     }
 
-    function _versionExecutorStandardOutput( executor:AbstractExecutor, data:String ) {
-
-        var a = data.split( SysTools.lineEnd );
-
-        if ( data.length > 0 && a.length > 0 ) {
-
-            if ( _versionPattern.match( a[ 0 ] ) ) {
-
-                this._version = _versionPattern.matched( 0 );
-
-            }
-
-        }
-
-    }
 
     function _versionExecutorStopped( executor:AbstractExecutor ) {
         

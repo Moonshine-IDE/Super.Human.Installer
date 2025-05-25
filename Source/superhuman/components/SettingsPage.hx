@@ -237,12 +237,33 @@ class SettingsPage extends Page {
         #if mac
         // Add UTM settings section for Mac
         var _rowUTM = new GenesisFormRow();
-        _rowUTM.text = "UTM Settings";
+        _rowUTM.text = "Virtualization";
         
-        // Only show UTM options on Mac - using class variable
-        _cbUseUTM = new GenesisFormCheckBox("Use UTM for virtualization (recommended for ARM Macs)");
+        // Create a horizontal layout for the toggle
+        var _toggleLayout = new HorizontalLayout();
+        _toggleLayout.horizontalAlign = HorizontalAlign.CENTER;
+        _toggleLayout.verticalAlign = VerticalAlign.MIDDLE;
+        _toggleLayout.gap = GenesisApplicationTheme.GRID * 2;
+        
+        var _toggleContainer = new LayoutGroup();
+        _toggleContainer.layout = _toggleLayout;
+        
+        // Add VirtualBox label on the left
+        var _lblVirtualBox = new Label();
+        _lblVirtualBox.text = "VirtualBox";
+        _toggleContainer.addChild(_lblVirtualBox);
+        
+        // Add toggle in the middle
+        _cbUseUTM = new GenesisFormCheckBox("");
         _cbUseUTM.selected = superhuman.config.SuperHumanGlobals.USE_UTM;
-        _rowUTM.content.addChild(_cbUseUTM);
+        _toggleContainer.addChild(_cbUseUTM);
+        
+        // Add UTM label on the right
+        var _lblUTM = new Label();
+        _lblUTM.text = "UTM";
+        _toggleContainer.addChild(_lblUTM);
+        
+        _rowUTM.content.addChild(_toggleContainer);
         
         // Only show download button if UTM is not installed
         if (!prominic.sys.applications.utm.UTM.getInstance().exists) {
