@@ -75,7 +75,7 @@ jobs:
           otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
 
           # Fix the paths using install_name_tool
-          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.0/x64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
+          install_name_tool -change @rpath/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/neko/2.4.1/x64/libneko.2.dylib /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
 
           # Verify the change
           otool -L /Users/prominic/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/haxelib
