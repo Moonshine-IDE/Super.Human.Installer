@@ -198,13 +198,17 @@ class UTM extends AbstractApp {
             if (plist != null) {
                 Logger.info('${this}: Successfully read plist file');
                 
-                // Get the version using the typed PListEntryId
-                var versionEntry = plist.get(PListEntryId.CFBundleShortVersionString);
-                if (versionEntry != null) {
-                    this._version = versionEntry.value;
-                    Logger.info('${this}: Found UTM version from plist: ${this._version}');
+                // Extract the version directly from the plist toString representation
+                var plistContent = Std.string(plist);
+                Logger.info('${this}: Raw plist string: ${plistContent}');
+                
+                // Parse with regex to extract the exact version
+                var versionRegex = ~/CFBundleShortVersionString => ([0-9]+\.[0-9]+\.[0-9]+)/;
+                if (versionRegex.match(plistContent)) {
+                    this._version = versionRegex.matched(1);
+                    Logger.info('${this}: Extracted UTM version: ${this._version}');
                 } else {
-                    Logger.warning('${this}: CFBundleShortVersionString not found in plist');
+                    Logger.warning('${this}: Could not extract version from plist');
                 }
                 
                 // Additional debug output
