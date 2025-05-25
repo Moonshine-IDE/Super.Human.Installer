@@ -101,6 +101,9 @@ class SettingsPage extends Page {
 
     var _titleGroup:LayoutGroup;
     
+    // Add UTM checkbox as class variable
+    var _cbUseUTM:GenesisFormCheckBox;
+    
     var _browsers:ArrayCollection<BrowserData>;
     var _applications:ArrayCollection<ApplicationData>;
     
@@ -236,8 +239,8 @@ class SettingsPage extends Page {
         var _rowUTM = new GenesisFormRow();
         _rowUTM.text = "UTM Settings";
         
-        // Only show UTM options on Mac
-        var _cbUseUTM = new GenesisFormCheckBox("Use UTM for virtualization (recommended for ARM Macs)");
+        // Only show UTM options on Mac - using class variable
+        _cbUseUTM = new GenesisFormCheckBox("Use UTM for virtualization (recommended for ARM Macs)");
         _cbUseUTM.selected = superhuman.config.SuperHumanGlobals.USE_UTM;
         
         var _buttonDownloadUTM = new GenesisFormButton("Download UTM");
