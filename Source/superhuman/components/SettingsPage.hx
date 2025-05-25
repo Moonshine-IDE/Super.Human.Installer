@@ -239,21 +239,15 @@ class SettingsPage extends Page {
         var _rowUTM = new GenesisFormRow();
         _rowUTM.text = "Virtualization";
         
-        // Create a horizontal layout for the toggle
-        var _toggleLayout = new HorizontalLayout();
-        _toggleLayout.horizontalAlign = HorizontalAlign.CENTER;
-        _toggleLayout.verticalAlign = VerticalAlign.MIDDLE;
-        _toggleLayout.gap = GenesisApplicationTheme.GRID * 2;
-        
         var _toggleContainer = new LayoutGroup();
-        _toggleContainer.layout = _toggleLayout;
         
         // Add VirtualBox label on the left
         var _lblVirtualBox = new Label();
         _lblVirtualBox.text = "VirtualBox";
+        _lblVirtualBox.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         _toggleContainer.addChild(_lblVirtualBox);
         
-        // Add toggle in the middle
+        // Add toggle in the middle (with empty text)
         _cbUseUTM = new GenesisFormCheckBox("");
         _cbUseUTM.selected = superhuman.config.SuperHumanGlobals.USE_UTM;
         _toggleContainer.addChild(_cbUseUTM);
@@ -261,6 +255,7 @@ class SettingsPage extends Page {
         // Add UTM label on the right
         var _lblUTM = new Label();
         _lblUTM.text = "UTM";
+        _lblUTM.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         _toggleContainer.addChild(_lblUTM);
         
         _rowUTM.content.addChild(_toggleContainer);

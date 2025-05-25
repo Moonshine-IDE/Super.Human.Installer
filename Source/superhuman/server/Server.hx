@@ -1946,13 +1946,13 @@ class Server {
     }
     
     /**
-     * Check if the vagrant-scp-sync plugin is installed, and install it if needed
+     * Check if required Vagrant plugins are installed, and install them if needed
      */
     function _checkAndInstallVagrantPlugin() {
-        if (console != null) console.appendText("Checking for vagrant-scp-sync plugin...");
+        if (console != null) console.appendText("Checking for required Vagrant plugins...");
         
         try {
-            // First check if the plugin is already installed
+            // First check which plugins are already installed
             var pluginOutput = "";
             var checkExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "list"]);
             
@@ -1963,67 +1963,149 @@ class Server {
             });
             
             checkExecutor.onStop.add((executor:AbstractExecutor) -> {
-                if (pluginOutput.indexOf("vagrant-scp-sync") >= 0) {
-                    // Plugin is already installed, proceed directly to vagrant up
-                    if (console != null) console.appendText("vagrant-scp-sync plugin already installed");
+                // Check if we need the UTM plugin (ARM Mac with UTM enabled)
+                var needsUTMPlugin = false;
+                
+                #if mac
+                // Only check on Mac
+                var isARM = prominic.sys.tools.SysTools.getCPUArchitecture() == CPUArchitecture.Arm64;
+                var isUTMEnabled = superhuman.config.SuperHumanGlobals.USE_UTM;
+                needsUTMPlugin = isARM && isUTMEnabled;
+                #end
+                
+                // Determine which plugins are missing
+                var hasSCPPlugin = pluginOutput.indexOf("vagrant-scp-sync") >= 0;
+                var hasUTMPlugin = pluginOutput.indexOf("vagrant-utm") >= 0;
+                
+                if (hasSCPPlugin && (!needsUTMPlugin || hasUTMPlugin)) {
+                    // All required plugins are installed
+                    if (console != null) console.appendText("All required Vagrant plugins are installed");
                     _executeVagrantUp();
+                } else if (!hasSCPPlugin) {
+                    // Install SCP plugin first
+                    if (console != null) console.appendText("Need to install vagrant-scp-sync plugin");
+                    
+                    if (needsUTMPlugin && !hasUTMPlugin) {
+                        // After SCP plugin is installed, install UTM plugin
+                        _safeInstallVagrantPlugin("vagrant-scp-sync", function() {
+                            if (console != null) console.appendText("Now checking for UTM plugin...");
+                            
+                            if (!hasUTMPlugin) {
+                                // Install UTM plugin and then proceed with vagrant up
+                                _safeInstallVagrantPlugin("vagrant-utm");
+                            } else {
+                                // UTM plugin already installed, proceed with vagrant up
+                                _executeVagrantUp();
+                            }
+                        });
+                    } else {
+                        // Just install SCP plugin and proceed
+                        _safeInstallVagrantPlugin("vagrant-scp-sync");
+                    }
+                } else if (needsUTMPlugin && !hasUTMPlugin) {
+                    // Only need to install UTM plugin
+                    if (console != null) console.appendText("Need to install vagrant-utm plugin for ARM Mac");
+                    _safeInstallVagrantPlugin("vagrant-utm");
                 } else {
-                    // Plugin not found, install it
-                    _safeInstallVagrantPlugin();
+                    // Fallback - should never reach here
+                    _executeVagrantUp();
                 }
             });
             
             checkExecutor.execute();
         } catch (e:Dynamic) {
             // If anything goes wrong with the check, log it and continue with vagrant up
-            Logger.error('${this}: Error checking vagrant plugin: ${e}');
-            if (console != null) console.appendText('Error checking vagrant plugin: ${e}', true);
+            Logger.error('${this}: Error checking vagrant plugins: ${e}');
+            if (console != null) console.appendText('Error checking vagrant plugins: ${e}', true);
             // Continue with vagrant up anyway
             _executeVagrantUp();
         }
     }
     
     /**
-     * Install the vagrant-scp-sync plugin before running vagrant up for the first time,
+     * Install a Vagrant plugin before running vagrant up,
      * with additional error handling and fallback
+     * @param pluginName The name of the plugin to install
+     * @param callback Optional callback function to execute after installation completes
      */
-    function _safeInstallVagrantPlugin() {
-        if (console != null) console.appendText("Installing vagrant-scp-sync plugin...");
+    function _safeInstallVagrantPlugin(pluginName:String, callback:()->Void = null) {
+        if (console != null) console.appendText('Installing ${pluginName} plugin...');
         
         try {
             // Create a custom executor for the plugin installation command
-            var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", "vagrant-scp-sync"]);
+            var pluginExecutor = new Executor(Vagrant.getInstance().path + Vagrant.getInstance().executable, ["plugin", "install", pluginName]);
             
             // Add event handlers with explicit null checks
             if (pluginExecutor != null) {
                 if (pluginExecutor.onStart != null) 
-                    pluginExecutor.onStart.add(_pluginInstallStarted);
+                    pluginExecutor.onStart.add(function(executor:AbstractExecutor) {
+                        if (console != null) console.appendText('${pluginName} plugin installation started');
+                    });
+                    
                 if (pluginExecutor.onStop != null) 
-                    pluginExecutor.onStop.add(_pluginInstallStopped);
+                    pluginExecutor.onStop.add(function(executor:AbstractExecutor) {
+                        if (console != null) {
+                            if (executor.exitCode == 0) {
+                                console.appendText('${pluginName} plugin installation completed successfully');
+                            } else {
+                                console.appendText('${pluginName} plugin installation failed with exit code: ${executor.exitCode}', true);
+                                console.appendText('Continuing without the plugin - some features may be limited', true);
+                            }
+                        }
+                        
+                        // Call the callback function if provided, otherwise proceed with vagrant up
+                        if (callback != null) {
+                            callback();
+                        } else {
+                            _executeVagrantUp();
+                        }
+                    });
+                    
                 if (pluginExecutor.onStdOut != null) 
                     pluginExecutor.onStdOut.add(_pluginInstallStandardOutputData);
+                    
                 if (pluginExecutor.onStdErr != null) 
-                    pluginExecutor.onStdErr.add(_pluginInstallStandardErrorData);
+                    pluginExecutor.onStdErr.add(function(executor:AbstractExecutor, data:String) {
+                        if (console != null) console.appendText(data, true);
+                        Logger.error('${this}: ${pluginName} plugin installation error: ${data}');
+                    });
                 
                 // Execute only if the executor was properly initialized
                 try {
                     pluginExecutor.execute();
                 } catch (execError:Dynamic) {
-                    Logger.error('${this}: Error executing plugin installation: ${execError}');
-                    if (console != null) console.appendText('Error executing plugin installation: ${execError}', true);
-                    _executeVagrantUp();
+                    Logger.error('${this}: Error executing ${pluginName} plugin installation: ${execError}');
+                    if (console != null) console.appendText('Error executing ${pluginName} plugin installation: ${execError}', true);
+                    
+                    // Call the callback function if provided, otherwise proceed with vagrant up
+                    if (callback != null) {
+                        callback();
+                    } else {
+                        _executeVagrantUp();
+                    }
                 }
             } else {
-                Logger.error('${this}: Failed to create plugin installation executor');
-                if (console != null) console.appendText('Failed to create plugin installation executor', true);
-                _executeVagrantUp();
+                Logger.error('${this}: Failed to create ${pluginName} plugin installation executor');
+                if (console != null) console.appendText('Failed to create ${pluginName} plugin installation executor', true);
+                
+                // Call the callback function if provided, otherwise proceed with vagrant up
+                if (callback != null) {
+                    callback();
+                } else {
+                    _executeVagrantUp();
+                }
             }
         } catch (e:Dynamic) {
-            // If there's any exception, log it and continue with vagrant up
-            Logger.error('${this}: Exception during plugin installation setup: ${e}');
-            if (console != null) console.appendText('Exception during plugin installation setup: ${e}', true);
-            // Continue with vagrant up even if plugin installation fails
-            _executeVagrantUp();
+            // If there's any exception, log it and continue
+            Logger.error('${this}: Exception during ${pluginName} plugin installation setup: ${e}');
+            if (console != null) console.appendText('Exception during ${pluginName} plugin installation setup: ${e}', true);
+            
+            // Call the callback function if provided, otherwise proceed with vagrant up
+            if (callback != null) {
+                callback();
+            } else {
+                _executeVagrantUp();
+            }
         }
     }
     

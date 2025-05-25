@@ -192,37 +192,25 @@ class UTM extends AbstractApp {
         // Read the UTM version directly from the Info.plist file
         try {
             var plistPath = "/Applications/UTM.app/Contents/Info.plist";
-            Logger.info('${this}: Attempting to read plist from ${plistPath}');
-            
             var plist = PListUtil.readFromFile(plistPath);
+            
             if (plist != null) {
-                Logger.info('${this}: Successfully read plist file');
-                
                 // Extract the version directly from the plist toString representation
                 var plistContent = Std.string(plist);
-                Logger.info('${this}: Raw plist string: ${plistContent}');
                 
                 // Parse with regex to extract the exact version
                 var versionRegex = ~/CFBundleShortVersionString => ([0-9]+\.[0-9]+\.[0-9]+)/;
                 if (versionRegex.match(plistContent)) {
                     this._version = versionRegex.matched(1);
-                    Logger.info('${this}: Extracted UTM version: ${this._version}');
+                    Logger.info('${this}: Found UTM version: ${this._version}');
                 } else {
                     Logger.warning('${this}: Could not extract version from plist');
                 }
-                
-                // Additional debug output
-                try {
-                    // Log all keys for debugging
-                    Logger.info('${this}: Plist contents: ${plist}');
-                } catch (e) {
-                    Logger.error('${this}: Error logging plist: ${e}');
-                }
             } else {
-                Logger.error('${this}: Plist file could not be read from ${plistPath}');
+                Logger.error('${this}: Could not read UTM plist file');
             }
         } catch (e) {
-            Logger.error('${this}: Error reading UTM version from plist: ${e}');
+            Logger.error('${this}: Error reading UTM version: ${e}');
         }
         
         return executor;
