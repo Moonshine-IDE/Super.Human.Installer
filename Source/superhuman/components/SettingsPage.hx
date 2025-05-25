@@ -240,6 +240,11 @@ class SettingsPage extends Page {
         _rowUTM.text = "Virtualization";
         
         var _toggleContainer = new LayoutGroup();
+        var _toggleLayout = new HorizontalLayout();
+        _toggleLayout.horizontalAlign = HorizontalAlign.LEFT;
+        _toggleLayout.verticalAlign = VerticalAlign.MIDDLE;
+        _toggleLayout.gap = GenesisApplicationTheme.GRID * 2;
+        _toggleContainer.layout = _toggleLayout;
         
         // Add VirtualBox label on the left
         var _lblVirtualBox = new Label();
