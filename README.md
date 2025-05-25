@@ -24,17 +24,27 @@
 
 Successfully building the app requires the followings to be installed:
 
-- [Haxe 4.2.5](https://haxe.org/download/)
-- Neko VM 2.3.0 (for Neko builds) - Haxe installer will install Neko VM as well
+- [Haxe 4.3.7](https://haxe.org/download/) (updated from 4.2.5)
+- Neko VM 2.4.1 (for Neko builds) - Haxe installer will install Neko VM as well
 
 Required and properly pre-configured Haxelibs:
 
-- [HXCPP](https://lib.haxe.org/p/hxcpp/) - for Native/C++ builds
-- Lime 8.0.0
-- [OpenFL 9.2.0](https://www.openfl.org/download/) - Installing and setting up OpenFL 9.2.0 will install Lime 8.0.0 as well
-- [FeathersUI 1.0](https://feathersui.com/learn/haxe-openfl/installation/)
-- Actuate 1.9.0 - Will be installed with FeathersUI 1.0
-- [Champaign](https://github.com/Moonshine-IDE/Champaign)
+- [HXCPP](https://lib.haxe.org/p/hxcpp/) v4.3.89 - for Native/C++ builds
+- [Lime 8.2.2](https://lib.haxe.org/p/lime/) - A foundational layer for OpenFL that handles low-level operations
+- [OpenFL 9.4.1](https://www.openfl.org/download/) - A powerful framework for building cross-platform applications
+- [FeathersUI](https://feathersui.com/learn/haxe-openfl/installation/) - UI component library for Haxe and OpenFL
+- [Actuate](https://lib.haxe.org/p/actuate/) - Animation library for Haxe (installed with FeathersUI)
+- [Champaign](https://github.com/Moonshine-IDE/Champaign) - Library for building cross-platform applications
+- [MXHX-Component](https://github.com/mxhx-dev/mxhx-component) - Library for creating UI components using MXHX
+- [MXHX-FeathersUI](https://github.com/mxhx-dev/mxhx-feathersui) - Integration between MXHX and FeathersUI
+- [YAML](https://github.com/Sword352/hx-yaml) - Library for parsing and generating YAML data
+- [Format](https://lib.haxe.org/p/format/) - Library for various file format support
+- [HXP](https://lib.haxe.org/p/hxp/) - Project scripting library
+
+Windows-specific libraries:
+
+- [Flixel](https://haxeflixel.com/) - 2D game engine used for specific Windows functionality
+- [hxWindowColorMode](https://lib.haxe.org/p/hxWindowColorMode/) - Library for handling window color modes on Windows
 
 C++ Compilers
 
