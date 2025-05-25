@@ -198,25 +198,13 @@ class UTM extends AbstractApp {
             if (plist != null) {
                 Logger.info('${this}: Successfully read plist file');
                 
-                // Try different approaches to get the version
-                // 1. Using the typed PListEntryId
+                // Get the version using the typed PListEntryId
                 var versionEntry = plist.get(PListEntryId.CFBundleShortVersionString);
                 if (versionEntry != null) {
                     this._version = versionEntry.value;
-                    Logger.info('${this}: Found UTM version from plist using PListEntryId: ${this._version}');
+                    Logger.info('${this}: Found UTM version from plist: ${this._version}');
                 } else {
-                    // 2. Try using string directly as fallback
-                    try {
-                        var stringKeyEntry = plist.get("CFBundleShortVersionString");
-                        if (stringKeyEntry != null) {
-                            this._version = stringKeyEntry.value;
-                            Logger.info('${this}: Found UTM version from plist using string key: ${this._version}');
-                        } else {
-                            Logger.warning('${this}: CFBundleShortVersionString not found in plist');
-                        }
-                    } catch (e) {
-                        Logger.error('${this}: Error getting version with string key: ${e}');
-                    }
+                    Logger.warning('${this}: CFBundleShortVersionString not found in plist');
                 }
                 
                 // Additional debug output
