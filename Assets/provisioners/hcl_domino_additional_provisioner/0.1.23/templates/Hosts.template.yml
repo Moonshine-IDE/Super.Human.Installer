@@ -26,9 +26,10 @@ hosts:
       box: 'STARTcloud/debian12-server'
       box_url: ::BOX_URL:: # Should default to 'https://boxvault.startcloud.com' but can be set to 'https://vagrantcloud.com'
       box_version: 2025.2.9
+      box_arch: amd64
 
       # Provider Specific Settings
-      provider_type: virtualbox
+      provider_type: ::VAGRANT_PROVIDER::
       os_type: 'Debian_64'
       firmware_type: UEFI
 

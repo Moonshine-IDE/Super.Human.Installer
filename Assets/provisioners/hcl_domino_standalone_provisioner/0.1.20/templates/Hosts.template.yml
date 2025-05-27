@@ -10,8 +10,9 @@ hosts:
 
       box: 'STARTcloud/debian12-server'
       box_version: 0.0.4
+      box_arch: amd64
       os_type: 'Debian_64'
-      provider-type: virtualbox
+      provider-type: ::VAGRANT_PROVIDER::
       firmware_type: UEFI
       consoleport: ::SERVER_ID:: # Auto-generated
       consolehost: 0.0.0.0

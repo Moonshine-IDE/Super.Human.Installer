@@ -29,10 +29,14 @@ class Hosts
       ENV['VAGRANT_SERVER_URL'] = host['settings']['box_url'] if host['settings'].has_key?('box_url')
 
       provider = host['settings']['provider_type']
+
+      config.vm.provider provider
+
       config.vm.define "#{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}" do |server|
         server.vm.box = host['settings']['box']
         config.vm.box_url = host['settings']['box_url'].to_s.empty? ? "https://vagrantcloud.com/#{host['settings']['box']}" : "#{host['settings']['box_url']}/#{host['settings']['box']}"
         server.vm.box_version = host['settings']['box_version']
+        config.vm.box_architecture = host['settings']['box_arch']
         server.vm.boot_timeout = host['settings']['setup_wait']
         server.ssh.username = host['settings']['vagrant_user']
         #server.ssh.password = host['settings']['vagrant_user_pass']
@@ -60,16 +64,22 @@ class Hosts
         if host.has_key?('networks') and !host['networks'].empty?
           ## This tells Virtualbox to set the Nat network so that we can avoid IP conflicts and more easily identify networks
           ## This Nic cannot be removed which is why its not in the loop below
-#          config.vm.provider "virtualbox" do |network_provider|
-#            # https://github.com/Moonshine-IDE/Super.Human.Installer/issues/116
-#            network_provider.customize ['modifyvm', :id, '--natnet1', '10.244.244.0/24']
-#          end
+          #config.vm.provider "virtualbox" do |network_provider|
+          #  # https://github.com/Moonshine-IDE/Super.Human.Installer/issues/116
+          #  network_provider.customize ['modifyvm', :id, '--natnet1', '10.244.244.0/24']
+          #end
 
           ## Loop over each block, with an index so that we can use the ordering to specify interface number
           host['networks'].each_with_index do |network, netindex|
               ## Get the bridge device the user specifies, if none selected, we need to try our best to get the best one (for every OS: Mac, Windows, and Linux)
               bridge = network['bridge'] if defined?(network['bridge'])
-              bridge = get_bridge_interface(path_VBoxManage) if bridge.nil? && provider == 'virtualbox'
+              if bridge.nil? && (provider == 'virtualbox' || provider == 'utm')
+                bridge = get_bridge_interface(path_VBoxManage)
+                # For UTM on Mac, use only the part before the first colon
+                if provider == 'utm' && Vagrant::Util::Platform.darwin? && bridge && bridge.include?(':')
+                  bridge = bridge.split(':').first
+                end
+              end
 
               ## We then take those variables, and hopefully have the best connection to use and then pass it to vagrant so it can create the network adapters.
               if network['type'] == 'host'
@@ -118,6 +128,84 @@ class Hosts
         end
 
         ##### Begin Virtualbox Configurations #####
+        # Save MAC addresses after VM is created and update Hosts.yml if needed
+        config.trigger.after :up do |trigger|
+          trigger.info = "Checking and updating network interface MAC addresses in Hosts.yml..."
+          trigger.ruby do |env, machine|
+            # Only run this for VirtualBox provider
+            if host['settings']['provider_type'] == 'virtualbox'
+              vm_name = "#{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}"
+              
+              # Get VM info from VirtualBox
+              vm_info = `#{path_VBoxManage} showvminfo "#{vm_name}" --machinereadable`
+              
+              # Extract MAC addresses for each adapter
+              mac_addresses = {}
+              vm_info.scan(/macaddress(\d+)="(.+?)"/).each do |adapter_num, mac|
+                mac_addresses[adapter_num.to_i] = mac.upcase
+              end
+              
+              # Check if we need to update Hosts.yml
+              hosts_yml_path = File.join(Dir.pwd, 'Hosts.yml')
+              if File.exist?(hosts_yml_path)
+                # Read the file line by line
+                lines = File.readlines(hosts_yml_path)
+                
+                # Track if we're in the right host section
+                in_current_host = false
+                in_networks = false
+                current_network_index = -1
+                needs_update = false
+                
+                # Process each line
+                lines.each_with_index do |line, i|
+                  # Check if we're entering a host section
+                  if line.strip == '-' && lines[i+1] && lines[i+1].strip.start_with?('settings:')
+                    in_current_host = false
+                    in_networks = false
+                    current_network_index = -1
+                  end
+                  
+                  # Check if we're in the settings section of the current host
+                  if !in_current_host && line.strip.start_with?('hostname:') && line.include?(host['settings']['hostname'])
+                    in_current_host = true
+                  end
+                  
+                  # Check if we're entering the networks section of the current host
+                  if in_current_host && line.strip == 'networks:'
+                    in_networks = true
+                    current_network_index = -1
+                  end
+                  
+                  # Check if we're starting a new network entry
+                  if in_networks && line.strip == '-'
+                    current_network_index += 1
+                  end
+                  
+                  # Check if this line contains a MAC address set to 'auto'
+                  if in_networks && current_network_index >= 0 && line.strip.start_with?('mac:') && (line.include?('auto') || line.strip == 'mac:')
+                    adapter_num = current_network_index + 2  # +2 because adapter 1 is NAT
+                    if mac_addresses.has_key?(adapter_num)
+                      formatted_mac = mac_addresses[adapter_num].scan(/../).join(':')
+                      indent = line[/\A\s*/]
+                      lines[i] = "#{indent}mac: #{formatted_mac}\n"
+                      needs_update = true
+                      puts "Updated MAC address for network #{current_network_index} to #{formatted_mac}"
+                    end
+                  end
+                end
+                
+                # Write updated Hosts.yml if changes were made
+                if needs_update
+                  File.open(hosts_yml_path, 'w') do |file|
+                    file.write(lines.join)
+                  end
+                  puts "Updated Hosts.yml with actual MAC addresses while preserving comments"
+                end
+              end
+            end
+          end
+        end
         ##### Disk Configurations #####
         ## https://sleeplessbeastie.eu/2021/05/10/how-to-define-multiple-disks-inside-vagrant-using-virtualbox-provider/
         disks_directory = File.join("./", "disks")
@@ -231,6 +319,64 @@ class Hosts
           end
         end
         ##### End Virtualbox Configurations #####
+
+        ##### Begin UTM type Configurations #####
+        if provider == 'utm'
+          if host['settings']['memory'].to_s =~ /gb|g|/
+            vm_memory = 1024 * host['settings']['memory'].to_s.tr('^0-9', '').to_i
+          elsif host['settings']['memory'] =~ /mb|m|/
+            vm_memory = host['settings']['memory'].tr('^0-9', '')
+          end
+          
+          # Determine directory share mode based on folder configurations
+          directory_share_mode = "none"
+          if host.has_key?('folders')
+            host['folders'].each do |folder|
+              if folder['type'] == 'utm' && !folder['disabled']
+                directory_share_mode = "webDAV"
+                break
+              elsif folder['type'] == 'virtualbox' && !folder['disabled']
+                directory_share_mode = "virtFS"
+                break
+              end
+            end
+          end
+          
+          server.vm.provider :utm do |utm|
+            utm.name = "#{host['settings']['server_id']}--#{host['settings']['hostname']}.#{host['settings']['domain']}"
+            utm.cpus = host['settings']['vcpus']
+            utm.memory = vm_memory
+            utm.notes = host['utm'] && host['utm']['notes'] ? host['utm']['notes'] : "Vagrant: For testing plugin development"
+            utm.wait_time = host['settings']['setup_wait']
+            utm.directory_share_mode = directory_share_mode
+            
+            # Additional UTM-specific settings from utm configuration block
+            if host.has_key?('utm') && host['utm'] && !host['utm'].empty?
+              utm.check_guest_additions = host['utm']['check_guest_additions'] if host['utm'].has_key?('check_guest_additions')
+              utm.functional_9pfs = host['utm']['functional_9pfs'] if host['utm'].has_key?('functional_9pfs')
+              
+              # Support for custom UTM AppleScript customizations
+              if host['utm'].has_key?('customizations') && host['utm']['customizations'] && !host['utm']['customizations'].empty?
+                host['utm']['customizations'].each do |customization|
+                  event = customization['event'] || 'pre-boot'
+                  command = customization['command']
+                  utm.customize(event, command) if command
+                end
+              end
+            end
+          end
+
+          if host.has_key?('roles') and !host['roles'].empty?
+            host['roles'].each do |rolefwds|
+              if rolefwds.has_key?('port_forwards') and !rolefwds.empty?
+                rolefwds['port_forwards'].each_with_index do |param, index|
+                  config.vm.network "forwarded_port", guest: param['guest'], host: param['host'], host_ip: param['ip']
+                end
+              end
+            end
+          end
+        end
+        ##### End UTM Configurations #####
 
         ##### Begin ZONE type Configurations #####
         if provider == 'zones'
@@ -534,8 +680,8 @@ class Hosts
                   ## For CI/CD Automation Purposes Only
                   if host['settings']['debug_build']
                     puts "#{ prefix } Transferring Hosts Template back to Host"
-                    id_transfer_cmd = "vagrant ssh -c 'cat /vagrant/ansible/auto-SHI-Hosts.yml' > ./templates/auto-SHI-Hosts.yml"
-                    id_transfer_cmd = "vagrant scp :/vagrant/ansible/auto-SHI-Hosts.yml ./templates/auto-SHI-Hosts.yml" if Vagrant.has_plugin?("vagrant-scp-sync")
+                    id_transfer_cmd = "vagrant ssh -c 'cat /vagrant/ansible/Hosts.template.yml' > ./templates/Hosts.template.yml"
+                    id_transfer_cmd = "vagrant scp :/vagrant/ansible/Hosts.template.yml ./templates/Hosts.template.yml" if Vagrant.has_plugin?("vagrant-scp-sync")
                     system(id_transfer_cmd)
                   end
 
