@@ -1,19 +1,6 @@
 Write-Host "`nSet User Configurations"
 Set-LocalUser -Name STARTcloud -PasswordNeverExpires $true
 
-Write-Host "`nConfigure PowerShell"
-Set-ExecutionPolicy RemoteSigned -Force
-$ProgressPreference = 'SilentlyContinue'
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-Write-Output "`nEnabling RDP"
-Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name fDenyTSConnections -Value 0 -Type DWord
-
-Write-Host "`nEnable Serial Console"
-bcdedit /ems ON
-bcdedit /bootems ON
-bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200
-
 Write-Host "`nSet Dark Mode"
 Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type Dword
 Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type Dword
@@ -32,18 +19,6 @@ New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\E
 New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
 New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
 REG UNLOAD HKLM\Default
-
-Write-Host "`nDisable Hibernate"
-Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\Power\ -name HiberFileSizePercent -value 0
-Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\Power\ -name HibernateEnabled -value 0
-
-Write-Host "`nDisable Screensaver"
-Set-ItemProperty "HKCU:\Control Panel\Desktop" -Name ScreenSaveActive -Value 0 -Type DWord
-& powercfg -x -monitor-timeout-ac 0
-& powercfg -x -monitor-timeout-dc 0
-
-Set-Service -Name 'WinRM' -StartupType Automatic
-Start-Service -Name 'WinRM'
 
 Write-Host "Configure OpenSSH"
 $ACL = Get-ACL C:\Windows\Temp\packer\

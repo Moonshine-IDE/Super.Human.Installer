@@ -1,6 +1,6 @@
 ---
 -
-  name: Remove default nginx vhost config file (if configured).
+  name: "Removing default nginx vhost config file (if configured)"
   ansible.builtin.file:
     path: "{{ nginx_default_vhost_path }}"
     state: absent
@@ -8,7 +8,7 @@
   notify: Restart nginx
 
 -
-  name: Ensure nginx_vhost_path exists.
+  name: "Ensuring nginx_vhost_path exists"
   ansible.builtin.file:
     path: "{{ nginx_vhost_path }}"
     state: directory
@@ -16,7 +16,7 @@
   notify: Reload nginx
 
 -
-  name: Add managed vhost config files.
+  name: "Adding managed vhost config files"
   ansible.builtin.template:
     src: "{{ item.template|default(nginx_vhost_template) }}"
     dest: "{{ nginx_vhost_path }}/{{ item.filename|default(item.server_name.split(' ')[0] ~ '.conf') }}"
@@ -31,7 +31,7 @@
     - skip_ansible_lint
 
 -
-  name: Remove managed vhost config files.
+  name: "Removing managed vhost config files"
   ansible.builtin.file:
     path: "{{ nginx_vhost_path }}/{{ item.filename|default(item.server_name.split(' ')[0] ~ '.conf') }}"
     state: absent
@@ -42,7 +42,7 @@
     - skip_ansible_lint
 
 -
-  name: Remove legacy vhosts.conf file.
+  name: "Removing legacy vhosts.conf file"
   ansible.builtin.file:
     path: "{{ nginx_vhost_path }}/vhosts.conf"
     state: absent

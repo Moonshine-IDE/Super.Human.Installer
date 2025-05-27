@@ -18,30 +18,166 @@
         - not oidc_configured_check.stat.exists
       block:
         -
-          name: "Ensure cacert.pem exists"
-          ansible.builtin.file:
-            path: "{{ domino_home_dir }}/cacert.pem"
-            state: touch
-            owner: "{{ domino_user }}"
-            group: "{{ domino_group }}"
-            mode: '0644'
-            modification_time: preserve
-            access_time: preserve
+          name: "Checking if IDPcat.nsf exists"
+          ansible.builtin.stat:
+            path: "{{ domino_home_dir }}/idpcat.nsf"
+          register: idpcat_file_check
 
         -
-          name: "Append CA certificate to cacert.pem"
-          ansible.builtin.blockinfile:
-            path: "{{ domino_home_dir }}/cacert.pem"
-            block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
-            marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
-            owner: "{{ domino_user }}"
-            group: "{{ domino_group }}"
-            mode: '0644'
+          name: "Setting up IDPcat for Domino OIDC"
+          when: 
+            - is_additional_server
+            - not idpcat_file_check.stat.exists
+          block:
+            -
+              name: "Creating Templated JSON file to add IDPcat from NTF"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_additional_create_idpcat.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_additional_create_idpcat.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_additional_create_idpcat"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_additional_create_idpcat.json"
+
+            -
+              name: "Checking if Genesis returns that the json file processed succesfully: domino_oidc_additional_create_idpcat JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_additional_create_idpcat.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_idpcat
+              failed_when: presence_oidc_idpcat is changed
+
+        -
+          name: "Checking if Domccfg.nsf exists"
+          ansible.builtin.stat:
+            path: "{{ domino_home_dir }}/domcfg.nsf"
+          register: domcfg_file_check
+
+        -
+          name: "Setting up IDPcat for Domino OIDC"
+          when: 
+            - is_additional_server
+            - not domcfg_file_check.stat.exists
+          block:
+            -
+              name: "Creating Templated JSON file to add Domcfg from NTF"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_additional_create_domcfg.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "domino_oidc_additional_create_domcfg.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing domino_oidc_additional_create_domcfg"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_additional_create_domcfg.json"
+
+            -
+              name: "Checking if Genesis returns that the json file processed succesfully: domino_oidc_additional_create_domcfg JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/domino_oidc_additional_create_domcfg.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_domcfg
+              failed_when: presence_oidc_domcfg is changed
+
+        -
+          name: "Setting up IDPcat for Domino OIDC"
+          when: 
+            - is_additional_server
+          block:
+            -
+              name: "Handing templated gather_domino_oidc_provider_for_additional.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_oidc_provider_for_additional.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "gather_domino_oidc_provider_for_additional.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing gather_domino_oidc_provider_for_additional.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_provider_for_additional.json"
+
+            -
+              name: "Checking if gather_domino_oidc_provider_for_additional.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_provider_for_additional.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_oidc_gather_for_additional
+              failed_when: presence_oidc_gather_for_additional is changed
+
+            -
+              name: "Checking for oidc_provider_for_additional"
+              register: oidc_provider_configured_check
+              ansible.builtin.stat:
+                path: "{{ completed_dir }}/JavaAddin/Genesis/jsonresponse/oidc_provider_for_additional.txt"
+                get_md5: false
+
+            -
+              name: "Reading OIDC hostnames from file"
+              when: oidc_provider_configured_check.stat.exists
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_provider_for_additional.txt"
+              register: oidc_provider_file
+
+            -
+              name: "Processing Domino OIDC Provider Inetsite doc entry"
+              when: oidc_provider_configured_check.stat.exists
+              ansible.builtin.set_fact:
+                oidc_provider_file_for_additional_raw: "{{ oidc_provider_file['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Removing OIDCHostname= prefix, checking for Auth URL for server, and ensuring unique entries"
+              when: oidc_provider_configured_check.stat.exists
+              ansible.builtin.set_fact:
+                oidc_provider_file_for_additional: "{{ oidc_provider_file_for_additional_raw | regex_replace('OIDCP_InternetSite=', ' ') | split(' ') | unique | join(' ') }}"
+
+            -
+              name: "Setting Update/Create on document creation to prevent duplicates by checking oidc_provider_file_for_additional for matching hostname"
+              when: oidc_provider_configured_check.stat.exists
+              ansible.builtin.set_fact:
+                domino_provider_create: "{{ false if domino_oidc_install_proxy_url in oidc_provider_file_for_additional else domino_provider_create | default(true) }}"
 
         -
           name: "Setting up Domino OIDC for use with Self Signed Cert"
-          when: domino_https_enabled and selfsigned_enabled and not letsencrypt_enabled
+          when:
+            - domino_https_enabled
+            - selfsigned_enabled
+            - not letsencrypt_enabled
           block:
+            -
+              name: "Ensure cacert.pem exists"
+              ansible.builtin.file:
+                path: "{{ domino_home_dir }}/cacert.pem"
+                state: touch
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                mode: '0644'
+                modification_time: preserve
+                access_time: preserve
+
+            -
+              name: "Append CA certificate to cacert.pem"
+              ansible.builtin.blockinfile:
+                path: "{{ domino_home_dir }}/cacert.pem"
+                block: "{{ lookup('file', cert_dir + '/ca/ca-certificate.crt') }}"
+                marker: "# {mark} ANSIBLE MANAGED BLOCK - CA CERTIFICATE"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                mode: '0644'
+
             -
               name: "Setting Imported Self Signed CA as trusted via Genesis task"
               ansible.builtin.template:
@@ -67,7 +203,7 @@
               failed_when: presence_oidc is changed
 
         -
-          name: "Setting up Domino OIDC Federation "
+          name: "Setting up Domino OIDC Federation"
           when: domino_oidc_provider_federation_enabled
           block:
             -
@@ -93,8 +229,10 @@
               check_mode: true
               register: presence_domino_oidc_federated_idvault_security_policy
               failed_when: presence_domino_oidc_federated_idvault_security_policy is changed
-
-            ## Input the value bearer.vault.<Vault server hostname> into the Bearer token (JWT) approved OIDC provider configurations field
+        -
+          name: "Settin the value bearer.vault.<Vault server hostname> into the Bearer token (JWT) approved OIDC provider configurations field"
+          when: domino_oidc_provider_federation_enabled and not is_additional_server
+          block:
             -
               name: "Handing IDVault JWT Bearer Token Modifications JSON to Genesis"
               ansible.builtin.template:
@@ -119,7 +257,6 @@
               register: presence_domino_oidc_federated_idvault_bearer_configuration
               failed_when: presence_domino_oidc_federated_idvault_bearer_configuration is changed
 
-        ## Setting Login form via Domcfg
         -
           name: "Using Genesis to set Domcfg Login form via JSON"
           ansible.builtin.template:
@@ -143,6 +280,66 @@
           check_mode: true
           register: presence_domino_oidc_domcfg
           failed_when: presence_domino_oidc_domcfg is changed
+
+        -
+          name: "Checking for existing OIDC Auth Internet site Doc"
+          block:
+            -
+              name: "Handing templated gather_domino_oidc_auth_inet_site_doc.json JSON to Genesis"
+              ansible.builtin.template:
+                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_oidc_auth_inet_site_doc.json"
+                mode: "a+x"
+                owner: "{{ domino_user }}"
+                group: "{{ domino_group }}"
+                src: "gather_domino_oidc_auth_inet_site_doc.json.j2"
+
+            -
+              name: "Waiting until Genesis returns OK after processing gather_domino_oidc_auth_inet_site_doc.json"
+              ansible.builtin.wait_for:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_auth_inet_site_doc.json"
+
+            -
+              name: "Checking if gather_domino_oidc_auth_inet_site_doc.json JSON applied succesfully"
+              ansible.builtin.lineinfile:
+                path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_auth_inet_site_doc.json"
+                line: "OK"
+                state: present
+              check_mode: true
+              register: presence_gather_domino_oidc_auth_inet_site_doc
+              failed_when: presence_gather_domino_oidc_auth_inet_site_doc is changed
+
+            -
+              name: "Checking for gather_domino_oidc_auth_inet_site_doc"
+              register: gather_domino_oidc_auth_inet_site_doc_check
+              ansible.builtin.stat:
+                path: "{{ completed_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_auth_inet_site_doc.txt"
+                get_md5: false
+
+            -
+              name: "Reading OIDC hostnames from file"
+              when: gather_domino_oidc_auth_inet_site_doc_check.stat.exists
+              ansible.builtin.slurp:
+                src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_oidc_auth_inet_site_doc.txt"
+              register: oidc_provider_file
+
+            -
+              name: "Processing Domino OIDC Provider Inetsite doc entry"
+              when: gather_domino_oidc_auth_inet_site_doc_check.stat.exists
+              ansible.builtin.set_fact:
+                gather_domino_oidc_auth_inet_site_doc_check_raw: "{{ oidc_provider_file['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+            -
+              name: "Removing ISiteName= prefix, checking for Auth URL for server, and ensuring unique entries"
+              when: gather_domino_oidc_auth_inet_site_doc_check.stat.exists
+              ansible.builtin.set_fact:
+                gather_domino_oidc_auth_inet_site_doc_check_processed: "{{ gather_domino_oidc_auth_inet_site_doc_check_raw | regex_replace('ISiteName=', ' ') | split(' ') | unique | join(' ') }}"
+
+            -
+              name: "Setting Update/Create on document creation to prevent duplicates by checking gather_domino_oidc_auth_inet_site_doc_check_processed for matching hostname"
+              when: gather_domino_oidc_auth_inet_site_doc_check.stat.exists
+              ansible.builtin.set_fact:
+                domino_oidc_auth_inet_site_create: "{{ false if domino_oidc_install_proxy_url in gather_domino_oidc_auth_inet_site_doc_check_processed else domino_oidc_auth_inet_site_create | default(true) }}"
+
 
         ## Creating a Internet Site Document for the Domino OIDC Auth Provider
         -
@@ -230,15 +427,6 @@
               name: "Using Genesis to create a Registered Auth Client for WebApps via JSON"
               ansible.builtin.template:
                 dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/domino_oidc_registered_client_web_apps.json"
-                mode: "a+x"
-                owner: "{{ domino_user }}"
-                group: "{{ domino_group }}"
-                src: "domino_oidc_registered_client_web_apps.json.j2"
-
-            -
-              name: "Using Genesis to create a Registered Auth Client for WebApps via JSON"
-              ansible.builtin.template:
-                dest: "{{ domino_home_dir }}/JavaAddin/Genesis/domino_oidc_registered_client_web_apps.json"
                 mode: "a+x"
                 owner: "{{ domino_user }}"
                 group: "{{ domino_group }}"

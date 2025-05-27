@@ -1,18 +1,18 @@
 ---
 -
-  name: Ensure PostgreSQL Python libraries are installed.
+  name: "Ensuring PostgreSQL Python libraries are installed"
   community.general.pacman:
     name: "{{ postgresql_python_library }}"
     state: present
 
 -
-  name: Ensure PostgreSQL packages are installed.
+  name: "Ensuring PostgreSQL packages are installed"
   community.general.pacman:
     name: "{{ postgresql_packages }}"
     state: present
 
 -
-  name: Ensure all configured locales are present.
+  name: "Ensuring all configured locales are present"
   community.general.locale_gen:
     name: "{{ item }}"
     state: "present"

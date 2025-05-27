@@ -10,15 +10,23 @@
                     "filePath": "names.nsf", 
                     "documents":[
                         { 
+{% if domino_verse_inet_site_create %}
                             "action": "create", 
+{% else %}
+                            "action": "update", 
+							"search": {
+							   "formula":"Form=\"WebSite\" & ISiteName=\"{{ settings.hostname }} Verse\"",
+                               "number":0
+							},
+{% endif %}
                             "computeWithForm": true,
                             "items": {
               					"Form": "WebSite",
-              					"AutomationComment" : "Verse",
+              					"AutomationComment" : "{{ settings.hostname }} Verse",
               					"WSIsDflt"           : "0",
               					"WSHomeURL"          : "/verse",
               					"ISiteAdrs"          : [ "{{ domino_verse_proxy_url }}" ],
-              					"ISiteName"          : "Verse",
+              					"ISiteName"          : "{{ settings.hostname }} Verse",
               					"ISiteOrg"           : "{{ domino_organization }}",
               					"WSHostingSrvrs"     : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
               					"HTTP_TCP_Redirect"  : "1",

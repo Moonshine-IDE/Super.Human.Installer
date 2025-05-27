@@ -1,0 +1,160 @@
+global
+        pidfile                 /var/run/haproxy.pid
+        #chroot                 /var/lib/haproxy
+        user                    haproxy
+        group                   haproxy
+
+        # Makes the process fork into background
+        daemon
+
+        ## Logging stdout/stderr because we are in docker
+        log                     stdout format raw local0 debug
+
+        ## Tuning
+        tune.bufsize            64768
+        maxconn                 500000
+
+        ## Stats
+        stats socket /var/lib/haproxy/stats level admin mode 660 group haproxy expose-fd listeners
+        stats timeout 30s
+
+        ## Default SSL material locations
+        ca-base /etc/ssl/certs
+        crt-base /etc/ssl/private
+
+
+        tune.ssl.default-dh-param 4096
+        #ssl-dh-param-file /path/to/dhparam
+
+        ## SSL/TLS Cipher Suites
+        ## See: https://ssl-config.mozilla.org/#server=haproxy&server-version=2.0.3&config=intermediate
+        ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305
+        ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+        ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+        #ssl-default-bind-options ssl-min-ver TLSv1.2 no-tls-tickets
+
+        ssl-default-server-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:DHE-RSA-CHACHA20-POLY1305
+        ssl-default-server-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+        ssl-default-server-options no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+#### DEFAULTS ####
+defaults
+        default-server              init-addr none
+        log                         global
+        mode                        http
+        balance                     leastconn
+        retries                     3
+        timeout http-request        60s
+        timeout queue               1m
+        timeout connect             30s
+        timeout client              1m
+        timeout server              1m
+        timeout http-keep-alive     30s
+        timeout check               10s
+        timeout client-fin          30s
+        maxconn                     500000
+        option                      http-keep-alive
+        option                      forwardfor
+        option                      http-server-close
+        option                      dontlognull
+        option                      httplog
+        option                      redispatch
+        option                      tcpka
+
+#---------------------------------------------------------------------
+##### FRONTENDs: WEB/HTTP/HTTPS
+#---------------------------------------------------------------------
+{# HAProxy frontends are configurations that define the IP addresses and ports clients can connect to #}
+{# specifying how incoming requests should be forwarded to backends, and can include rules for routing traffic based on conditions or default actions #}
+
+{# This frontend section listens on Port 444 (This can be overriden by modifying the Ansible Variables, refernce the default/main.yml) #}
+{# This exposes a statistics page, with some controls to manage load balancing  #}
+frontend  STATS
+        mode http
+{% if selfsigned_enabled %}
+        bind :::{{ startcloud_haproxy_port_forwards[2].guest }} ssl crt {{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem
+{% else %}
+        bind :::{{ startcloud_haproxy_port_forwards[2].guest }} ssl crt {{ cert_dir }}/combined/default-signed.pem
+{% endif %}
+        stats enable
+        stats uri /
+        stats admin if TRUE
+        http-request use-service prometheus-exporter if { path /metrics }
+
+
+{# This frontend section listens on Port 80 (This can be overriden by modifying the Ansible Variables, refernce the default/main.yml) #}
+{# All This section does, is IF any URL hits the server, and if it contains the URI /.well-known/acme-challenge/,  #}
+{# then send it to the Let's Encrypt Backend Defined in the backend section at the bottom. #}
+{# If haproxy_ssl_redirect is set to false, which normally it is not and should not be, then It will not send a 301 request to the user to use HTTPS #}
+{# Since there are no other Directives such as ACLs, use_backend, or nothing else is done with the request #}
+{# If you want HAProxy to proxy the backends like it does port 443, then you can, but its not recommended, copy the configurations from the 443 backend, #}
+{# And place them here with some slight modifications. Again this is not recommended, you should use SSL everywhere. #}
+frontend EXT-WEB:{{ startcloud_haproxy_port_forwards[0].guest}}
+        bind :::{{ startcloud_haproxy_port_forwards[0].guest}}
+        mode http
+        log global
+
+        # Redirections to Let's Encrypt local agent
+        acl ispath_letsencrypt                  path_beg /.well-known/acme-challenge/
+{% if haproxy_ssl_redirect %}
+        # Redirect HTTP -> HTTPS (except let's encrypt)
+        redirect  code 301 scheme https if !{ ssl_fc }   !ispath_letsencrypt
+{% endif %}
+        use_backend     letsencrypt_80          if      ispath_letsencrypt
+
+
+{# This frontend section listens on Port 443 (This can be overriden by modifying the Ansible Variables, refernce the default/main.yml) #}
+{# This section, unlike the Port 80 section above, defines most of the advanced rules and configurations for how URLs are handled for the services, #}
+{# running on this server.  #}
+frontend  HTTPS-IN
+{% if selfsigned_enabled %}
+        bind :::{{ startcloud_haproxy_port_forwards[1].guest}} v4v6 ssl crt  {{ cert_dir }}/combined/{{ settings.hostname }}.{{ settings.domain }}.pem
+{% else %}
+        bind :::{{ startcloud_haproxy_port_forwards[1].guest}} v4v6 ssl crt  {{ cert_dir }}/combined/default-signed.pem
+{% endif %}
+        mode http
+{% if haproxy_ssl_redirect %}
+        http-request redirect scheme https unless { ssl_fc }
+{% endif %}
+
+        ## Dynamic Logging to Error Page
+        unique-id-format %{+X}o\ %ci:%cp_%fi:%fp_%Ts_%rt:%pid
+        unique-id-header X-Unique-ID
+
+        log-format "%ci:%cp [%tr] %ft %b/%s %TR/%Tw/%Tc/%Tr/%Ta %ST %B %CC %CS %tsc %ac/%fc/%bc/%sc/%rc %sq/%bq %hr %hs %{+Q}r %[unique-id]"
+
+        #### ACL's  ####
+{% if voltmx_port_forwards[0].url is defined %}
+        acl host_voltmx               hdr(host)            -i {{ settings.hostname }}.{{ settings.domain }}
+        acl path_root                 path                 -i /
+        acl path_mfconsole            path                 -i /mfconsole
+
+        # Redirect root path to /mfconsole but only for the exact root path
+        http-request redirect code 302 location /mfconsole if host_voltmx path_root !path_mfconsole
+{% endif %}
+{% if voltmx_port_forwards[0].url is defined %}
+        use_backend                   voltmx               if host_voltmx
+        default_backend               voltmx
+{% endif %}
+
+#---------------------------------------------------------------------
+##### BACKENDS ####
+#---------------------------------------------------------------------
+{# Haproxy backends are sets of servers defined in the HAProxy configuration that receive forwarded requests,  #}
+{# allowing for load balancing and increased reliability by distributing the load across multiple servers #}
+
+## Let's Encrypt Cert-bot Tool
+backend letsencrypt_80
+        mode http
+        log global
+        http-response set-header Server haproxy
+        server  letsencrypt             127.0.0.1:{{ haproxy_cert_bot_port }}
+
+{% if voltmx_port_forwards[0].guest is defined %}
+# Voltmx
+backend voltmx
+        balance roundrobin
+{% if voltmx_port_forwards[1].guest is defined %}
+        server  voltmx-https          127.0.0.1:{{ voltmx_port_forwards[1].guest }}    ssl verify none sni ssl_fc_sni check cookie {{ settings.hostname }} init-addr last,libc,none
+{% endif %}
+{% endif %}

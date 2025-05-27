@@ -1,1 +1,3 @@
 use_default_rules: true
+exclude_paths:
+  - ../ansible_collections/ # Relative to this .ansible-lint file's location

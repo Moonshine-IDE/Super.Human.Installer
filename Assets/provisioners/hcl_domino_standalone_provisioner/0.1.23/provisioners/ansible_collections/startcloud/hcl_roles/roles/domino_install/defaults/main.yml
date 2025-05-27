@@ -18,7 +18,9 @@ id_vault_enable_vault_bearer: "1"
 domino_admin_user_first_name: Prominic
 domino_admin_user_last_name: Admin
 domino_admin_user_id: admin-user.id
-domino_admin_notes_id_password: "password"
+domino_admin_notes_id_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=16') }}"
+domino_certifier_id: cert.id
+domino_certifier_id_password: "{{ domino_admin_notes_id_password | default(domino_admin_notes_id_password) }}"
 auto_register_users_enable_full_text_index: true
 auto_register_users_cert_expiry_months: 48
 auto_register_users_save_id_to_person_doc: false
@@ -44,12 +46,8 @@ domino_server_fixpack_tar: "{{ 'Domino_140FP1_Linux.tar' if domino_major_version
 domino_installer_hotfix_install: false
 domino_hotfix_version: HF16
 domino_server_hotfix_tar: "{{ domino_major_version|string + domino_minor_version|string + domino_fixpack_version|string + domino_hotfix_version|string + '-linux64.tar' }}"
-
-domino_installer_base_url: "{{ secrets.domino_installer_base_url }}"
-domino_installer_url_user: "{{ secrets.domino_installer_url_user }}"
-domino_installer_url_pass: "{{ secrets.domino_installer_url_pass }}"
-
 installer_url_app_path: "Super.Human.Installer/Domino"
+installer_base_url: "{{ secrets.installer_base_url | default('https://downloads.prominic.net') }}"
 domino_install_dir: /opt/hcl/domino/notes/latest/linux
 domino_install_basedir: /opt/hcl/domino
 domino_install_chosen_feature_list: Domino,Nomad,OnTime,Verse,Help
@@ -186,6 +184,7 @@ domino_server_name_common_with_org: "{{ (domino_major_version is defined and
                                          domino_server_name + '/' + domino_organization,
                                          domino_server_name + '.' + domino_server_domain + '/' + domino_organization
                                        ) }}"
+
 
 ## Do not change these unless you know exactly what you are doing, these are set to false in case the oidc role isn't included.
 super_human_portal_enabled: true

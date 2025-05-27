@@ -19,7 +19,8 @@ domino_oidc_install_proxy_url: "{{ domino_oidc_hostname }}.{{ settings.hostname 
 
 domino_oidc_client_id: "{{ settings.hostname }}_{{ settings.domain | regex_replace('\\.', '_') }}_client_id"
 domino_oidc_client_secret: "{{ lookup('ansible.builtin.password', '/dev/null', seed=inventory_hostname) }}"
-
+domino_provider_create: true
+domino_oidc_auth_inet_site_create: true
 domino_oidc_provider_login_form: "$$LoginUserForm"
 domino_oidc_provider_login_form_db: domcfg.nsf
 domino_oidc_provider_web_home_url: "/names.nsf?open"

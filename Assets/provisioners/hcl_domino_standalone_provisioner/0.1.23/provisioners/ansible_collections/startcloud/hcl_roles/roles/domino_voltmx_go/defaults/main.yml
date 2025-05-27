@@ -1,17 +1,19 @@
 ---
 run_tasks: true
-voltmx_installation_type: Development
-voltmx_installation_dir: /local/voltmx-foundry
-voltmx_installer_archive: VoltMXFoundrySetup-9.5.1.1_GA.tar.gz
-voltmx_installer_base_url: https://mydomain.com
-voltmx_admin_first_name: VoltMX
-voltmx_admin_last_name: Admin
-voltmx_admin_email: support@prominic.net
-voltmx_admin_pass: "SomeRandomPasswordSecureMe@!"
-voltmx_port_forwards:
-  -
-    guest: 8181
-    url: "voltmx"
-  -
-    guest: 8444
-    url: "voltmx"
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing VoltMX Go"
+
+installer_url_app_path: "Super.Human.Installer/VoltMXGo"
+
+# Download File
+voltmx_go_installer_archive: HCLVoltMXGO_Plugin_Installer_Tool_Linux_V2.1.tar.gz
+
+# Extracted VoltMX Go Plugin Installer
+voltmx_go_plugin_installer_bin: "VoltMXGoInstallationTool-9.5.18.3.bin"
+
+## VoltMX Go Installer
+voltmx_go_install_dir: "{{ voltmx_installation_dir }}/VoltMXGoPluginInstaller"
+voltmx_go_installer_bin: "VoltMXGoPluginInstaller"
+
+install_voltmx_go_plugin: true

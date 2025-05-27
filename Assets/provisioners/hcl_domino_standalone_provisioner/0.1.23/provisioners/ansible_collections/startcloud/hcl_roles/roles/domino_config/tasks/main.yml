@@ -391,7 +391,12 @@
       register: domino_certmgr_start
       with_items:
         - 'domino cmd "load certmgr" 20'
-    
+
+    -
+      name: "Adding setup.json to cleanup list"
+      ansible.builtin.set_fact:
+        lockdown_file_cleanups_list: "{{ lockdown_file_cleanups_list | default([]) + [domino_home_dir + '/setup.json'] }}"
+
     -
       name: "Telling Domino to load certmgr to replicate the certificates"
       when: not domino_server_touched.stat.exists and is_additional_server

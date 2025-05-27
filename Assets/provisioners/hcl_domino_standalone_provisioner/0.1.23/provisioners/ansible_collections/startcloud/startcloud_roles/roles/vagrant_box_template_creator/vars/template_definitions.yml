@@ -1,0 +1,35 @@
+---
+templates:
+  - name: "Windows Server 2022"
+    path: "definitions/templates/amd64/windows2022-server.json"
+    providers: ["virtualbox", "zone", "aws"]
+  - name: "Windows 11 Desktop"
+    path: "definitions/templates/amd64/windows11-desktop.json"
+    providers: ["virtualbox", "zone"]
+  - name: "Windows 10 Desktop"
+    path: "definitions/templates/amd64/windows10-desktop.json"
+    providers: ["virtualbox", "zone"]
+  - name: "Debian 12 Server"
+    path: "definitions/templates/amd64/debian12-server.json"
+    providers: ["virtualbox", "zone", "docker", "aws"]
+  - name: "Encrypted Debian 12 Server"
+    path: "definitions/templates/amd64/encrypted-debian12-server.json"
+    providers: ["virtualbox", "zone"]
+  - name: "Ubuntu 22.04 Server"
+    path: "definitions/templates/amd64/ubuntu22-server.json"
+    providers: ["virtualbox", "zone", "docker", "aws"]
+  - name: "AlmaLinux 8 Server"
+    path: "definitions/templates/amd64/alma8-server.json"
+    providers: ["virtualbox", "zone"]
+  - name: "AlmaLinux 9 Server"
+    path: "definitions/templates/amd64/alma9-server.json"
+    providers: ["virtualbox", "zone"]
+  - name: "OmniOS r151040"
+    path: "definitions/templates/amd64/omnios-r151040.json"
+    providers: ["virtualbox", "zone"]
+  - name: "pfSense 2.6.0"
+    path: "definitions/templates/amd64/pfsense2.6.0.json"
+    providers: ["virtualbox", "zone"]
+  - name: "Ubuntu 23.04 Server ARM64"
+    path: "definitions/templates/aarch64/ubuntu2304-server-aarch64.json"
+    providers: ["qemu-arm64"]

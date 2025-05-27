@@ -5,3 +5,8 @@ service_group: java_group
 service_home_dir: /local/notesjava
 service_user_soft_limit: "60000"
 service_user_hard_limit: "80000"
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring service user"

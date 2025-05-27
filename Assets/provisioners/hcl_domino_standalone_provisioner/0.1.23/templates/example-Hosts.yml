@@ -247,9 +247,9 @@ hosts:
       # Uncomment and fill in these lines if you want to download the installers for this instance
       # Note that the installer names must match the names on the download server.
       #secrets:
-      #  domino_installer_base_url: "replacme"
-      #  domino_installer_url_user: "replaceme"
-      #  domino_installer_url_pass: "replaceme"
+      #  installer_base_url: "replacme"
+      #  installer_url_user: "replaceme"
+      #  installer_url_pass: "replaceme"
 
       ## Provisioner Debug
       debug_all: true
@@ -366,11 +366,6 @@ hosts:
       #verse_archive:
       #verse_base_version:
 
-      ## AppDev Web Pack Variables ## Will receive no Updates in the future
-      #appdevpack_hash: ::APPDEVPACK_HASH::
-      #appdevpack_archive:
-      #appdevpack_version:
-
       ## Domino Rest API Variables
       #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
       #domino_rest_api_version:
@@ -428,10 +423,6 @@ hosts:
         vars:
           run_tasks: false
       - name: startcloud.hcl_roles.domino_verse
-        vars:
-          run_tasks: false
-      # Deprecated -- See: https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0105781
-      - name: startcloud.hcl_roles.domino_appdevpack
         vars:
           run_tasks: false
       - name: startcloud.hcl_roles.domino_rest_api

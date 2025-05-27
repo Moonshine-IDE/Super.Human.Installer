@@ -19,3 +19,5 @@ domino_traveler_port_forwards:
     guest: "{{ domino_install_port_forwards[1].guest }}"
     url: "traveler"
 domino_traveler_proxy_url: "{{ domino_traveler_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
+
+domino_traveler_inet_site_create: true

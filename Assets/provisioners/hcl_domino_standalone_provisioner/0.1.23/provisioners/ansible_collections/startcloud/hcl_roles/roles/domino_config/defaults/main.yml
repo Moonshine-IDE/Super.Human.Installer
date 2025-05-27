@@ -13,3 +13,30 @@ origin_server_ip: ""
 domino_config:
   delete_input_file_after_processing: "false"
   start_server_after_configuration: "true"
+
+
+domino_origin_server_name_common: "{{ domino_server_name_common if not is_additional_server else
+                                     ((domino_major_version is defined and 
+                                       ((domino_major_version >= 12 and 
+                                         ((domino_major_version == 12 and domino_patch_version >= 2) or domino_major_version > 12) and 
+                                         domino_admin_ignore_new_servernaming_convention == 1) or
+                                        (domino_major_version == 12 and 
+                                         domino_patch_version < 2 and 
+                                         domino_admin_ignore_new_servernaming_convention == 0))
+                                      ) | ternary(
+                                        origin_server,
+                                        origin_server + '.' + domino_server_domain
+                                      )) }}"
+
+domino_origin_server_name_common_with_org: "{{ domino_server_name_common_with_org if not is_additional_server else
+                                             ((domino_major_version is defined and 
+                                               ((domino_major_version >= 12 and 
+                                                 ((domino_major_version == 12 and domino_patch_version >= 2) or domino_major_version > 12) and 
+                                                 domino_admin_ignore_new_servernaming_convention == 1) or
+                                                (domino_major_version == 12 and 
+                                                 domino_patch_version < 2 and 
+                                                 domino_admin_ignore_new_servernaming_convention == 0))
+                                              ) | ternary(
+                                                origin_server + '/' + domino_organization,
+                                                origin_server + '.' + domino_server_domain + '/' + domino_organization
+                                              )) }}"

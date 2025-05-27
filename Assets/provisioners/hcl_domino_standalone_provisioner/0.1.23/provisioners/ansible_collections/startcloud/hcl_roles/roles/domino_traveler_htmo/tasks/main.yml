@@ -11,7 +11,7 @@
         get_md5: false
     
     -
-      name: "Block to Allow Loading of Variables without running task"
+      name: "Setting up Traveler HTMO"
       when: not htmo_installed_check.stat.exists
       block:
         -
@@ -35,8 +35,8 @@
             line: "OK"
             state: present
           check_mode: true
-          register: presence
-          failed_when: presence is changed
+          register: presence_htmo
+          failed_when: presence_htmo is changed
 
         -
           name: "Stopping Domino for Changes to take effect"

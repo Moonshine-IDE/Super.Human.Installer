@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing MariaDB"
+
 mariadb_admin_pass: SomeMariaDBeyPassword
 mariadb_admin_user: root
 startcloud_mariadb_port_forwards:

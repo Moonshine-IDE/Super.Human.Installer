@@ -14,7 +14,7 @@ certbot_hsts: false
 # Parameters used when creating new Certbot certs.
 certbot_create_if_missing: false
 certbot_create_method: standalone
-certbot_admin_email: email@example.com
+certbot_admin_email: "{{ email }} | default('support@startcloud.com')"
 
 # Default webroot, overwritten by individual per-cert webroot directories
 certbot_webroot: /var/www/letsencrypt

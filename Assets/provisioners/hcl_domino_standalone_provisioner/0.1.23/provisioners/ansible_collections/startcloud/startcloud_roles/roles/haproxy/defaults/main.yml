@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing HAProxy"
+
 haproxy_http_port: 80
 haproxy_https_port: 443
 haproxy_cfg: haproxy.cfg.j2

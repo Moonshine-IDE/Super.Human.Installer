@@ -93,7 +93,7 @@
       replace: 
         dest: "{{ item }}"
         regexp: "(;date.timezone =)"
-        replace: "date.timezone={{librenms_php_timezone}}"
+        replace: "date.timezone={{ librenms_php_timezone }}"
       with_items: 
         - /etc/php/7.4/fpm/php.ini
         - /etc/php/7.4/cli/php.ini

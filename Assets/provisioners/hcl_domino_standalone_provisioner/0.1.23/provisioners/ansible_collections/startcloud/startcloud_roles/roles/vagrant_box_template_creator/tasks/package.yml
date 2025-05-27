@@ -1,0 +1,49 @@
+---
+# Package tasks
+
+- name: Set provider list
+  set_fact:
+    providers_to_process: "{{ template_providers }}"
+
+- name: Report packaging status
+  debug:
+    msg: "Packaging {{ template_def.name }} for providers: {{ providers_to_process | join(', ') }}"
+
+- name: Package for each provider
+  block:
+    - name: Check if provider package.json exists
+      stat:
+        path: "providers/{{ item }}/package.json"
+      register: package_file_stat
+      loop: "{{ providers_to_process }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Package for provider
+      command: >
+        packer build
+        {% for var_file in default_var_files %}
+        -var-file='{{ var_file }}'
+        {% endfor %}
+        -var-file='{{ template_file }}'
+        providers/{{ item.item }}/package.json
+      register: package_result
+      failed_when: package_result.rc != 0
+      changed_when: package_result.rc == 0
+      loop: "{{ package_file_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stat.exists
+
+    - name: Report missing package.json
+      debug:
+        msg: "Package configuration not found for provider: {{ item.item }}"
+      loop: "{{ package_file_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: not item.stat.exists
+
+  rescue:
+    - name: Report packaging error
+      debug:
+        msg: "Error packaging {{ template_def.name }}. Check output for details."

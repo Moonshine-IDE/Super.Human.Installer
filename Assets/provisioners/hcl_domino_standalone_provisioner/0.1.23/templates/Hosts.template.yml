@@ -1,17 +1,16 @@
-# core_provisioner_version: 0.2.8
-# provisioner_name: hcl_domino_standalone_provisioner
-# provisioner_version: 0.1.22
 ---
 hosts:
   -
     settings:
+      # Vagrant Debug
       debug_build: false
+
       # Identifiers
       hostname: ::SERVER_HOSTNAME::
       domain: ::SERVER_DOMAIN::
       server_id: '::SERVER_ID::'
 
-    # Extra Actions
+      # Extra Actions
       post_provision: ::POST_PROVISION:: ## This calls extra things after Ansible completes, like syncing the new SSH key from the lockdown role, or the id_files or the support bundle
 
       # Resources
@@ -21,15 +20,16 @@ hosts:
       # Console Access
       consoleport: ::SERVER_ID::
       consolehost: 0.0.0.0
-      show_console: ::SHOW_CONSOLE:: ## Some people have reported issues when VBox doesn't show the Console
+      show_console: ::SHOW_CONSOLE:: ## Some people have reported issues when VBox doesn't show the Console, default to false
 
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: ::BOX_URL:: # Should default to 'https://boxvault.startcloud.com' but can be set to 'https://vagrantcloud.com'
-      box_version: 2025.2.9
+      box_version: 2025.5.24
+      box_arch: amd64 ## Next release needs to be changed to this ::BOX_ARCH::
 
       # Provider Specific Settings
-      provider_type: virtualbox
+      provider_type: virtualbox ## Next release needs to be chagned to this ::VAGRANT_PROVIDER:: 
       os_type: 'Debian_64'
       firmware_type: UEFI
 
@@ -38,7 +38,7 @@ hosts:
 
       # Vagrant Configurations
       vagrant_user: ::SERVER_DEFAULT_USER:: #  startcloud
-      vagrant_user_pass: ::SERVER_DEFAULT_USER_PASS:: # 'STARTcloud24@!' 
+      vagrant_user_pass: ::SERVER_DEFAULT_USER_PASS:: # 'STARTcloud24@!'
       vagrant_user_private_key_path: ./id_rsa
       vagrant_ssh_insert_key: true
       vagrant_ssh_forward_agent: true
@@ -53,16 +53,29 @@ hosts:
         -
           name: vagrant-scp
 
+    # UTM Provider Specific Settings
+    utm:
+      notes: "Vagrant: For testing plugin development"  # Custom VM notes/description
+      check_guest_additions: false                       # Check for qemu-guest-agent
+      functional_9pfs: false                            # VirtFS 9P filesystem support
+      customizations:                                  # Custom AppleScript commands
+        # - event: "pre-boot"
+        #   command: ["customize_vm.applescript", ":id", "--some-option", "value"]
+        # - event: "post-boot"
+        #   command: ["some_script.applescript", ":id", "--another-option"]                                 # Custom AppleScript commands
+
     networks:
-      # Future iteration may omit this to skip attaching a bridged adpater, the below block will need to be template unto itself
-      - type: external
+      # if ::NO_BRIDGE_INTERFACE::
+      # TO SHI DEVs, if user wants to to disable the external bridged interface, then you should remove the below block
+      -
+        type: external
         address: ::NETWORK_ADDRESS::
         netmask: ::NETWORK_NETMASK::
         gateway: ::NETWORK_GATEWAY::
         autoconf: false
         vlan:
         dhcp4: ::NETWORK_DHCP4::
-        dhcp6: false # false
+        dhcp6: false
         is_control: false
         route: default
         provisional: false
@@ -92,6 +105,8 @@ hosts:
       #    mount: ::ADDITIONAL_DISK_MOUNT_POINT::
       #    size: ::ADDITIONAL_DISK_SIZE::
       #    port: 5
+      #    device: vdb
+      #    #driver: virtio-scsi #Only add if your template doesn't already use virtio-scsi(the new templates do)
       #    volume_name: disk1
 
     provisioning:
@@ -152,6 +167,7 @@ hosts:
         type: virtualbox
         disabled: true
         automount: true
+
       -
         description: "Directory for Ansible Scripts"
         map: ./provisioners/ansible/
@@ -163,53 +179,55 @@ hosts:
           - '--delete'
           - '-z'
           - '--copy-links'
+
       -
         description: "Directory for Ansible Collections"
         map: ./provisioners/ansible_collections/
         to: /vagrant/ansible_collections/
-        type: ::SYNC_METHOD::
+        type: ::SYNC_METHOD:: ## rsync or scp
         args:
           - '--verbose'
           - '--archive'
           - '--delete'
           - '-z'
           - '--copy-links'
+
       -
         description: "Directory for Application Installers"
         map: ./installers/
         to: /vagrant/installers/
         type: ::SYNC_METHOD:: ## rsync or scp
+
       -
         description: "Directory for Pre-Signed SSLs"
         map: ./ssls/
         to: /secure/
         type: ::SYNC_METHOD:: ## rsync or scp
+
       -
         description: "Directory for Server and User IDs"
         map: ./id-files/
         to: /id-files/
         type: ::SYNC_METHOD:: ## rsync or scp
-        syncback: ::SYNCBACK_ID_FILES::
+        syncback: ::SYNCBACK_ID_FILES:: ## Should Default to True
 
     vars:
       # Secrets Override: If you don't want to use a secrets file you can override secrets here
-      domino_installer_base_url: ::SECRETS_PROMINIC_DOWNLOADS_URL::
-      domino_installer_url_user: ::SECRETS_PROMINIC_DOWNLOADS_USER::  # Only if useAuth is true
-      domino_installer_url_pass: ::SECRETS_PROMINIC_DOWNLOADS_PASS::  # Only if useAuth is true
-      
+      # Uncomment and fill in these lines if you want to download the installers for this instance
+      # Note that the installer names must match the names on the download server.
+      #secrets:
+      #  installer_base_url: ::DOWNLOAD_BASE_URL::
+      #  installer_url_user: ::DOWNLOAD_AUTH_USER::
+      #  installer_url_pass: ::DOWNLOAD_AUTH_PASS::
+
+      ## Provisioner Debug
       debug_all: ::DEBUG_ALL_ANSIBLE_TASKS::
+
+      ## SSL
       selfsigned_enabled: ::CERT_SELFSIGNED::
       haproxy_ssl_redirect: true
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
-
-      #dns_entries_list:
-      #  - nomadweb
-      #  - domino
-      #  - traveler
-      #  - verse
-      #  - console
-      #  - downloads
 
       ## Use Proxy for downloads and updates
       use_proxy: ::USE_HTTP_PROXY::
@@ -219,56 +237,83 @@ hosts:
       ## Extra Packages
       extra_packages: ['htop']
 
-      # Domino Configuration Variables
+      ## Domino Configuration Variables
+      #domino_server_name: "DoMiNO-iS-dVMb" # Defaults to settings.hostname if not set
+      #domino_server_domain: "some-domino-org-different-than-vms-domain.tld" # Defaults to settings.domain if not set
       domino_organization: ::SERVER_ORGANIZATION::
       domino_admin_notes_id_password: ::DOMINO_ADMIN_PASSWORD::
-
-      # Domino OIDC Configurations
       domino_oidc_debug: false
 
-      user_safe_id: ::USER_SAFE_ID::
+      #domino_oidc_external_providers:
+      #  - name: null
+      #    base_url: null
+      #    client_id: null
+      #    client_secret: null
 
-      #generate_server_id_count: ::DOMINO_SERVER_CLUSTERMATES::
+      ## Safe-ids to cross-certify (only works for initial/standalone server)
+      # You need to add a file matching this name to id-files/user-safe-ids
+      user_safe_id: ::USER_SAFE_ID::
 
       ## Additional server options
       is_additional_server: ::DOMINO_IS_ADDITIONAL_INSTANCE::
       domino_server_id: ::DOMINO_SERVER_ID::
-      origin_server: ::SERVER_HOSTNAME::  ## Note to SHI dev, may be able to use ::SERVER_DOMAIN:: instead of ::DOMINO_ORIGIN_DOMAIN::
-      #origin_server_ip: ::DOMINO_ORIGIN_SERVER_IP::
+      origin_server: ::DOMINO_ORIGIN_HOSTNAME::
+      origin_server_ip: ::DOMINO_ORIGIN_SERVER_IP::
 
-      # Genesis Variables
+      # ots: Use One Touch Setup to generate the ID (server names are incremented, ie mail1 mail2 mail3 . .)
+      # asja: Use Custom Additional Server Java Applet to generate the additional server ID
+      #domino_server_id_creation_tool: ::DOMINO_SERVER_ID_CREATION_TOOL::
+
+      ## OTS Additional Server Settings
+      # For use in Domino 14 and above, uncomment out these and set as needed
+      #ots_generate_server_names:
+      #  - ::DOMINO_ADITIONAL_HOSTNAME::.::SERVER_DOMAIN::
+      
+      # For use in Domino 12 and below
+      #ots_generate_server_id_count:  ::DOMINO_SERVER_CLUSTERMATES::
+      #ots_generate_server_id_pattern: ::DOMINO_SERVER_CLUSTERMATES_PATTERN::
+
+      ## ASJA Server Settings
+      # If using ASJA instead of OTS to generated Server IDs uncomment these lines
+      #asja_generate_server_ids:
+      #  - name: additional-demo.startcloud.com
+      #    pass: ""
+
+      ## Genesis Variables
       genesis_packages:
         - netmonitor
         - SuperHumanPortal
 
-      # Domino Installer Variables
+      ## Domino Installer Variables
       domino_hash: ::DOMINO_HASH::
+      # REPLACEME:   Update Domino installer and version if needed, and update the versions as well
+      # If you want to use a local copy, it must match the below name and be added to `./installers/domino/archives`
       domino_server_installer_tar: ::DOMINO_INSTALLER::
       domino_major_version: ::DOMINO_INSTALLER_MAJOR_VERSION::
       domino_minor_version: ::DOMINO_INSTALLER_MINOR_VERSION::
       domino_patch_version: ::DOMINO_INSTALLER_PATCH_VERSION::
 
-      # Domino fixpack Variables
+      ## Domino fixpack Variables
       domino_fp_hash: ::DOMINO_FP_HASH::
       domino_installer_fixpack_install: ::DOMINO_INSTALLER_FIXPACK_INSTALL::
       domino_fixpack_version: ::DOMINO_INSTALLER_FIXPACK_VERSION::
       domino_server_fixpack_tar: ::DOMINO_INSTALLER_FIXPACK::
 
-      # Domino Hotfix Variables
+      ## Domino Hotfix Variables
       domino_hf_hash: ::DOMINO_HF_HASH::
       domino_installer_hotfix_install: ::DOMINO_INSTALLER_HOTFIX_INSTALL::
       domino_hotfix_version: ::DOMINO_INSTALLER_HOTFIX_VERSION::
       domino_server_hotfix_tar: ::DOMINO_INSTALLER_HOTFIX::
 
-## Jedi Overrides
+      ## Jedi Overrides
       jedi_enabled: true ## If you prefer Nashed Domino Management, but want to have Jedi Installed, set this to False, otherwise if you want Jedi to manage domino, set this to true
 
-      # Leap Variables
+      ## Leap Variables
       leap_hash: ::LEAP_HASH::
       leap_archive: ::LEAP_INSTALLER::
       leap_version: ::LEAP_INSTALLER_VERSION::
 
-      # Nomad Web Variables
+      ## Nomad Web Variables
       nomadweb_hash: ::NOMADWEB_HASH::
       nomadweb_archive: ::NOMADWEB_INSTALLER::
       nomadweb_version: ::NOMADWEB_VERSION::
@@ -276,8 +321,7 @@ hosts:
       nomad_hotfix_version: ::NOMADWEB_VERSION_HOTFIX_INSTALL:: # "HF1"
       nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL:: # Default to False, HCL may provide Hotfixes, for example HF1 fixes and issue that requires Nomad to be restarted after HTTP comes up
 
-
-      # Traveler Variables
+      ## Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
       traveler_archive: ::TRAVELER_INSTALLER::
       traveler_base_version: ::TRAVELER_INSTALLER_VERSION::
@@ -285,27 +329,22 @@ hosts:
       traveler_fixpack_archive: ::TRAVELER_FP_INSTALLER::
       traveler_fixpack_version: ::TRAVELER_FP_INSTALLER_VERSION::
 
-      # Verse Variables
-     # verse_hash: ::VERSE_HASH::
+      ## Verse Variables
+      #verse_hash: ::VERSE_HASH::
       verse_archive: ::VERSE_INSTALLER::
       verse_base_version: ::VERSE_INSTALLER_VERSION::
 
-      # AppDev Web Pack Variables
-      #appdevpack_hash: ::APPDEVPACK_HASH::
-      appdevpack_archive: ::APPDEVPACK_INSTALLER::
-      appdevpack_version: ::APPDEVPACK_INSTALLER_VERSION::
-
-      # Domino Rest API Variables
+      ## Domino Rest API Variables
       #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
       domino_rest_api_version: ::DOMINO_REST_API_INSTALLER_VERSION::
       domino_rest_api_archive: ::DOMINO_REST_API_INSTALLER::
 
-       ## Hosts entries for /etc/hosts
+      ## Hosts entries for /etc/hosts ## Really only needed for Standalone
       #etc_hosts_entries:
-       # - hostname: ::DOMINO_ORIGIN_HOSTNAME::.::DOMINO_ORIGIN_DOMAIN::
-        #  aliases:
-         #   - ::DOMINO_ORIGIN_HOSTNAME::
-          #ip: ::DOMINO_ORIGIN_SERVER_IP::
+      #  - hostname: ::DOMINO_ORIGIN_HOSTNAME::.::DOMINO_ORIGIN_DOMAIN::
+      #    aliases:
+      #      - ::DOMINO_ORIGIN_HOSTNAME::
+      #    ip: ::DOMINO_ORIGIN_SERVER_IP::
 
     roles:
       - name: startcloud.startcloud_roles.setup
@@ -322,8 +361,7 @@ hosts:
       - name: startcloud.startcloud_roles.sdkman_gradle
       - name: startcloud.startcloud_roles.ssl
       - name: startcloud.hcl_roles.domino_reset
-        vars:
-          run_tasks: ::ROLE_DOMINO_RESET::
+        when: ::ROLE_DOMINO_RESET::
       - name: startcloud.hcl_roles.domino_install
       - name: startcloud.hcl_roles.domino_vagrant_rest_api
       - name: startcloud.hcl_roles.domino_service_nash
@@ -335,46 +373,30 @@ hosts:
       - name: startcloud.hcl_roles.domino_genesis_applications
       - name: startcloud.hcl_roles.domino_cross_certify
       - name: startcloud.hcl_roles.domino_java_app_example
-        vars:
-          run_tasks: true
+        when:  true
       - name: startcloud.hcl_roles.domino_oidc
-        vars:
-          run_tasks: ::ROLE_OIDC:: # Default to true
+        when: ::ROLE_OIDC:: # Default to true
       - name: startcloud.hcl_roles.domino_leap
-        vars:
-          run_tasks: ::ROLE_LEAP::
+        when: ::ROLE_LEAP::
       - name: startcloud.hcl_roles.domino_traveler
-        vars:
-          run_tasks: ::ROLE_TRAVELER::
+        when: ::ROLE_TRAVELER::
       - name: startcloud.hcl_roles.domino_traveler_htmo
-        vars:
-          run_tasks: ::ROLE_TRAVELER_HTMO::
+        when: ::ROLE_TRAVELER_HTMO::
       - name: startcloud.hcl_roles.domino_verse
-        vars:
-          run_tasks: ::ROLE_VERSE::
-      - name: startcloud.hcl_roles.domino_appdevpack
-        vars:
-          run_tasks: ::ROLE_APPDEVPACK::
+        when: ::ROLE_VERSE::
       - name: startcloud.hcl_roles.domino_rest_api
-        vars:
-          run_tasks: ::ROLE_DOMINO_RESTAPI::
+        when: ::ROLE_DOMINO_RESTAPI::
       - name: startcloud.hcl_roles.domino_nomadweb
-        vars:
-          run_tasks: ::ROLE_NOMADWEB::
+        when: ::ROLE_NOMADWEB::
       - name: startcloud.hcl_roles.domino_jedi
-        vars:
-          run_tasks: ::ROLE_JEDI::
+        when: ::ROLE_JEDI::
       - name: startcloud.hcl_roles.domino_vagrant_readme
+        when: true
       - name: startcloud.startcloud_roles.quick_start
         tags: always
-        vars:
-          run_tasks: ::ROLE_STARTCLOUD_QUICK_START::
+        when: ::ROLE_STARTCLOUD_QUICK_START::
       - name: startcloud.startcloud_roles.haproxy
-        vars:
-          run_tasks: ::ROLE_STARTCLOUD_HAPROXY::
+        when: ::ROLE_STARTCLOUD_HAPROXY::
       - name: startcloud.startcloud_roles.vagrant_readme
-        vars:
-          run_tasks: ::ROLE_STARTCLOUD_VAGRANT_README::
+        when: ::ROLE_STARTCLOUD_VAGRANT_README::
       - name: startcloud.startcloud_roles.lockdown
-        vars:
-          run_tasks: true

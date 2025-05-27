@@ -55,7 +55,7 @@
             </div>
             <p>Add the following line to your HOSTS file (this only must be done one time for each server):</p>
             <div class="tooltipnoborder">
-                <a href="#" onclick="CopyToClipboard('hosts');return false;"><code id="hosts">{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} {% if domino_install_proxy_url is defined %}{{ domino_install_proxy_url }}{% endif %} {% if domino_vagrant_rest_api_proxy_url is defined %}{{ domino_vagrant_rest_api_proxy_url }}{% endif %} {{ startcloud_quick_start_proxy_url }} {% if domino_traveler_proxy_url is defined %}{{ domino_traveler_proxy_url }}{% endif %} {% if domino_verse_proxy_url is defined %}{{ domino_verse_proxy_url }}{% endif %} {% if domino_leap_proxy_url is defined %}{{ domino_leap_proxy_url }}{% endif %} {% if domino_nomadweb_proxy_url is defined %}{{ domino_nomadweb_proxy_url }}{% endif %} {% if domino_rest_api_proxy_url is defined %}{{ domino_rest_api_proxy_url }}{% endif %} {% if domino_appdevpack_proxy_url is defined %}{{ domino_appdevpack_proxy_url }}{% endif %}  #entry requested by Super.Human.Installer on {{ ansible_date_time.iso8601 }} for server id {{ settings.server_id }}</code></a>
+                <a href="#" onclick="CopyToClipboard('hosts');return false;"><code id="hosts">{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} {% if domino_install_proxy_url is defined %}{{ domino_install_proxy_url }}{% endif %} {% if domino_vagrant_rest_api_proxy_url is defined %}{{ domino_vagrant_rest_api_proxy_url }}{% endif %} {{ startcloud_quick_start_proxy_url }} {% if domino_traveler_proxy_url is defined %}{{ domino_traveler_proxy_url }}{% endif %} {% if domino_verse_proxy_url is defined %}{{ domino_verse_proxy_url }}{% endif %} {% if domino_leap_proxy_url is defined %}{{ domino_leap_proxy_url }}{% endif %} {% if domino_nomadweb_proxy_url is defined %}{{ domino_nomadweb_proxy_url }}{% endif %} {% if domino_rest_api_proxy_url is defined %}{{ domino_rest_api_proxy_url }}{% endif %} #entry requested by Super.Human.Installer on {{ ansible_date_time.iso8601 }} for server id {{ settings.server_id }}</code></a>
                 <span class="tooltiptextcenter">Copy to Clipboard</span>
             </div>
         </div>
@@ -122,13 +122,6 @@
                 {% if domino_leap_proxy_url is defined %}
                 <li>
                     <a href="https://{{ domino_leap_proxy_url }}/volt-apps/secure/org/ide/manager.html" target="_blank">Volt</a>
-                </li>
-                {% endif %}
-                {% if domino_appdevpack_proxy_url is defined %}
-                <!-- {{ domino_rest_api_proxy_url }} -->
-                <!-- {{ domino_appdevpack_proxy_url }} -->
-                <li>
-                    <a href="https://doc.cwpcollaboration.com/appdevpack/docs/en/setup-guide-cfgtest0.html" target="_blank">App Dev Web Pack</a>
                 </li>
                 {% endif %}
                 {% if domino_rest_api_proxy_url is defined %}

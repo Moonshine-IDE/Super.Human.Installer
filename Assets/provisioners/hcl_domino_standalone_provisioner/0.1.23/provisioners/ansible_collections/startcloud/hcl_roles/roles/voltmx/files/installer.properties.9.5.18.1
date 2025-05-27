@@ -1,0 +1,538 @@
+# Fri Sep 05 21:07:27 IST 2014
+# Replay feature output
+# ---------------------
+# This file was built by the Replay feature of InstallAnywhere.
+# It contains variables that were set by Panels, Consoles or Custom Code.
+#------------------------------------------------------------------------
+
+# Note that all options are case-sensitive
+# It is recommended to go through installation guide before starting the installation.
+#-------------------------------------------------------------------------------------
+
+
+#Installation Type
+#-------------------
+#Choose whether installation type is Production or Non-Production or Development.
+#If you want to use Production set CONSOLE_INSTALLATION_TYPE_1 to Production
+#If you want to use Non-Production set CONSOLE_INSTALLATION_TYPE_2 to Non-Production
+#If you want to use Development CONSOLE_INSTALLATION_TYPE_3 to Development
+
+CONSOLE_INSTALLATION_TYPE_1=
+CONSOLE_INSTALLATION_TYPE_2=
+CONSOLE_INSTALLATION_TYPE_3=
+
+
+#Prerequisites
+#-------------
+# Leave this variable as is
+#--------------------------
+PROMPT_USER_CHOSEN_OPTION=0
+
+# Install Components
+#------------------
+# If you want to install all the services use following
+#INSTALL_COMP_1=Console
+#INSTALL_COMP_2=Identity Services
+#INSTALL_COMP_3=Integration Services
+#INSTALL_COMP_4=API Developer Portal
+#INSTALL_COMP_5=Engagement Services
+# If you want to install only Console use INSTALL_COMP_1=Console
+# If you want to install only Identity Services use INSTALL_COMP_2=Identity Services
+# If you want to install only Integration Services use INSTALL_COMP_3=Integration Services
+# If you want to install only Developer Portal use INSTALL_COMP_4=API Developer Portal
+# If you want to install only Engagement Services use INSTALL_COMP_5=Engagement Services
+#---------------------------------------------------------------------------------------------------
+INSTALL_COMP_1=
+INSTALL_COMP_2=
+INSTALL_COMP_3=
+INSTALL_COMP_4=
+INSTALL_COMP_5=
+
+# Send Usage Data
+# ----------------
+# Help us make your Volt Foundry experience better by allowing us to collect product usage information.
+# We will not save any of your private or application data.
+# If you want to send usage data set SEND_USAGE_DATA_INPUT_1 to Yes.
+# If you don't want to send usage data then comment SEND_USAGE_DATA_INPUT_1.Uncomment SEND_USAGE_DATA_INPUT_2 and set it to No.
+#------------------------------------------------------------------------------------------------------------------------------
+SEND_USAGE_DATA_INPUT_1=Yes
+#SEND_USAGE_DATA_INPUT_2=
+
+#Choose Install Folder
+#Note: Build version will be appended automatically to the install folder
+#---------------------
+USER_INSTALL_DIR=$USER_HOME$/VoltFoundryInstaller-GA-9.5.18.1
+
+#Application Server
+#------------------
+#Please select server of your choice.
+#If you want to use Tomcat 9.0.90 then set USER_INPUT_SERVER_CHOICE_1=Tomcat 9.0.90
+#If you want to use JBoss 7.4 then set USER_INPUT_SERVER_CHOICE_2=JBoss 7.4
+#If you want to use Weblogic 14c (14.1.1.0) then set USER_INPUT_SERVER_CHOICE_3=Weblogic 14c (14.1.1.0)
+#If you want to use WebSphere 8.5.5.13 then set USER_INPUT_SERVER_CHOICE_4=WebSphere 8.5.5.13
+
+#-------------------------------------------------------------------------------------------------------
+
+USER_INPUT_SERVER_CHOICE_1=
+USER_INPUT_SERVER_CHOICE_2=
+USER_INPUT_SERVER_CHOICE_3=
+USER_INPUT_SERVER_CHOICE_4=
+
+#Installation Mode
+#-----------------
+# If you have selected JBoss 7.4 application server then please select installation mode using below options.
+# If you want to install standalone mode use USER_INPUT_INSTALL_MODE_1=Standalone Mode (Single Node installation in bundled JBoss)
+# If you want to use preconfigured standalone jboss set USER_INPUT_INSTALL_MODE_2=Standalone Mode (Single Node installation in pre-configured JBoss)
+# If you want to install domain mode use USER_INPUT_INSTALL_MODE_3=Domain Mode (Multi Node installation in pre-configured JBoss cluster)
+#Setting USER_INPUT_INSTALL_MODE_1 to Standalone Mode (Single Node installation in bundled JBoss) which means the MobileFoundry is going to use the JBoss bundled with the installer.
+#Setting USER_INPUT_INSTALL_MODE_2 to Standalone Mode (Single Node installation in pre-configured JBoss) which means the MobileFoundry will use the existing standalone jboss setup. You
+#will need to provide the preconfigured standalone JBoss details.
+#Setting USER_INPUT_INSTALL_MODE_3 to Domain Mode (Multi Node installation in pre-configured JBoss cluster) which means the MobileFoundry will use the existing multinode jboss setup.
+#You will need to provide the preconfigured multinode JBoss details.
+#--------------------------------------------------------------------------------------------------------------------------------------------------
+USER_INPUT_INSTALL_MODE_1=Standalone Mode (Single Node installation in bundled JBoss)
+USER_INPUT_INSTALL_MODE_2=
+USER_INPUT_INSTALL_MODE_3=
+
+#HTTP or HTTPS
+#-------------
+# If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# If you want to HTTP use USER_INPUT_PROTOCOL_1=HTTP
+# If you want to HTTPS use USER_INPUT_PROTOCOL_2=HTTPS
+#---------------------------------------------------------------------------------------
+USER_INPUT_PROTOCOL_1=HTTP
+USER_INPUT_PROTOCOL_2=
+
+
+#Details for Application Server
+#------------------------------
+# If you have selected Identity Services or Console Component or Engagement Services, then uncomment & provide below details.
+# If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# CONSOLE_HOST_DETAILS_1 is Hostname/IP Address of the system.
+# CONSOLE_HOST_DETAILS_2 is HTTP Port of the system.
+# CONSOLE_HOST_DETAILS_3 is HTTPS Port of the system.
+# Please make sure that if you using HTTP then CONSOLE_HOST_DETAILS_3 should be commented
+# and if you are using then CONSOLE_HOST_DETAILS_3 should be uncommented.
+#---------------------------------------------------------------------------------------------------------------------------
+#CONSOLE_HOST_DETAILS_1=
+#CONSOLE_HOST_DETAILS_2=8080
+#CONSOLE_HOST_DETAILS_3=8443
+
+#Details for Application Server
+#------------------------------
+# If you have selected Integration Services or All Components with HTTP protocol, then uncomment & provide below details.
+# If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# CONSOLE_HOST_DETAILS_1 is Hostname/IP Address of the system.
+# CONSOLE_HOST_DETAILS_2 is HTTP Port of the system.
+#---------------------------------------------------------------------------------------------------------------------------
+#CONSOLE_HOST_DETAILS_1=
+#CONSOLE_HOST_DETAILS_2=8080
+
+#Details for Application Server
+#------------------------------
+# If you have selected Integration Services or All Components with HTTPS protocol, then uncomment & provide below details.
+# If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# CONSOLE_HOST_DETAILS_1 is Hostname/IP Address of the system.
+# CONSOLE_HOST_DETAILS_2 is HTTP Port of the system.
+# CONSOLE_HOST_DETAILS_3 is HTTPS Port of the system.
+#---------------------------------------------------------------------------------------------------------------------------
+#CONSOLE_HOST_DETAILS_1=
+#CONSOLE_HOST_DETAILS_2=8080
+#CONSOLE_HOST_DETAILS_3=8443
+
+#SSL Configuration for HTTPS Communication
+#-----------------------------------------
+#If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# If you want to create self-signed certificate from installer then use CONSOLE_SSL_CERTS_1=Generate a self-signed certificate
+# else if you have a valid SSL Certificate use CONSOLE_SSL_CERTS_2=Use existing certificate
+#-----------------------------------------------------------------------------------------------------------------------------
+CONSOLE_SSL_CERTS_1=
+CONSOLE_SSL_CERTS_2=
+
+#Details for self-signed SSL Certificate
+#---------------------------------------
+#If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# If you are using CONSOLE_SSL_CERTS_1=Create self-signed certificate, then provide below details
+# CONSOLE_CERTS_DETAILS_1 is Organizational Unit, CONSOLE_CERTS_DETAILS_2 Hostname mapped in SSL Certificate, CONSOLE_CERTS_DETAILS_3 is Company Name
+# CONSOLE_CERTS_DETAILS_4 is City, CONSOLE_CERTS_DETAILS_5 is State and CONSOLE_CERTS_DETAILS_6 is Country.
+#-----------------------------------------------------------------------------------------------------------------------------------------------------
+CONSOLE_CERTS_DETAILS_1=
+CONSOLE_CERTS_DETAILS_2=
+CONSOLE_CERTS_DETAILS_3=
+CONSOLE_CERTS_DETAILS_4=
+CONSOLE_CERTS_DETAILS_5=
+CONSOLE_CERTS_DETAILS_6=
+
+#SSL Certificate Details
+#-----------------------
+#If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# If you are suing CONSOLE_SSL_CERTS_2=Provide SSL certificate provide below details.
+# CONSOLE_APPSERVER_SSL_1 is absolute path of keystore file.
+#---------------------------------------------------------------------------------------
+CONSOLE_APPSERVER_SSL_1=
+
+#Password for keystore file
+#--------------------------
+#If you have selected Tomcat or JBoss standalone mode then please provide below details.
+# APPSERVER_KEYSTORE_PASS is password of keystore file.
+# Leave INDEX_OF_MATCHING_PASSWORD as is.
+#---------------------------------------------------------------------------------------
+APPSERVER_KEYSTORE_PASS=
+INDEX_OF_MATCHING_PASSWORD=0
+
+#Application Server Details
+#--------------------------
+# If you have selected Jboss standalone(Existing) or JBoss domain mode as installation mode provide below details.
+# If you have selected Identity Services or Console Component, then uncomment & provide below details.
+# USER_INPUT_MASTER_NODE_1 is Fully Qualified Public URL of MobileFoundry Console.
+# USER_INPUT_MASTER_NODE_2 is Master Node Hostname/IP Address.
+# USER_INPUT_MASTER_NODE_3 is Management Port.
+# USER_INPUT_MASTER_NODE_4 is User.
+#--------------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_MASTER_NODE_1=
+#USER_INPUT_MASTER_NODE_2=
+#USER_INPUT_MASTER_NODE_3=9999
+#USER_INPUT_MASTER_NODE_4=master
+
+#Application Server Details
+#--------------------------
+# If you have selected Jboss standalone(Existing) or JBoss domain mode as installation mode provide below details.
+# If you have selected Integration Services or All Components, then uncomment & provide below details.
+# USER_INPUT_MASTER_NODE_1 is Fully Qualified Public URL of MobileFoundry Console.
+# USER_INPUT_MASTER_NODE_2 is Master Node Hostname/IP Address.
+# USER_INPUT_MASTER_NODE_3 is Management port.
+# USER_INPUT_MASTER_NODE_4 is HTTP/HTTPS port of JBoss Master Node.
+# USER_INPUT_MASTER_NODE_5 is JBoss Master Node User.
+#--------------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_MASTER_NODE_1=
+#USER_INPUT_MASTER_NODE_2=
+#USER_INPUT_MASTER_NODE_3=9999
+#USER_INPUT_MASTER_NODE_4=8080
+#USER_INPUT_MASTER_NODE_5=master
+
+#Application Server Details
+#--------------------------
+# This is used only in Weblogic installation.
+# If you have selected Identity Services or Console Component, then uncomment & provide below details.
+# Please uncomment below fields and set proper value for Weblogic and comment above JBoss domain mode related variables.
+# USER_INPUT_WEBLOGIC_DETAIL_1 is Fully Qualified Public URL of Console/Identity Services.
+# USER_INPUT_WEBLOGIC_DETAIL_2 is WebLogic Management Server IP Address/Hostname.
+# USER_INPUT_WEBLOGIC_DETAIL_3 is WebLogic Management Server Port.
+# USER_INPUT_WEBLOGIC_DETAIL_4 is WebLogic Management Server User.
+#----------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_WEBLOGIC_DETAIL_1=
+#USER_INPUT_WEBLOGIC_DETAIL_2=
+#USER_INPUT_WEBLOGIC_DETAIL_3=
+#USER_INPUT_WEBLOGIC_DETAIL_4=
+
+#Application Server Details
+#--------------------------
+# This is used only in Weblogic installation.
+# If you have selected Integration Services or All Components, then uncomment & provide below details.
+# Please uncomment below fields and set proper value for Weblogic and comment above JBoss domain mode related variables.
+# USER_INPUT_WEBLOGIC_DETAIL_1 is Fully Qualified Public URL of Console/Integration Services.
+# USER_INPUT_WEBLOGIC_DETAIL_2 is WebLogic Management Server IP Address/Hostname.
+# USER_INPUT_WEBLOGIC_DETAIL_3 is WebLogic Management Server Port.
+# USER_INPUT_WEBLOGIC_DETAIL_4 is Weblogic Management Server User.
+#----------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_WEBLOGIC_DETAIL_1=
+#USER_INPUT_WEBLOGIC_DETAIL_2=
+#USER_INPUT_WEBLOGIC_DETAIL_3=
+#USER_INPUT_WEBLOGIC_DETAIL_4=
+
+#Application Server Details
+#--------------------------
+# This is used only in WebSphere installation.
+# If you have selected Identity Services or Console Component, then uncomment & provide below details.
+# Please uncomment below fields and set proper value for WebSphere and comment above JBoss domain mode related variables.
+# USER_INPUT_WEBSPHERE_DETAIL_1 is Fully Qualified Public URL of Console/Identity Services.
+# USER_INPUT_WEBSPHERE_DETAIL_2 is WebSphere Administration Server IP Address/Hostname.
+# USER_INPUT_WEBSPHERE_DETAIL_3 is WebSphere SOAP Connector Port.
+# USER_INPUT_WEBSPHERE_DETAIL_4 is WebSphere Administration Server User.
+#----------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_WEBSPHERE_DETAIL_1=
+#USER_INPUT_WEBSPHERE_DETAIL_2=
+#USER_INPUT_WEBSPHERE_DETAIL_3=
+#USER_INPUT_WEBSPHERE_DETAIL_4=
+
+#Application Server Details
+#--------------------------
+# This is used only in WebSphere installation.
+# If you have selected Integration Services or All Components, then uncomment & provide below details.
+# Please uncomment below fields and set proper value for WebSphere and comment above JBoss domain mode related variables.
+# USER_INPUT_WEBSPHERE_DETAIL_1 is Fully Qualified Public URL of Console/Integration Services.
+# USER_INPUT_WEBSPHERE_DETAIL_2 is WebSphere Administration Server IP Address/Hostname.
+# USER_INPUT_WEBSPHERE_DETAIL_3 is WebSphere SOAP Connector Port.
+# USER_INPUT_WEBSPHERE_DETAIL_4 is WebSphere Administration Server User.
+#----------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_WEBSPHERE_DETAIL_1=
+#USER_INPUT_WEBSPHERE_DETAIL_2=
+#USER_INPUT_WEBSPHERE_DETAIL_3=
+#USER_INPUT_WEBSPHERE_DETAIL_4=
+
+#Master Node User Password
+#---------------------------
+# This is used only in JBoss Standalone(Existing) mode, JBoss domain mode installation mode, Weblogic and WebSphere.
+# MASTER_PASSWORD is password of management user.
+# Leave INDEX_OF_MATCHING_PASSWORD as is.
+#------------------------------------------------------------------------------------
+MASTER_PASSWORD=
+INDEX_OF_MATCHING_PASSWORD=0
+
+#Application Server Details
+#--------------------------
+#If you have selected WebSphere then please provide below details.
+#Please uncomment below fields and set proper values for WebSphere.
+#CONSOLE_WAS_KEYSTORE_LOCATION_1 is location of your WebSphere generated Keystore file.
+#WAS_KEYSTORE_PASSWORD is the password for Keystore file you have chosen.
+#CONSOLE_WAS_TRUSTSTORE_LOCATION_1 is location of your Websphere generated Truststore file.
+#WAS_TRUSTSTORE_PASSWORD is the password for Truststore file you have chosen.
+# Leave INDEX_OF_MATCHING_PASSWORD as is.
+#---------------------------------------------------------------------------------
+#CONSOLE_WAS_KEYSTORE_LOCATION_1=
+#CONSOLE_WAS_KEYSTORE_PASSWORD=
+#INDEX_OF_MATCHING_PASSWORD=0
+#CONSOLE_WAS_TRUSTSTORE_LOCATION_1=
+#CONSOLE_WAS_TRUSTSTORE_PASSWORD=
+#INDEX_OF_MATCHING_PASSWORD=0
+
+#Server Groups
+#-------------
+#This is used if you have choosen JBoss domain mode installation mode, WebSphere or WebLogic application server.
+#Please uncomment below field and set proper value.
+#If you have selected JBoss domain mode installation mode leave this variable as is
+#If you have selected WebSphere application server give appropriate server group (e.g.:1 or 2).
+#--------------------------------------------------------------------------------------------------------------------
+#USER_INPUT_SERVER_GROUPS_1=all
+
+#Selected Server Group
+#---------------------
+# This is used only in JBoss domain mode installation mode.
+# Leave this variable as is
+#----------------------------------------------------------
+PROMPT_USER_CHOSEN_OPTION=0
+
+#Memcache Details
+#----------------
+# This is only used in JBoss multinode installation.
+# If you want to use memcache, set USER_INPUT_USE_MEMCACHE_1=Yes else set USER_INPUT_USE_MEMCACHE_2=No
+#----------------------------------------------------------------------------------------------------
+USER_INPUT_USE_MEMCACHE_1=
+USER_INPUT_USE_MEMCACHE_2=
+
+#Memcache Details
+#----------------
+# If you have selected to use memcache then provide the details of exisiting memcache server in IPAddress:port format.
+# You can give multiple server details also using comma separated input like 10.10.25.110:11211, 10.10.25.110:11311
+# MEMCACHE_SERVERS_1 is IPAddress:port format input of memcache server.
+#-------------------------------------------------------------------------------------------------------------------
+MEMCACHE_SERVERS_1=
+
+#Database Choice
+#---------------
+# Please select database you want to use.
+# If you want to use MySQL 8.0 then set CONSOLE_DB_CHOICE_1=MySQL 8.0
+# If you want to use MySQL 8.0 - Group Replication then set CONSOLE_DB_CHOICE_2=MySQL 8.0 Cluster - Group Replication
+# If you want to use Oracle 19c (19.3.0) then set CONSOLE_DB_CHOICE_3=Oracle 19c (19.3.0)
+# If you want to use SQL Server 2019 then set CONSOLE_DB_CHOICE_4=SQL Server 2019
+# If you have selected Tomcat or Jboss and wants to use MariaDB then set CONSOLE_DB_CHOICE_5=MariaDB 10.11.4
+# If you have selected Weblogic or Websphere and wants to use DB2 then set CONSOLE_DB_CHOICE_5=DB2 11.1
+#----------------------------------------------------------------------------------------
+CONSOLE_DB_CHOICE_1=
+CONSOLE_DB_CHOICE_2=
+CONSOLE_DB_CHOICE_3=
+CONSOLE_DB_CHOICE_4=
+CONSOLE_DB_CHOICE_5=
+
+#MySQL Database Details
+#----------------------
+# If you have selected MySQL, then please uncomment below properties and set proper value.
+# CONSOLE_DB_DETAILS_1 is Database Server Hostname/IP.
+# CONSOLE_DB_DETAILS_2 is Database Server Port.
+# CONSOLE_DB_DETAILS_3 is Database Server User Name.
+#------------------------------------------------------------------------------------------
+#CONSOLE_DB_DETAILS_1=
+#CONSOLE_DB_DETAILS_2=
+#CONSOLE_DB_DETAILS_3=
+
+#MySQL 8.0 - Group Replication - Database Details
+#----------------------
+# If you have selected MySQL, then please uncomment below properties and set proper value.
+# CONSOLE_DB_DETAILS_1 is Database Server Hostname/IP.
+# CONSOLE_DB_DETAILS_2 is Database Server Port.
+# CONSOLE_DB_DETAILS_3 is Database Server User Name.
+#------------------------------------------------------------------------------------------
+#CONSOLE_DB_DETAILS_1=
+#CONSOLE_DB_DETAILS_2=
+#CONSOLE_DB_DETAILS_3=
+
+
+#SQLServer Database Details
+#----------------------
+# If you have selected SQLServer, then please uncomment below properties and set proper value.
+# CONSOLE_DB_DETAILS_1 is Database Server Hostname/IP.
+# CONSOLE_DB_DETAILS_2 is Database Server Port.
+# CONSOLE_DB_DETAILS_3 is Database Server User Name.
+# CONSOLE_DB_DETAILS_4 is Database Server Instance Name.
+#------------------------------------------------------------------------------------------
+#CONSOLE_DB_DETAILS_1=
+#CONSOLE_DB_DETAILS_2=
+#CONSOLE_DB_DETAILS_3=
+#CONSOLE_DB_DETAILS_4=
+
+
+#Oracle Database Details
+#----------------------
+# If you have selected Oracle, then please uncomment below properties and set proper value.
+# CONSOLE_DB_DETAILS_1 is Database Server Hostname/IP.
+# CONSOLE_DB_DETAILS_2 is Database Server Port.
+# CONSOLE_DB_DETAILS_3 is Service ID.
+# CONSOLE_DB_DETAILS_4 is Administrator User Name.
+#------------------------------------------------------------------------------------------
+#CONSOLE_DB_DETAILS_1=
+#CONSOLE_DB_DETAILS_2=
+#CONSOLE_DB_DETAILS_3=
+#CONSOLE_DB_DETAILS_4=
+
+#DB2 Database Details
+#----------------------
+# If you have selected DB2, then please uncomment below properties and set proper value.
+# CONSOLE_DB_DETAILS_1 is Database Server Hostname/IP.
+# CONSOLE_DB_DETAILS_2 is Database Server Port.
+# CONSOLE_DB_DETAILS_3 is Instance Name.
+# CONSOLE_DB_DETAILS_4 is Administrator User Name.
+# CONSOLE_DB_DETAILS_5 is DB2 JDBC Driver Path.
+# CONSOLE_DB_DETAILS_6 is DB2 JDBC Driver License Path.
+
+#------------------------------------------------------------------------------------------
+#CONSOLE_DB_DETAILS_1=
+#CONSOLE_DB_DETAILS_2=
+#CONSOLE_DB_DETAILS_3=
+#CONSOLE_DB_DETAILS_4=
+#CONSOLE_DB_DETAILS_5=
+#CONSOLE_DB_DETAILS_6=
+
+#MariaDB Database Details
+#----------------------
+# If you have selected MariaDB, then please uncomment below properties and set proper value.
+# CONSOLE_DB_DETAILS_1 is Database Server Hostname/IP.
+# CONSOLE_DB_DETAILS_2 is Database Server Port.
+# CONSOLE_DB_DETAILS_3 is Database Server User Name.
+#------------------------------------------------------------------------------------------
+#CONSOLE_DB_DETAILS_1=
+#CONSOLE_DB_DETAILS_2=
+#CONSOLE_DB_DETAILS_3=
+
+# Tablespace Details
+#----------------------
+#If you have selected Oracle or DB2 Database please use the below properties by uncommenting them
+#If you want to use Default Tablespace set TABLE_SPACE_CHOICE_1 to Default Tablespace. Data,Index and LOB Tablespaces will be replaced with 'USERS' for Oracle Database and 'USERSPACE1' for DB2 Database.
+#If you want to use User Defined Tablespace then set TABLE_SPACE_CHOICE_2 to User Defined Tablespace. Provide Tablespace names to Data Tablespace, Index Tablespace and LOB Tablespace.
+
+#USER_INPUT_CONSOLE_RESULTS_1 is for database tablespace
+#USER_INPUT_CONSOLE_RESULTS_2 is for index tablespace
+#USER_INPUT_CONSOLE_RESULTS_3 is for large tablespace
+
+#---------------------------------------------------------------------------------------------
+
+#TABLE_SPACE_CHOICE_1=Default Tablespace
+#TABLE_SPACE_CHOICE_2=User Defined Tablespace
+
+#USER_INPUT_CONSOLE_RESULTS_1=
+#USER_INPUT_CONSOLE_RESULTS_2=
+#USER_INPUT_CONSOLE_RESULTS_3=
+
+
+#Database Name Prefix and suffix
+#Note:Provide Prefix and suffix Only in case of MobileFoundry Console or Identity Services or All components
+#No Prefix and suffix is not required in case of only Integration Services
+#---------------------------------------------------
+#CONSOLE_DB_PREFIX_SUFFIX_1 is Database Name Prefix
+#CONSOLE_DB_PREFIX_SUFFIX_2 is Database Name suffix
+#---------------------------------------------------
+CONSOLE_DB_PREFIX_SUFFIX_1=
+CONSOLE_DB_PREFIX_SUFFIX_2=
+
+#Enter Password for Database User
+#--------------------------------
+# CONSOLE_DB_PASS is password for database user.
+# Leave INDEX_OF_MATCHING_PASSWORD as is.
+#-----------------------------------------------
+CONSOLE_DB_PASS=
+INDEX_OF_MATCHING_PASSWORD=0
+
+#Upgrade Existing Database
+#----------------------------------
+# Set DB_EXIST_CHOICE to 1 if you want to use existing database(s)
+#
+# Set AUTO_UPDATE_ENCRYPTION_KEYS to 1 if you want to auto update encryption keys,
+# else set to 0 and update the encryption keys manually once the installation is done
+#
+# PREVIOUS_USER_INSTALL_DIR_PATH_1 is the previous installation directory, set this if
+# AUTO_UPDATE_ENCRYPTION_KEYS is set to 1
+#----------------------------------
+DB_EXIST_CHOICE=1
+AUTO_UPDATE_ENCRYPTION_KEYS=1
+PREVIOUS_USER_INSTALL_DIR_PATH_1=
+#----------------------------------
+#Environment Setup
+#------------------
+#Use the below property iff the following conditions are met:
+#1.If components selected are Console, Identity Services and any/all of Integration/Engagement.
+#2.If Application Server selected is Tomcat/JBoss(single node).
+
+#If you want to do environment setup now during installation, then set PERFORM_AUTO_REG_1=Yes else set PERFORM_AUTO_REG_1=No
+#-----------------------------------------------------------------------------------------------------------------------------------------
+PERFORM_AUTO_REG_1=
+
+#If you have chosen to do environment setup now, then uncomment the below properties and provide the details.
+#USER_INPUT_AUTO_REG_1 is the fully qualified public URL of MobileFoundry.
+#USER_INPUT_AUTO_REG_2 is the first name that you want to use for environment setup.
+#USER_INPUT_AUTO_REG_3 is the last name that you want to use for environment setup.
+#USER_INPUT_AUTO_REG_4 is the email that you want to use for environment setup.
+#-----------------------------------------------------------------------------------------------------------
+#USER_INPUT_AUTO_REG_1=
+#USER_INPUT_AUTO_REG_2=
+#USER_INPUT_AUTO_REG_3=
+#USER_INPUT_AUTO_REG_4=
+
+#Enter Password for Environment Setup
+#-------------------------------------
+#Use the below properties if you you meet the Environment Setup requisites.
+#USER_SUPPLIED_AUTO_REG_PASSWORD is the password that you want to use for environment setup.
+#Note:Passwords must contain at least 6 characters, maximum of 20 characters including uppercase, lowercase letters and numbers.
+#-------------------------------------------------------------------------------------------------------------------------------
+USER_SUPPLIED_AUTO_REG_PASSWORD=
+INDEX_OF_MATCHING_PASSWORD=0
+
+#Confirm Password for Environment Setup
+#---------------------------------------
+#Use the below properties if you you meet the Environment Setup requisites.
+#USER_SUPPLIED_AUTO_REG_CONFIRM_PASSWORD is to confirm the password that you want to use for environment setup.
+#Note: Make sure USER_SUPPLIED_AUTO_REG_PASSWORD and USER_SUPPLIED_AUTO_REG_CONFIRM_PASSWORD match.
+#--------------------------------------------------------------------------------------------------------------
+USER_SUPPLIED_AUTO_REG_CONFIRM_PASSWORD=
+INDEX_OF_MATCHING_PASSWORD=0
+
+#If you have chosen Developer Portal but not chosen Console, then please provide the below details
+#USER_INPUT_ACCOUNTS_URL is the accounts url to which developer portal needs to connect
+#--------------------------------------------------------------------------------------------------
+#USER_INPUT_ACCOUNTS_URL=
+
+#Start MobileFoundry Server
+#---------------------------------------
+#Use the below property if you want to start/stop the MobileFoundry server after the successful installation of Mobile Foundry.
+#To start the server START_SERVER_1 should be set as Yes or else START_SERVER_2 should be set as Yes
+#---------------------------------------
+START_SERVER_1=Yes
+START_SERVER_2=
+
+#Delete Database During Uninstall
+#--------------------------------
+# If you want to delete database during uninstall, set CONSOLE_DELETE_DATABASE_1 to Delete all data else
+# set CONSOLE_DELETE_DATABASE_2 to Retain all data.
+#CONSOLE_DELETE_DATABASE_1=Delete all data
+#CONSOLE_DELETE_DATABASE_2=Retain all data
+#--------------------------------------------------------------------------------------------
+CONSOLE_DELETE_DATABASE_1=
+CONSOLE_DELETE_DATABASE_2=

@@ -1,7 +1,7 @@
 galaxy_info:
   role_name: domino_rest_api
   author: MarkProminic
-  description: Add Appdevpack tools to Domino for NodeJS development
+  description: Add Domino Rest API tools to Domino for NodeJS development
   company: STARTCloud
   # issue_tracker_url: http://example.com/issue/tracker
   license: license (Apache)

@@ -55,3 +55,8 @@ sdkman_offline_mode: false
 # Link SDKMAN installed packages
 # Reference: https://linux.die.net/man/8/update-alternatives
 sdkman_update_alternatives: []
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing SDKMAN"

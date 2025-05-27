@@ -44,7 +44,6 @@
         - { path: "{{ completed_dir }}/domino_rest_api_installed" }
         - { path: "{{ completed_dir }}/kyr-cert-imported" }
         - { path: "{{ completed_dir }}/kyr-key-imported" }
-        - { path: "{{ completed_dir }}/appdevpack_installed" }
         - { path: "{{ completed_dir }}/genesis_installed_check" }
         - { path: "{{ completed_dir }}/genesis_packages_installed_check" }
         - { path: "{{ completed_dir }}/javabuildtools" }

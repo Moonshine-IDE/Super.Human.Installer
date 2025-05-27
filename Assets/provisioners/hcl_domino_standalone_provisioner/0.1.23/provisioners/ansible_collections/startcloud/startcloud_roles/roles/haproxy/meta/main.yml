@@ -3,7 +3,13 @@ galaxy_info:
   author: MarkProminic
   description: Setup a reverse proxy to aggregate roles and provide centralized SSL management
   company: STARTCloud
-  # issue_tracker_url: http://example.com/issue/tracker
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+#  company: Moonshine-IDE
+#  issue_tracker_url: https://github.com/Moonshine-IDE/moonshine_roles/issues
+#  company: Prominic
+#  issue_tracker_url: https://github.com/Prominic/prominic_roles/issues
+#  company: Switchboard
+#  issue_tracker_url: https://github.com/PhoneSwitchboard/switchboard_roles/issues
   license: license (Apache)
   min_ansible_version: '1.2'
 

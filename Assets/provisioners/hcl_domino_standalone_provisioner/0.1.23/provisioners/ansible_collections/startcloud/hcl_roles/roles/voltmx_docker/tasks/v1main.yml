@@ -60,7 +60,7 @@
     state: restarted
 
 -
-  name: "Downloading VoltMX from {{ voltmx_installer_base_url }}"
+  name: "Downloading VoltMX from {{ installer_base_url }}"
   when: not voltmx_server_installer_check.stat.exists and not voltmx_server_installed.stat.exists and not voltmx_extracted.stat.exists
   register: voltlsresult
   until: "voltlsresult is not failed"
@@ -68,10 +68,10 @@
   ansible.builtin.get_url:
     mode: u=rwX,g=rX,o=rX
     validate_certs: false
-    url: "{{ voltmx_installer_base_url }}"
+    url: "{{ installer_base_url }}"
     dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
-    username: "{{ voltmx_installer_url_user }}"
-    password: "{{ voltmx_installer_url_pass }}"
+    username: "{{ installer_url_user }}"
+    password: "{{ installer_url_pass }}"
 
 -
   name: "Extracting voltmx from {{ voltmx_installer_archive }}"
