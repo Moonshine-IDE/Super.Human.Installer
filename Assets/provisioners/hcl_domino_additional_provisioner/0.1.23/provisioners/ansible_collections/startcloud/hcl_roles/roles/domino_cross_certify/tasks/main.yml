@@ -4,110 +4,134 @@
   when: run_tasks
   block:
     -
-      name: "Ensuring Domino is up"
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
-    
-    -
       name: "Checking if ID to Cross Certify is available at /id-files/user-safe-ids/{{ user_safe_id }}"
       register: cross_certify_check
       ansible.builtin.stat:
         path: "/id-files/user-safe-ids/{{ user_safe_id }}"
         get_md5: false
-    
-    -
-      name: Pause for 45 seconds to let Domino fully start
-      when: cross_certify_check.stat.exists
-      ansible.builtin.pause:
-        seconds: 45
-    
-    -
-      name: "Cross Certifying /id-files/user-safe-ids/{{ user_safe_id }}"
-      become_user: "{{ service_user }}"
-      become: true
-      register: cross_certify_commands
-      when: cross_certify_check.stat.exists
-      ansible.builtin.shell: >
-        source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
-        source {{ service_home_dir }}/.bashrc &&
-        source {{ service_home_dir }}/.bash_profile &&
-        $JAVA_HOME/bin/java
-        -Dapp.properties.file={{ service_home_dir }}/CrossCertifyNotesID.properties
-        -jar CrossCertifyNotesID.jar /id-files/user-safe-ids/{{ user_safe_id }}
-      args:
-        executable: /bin/bash
-        chdir: "{{ service_home_dir }}"
-      changed_when: false
-    
-    -
-      name: "Waiting until the Cross Certification JAR writes to CrossCertifyNotesID.out"
-      when: cross_certify_check.stat.exists
-      ansible.builtin.wait_for:
-        path: "{{ completed_dir }}/CrossCertifyNotesID.out"
-    
-    -
-      name: "Outputting available Help Text"
-      when: cross_certify_check.stat.exists
-      ansible.builtin.debug:
-        var: cross_certify_commands.stdout_lines
 
     -
-      name: "Adding Admin notes ID to the ID Vault"
-      become_user: "{{ service_user }}"
-      ansible.builtin.expect:
-        chdir: "{{ service_home_dir }}"
-        command: >
-          /bin/bash -c "
-            . {{ service_home_dir }}/.bash_profile &&
-            . {{ service_home_dir }}/.bashrc &&
-            . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
-            java -jar PushUserIDtoIDVault.jar /id-files/user-ids/{{ domino_admin_user_id }} '{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}' '{{ domino_admin_notes_id_password }}' {{ domino_server_name_common }}"
-        responses:
-          'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
+      name: "Running Cross Certification"
+      when: cross_certify_check.stat.exists
+      block:
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_crosscertify
+          until: domino_service_start_details_crosscertify.state == "started"
+          retries: 10
+          delay: 10
 
-    -
-      name: "Running Check database to populate IDs into ID Vault"
-      become_user: "{{ service_user }}"
-      ansible.builtin.expect:
-        chdir: "{{ service_home_dir }}"
-        command: >
-          /bin/bash -c "
-            . {{ service_home_dir }}/.bash_profile &&
-            . {{ service_home_dir }}/.bashrc &&
-            . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
-            java -jar CheckDatabase.jar {{ domino_server_name_common_with_org }} names.nsf"
-        responses:
-          'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
-    
-    -
-      name: "Stopping Domino for Changes to take effect"
-      become: true
-      when: cross_certify_check.stat.exists
-      ansible.builtin.service:
-        name: domino
-        state: stopped
-        enabled: true
-      register: domino_cc_service_details_stop
-      until: domino_cc_service_details_stop.state == "stopped"
-      retries: 3
-      delay: 5
-    
-    -
-      name: "Starting Domino for Changes to take effect"
-      when: cross_certify_check.stat.exists
-      ansible.builtin.service:
-        name: domino
-        state: started
-        enabled: true
-      register: domino_cc_service_details_start
-      retries: 3
-      delay: 5
-      until: domino_cc_service_details_start.state == "started"
-    
-    -
-      name: Pause for 60 seconds to let Domino fully configure
-      when: cross_certify_check.stat.exists
-      ansible.builtin.pause:
-        seconds: 60
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"
+
+        -
+          name: "Cross Certifying /id-files/user-safe-ids/{{ user_safe_id }}"
+          become_user: "{{ service_user }}"
+          become: true
+          register: cross_certify_commands
+          ansible.builtin.shell: >
+            source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
+            source {{ service_home_dir }}/.bashrc &&
+            source {{ service_home_dir }}/.bash_profile &&
+            $JAVA_HOME/bin/java
+            -Dapp.properties.file={{ service_home_dir }}/CrossCertifyNotesID.properties
+            -jar CrossCertifyNotesID.jar /id-files/user-safe-ids/{{ user_safe_id }}
+          args:
+            executable: /bin/bash
+            chdir: "{{ service_home_dir }}"
+          changed_when: false
+
+        -
+          name: "Waiting until the Cross Certification JAR writes to CrossCertifyNotesID.out"
+          ansible.builtin.wait_for:
+            path: "{{ completed_dir }}/CrossCertifyNotesID.out"
+
+        -
+          name: "Outputting available Help Text"
+          ansible.builtin.debug:
+            var: cross_certify_commands.stdout_lines
+
+        -
+          name: "Adding Admin notes ID to the ID Vault"
+          become_user: "{{ service_user }}"
+          ansible.builtin.expect:
+            chdir: "{{ service_home_dir }}"
+            command: >
+              /bin/bash -c "
+                . {{ service_home_dir }}/.bash_profile &&
+                . {{ service_home_dir }}/.bashrc &&
+                . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
+                java -jar PushUserIDtoIDVault.jar /id-files/user-ids/{{ domino_admin_user_id }} '{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}' '{{ domino_admin_notes_id_password }}' {{ domino_server_name_common }}"
+            responses:
+              'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
+
+        -
+          name: "Running Check database to populate IDs into ID Vault"
+          become_user: "{{ service_user }}"
+          ansible.builtin.expect:
+            chdir: "{{ service_home_dir }}"
+            command: >
+              /bin/bash -c "
+                . {{ service_home_dir }}/.bash_profile &&
+                . {{ service_home_dir }}/.bashrc &&
+                . {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh &&
+                java -jar CheckDatabase.jar {{ domino_server_name_common_with_org }} names.nsf"
+            responses:
+              'Enter password \(press the Esc key to abort\): ': "{{ domino_admin_notes_id_password }}"
+
+        -
+          name: "Stopping Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: stopped
+            enabled: true
+          register: domino_service_stopped_cross_certify
+          until: domino_service_stopped_cross_certify.state == "stopped"
+          retries: 3
+          delay: 5
+
+        -
+          name: "Waiting for 30 seconds to let Domino fully shutdown"
+          ansible.builtin.pause:
+            seconds: "{{ domino_shutdown_delay }}"
+
+        -
+          name: "Starting Domino for Changes to take effect"
+          become: true
+          ansible.builtin.service:
+            name: domino
+            state: started
+            enabled: true
+          register: domino_service_start_details_crosscertify
+          until: domino_service_start_details_crosscertify.state == "started"
+          retries: 10
+          delay: 10
+
+        -
+          name: "Waiting for HTTP Server to start"
+          ansible.builtin.wait_for:
+            path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+            search_regex: "HTTP Server: Started"
+            timeout: 300
+            msg: "HTTP Server did not start within the timeout period."
+
+        -
+          name: "Waiting for 60 seconds to let HTTP to fully startup"
+          ansible.builtin.pause:
+            seconds: "{{ domino_startup_delay }}"

@@ -12,3 +12,8 @@ sdkman_update_alternatives:
   - candidate: java
     name: javadoc
     link: /usr/bin/javadoc
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Java via SDKMAN"

@@ -1,5 +1,9 @@
 ---
 run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing Nginx"
+
 # Used only for Debian/Ubuntu installation, as the -t option for apt.
 nginx_default_release: ""
 
@@ -93,7 +97,7 @@ nginx_vhosts: []
 #   access_log: ""
 #   error_log: ""
 #   extra_parameters: "" # Can be used to add extra config blocks (multiline).
-#   ansible.builtin.template: "" # Can be used to override the `nginx_vhost_template` per host.
+#   template: "" # Can be used to override the `nginx_vhost_template` per host.
 #   state: "absent" # To remove the vhost configuration.
 
 nginx_upstreams: []

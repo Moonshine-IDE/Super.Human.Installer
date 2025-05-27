@@ -1,0 +1,1 @@
+haproxy_cfg: "{{ role_path }}/templates/haproxy.cfg.j2"

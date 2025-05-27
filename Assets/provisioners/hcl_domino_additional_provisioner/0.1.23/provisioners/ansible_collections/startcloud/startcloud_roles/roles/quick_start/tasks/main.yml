@@ -181,20 +181,49 @@
         format: zip # Uses ZIP format for the archive.
 
     -
-      name: "Recording Installers" # Records the contents of the /vagrant/installers directory.
+      name: "Check if /vagrant/installers directory exists"
+      ansible.builtin.stat:
+        path: /vagrant/installers
+      register: installers_dir_stat
       when: not ansible_module_running_in_container
+
+    -
+      name: "Check if /vagrant/installers directory is empty"
+      ansible.builtin.find:
+        paths: /vagrant/installers
+        file_type: any
+      register: installers_dir_contents
+      when:
+        - not ansible_module_running_in_container
+        - installers_dir_stat.stat.exists
+        - installers_dir_stat.stat.isdir
+
+    -
+      name: "Recording Installers" # Records the contents of the /vagrant/installers directory.
+      when:
+        - not ansible_module_running_in_container
+        - installers_dir_stat.stat.exists
+        - installers_dir_stat.stat.isdir
+        - installers_dir_contents.matched > 0
       ansible.builtin.command: tree -J /vagrant/installers # Executes the tree command to list directory contents.
       register: installers # Stores the output for later use.
       changed_when: false # Indicates that this task does not change the system state.
+      ignore_errors: true
 
     -
       name: "Writing included installers to /vagrant/support-bundle/installers.json" # Writes the recorded installers to a JSON file.
-      when: not ansible_module_running_in_container
+      when:
+        - not ansible_module_running_in_container
+        - installers_dir_stat.stat.exists
+        - installers_dir_stat.stat.isdir
+        - installers_dir_contents.matched > 0
+        - installers is defined and installers.rc == 0 and installers.stdout_lines is defined
       ansible.builtin.copy:
         content: "{{ installers.stdout_lines }}" # Uses the stored output as the content.
         dest: "/vagrant/support-bundle/installers.json" # Specifies the destination file.
         force: false # Does not overwrite existing files.
         mode: 'a+x'  # Appends to the file and sets execute permission.
+      ignore_errors: true
 
     -
       name: "Checking if Domino has been autoconfigured"
@@ -202,6 +231,7 @@
       ansible.builtin.stat:
         path: "{{ domino_home_dir }}/IBM_TECHNICAL_SUPPORT/autoconfigure.log"
         get_md5: false
+      ignore_errors: true
 
     -
       name: "Including Domino One Touch autoconfigure to /vagrant/support-bundle/autoconfigure.log" # Copies the Domino One Touch log to the support bundle.
@@ -213,20 +243,48 @@
         force: false # Does not overwrite existing files.
         mode: 'a+x' # Appends to the file and sets execute permission.
         remote_src: true # Indicates the source file is on the remote system.
+      ignore_errors: true
+
+    -
+      name: "Check if /vagrant/completed directory exists"
+      ansible.builtin.stat:
+        path: /vagrant/completed
+      register: completed_dir_stat
+
+    -
+      name: "Check if /vagrant/completed directory is empty"
+      ansible.builtin.find:
+        paths: /vagrant/completed
+        file_type: any
+      register: completed_dir_contents
+      when:
+        - completed_dir_stat.stat.exists
+        - completed_dir_stat.stat.isdir
 
     -
       name: "Recording Completed Roles"  # Records the contents of the /vagrant/completed directory.
+      when:
+        - completed_dir_stat.stat.exists
+        - completed_dir_stat.stat.isdir
+        - completed_dir_contents.matched > 0
       ansible.builtin.command: tree -J /vagrant/completed # Executes the tree command to list directory contents.
       register: completed # Stores the output for later use.
       changed_when: false # Indicates that this task does not change the system state.
+      ignore_errors: true
 
     -
       name: "Writing current completed roles to /vagrant/support-bundle/completed.json" # Writes the recorded completed roles to a JSON file.
+      when:
+        - completed_dir_stat.stat.exists
+        - completed_dir_stat.stat.isdir
+        - completed_dir_contents.matched > 0
+        - completed is defined and completed.rc == 0 and completed.stdout_lines is defined
       ansible.builtin.copy:
         content: "{{ completed.stdout_lines }}" # Uses the stored output as the content.
         dest: "/vagrant/support-bundle/completed.json"  # Specifies the destination file.
         force: false # Does not overwrite existing files.
         mode: 'a+x' # Appends to the file and sets execute permission.
+      ignore_errors: true
 
     -
       name: "Zip Support Bundle" # Archives the support bundle directory into a ZIP file.
@@ -235,6 +293,7 @@
         path: "/vagrant/support-bundle" # Specifies the directory to archive.
         dest: "{{ python_simple_web_server_path }}/support-bundle.zip" # Specifies the destination of the archive.
         format: zip # Uses ZIP format for the archive.
+      ignore_errors: true
 
     -
       name: Zip Support Bundle
@@ -243,3 +302,4 @@
         path: "/vagrant/support-bundle"
         dest: "/vagrant/support-bundle.zip"
         format: zip
+      ignore_errors: true

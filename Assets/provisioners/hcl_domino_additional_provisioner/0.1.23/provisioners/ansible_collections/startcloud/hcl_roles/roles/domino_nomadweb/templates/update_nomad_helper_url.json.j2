@@ -7,7 +7,7 @@
             "databases": [ 
                 { 
                     "action": "update", 
-                    "filePath": "SuperHumanPortal.nsf", 
+                    "filePath": "SuperHumanPortal.nsf",
                     "documents":[
                         { 
                             "action": "update", 
@@ -30,7 +30,22 @@
                             "items": {
                                 "Value":"https://{{ domino_nomadweb_proxy_url }}/nomad"
                             }
+{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and domino_major_version >= 14 %}
+                        },
+                        { 
+                            "action": "update", 
+                            "search": {
+                                        "formula":"Form=\"Config Value\" & Key=\"logout_url\"",
+                                        "number":0
+                            },
+                            "computeWithForm": true,
+                            "items": {
+                                "Value":"https://{{ domino_install_proxy_url }}/auth/protocol/oidc"
+                            }
                         }
+{% else %}
+                        }
+{% endif %}
                     ]
                 }
             ]

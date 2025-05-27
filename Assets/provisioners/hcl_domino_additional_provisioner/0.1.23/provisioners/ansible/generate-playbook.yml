@@ -1,22 +1,44 @@
 ---
 -
-  name: "Generating hcl_domino_additional_provisioner Playbook Locally"
+  name: "Generating switchboard_provisioner Playbook Locally"
   become: true
   gather_facts: true
   hosts: all
+  vars:
+    # provision_roles is expected to be available as an extra_var from Hosts.rb
+    _ansible_collections_base_relative_path: '../ansible_collections'
   tasks:
+    - name: "Resolve all progress role definitions including dependencies using Python filter"
+      ansible.builtin.set_fact:
+        _progress_setup_role_definitions: >
+          {{
+            provision_roles |
+            resolve_progress_dependencies(
+              playbook_dir,
+              _ansible_collections_base_relative_path
+            )
+          }}
+
+    -
+      name: "Debugging: _progress_setup_role_definitions content"
+      ansible.builtin.debug:
+        var: _progress_setup_role_definitions
+        verbosity: 1 # Show only if -v is used
+
     -
       name: "Dynamically generating template playbook for SHI"
       ansible.builtin.template:
-        dest: "Hosts.template.yml.SHI"
+        dest: "Hosts.template.yml"
         mode: a+x
         src: "Hosts.template.yml.j2"
+
     -
       name: "Dynamically generating playbook"
       ansible.builtin.template:
         dest: "/vagrant/ansible/playbook.yml"
         mode: a+x
         src: "playbook.yml.j2"
+
     -
       name: "Dynamically generating playbook"
       ansible.builtin.template:

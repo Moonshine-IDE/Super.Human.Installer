@@ -105,7 +105,7 @@
 
     - 
       become: true
-      name: "Generating the XML from {{pxe_profile}}hosttemplate.xml"
+      name: "Generating the XML from {{ pxe_profile }}hosttemplate.xml"
       ansible.builtin.template: 
         dest: "{{item.dest}}"
         mode: "0644"
@@ -113,7 +113,7 @@
       with_items: 
         - 
           dest: "/var/kayak/kayak/xml/{{ pxe_client_hostname }}.xml"
-          src: "{{pxe_profile}}hosttemplate.xml"
+          src: "{{ pxe_profile }}hosttemplate.xml"
 
 
     - 

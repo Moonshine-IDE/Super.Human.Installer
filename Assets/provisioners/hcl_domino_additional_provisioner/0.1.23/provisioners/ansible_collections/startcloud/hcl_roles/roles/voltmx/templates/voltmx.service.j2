@@ -8,10 +8,10 @@ Type=forking
 User={{ service_user }}
 Group={{ service_group }}
 
-WorkingDirectory=/local/voltmx-foundry/tomcat/
+WorkingDirectory={{ voltmx_installation_dir}}/tomcat/
 
-ExecStart=/local/voltmx-foundry/tomcat/bin/startup.sh
-ExecStop=/local/voltmx-foundry/tomcat/bin/shutdown.sh
+ExecStart=/usr/bin/authbind --deep {{ voltmx_installation_dir}}/tomcat/bin/startup.sh
+ExecStop={{ voltmx_installation_dir}}/tomcat/bin/shutdown.sh
 
 RestartSec=20
 Restart=always

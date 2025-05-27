@@ -24,7 +24,7 @@
       name: "Checking if Virtualmin has been installed and configured"
       register: virtualmin_installed
       ansible.builtin.stat:
-        path: "{{completed_dir}}/vmininstalled"
+        path: "{{ completed_dir }}/vmininstalled"
         get_md5: false
     
     - 

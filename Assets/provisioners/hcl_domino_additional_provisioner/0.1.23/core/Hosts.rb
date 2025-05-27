@@ -782,6 +782,7 @@ class Hosts
     `rsync --version`.include?('2.6.9') || `rsync --version` < '2.6.9'
   end
 
+
   def self.delete_files(trigger, files_to_delete)
     files_to_delete.each do |file|
       if File.exist?(file)

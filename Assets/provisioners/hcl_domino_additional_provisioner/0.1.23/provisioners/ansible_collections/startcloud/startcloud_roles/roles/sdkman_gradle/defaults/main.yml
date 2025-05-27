@@ -5,3 +5,8 @@ sdkman_update_alternatives:
   - candidate: gradle
     name: gradle
     link: /usr/bin/gradle
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Gradle via SDKMAN"

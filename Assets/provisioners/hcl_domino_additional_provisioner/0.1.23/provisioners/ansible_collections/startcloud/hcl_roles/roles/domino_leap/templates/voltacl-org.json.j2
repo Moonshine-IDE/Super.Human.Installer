@@ -1,5 +1,5 @@
 {
-	"title": "Modify ACL volt/VoltBuilder.nsf",
+	"title": "Modify ACL volt/VoltBuilder.nsf, VoltAppHistory.nsf and VoltConfig.nsf",
 	"versionjson": "1.0.0",
 	"steps": [
 		{
@@ -14,14 +14,14 @@
 						],
 						"ACLEntries": [
 							{
-								"name": "Nancy Noaccess",
+								"name": "Anonymous",
 								"level": "noAccess",
 								"type": "unspecified",
 								"isPublicReader": true,
 								"isPublicWriter": false
 							},
 							{
-								"name": "Volt Authors",
+								"name": "Leap Authors",
 								"level": "Editor",
 								"canCreateDocuments": true,
 								"canDeleteDocuments": true,
@@ -51,7 +51,8 @@
 								"isPublicReader": true,
 								"isPublicWriter": true,
 								"roles": [
-									"VoltAppsManager"
+									"VoltAppsManager",
+									"LeapAdmin"
 								]
 							}
 						]
@@ -65,8 +66,66 @@
 				"You have adjusted ACL for volt/VoltBuilder.nsf successfully"
 			]
 		},
+		{
+			"title": "--- Step 3. SET ACL for VoltAppHistory.nsf ---",
+			"databases": [
+				{
+					"action": "update",
+					"filePath": "volt/VoltAppHistory.nsf",
+					"ACL": {
+						"roles": [
+							"VoltAppsManager"
+						],
+						"ACLEntries": [
+							{
+								"name": "Anonymous",
+								"level": "noAccess",
+								"type": "unspecified",
+								"isPublicReader": true,
+								"isPublicWriter": false
+							},
+							{
+								"name": "Leap Authors",
+								"level": "Editor",
+								"canCreateDocuments": true,
+								"canDeleteDocuments": true,
+								"type": "mixedGroup"
+							},
+							{
+								"name": "LocalDomainAdmins",
+								"level": "manager",
+								"type": "personGroup"
+							},
+							{
+								"name": "AutomaticallyCrossCertifiedUsers",
+								"level": "manager",
+								"type": "personGroup"
+							},
+							{
+								"name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+								"level": "manager",
+								"type": "person",
+								"canCreateDocuments": true,
+								"canCreateLSOrJavaAgent": true,
+								"canCreatePersonalAgent": true,
+								"canCreatePersonalFolder": true,
+								"canCreateSharedFolder": true,
+								"canDeleteDocuments": true,
+								"canReplicateOrCopyDocuments": true,
+								"isPublicReader": true,
+								"isPublicWriter": true,
+								"roles": [
+									"VoltAppsManager",
+									"LeapAdmin"
+								]
+							}
+						]
+					}
+				}
+			]
+		},
         {
-			"title": "--- Step 3. SET ACL for VoltConfig.nsf ---",
+			"title": "--- Step 5. SET ACL for VoltConfig.nsf ---",
 			"databases": [
 				{
 					"action": "update",
@@ -77,14 +136,14 @@
 						],
 						"ACLEntries": [
 							{
-								"name": "Nancy Noaccess",
+								"name": "Anonymous",
 								"level": "noAccess",
 								"type": "unspecified",
 								"isPublicReader": true,
 								"isPublicWriter": false
 							},
 							{
-								"name": "Volt Authors",
+								"name": "Leap Authors",
 								"level": "Editor",
 								"canCreateDocuments": true,
 								"canDeleteDocuments": true,
@@ -109,7 +168,8 @@
 								"isPublicReader": true,
 								"isPublicWriter": true,
 								"roles": [
-									"VoltAppsManager"
+									"VoltAppsManager",
+									"LeapAdmin"
 								]
 							}
 						]

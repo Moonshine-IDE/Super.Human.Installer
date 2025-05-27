@@ -45,6 +45,7 @@
                     <PlainText>true</PlainText>
                 </Password>
                 <Enabled>true</Enabled>
+                <LogonCount>1</LogonCount>
                 <Username>STARTcloud</Username>
             </AutoLogon>
             <FirstLogonCommands>
@@ -55,15 +56,15 @@
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>rm C:\Windows\Temp\packer\Autounattend.ps1"</CommandLine>
+                    <CommandLine>rm C:\Windows\Temp\packer\Autounattend.ps1</CommandLine>
                     <Description>Remove Autounattend</Description>
-                    <Order>1</Order>
+                    <Order>2</Order>
                     <RequiresUserInput>false</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>rm C:\Windows\Temp\packer\Autounattend.xml"</CommandLine>
+                    <CommandLine>rm C:\Windows\Temp\packer\Autounattend.xml</CommandLine>
                     <Description>Remove Autounattend</Description>
-                    <Order>1</Order>
+                    <Order>3</Order>
                     <RequiresUserInput>false</RequiresUserInput>
                 </SynchronousCommand>
             </FirstLogonCommands>

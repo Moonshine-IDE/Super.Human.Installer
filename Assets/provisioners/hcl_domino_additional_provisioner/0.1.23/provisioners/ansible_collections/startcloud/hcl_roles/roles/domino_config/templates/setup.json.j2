@@ -5,6 +5,18 @@
       "type": "additional",
       "IDFilePath": "{{ domino_home_dir }}/ids/{{ domino_server_id }}",
       "useExistingServerID": {{ use_domino_server_id | lower }},
+{% if domino_major_version >= 14 %}
+      "additionalReplicas": [
+        {
+          "databaseName": "idpcat.nsf",
+          "failOnError": false
+        },
+        {
+          "databaseName": "domcfg.nsf",
+          "failOnError": false
+        }
+      ],
+{% endif %}
 {% else %}
       "type": "first",
 {% endif %}
@@ -13,7 +25,7 @@
       "title": "{{ domino_server_name }}",
       "password": {{ domino_server_id_password }},
       "minPasswordLength": 5,
-      "serverTasks": "HTTP"
+      "serverTasks": "replica,router,update,amgr,adminp,http,nomad"
     },
 {% if origin_server is defined and is_additional_server %}
     "existingServer": {
@@ -32,7 +44,8 @@
     "org": {
       "countryCode": null,
       "orgName": "{{ domino_organization }}",
-      "certifierPassword": "{{ domino_admin_notes_id_password }}",
+      "certifierPassword": "{{ domino_certifier_id_password }}",
+      "certifierIDFilePath": "{{ domino_home_dir }}/ids/{{ domino_certifier_id }}",
       "orgUnitName": null,
       "orgUnitPassword": null
     },
@@ -61,6 +74,7 @@
       "LOG_SESSIONS": "{{ domino_log_sessions }}",
       "COMPRESS_LZ1_CREATE": "{{ domino_compress_lz1_create }}",
       "ServerTasks": "{{ domino_notesini_servertasks }}",
+      "DominoSessionCookieUniqueName" : "1",
       "iNotes_WA_EnableActionsInArchive": "{{ domino_inotes_wa_enable_actions_in_archive }}",
       "HTTPPublicURLs": "{{ domino_http_public_urls }}",
       "ENABLE_SNI": "{{ domino_enable_sni }}",
@@ -91,7 +105,7 @@
 {% if not is_additional_server and domino_server_id_creation_tool is defined and domino_server_id_creation_tool == "ots" and ots_generate_server_names is defined and ots_generate_server_names | length > 0 %}
     "autoRegister": {
       "IDPath": "{{ domino_home_dir }}/ids",
-      "serverNames": {{ ots_generate_server_names | tojson }}
+      "serverNames": {{ ots_generate_server_names | to_json }}
     },
 {% endif %}
 {% else %}
@@ -105,14 +119,23 @@
 {% endif %}
 {% if not is_additional_server %}
     "registerUsers": {
+      "defaults": {
+        "saveIDToPersonDocument": {{ auto_register_users_save_id_to_person_doc | lower }},
+        "password": "{{ auto_register_users_password }}",
+        "enableFullTextIndex": {{ auto_register_users_enable_full_text_index | lower }},
+        "certificateExpirationMonths": {{ auto_register_users_cert_expiry_months | int }}
+      },
       "users": [
       {
         "firstName": "{{ domino_dev_user_first_name }}",
         "lastName": "{{ domino_dev_user_last_name }}",
         "shortName": "{{ domino_dev_user_short_name }}",
         "password": "{{ domino_dev_user_id_password }}",
-        "mailFilePath": "mail/{{ domino_dev_user_short_name }}",
-        "IDFilePath": "{{ domino_home_dir }}/ids/{{ domino_dev_user_id }}"
+        "internetAddress": "{{ domino_dev_user_short_name }}@{{ settings.domain }}",
+        "mailFilePath": "mail/{{ domino_dev_user_short_name }}.nsf",
+        "enableFullTextIndex": {{ auto_register_users_enable_full_text_index | lower}},
+        "IDFilePath": "{{ domino_home_dir }}/ids/{{ domino_dev_user_id }}",
+        "certificateExpirationMonths": {{ auto_register_users_cert_expiry_months | int }}
       }
       ]
     },
@@ -173,308 +196,344 @@
         },
 {% endif %}
         "documents": [
-{% if domino_oidc_provider_enabled and domino_oidc_provider_nomad_enabled and domino_oidc_provider_federation_enabled and not is_additional_server %}
-        {
-          "action": "update",
-          "findDocument": {
-            "Type": "PolicySecurity",
-            "Fullname": "{{ id_vault_name }} Security Settings Policy"
-          },
-          "computeWithForm": true,
-          "items": {
-             "VaultBearerOn": "1"
-          }
-        },
-{% endif %}
-        {
-          "action": "update",
-          "findDocument": {
-            "Type": "Server",
-            "ServerName": "CN={{ domino_server_name_common }}/O={{ domino_organization }}"
-          },
-          "computeWithForm": true,
-          "items": {
-            "AutomationComment": "ServerAutoConfigured",
+          {
+            "action": "update",
+            "findDocument": {
+              "Type": "Server",
+              "ServerName": "CN={{ domino_server_name_common }}/O={{ domino_organization }}"
+            },
+            "computeWithForm": true,
+            "items": {
+              "AutomationComment": "ServerAutoConfigured",
 {% if not is_additional_server %}
-            "FullAdmin": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
-            "CreateAccess": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
-            "ReplicaAccess": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
-            "UnrestrictedList": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
-            "OnBehalfOfInvokerLst": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
-            "LibsLst": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
-            "RestrictedList": [
-              "LocalDomainAdmins",
-              "AutomaticallyCrossCertifiedUsers",
-              "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
-            ],
+              "FullAdmin": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
+              "CreateAccess": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
+              "ReplicaAccess": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
+              "UnrestrictedList": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
+              "OnBehalfOfInvokerLst": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
+              "LibsLst": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
+              "RestrictedList": [
+                "LocalDomainAdmins",
+                "AutomaticallyCrossCertifiedUsers",
+                "CN={{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/O={{ domino_organization }}"
+              ],
 {% else %}
-            "FullAdmin": [
-              "LocalDomainAdmins"
-            ],
-            "CreateAccess": [
-              "LocalDomainAdmins"
-            ],
-            "ReplicaAccess": [
-              "LocalDomainAdmins"
-            ],
-            "UnrestrictedList": [
-              "LocalDomainAdmins"
-            ],
-            "OnBehalfOfInvokerLst": [
-              "LocalDomainAdmins"
-            ],
-            "LibsLst": [
-              "LocalDomainAdmins"
-            ],
-            "RestrictedList": [
-              "LocalDomainAdmins"
-            ],
+              "FullAdmin": [
+                "LocalDomainAdmins"
+              ],
+              "CreateAccess": [
+                "LocalDomainAdmins"
+              ],
+              "ReplicaAccess": [
+                "LocalDomainAdmins"
+              ],
+              "UnrestrictedList": [
+                "LocalDomainAdmins"
+              ],
+              "OnBehalfOfInvokerLst": [
+                "LocalDomainAdmins"
+              ],
+              "LibsLst": [
+                "LocalDomainAdmins"
+              ],
+              "RestrictedList": [
+                "LocalDomainAdmins"
+              ],
 {% endif %}
-            "TRANSLOG_AutoFixup": "{{ domino_translog_auto_fixup }}",
-            "TRANSLOG_MaxSize": {{ domino_translog_max_size }},
-            "TRANSLOG_Path": "{{ domino_translogs_path }}",
-            "TRANSLOG_Performance": "{{ domino_translog_performance }}",
-            "TRANSLOG_Status": "{{ domino_translog_status }}",
-            "TRANSLOG_Style": "{{ domino_translog_style }}",
-            "TRANSLOG_UseAll": "{{ domino_translog_use_all }}",
-            "QtaMthd": "{{ domino_qta_mthd }}",
-            "DAOSEnable": "{{ domino_daos_enable }}",
-            "DAOSBasePath": "{{ domino_daos_base_path }}",
-            "DAOSMinObjSize": "{{ domino_daos_min_obj_size }}",
-            "DAOS_ENCRYPT_NLO": "{{ domino_daos_encrypt_nlo }}",
-            "HTTP_LogToFiles": "{{ domino_http_log_enabled }}",
-            "HTTP_LogDirectory": "{{ domino_http_log_directory }}",
-            "HTTP_AccessLog": "{{ domino_http_log_prefix }}",
-            "HTTP_AccessLogFormat": "{{ domino_http_log_format }}",
-            "HTTP_LogToDomLog": "{{ domino_http_log_to_dom_log }}",
-            "HTTP_HomeURL": "{{ domino_http_home_url }}",
-            "HTTP_EnableSessionAuth": "{{ domino_http_enable_session_auth }}",
-            "HTTP_TCPNP": "{{ domino_http_tcpnp }}",
-            "HTTP_AllowAnonymous": "{{ domino_http_allow_anonymous }}",
-            "HTTP_NormalMode": "{{ domino_http_normal_mode }}",
-            "HTTP_MaxActiveThreads": {{ domino_http_max_active_threads }},
-            "HTTP_Port": {{ domino_install_port_forwards[1].guest }},
-            "HTTP_SSLMode": "{{ domino_https_enabled }}",
-            "HTTP_SSLPort": {{ domino_install_port_forwards[0].guest }},
-            "HTTP_SSLKeyFile": "{{ cert_dir }}/kyr/{{ kyr_cert }}",
-            "HTTP_SSLAnonymous": "{{ domino_http_ssl_anonymous }}",
-            "HTTP_EnforceAccess": "{{ domino_http_enforce_access }}",
-            "LDAP_EnforceAccess": "{{ domino_ldap_enforce_access }}",
-            "IMAP_EnforceAccess": "{{ domino_imap_enforce_access }}",
-            "POP3_EnforceAccess": "{{ domino_pop3_enforce_access }}",
-            "SMTPListenerEnabled": "{{ domino_smtp_listener_enabled }}",
-            "Router_PortStatus": "{{ domino_router_port_status }}",
-            "LDAP_SSLStatus": "{{ domino_ldap_ssl_status }}",
-            "IMAP_SSLStatus": "{{ domino_imap_ssl_status }}",
-            "POP3_SSLStatus": "{{ domino_pop3_ssl_status }}",
-            "NSDEnbld": "{{ domino_nsd_enbld }}",
-            "FREnbld": "{{ domino_fr_enbld }}",
-            "FltRcvryNot": "{{ domino_flt_rcvry_not }}",
-            "LdISite": "{{ domino_ld_isite }}",
-            "ServerBuildNumber": "{{ domino_major_version }}.{{ domino_minor_version }}",
-            "MajVer": {{ domino_major_version }},
-            "SSLCipherList": {{ domino_ssl_cipher_list | to_json }},
-            "SSLCipherSupportedList": {{ domino_ssl_cipher_supported_list | to_json }}
-          }
-        },
-        {
-          "action": "create",
-          "computeWithForm": true,
-          "items": {
-            "Form": "Program",
-            "CmdLine": "Genesis",
-            "Enabled": "2",
-            "Program": "runjava",
-            "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}"
-          }
-        },
-{% if not is_additional_server %}
-        {
-          "action": "create",
-          "computeWithForm": true,
-          "items": {
-            "Form": "Group",
-            "Type": "Group",
-            "GroupType": "0",
-            "ListName": "AutomaticallyCrossCertifiedUsers",
-            "ListDescription": "Created automatically during installation"
-          }
-        },
-        {
-          "action": "update",
-          "findDocument": {
-            "Type": "Group",
-            "ListName": "LocalDomainAdmins"
+              "TRANSLOG_AutoFixup": "{{ domino_translog_auto_fixup }}",
+              "TRANSLOG_MaxSize": {{ domino_translog_max_size }},
+              "TRANSLOG_Path": "{{ domino_translogs_path }}",
+              "TRANSLOG_Performance": "{{ domino_translog_performance }}",
+              "TRANSLOG_Status": "{{ domino_translog_status }}",
+              "TRANSLOG_Style": "{{ domino_translog_style }}",
+              "TRANSLOG_UseAll": "{{ domino_translog_use_all }}",
+              "QtaMthd": "{{ domino_qta_mthd }}",
+              "DAOSEnable": "{{ domino_daos_enable }}",
+              "DAOSBasePath": "{{ domino_daos_base_path }}",
+              "DAOSMinObjSize": "{{ domino_daos_min_obj_size }}",
+              "DAOS_ENCRYPT_NLO": "{{ domino_daos_encrypt_nlo }}",
+              "HTTP_LogToFiles": "{{ domino_http_log_enabled }}",
+              "HTTP_LogDirectory": "{{ domino_http_log_directory }}",
+              "HTTP_AccessLog": "{{ domino_http_log_prefix }}",
+              "HTTP_AccessLogFormat": "{{ domino_http_log_format }}",
+              "HTTP_LogToDomLog": "{{ domino_http_log_to_dom_log }}",
+              "HTTP_HomeURL": "{{ domino_http_home_url }}",
+              "HTTP_EnableSessionAuth": "{{ domino_http_enable_session_auth }}",
+              "HTTP_TCPNP": "{{ domino_http_tcpnp }}",
+              "HTTP_AllowAnonymous": "{{ domino_http_allow_anonymous }}",
+              "HTTP_NormalMode": "{{ domino_http_normal_mode }}",
+              "HTTP_MaxActiveThreads": {{ domino_http_max_active_threads }},
+              "HTTP_Port": {{ domino_install_port_forwards[1].guest }},
+              "HTTP_SSLMode": "{{ domino_https_enabled }}",
+              "HTTP_SSLPort": {{ domino_install_port_forwards[0].guest }},
+              "HTTP_SSLKeyFile": "{{ cert_dir }}/kyr/{{ kyr_cert }}",
+              "HTTP_SSLAnonymous": "{{ domino_http_ssl_anonymous }}",
+              "HTTP_EnforceAccess": "{{ domino_http_enforce_access }}",
+              "LDAP_EnforceAccess": "{{ domino_ldap_enforce_access }}",
+              "IMAP_EnforceAccess": "{{ domino_imap_enforce_access }}",
+              "POP3_EnforceAccess": "{{ domino_pop3_enforce_access }}",
+              "SMTPListenerEnabled": "{{ domino_smtp_listener_enabled }}",
+              "Router_PortStatus": "{{ domino_router_port_status }}",
+              "LDAP_SSLStatus": "{{ domino_ldap_ssl_status }}",
+              "IMAP_SSLStatus": "{{ domino_imap_ssl_status }}",
+              "POP3_SSLStatus": "{{ domino_pop3_ssl_status }}",
+              "NSDEnbld": "{{ domino_nsd_enbld }}",
+              "FREnbld": "{{ domino_fr_enbld }}",
+              "FltRcvryNot": "{{ domino_flt_rcvry_not }}",
+              "LdISite": "{{ domino_ld_isite }}",
+              "ServerBuildNumber": "{{ domino_major_version }}.{{ domino_minor_version }}",
+              "MajVer": {{ domino_major_version }},
+              "SSLCipherList": {{ domino_ssl_cipher_list | to_json }},
+              "SSLCipherSupportedList": {{ domino_ssl_cipher_supported_list | to_json }}
+            }
           },
-          "computeWithForm": true,
-          "items": {
-            "Form": "Group",
-            "Type": "Group",
-            "GroupType": "0",
-            "ListName": "LocalDomainAdmins",
-            "ListCategory": "Administration",
-            "Members": ["{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}", "{{ domino_dev_user_first_name }} {{ domino_dev_user_last_name }}/{{ domino_organization }}", "AutomaticallyCrossCertifiedUsers"],
-            "ListDescription": "This group should contain all Domino administrators in your domain. Most system databases and templates give people in this group Manager access."
-          }
-        },
+          {
+            "action": "create",
+            "computeWithForm": true,
+            "items": {
+              "Form": "Program",
+              "CmdLine": "Genesis",
+              "Enabled": "2",
+              "Program": "runjava",
+              "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}"
+            }
+          },
+{% if not is_additional_server %}
+          {
+            "action": "create",
+            "computeWithForm": true,
+            "items": {
+              "Form": "Group",
+              "Type": "Group",
+              "GroupType": "0",
+              "ListName": "AutomaticallyCrossCertifiedUsers",
+              "ListDescription": "Created automatically during installation"
+            }
+          },
+          {
+            "action": "update",
+            "findDocument": {
+              "Type": "Group",
+              "ListName": "LocalDomainAdmins"
+            },
+            "computeWithForm": true,
+            "items": {
+              "Form": "Group",
+              "Type": "Group",
+              "GroupType": "0",
+              "ListName": "LocalDomainAdmins",
+              "ListCategory": "Administration",
+              "Members": ["{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}", "{{ domino_dev_user_first_name }} {{ domino_dev_user_last_name }}/{{ domino_organization }}", "AutomaticallyCrossCertifiedUsers"],
+              "ListDescription": "This group should contain all Domino administrators in your domain. Most system databases and templates give people in this group Manager access."
+            }
+          },
 {% endif %}
 {% if is_additional_server and domino_major_version >= 14%}
-        {
-          "action": "create",
-          "computeWithForm": true,
-          "items": {
-            "Form": "local",
-            "Type": "Connection",
-            "PortName": "TCPIP",
-            "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
-            "Destination": "{{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
-            "SourceDomain": "{{ domino_organization }}",
-            "DestinationDomain": "{{ domino_organization }}",
-            "ConnectionMode": "0",
-            "ConnectionType": "0",
-            "Cost": "1",
-            "Enabled": "1",
-            "Interval": 15,
-            "MailThreshold": 1,
-            "PullAllPrimary": "1",
-            "PullRoutingTimeout": 30,
-            "RepPriority": "0",
-            "RepTask": "1",
-            "RepType": "1",
-            "RouterType": "3",
-            "RoutingTask": "Mail Routing",
-            "Schedule": {
-                "type": "datetime",
-                "value": [ [ "T000000,00", "T235959,00" ] ]
-              },
-            "Tasks": ["Replication","Mail Routing"],
-            "WeekDays": ["1","2","3","4","5","6","7"]
-          }
-        },
+          {
+            "action": "create",
+            "computeWithForm": true,
+            "items": {
+              "Form": "local",
+              "Type": "Connection",
+              "PortName": "TCPIP",
+              "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
+              "Destination": "CN={{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
+              "SourceDomain": "{{ domino_organization }}",
+              "DestinationDomain": "{{ domino_organization }}",
+              "ConnectionMode": "0",
+              "ConnectionType": "0",
+              "Cost": "1",
+              "Enabled": "1",
+              "Interval": 15,
+              "MailThreshold": 1,
+              "PullAllPrimary": "1",
+              "PullRoutingTimeout": 30,
+              "RepPriority": "0",
+              "RepTask": "1",
+              "RepType": "1",
+              "RouterType": "3",
+              "RoutingTask": "Mail Routing",
+              "Schedule": {
+                  "type": "datetime",
+                  "value": [ [ "T000000,00", "T235959,00" ] ]
+                },
+              "Tasks": ["Replication","Mail Routing"],
+              "WeekDays": ["1","2","3","4","5","6","7"]
+            }
+          },
 {% endif %}
-{% if domino_oidc_provider_enabled and domino_major_version >= 14 %}
-        {
-          "action": "create",
-          "computeWithForm": true,
-          "items": {
-            "Form": "WebSite",
-            "AutomationComment " : "Domino OIDC Provider",
-            "WSIsDflt"           : "0",
-            "ISiteAdrs"          : [ "127.0.0.1", "{{ domino_oidc_install_proxy_url }}" ],
-            "ISiteName"          : "DominoOIDCProvider",
-            "ISiteOrg"           : "{{ domino_organization }}",
-            "WSHostingSrvrs"     : "*",
-            "TCPAnonymous"       : "0",
-            "TCPNameAndPwd"      : "1",
-            "SSLAnonymous"       : "0",
-            "SSLNameAndPwd"      : "1",
-            "SSLBearerToken"     : "1",
-            "SSLKeyFile"         : "{{ cert_dir }}/kyr/{{ kyr_cert }}",
-            "SSLCipherList"      : [ "C030", "9F", "C02F", "9E" ],
-            "HTTP_EnableSessionAuth" : "1",
-            "HTTP_MaxActiveSessions" : "1000"
-          }
-        },
-{% endif %}
-        {
-          "action": "create",
-          "computeWithForm": true,
-          "items": {
-            "Form": "WebSite",
-            "ISiteOrg": "{{ domino_organization }}",
-            "ISiteName": "Domino Web Site",
-            "WSIsDflt": "1",
+          {
+            "action": "create",
+            "computeWithForm": true,
+            "items": {
+              "Form": "WebSite",
+              "AutomationComment" : "This default site document is what enabled SNI verification, Domino will try to route the request after initial TLS handshake, to the appropiate internet site doc, so long as you pass the host header via SNI",
+              "ISiteOrg": "{{ domino_organization }}",
+              "ISiteName": "{{ settings.hostname }} Default Site",
+              "WSIsDflt": "1",
+              "WSHostingSrvrs" : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
+              "TCPAnonymous"   : "0",
+              "TCPNameAndPwd"  : "0",
+              "SSLAnonymous"   : "0",
+              "SSLNameAndPwd"  : "0",
+              "SSLBearerToken" : "1",
+              "SSLKeyFile"     : "{{ cert_dir }}/kyr/{{ kyr_cert }}",
+              "SSLCipherList"  : [ "C030", "9F", "C02F", "9E" ],
+              "HTTP_MaxActiveSessions" : "1000",
+              "HTTP_TCP_Redirect"  : "1",
+              "HTTP_SessionCookieSecure" : "1",
+              "HTTP_sessioncookieSamesite" : "2",
+              "HTTP_SessionCookieHTTPOnly" : "1",
+              "HTTP_GenerateSessionCookie" : "1",
+              "HTTP_ForceLoginOnSSL" : "1",
+              "HTTP_EnableRedirectCmd" : "1",
 {% if super_human_portal_enabled %}
-            "WSHomeURL": "Super.Human.Portal/js-release/index.html",
+              "WSHomeURL": "Super.Human.Portal/js-release/index.html",
 {% endif %}
-            "HTTP_EnableSessionAuth": "1",
-            "WSHTTPMthds_ed": [ "1", "2", "3", "4", "6", "7" ]
+              "HTTP_EnableSessionAuth": "1",
+              "WSHTTPMthds_ed": [ "1", "2", "3", "4", "6", "7" ]
+            }
+          },
+          {
+            "action": "create",
+            "computeWithForm": true,
+            "items": {
+              "Form": "WebSite",
+              "AutomationComment" : "Dedicated Internet site document for Domino Webapps like Super.Human.Portal",
+              "ISiteOrg": "{{ domino_organization }}",
+              "WSIsDflt"           : "0",
+{% if super_human_portal_enabled %}
+              "WSHomeURL"          : "Super.Human.Portal/js-release/index.html",
+              "ISiteName"          : "{{ settings.hostname }} Super.Human.Portal",
+{% else %}
+              "WSHomeURL"          : "{{ domino_oidc_provider_web_home_url }}",
+              "ISiteName"          : "{{ settings.hostname }} Domino Web Apps",
+{% endif %}
+              "ISiteAdrs"          : [ "{{ domino_install_proxy_url }}", "{{ settings.hostname }}.{{ settings.domain }}" ],
+              "WSHostingSrvrs"     : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
+              "HTTP_TCP_Redirect"  : "1",
+              "HTTP_SessionCookieSecure" : "1",
+              "HTTP_sessioncookieSamesite" : "2",
+              "HTTP_SessionCookieHTTPOnly" : "1",
+              "HTTP_GenerateSessionCookie" : "1",
+              "HTTP_ForceLoginOnSSL" : "1",
+              "HTTP_EnableRedirectCmd" : "1",
+              "TCPAnonymous"       : "0",
+              "TCPNameAndPwd"      : "0",
+              "SSLAnonymous"       : "1",
+              "SSLNameAndPwd"      : "1",
+              "SSLBearerToken"     : "1",
+              "SSLPasskey"         : "1",
+              "SSLKeyFile"         : "{{ cert_dir }}/kyr/{{ kyr_cert }}",
+              "SSLCipherList"      : [ "C030", "9F", "C02F", "9E" ],
+              "HTTP_EnableSessionAuth" : "1",
+              "HTTP_MaxActiveSessions" : "1000",
+              "WSHTTPMthds_ed": [ "1", "2", "3", "4", "6", "7" ]
+            }
           }
-        }
         ]
       },
-{% if domino_oidc_provider_enabled and domino_major_version >= 14 %}
+      {
+        "filePath": "certstore.nsf",
+        "action": "update",
+        "ACL": {
+          "ACLEntries": [
+            {
+              "name": "AutomaticallyCrossCertifiedUsers",
+              "level": "manager",
+              "type": "personGroup",
+              "isPublicReader": true,
+              "isPublicWriter": true,
+              "canCreateDocuments": true,
+              "canDeleteDocuments": true
+            },
+            {
+              "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+              "level": "manager",
+              "canReplicateOrCopyDocuments": true,
+              "canDeleteDocuments": true
+            }
+          ]
+        }
+      },
+{% if domino_major_version >= 14 and not is_additional_server %}
       {
         "action": "create",
         "filePath": "idpcat.nsf",
         "title": "Identity Catalogue Database",
         "templatePath": "idpcat.ntf",
         "signUsingAdminp": false,
-        "documents": [
-          {
-            "action": "create",
-            "items": {
-              "Form": "OIDCProvider",
-{% if domino_oidc_provider_nomad_enabled  %}
-{% if not domino_oidc_provider_federation_enabled %}
-              "OIDCHostname": "127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}",
-{% else %}
-              "OIDCHostname": "bearer.vault.{{ domino_server_name_common }}; 127.0.0.1; {{ domino_nomadweb_proxy_url }}; {{ domino_install_proxy_url }}",
-{% endif %}
-{% else %}
-              "OIDCHostname": "127.0.0.1; {{ domino_install_proxy_url }}",
-{% endif %}
-              "OIDCProviderName": "Domino",
-              "OIDCBaseURL": "https://{{ domino_oidc_install_proxy_url }}/auth/protocol/oidc",
-              "OIDC_TrustedRoots": "{{ domino_oidc_trusted_roots }}",
-              "OIDCClientID": "{{ domino_oidc_client_id }}",
-              "OIDCSecret": "{{ domino_oidc_client_secret }}",
-              "OIDCAuthType": "{{ domino_oidc_auth_type }}",
-              "OIDCSimplifyRedirectURL": "{{ domino_oidc_simplify_redirect_url }}",
-              "BearerOptions": "{{ domino_oidc_bearer_options }}",
-              "BearerCustomClaimName": "{{ domino_oidc_bearer_custom_claim_names }}",
-              "BearerAlternateAudiences": "{{ domino_oidc_bearer_alternate_audiences }}",
-              "BearerAllowedClientIDs": "{{ domino_oidc_bearer_allowed_client_ids }}",
-              "OIDCLogLevel": "{{ domino_oidc_log_level }}"
+        "ACL": {
+          "ACLEntries": [
+            {
+              "name": "AutomaticallyCrossCertifiedUsers",
+              "level": "manager",
+              "type": "personGroup",
+              "isPublicReader": true,
+              "isPublicWriter": true,
+              "canCreateDocuments": true,
+              "canDeleteDocuments": true
+            },
+            {
+              "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+              "level": "manager",
+              "canReplicateOrCopyDocuments": true,
+              "canDeleteDocuments": true
             }
-          }
-        ]
+          ]
+        }
       },
 {% endif %}
+{% if not is_additional_server %}
       {
         "action": "create",
         "filePath": "domcfg.nsf",
         "title": "Domino Web Server Configuration",
         "templatePath": "domcfg5.ntf",
         "signUsingAdminp": false,
-        "documents": [
-{% if domino_oidc_provider_enabled and domino_major_version >= 14 %}
-          {
-            "action": "create",
-            "items": {
-              "Form": "LoginMap",
-              "LF_LoginForm": "{{ domino_oidc_provider_login_form }}",
-              "LF_LoginFormDB": "domcfg.nsf",
-              "LF_ServerType": "0",
-              "LF_IP": "",
-              "$PublicAccess": "1"
+        "ACL": {
+          "ACLEntries": [
+            {
+              "name": "AutomaticallyCrossCertifiedUsers",
+              "level": "manager",
+              "type": "personGroup",
+              "canReplicateOrCopyDocuments": true,
+              "canDeleteDocuments": true
+            },
+            {
+              "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+              "level": "manager",
+              "type": "person",
+              "canReplicateOrCopyDocuments": true,
+              "canDeleteDocuments": true
             }
-          }
-{% else %}
+          ]
+        },
+        "documents": [
           {
             "action": "create",
             "items": {
@@ -486,9 +545,9 @@
               "$PublicAccess": "1"
             }
           }
-{% endif %}
         ]
       },
+{% endif %}
       {
         "action": "create",
         "filePath": "iwaredir.nsf",
@@ -531,7 +590,7 @@
     ]
   },
   "autoConfigPreferences": {
-          "deleteInputFileAfterProcessing": {{ domino_config.delete_input_file_after_processing }},
+    "deleteInputFileAfterProcessing": {{ domino_config.delete_input_file_after_processing }},
     "startServerAfterConfiguration": {{ domino_config.start_server_after_configuration }},
     "consoleLogOutput": {
         "show": "all",

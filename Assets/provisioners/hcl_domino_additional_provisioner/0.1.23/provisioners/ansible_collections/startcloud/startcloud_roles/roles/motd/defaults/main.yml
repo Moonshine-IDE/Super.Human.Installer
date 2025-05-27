@@ -5,7 +5,7 @@ restore_default_config: false
 add_footer: false
 add_update: false
 sysadmins_signature: Random system administrators
-sysadmins_email: random@random.com
+sysadmins_email: "{{ email }} | default('support@startcloud.com')"
 update_content: |
   #!/bin/sh
   echo "Uptime:       $(uptime -p)"

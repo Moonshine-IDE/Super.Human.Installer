@@ -11,12 +11,20 @@ kyr_cert: keyfile.kyr
 id_vault_setup: true
 id_vault_replicate: false
 id_vault_name: "{{ domino_organization }}Vault"
+id_vault_name_allow_notes_based_apps: "1"
 id_vault_password: IDVaultPassword
 id_vault_help_text: Please create an issue in the DominoVagrant Issues Page for help!
+id_vault_enable_vault_bearer: "1"
 domino_admin_user_first_name: Prominic
 domino_admin_user_last_name: Admin
 domino_admin_user_id: admin-user.id
-domino_admin_notes_id_password: "password"
+domino_admin_notes_id_password: "{{ lookup('password', '/dev/null chars=ascii_letters,digits length=16') }}"
+domino_certifier_id: cert.id
+domino_certifier_id_password: "{{ domino_admin_notes_id_password | default(domino_admin_notes_id_password) }}"
+auto_register_users_enable_full_text_index: true
+auto_register_users_cert_expiry_months: 48
+auto_register_users_save_id_to_person_doc: false
+auto_register_users_password: "password"
 domino_dev_user_first_name: Dev
 domino_dev_user_last_name: User
 domino_dev_user_short_name: DevUser
@@ -27,20 +35,19 @@ is_additional_server: false
 domino_major_version: "14"
 domino_minor_version: "0"
 domino_patch_version: "0"
-domino_server_installer_tar: "Domino_14.0_Linux_English.tar"
+domino_version_string: "{{ domino_major_version|string + '.' + domino_minor_version|string + '.' + domino_patch_version|string }}"
+domino_ea_version: "EA2"
+domino_installer_ea_install: false
+domino_server_installer_tar: "{{ 'Domino_' + domino_major_version|string + '.' + domino_minor_version|string + '_Linux_English' + ('_' + domino_ea_version|string if domino_installer_ea_install else '') + '.tar' }}"
 domino_notesini_servertasks: "replica,router,update,amgr,adminp,certmgr,http,nomad"
 domino_installer_fixpack_install: false
 domino_fixpack_version: FP3
-domino_server_fixpack_tar: "Domino_1400FP3_Linux.tar"
+domino_server_fixpack_tar: "{{ 'Domino_140FP1_Linux.tar' if domino_major_version == '14' and domino_minor_version == '0' and domino_patch_version == '0' and domino_fixpack_version == 'FP1' else 'Domino_' + domino_major_version|string + domino_minor_version|string + domino_patch_version|string + domino_fixpack_version|string + '_Linux.tar' }}"
 domino_installer_hotfix_install: false
 domino_hotfix_version: HF16
-domino_server_hotfix_tar: "140FP3HF16-linux64.tar"
-
-domino_installer_base_url: "{{ secrets.domino_installer_base_url }}"
-domino_installer_url_user: "{{ secrets.domino_installer_url_user }}"
-domino_installer_url_pass: "{{ secrets.domino_installer_url_pass }}"
-
+domino_server_hotfix_tar: "{{ domino_major_version|string + domino_minor_version|string + domino_fixpack_version|string + domino_hotfix_version|string + '-linux64.tar' }}"
 installer_url_app_path: "Super.Human.Installer/Domino"
+installer_base_url: "{{ secrets.installer_base_url | default('https://downloads.prominic.net') }}"
 domino_install_dir: /opt/hcl/domino/notes/latest/linux
 domino_install_basedir: /opt/hcl/domino
 domino_install_chosen_feature_list: Domino,Nomad,OnTime,Verse,Help
@@ -48,19 +55,19 @@ domino_https_enabled: 1
 ots_generate_server_id_count: 0
 domino_organization: STARTcloud
 domino_countrycode: null
-
-domino_nomadweb_port_forwards:
-  -
-    guest: 9443
-    url: "notes"
-domino_nomadweb_use_proxy_url: true
-domino_nomadweb_proxy_url: "{{ domino_nomadweb_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
-
+domino_shutdown_delay: 30
+domino_startup_delay: 60
 domino_enable_java_agent_cache: 2
 domino_daos_enable: 0
-domino_daos_base_path: /local/daos
 domino_daos_min_obj_size: 256000
 domino_daos_encrypt_nlo: 0
+domino_daos_base_path: /local/daos
+domino_nifnsf_enable: "1"
+domino_nifnsf_base_path: /local/nif
+domino_ft_fly_index_off: "1"
+domino_update_fulltext_thread: "1"
+domino_update_fulltext_thread_path: /local/fulltext_indices
+domino_translogs_path: /local/translogs
 domino_translog_auto_fixup: ""
 domino_translog_max_size: 1024
 domino_translog_performance: "2"
@@ -93,7 +100,6 @@ domino_nsd_enbld: "1"
 domino_fr_enbld: "1"
 domino_flt_rcvry_not: "LocalDomainAdmins"
 domino_ld_isite: "1"
-domino_translogs_path: /local/translog
 
 # NotesINI settings
 domino_notesini_daos_encrypt_nlo: 0
@@ -105,8 +111,6 @@ domino_log_replication: "1"
 domino_log_sessions: "1"
 domino_compress_lz1_create: "1"
 domino_create_nifnsf_databases: "1"
-domino_nifnsf_enable: "1"
-domino_nifnsf_base_path: "/local/nif"
 domino_inotes_wa_enable_actions_in_archive: "1"
 domino_http_public_urls: "/iwaredir.nsf/*:/.well-known*"
 domino_enable_sni: "1"
@@ -114,9 +118,6 @@ domino_admin_client_skip_domino: "1"
 domino_event_pool_size: "41943040"
 domino_server_restart_delay: "1"
 domino_nsf_buffer_pool_size_mb: "256"
-domino_ft_fly_index_off: "1"
-domino_update_fulltext_thread: "1"
-domino_update_fulltext_thread_path: "/local/ft"
 domino_ftg_use_sys_memory: "1"
 domino_server_min_possible_trans_time: "1500"
 domino_server_max_possible_trans_time: "20000000"
@@ -159,34 +160,6 @@ domino_install_port_forwards:
     url: "domino"
 domino_install_proxy_url: "{{ domino_install_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"
 
-domino_oidc_provider_enabled: true
-domino_oidc_hostname: auth
-domino_oidc_install_proxy_url: "{{ domino_oidc_hostname }}.{{ settings.hostname }}.{{ settings.domain }}"
-domino_oidc_client_id: "{{ settings.hostname }}_{{ settings.domain }}_client_id"
-domino_oidc_client_secret: "{{ lookup('ansible.builtin.password', '/dev/null', seed=inventory_hostname) }}"
-domino_oidc_provider_federation_enabled: true
-domino_oidc_provider_login_form: "$$LoginUserForm"
-domino_oidc_provider_nomad_enabled: true
-domino_oidc_trusted_roots: ""
-domino_oidc_auth_type: "B"
-#None|N
-#Client secret basic|B
-#Client secret post|P
-#Private key JWT|J
-
-domino_oidc_simplify_redirect_url: "1"
-domino_oidc_bearer_options: "0"
-domino_oidc_bearer_custom_claim_names: ""
-domino_oidc_bearer_alternate_audiences: ""
-domino_oidc_bearer_allowed_client_ids: ""
-domino_oidc_log_level: "2" #1 Minimal, 2 Standard, 3 verbose
-
-domino_oidc_external_providers:
-  - name: null
-    base_url: null
-    client_id: null
-    client_secret: null
-
 #https://support.hcl-software.com/csm?id=kb_article&sysparm_article=KB0111664
 domino_server_name_common: "{{ (domino_major_version is defined and 
                                ((domino_major_version >= 12 and 
@@ -213,4 +186,11 @@ domino_server_name_common_with_org: "{{ (domino_major_version is defined and
                                        ) }}"
 
 
+## Do not change these unless you know exactly what you are doing, these are set to false in case the oidc role isn't included.
 super_human_portal_enabled: true
+domino_oidc_provider_leap_enabled: false
+domino_oidc_provider_nomad_enabled: false
+domino_oidc_provider_verse_enabled: false
+domino_oidc_provider_web_enabled: false
+domino_oidc_provider_enabled: false
+domino_oidc_web_apps_use_unified_registered_client: true

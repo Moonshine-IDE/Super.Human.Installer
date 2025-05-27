@@ -18,6 +18,21 @@
                           "isPublicWriter": false,
                           "canCreateDocuments": true,
                           "canDeleteDocuments": false
+                        },
+                        {
+                          "name": "AutomaticallyCrossCertifiedUsers",
+                          "level": "manager",
+                          "type": "personGroup",
+                          "isPublicReader": true,
+                          "isPublicWriter": true,
+                          "canCreateDocuments": true,
+                          "canDeleteDocuments": true
+                        },
+                        {
+                          "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+                          "level": "manager",
+                          "canReplicateOrCopyDocuments": true,
+                          "canDeleteDocuments": true
                         }
                       ]
                     }

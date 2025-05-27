@@ -102,18 +102,52 @@
             src: provision-Autounattend.xml.j2
             dest: C:\Windows\Temp\packer\Autounattend.xml
 
+        - name: "Creating Setup Scripts Directory"
+          ansible.windows.win_file:
+            path: C:\Windows\Setup\Scripts
+            state: directory
+
+        - name: "Copying SetupComplete.cmd to C:\\Windows\\Setup\\Scripts"
+          ansible.windows.win_template:
+            src: SetupComplete.cmd.j2
+            dest: C:\Windows\Setup\Scripts\SetupComplete.cmd
+
+        - name: "Copying setup-ssh.ps1 to C:\\Windows\\Setup\\Scripts"
+          ansible.windows.win_template:
+            src: setup-ssh.ps1.j2
+            dest: C:\Windows\Setup\Scripts\setup-ssh.ps1
+
+        - name: "Creating Vagrant Directory"
+          ansible.windows.win_file:
+            path: C:\vagrant
+            state: directory
+
     - name: "Setting up WinRM"
       block:
-        - name: "Downloading WinRM Configuration Script"
+        -
+          name: "Downloading WinRM Configuration Script"
           ansible.windows.win_get_url:
             url: "https://raw.githubusercontent.com/ansible/ansible-documentation/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
             dest: C:\temp\ConfigureRemotingForAnsible.ps1
           register: winrm_setup
 
-        - name: "Executing WinRM Configuration Script"
+        -
+          name: "Executing WinRM Configuration Script"
           ansible.windows.win_powershell:
             script: iex "C:\temp\ConfigureRemotingForAnsible.ps1"
           register: winrm_execution
+
+        -
+          name: "Allowing Basic WinRM Authentication"
+          ansible.windows.win_powershell:
+            script: Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+          register: winrm_allow_basic_auth
+
+        -
+          name: "Allowing Unecrypted Connections"
+          ansible.windows.win_powershell:
+            script: winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+          register: winrm_allow_unencrypted
 
     - name: "Installing Chocolatey"
       block:
@@ -327,7 +361,7 @@
             name: "{{ item }}"
             state: present
           loop:
-            - firefox
+            - librewolf
             - telegraf
             - git
             - bginfo
@@ -433,11 +467,11 @@
           ansible.windows.win_wait_for:
             path: C:\ProgramData\ssh\sshd_config
 
-        - name: "Modifying SSH Configuration"
-          ansible.windows.win_shell: |
-            $sshd_config = "$($env:ProgramData)\ssh\sshd_config"
-            (Get-Content $sshd_config).Replace("Match Group administrators", "# Match Group administrators") | Set-Content $sshd_config
-            (Get-Content $sshd_config).Replace("AuthorizedKeysFile", "# AuthorizedKeysFile") | Set-Content $sshd_config
+        #- name: "Modifying SSH Configuration"
+        #  ansible.windows.win_shell: |
+        #    $sshd_config = "$($env:ProgramData)\ssh\sshd_config"
+        #    (Get-Content $sshd_config).Replace("Match Group administrators", "# Match Group administrators") | Set-Content $sshd_config
+        #    (Get-Content $sshd_config).Replace("AuthorizedKeysFile", "# AuthorizedKeysFile") | Set-Content $sshd_config
 
         - name: "Ensuring OpenSSH Server firewall rule exists"
           community.windows.win_firewall_rule:
@@ -783,25 +817,48 @@
             data: "-c"
             type: string
 
-        - name: "Creating SSH directory for STARTcloud"
-          ansible.windows.win_file:
-            path: C:\Users\Administrator\.ssh
-            state: directory
-
-        - name: "Preparing SSH Directory and Keys"
+        - name: "Creating SSH key for sysprep to provision on start"
           ansible.windows.win_copy:
-            src: ../../../../../../ssh_keys/id_rsa.pub
-            dest: C:\Users\Administrator\.ssh\authorized_keys
+            src: ../../../../../../ansible/ssh_keys/id_rsa.pub
+            dest: C:\ProgramData\ssh\administrators_authorized_keys
 
-        - name: "Creating SSH directory for STARTcloud"
-          ansible.windows.win_file:
-            path: C:\Users\STARTcloud\.ssh
-            state: directory
+        - name: "Removing inheritance and reset permissions on administrators_authorized_keys"
+          ansible.windows.win_acl:
+            path: C:\ProgramData\ssh\administrators_authorized_keys
+            user: Administrators
+            rights: FullControl
+            type: allow
+            state: present
+            inheritance: None
 
-        - name: "Preparing SSH Directory and Keys"
-          ansible.windows.win_copy:
-            src: ../../../../../../ssh_keys/id_rsa.pub
-            dest: C:\Users\STARTcloud\.ssh\authorized_keys
+        - name: "Setting SYSTEM permissions on administrators_authorized_keys"
+          ansible.windows.win_acl:
+            path: C:\ProgramData\ssh\administrators_authorized_keys
+            user: SYSTEM
+            rights: FullControl
+            type: allow
+            state: present
+            inheritance: None
+
+        #- name: "Creating SSH key for sysprep to provision on start"
+        #  ansible.windows.win_file:
+        #    path: C:\Users\Administrator\.ssh
+        #    state: directory
+#
+        #- name: "Preparing SSH Directory and Keys"
+        #  ansible.windows.win_copy:
+        #    src: ../../../../../../ansible/ssh_keys/id_rsa.pub
+        #    dest: C:\Users\Administrator\.ssh\authorized_keys
+#
+        #- name: "Creating SSH directory for STARTcloud"
+        #  ansible.windows.win_file:
+        #    path: C:\Users\STARTcloud\.ssh
+        #    state: directory
+#
+        #- name: "Preparing SSH Directory and Keys"
+        #  ansible.windows.win_copy:
+        #    src: ../../../../../../ansible/ssh_keys/id_rsa.pub
+        #    dest: C:\Users\STARTcloud\.ssh\authorized_keys
 
         - name: "Configuring SSH Service"
           ansible.windows.win_powershell:
@@ -920,6 +977,39 @@
         - name: "Rebooting to Apply Windows Updates"
           ansible.windows.win_reboot:
             reboot_timeout: 7200
+
+    - name: "Installing Windows Updates"
+      block:
+        - name: "Executing the scheduled task"
+          ansible.windows.win_shell: schtasks /Run /TN "InstallWindowsUpdatesTask"
+
+        - name: "Waiting for the scheduled task to complete"
+          ansible.windows.win_shell: |
+            $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+            while ($task.State -eq "Running") {
+              Start-Sleep -Seconds 5
+              $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+            }
+
+        - name: "Waiting for the scheduled task to complete and check if it completed successfully"
+          ansible.windows.win_shell: |
+            $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+            while ($task.State -eq "Running") {
+              Start-Sleep -Seconds 5
+              $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+            }
+            if ($task.LastTaskResult -eq 0) {
+              $completedSuccessfully = $true
+            } else {
+              $completedSuccessfully = $false
+            }
+            $completedSuccessfully
+          register: task_result
+
+        - name: "Rebooting to Apply Windows Updates"
+          ansible.windows.win_reboot:
+            reboot_timeout: 7200
+
 
     - name: "Installing Windows Updates"
       block:

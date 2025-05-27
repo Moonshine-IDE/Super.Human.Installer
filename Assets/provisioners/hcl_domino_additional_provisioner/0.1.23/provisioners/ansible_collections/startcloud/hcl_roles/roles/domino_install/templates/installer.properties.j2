@@ -178,7 +178,6 @@ CHOSEN_INSTALL_SET=Enterprise
 #           DOM_CURRENT_REV=12000100 for Domino 12.0.1, 12.0.1 FP
 #
 #------- CHANGE_EACH_RELEASE
-{% set domino_version_string = domino_major_version|string + '.' + domino_minor_version|string + '.' + domino_patch_version|string %}
 {% if domino_version_string == '11.0.0' %}
 -fileOverwrite_{{ domino_install_basedir }}/notes/11000000/linux/_HCL Domino_installation/Change HCL Domino Installation.lax=Yes
 {% elif domino_version_string == '12.0.0' %}
@@ -189,4 +188,6 @@ CHOSEN_INSTALL_SET=Enterprise
 -fileOverwrite_{{ domino_install_basedir }}/notes/12000200/linux/_HCL Domino_installation/Change HCL Domino Installation.lax=Yes
 {% elif domino_version_string == '14.0.0' %}
 -fileOverwrite_{{ domino_install_basedir }}/notes/14000000/linux/_HCL Domino_installation/Change HCL Domino Installation.lax=Yes
+{% elif domino_version_string == '14.5.0' %}
+-fileOverwrite_{{ domino_install_basedir }}/notes/14050000/linux/_HCL Domino_installation/Change HCL Domino Installation.lax=Yes
 {% endif %}

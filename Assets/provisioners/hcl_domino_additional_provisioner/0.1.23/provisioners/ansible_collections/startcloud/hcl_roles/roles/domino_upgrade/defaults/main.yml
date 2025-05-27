@@ -29,9 +29,9 @@ domino_server_fixpack_tar: "Domino_1202FP1_Linux.tar"
 domino_installer_hotfix_install: false
 domino_hotfix_version: HF50
 domino_server_hotfix_tar: "1201HF50-linux64.tar"
-domino_installer_base_url: "{{ secrets.domino_installer_base_url }}"
-domino_installer_url_user: "{{ secrets.domino_installer_url_user }}"
-domino_installer_url_pass: "{{ secrets.domino_installer_url_pass }}"
+installer_base_url: "{{ secrets.installer_base_url }}"
+installer_url_user: "{{ secrets.installer_url_user }}"
+installer_url_pass: "{{ secrets.installer_url_pass }}"
 installer_url_app_path: "Super.Human.Installer/Domino"
 domino_install_dir: /opt/hcl/domino/notes/latest/linux
 domino_install_basedir: /opt/hcl/domino

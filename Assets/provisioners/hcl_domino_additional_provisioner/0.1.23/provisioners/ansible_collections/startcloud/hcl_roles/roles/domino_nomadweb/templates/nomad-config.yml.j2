@@ -1,12 +1,17 @@
 host: '0.0.0.0'
 port: "{{ domino_nomadweb_port_forwards[0].guest }}"
+{% if domino_oidc_debug %}
+DEBUG: "nomad::oidc=trace"
+{% endif %}
 access_log:
   enabled: true
 httpHeaders:
 {% if domino_nomadweb_use_proxy_url is defined %}
 {% if domino_nomadweb_use_proxy_url and domino_nomadweb_proxy_url is defined %}
   Access-Control-Allow-Origin: "https://{{ domino_nomadweb_proxy_url }}"
-  Content-Security-Policy: "frame-ancestors 'self' https://{{ domino_nomadweb_proxy_url }}"
+  Access-Control-Allow-Methods: "GET, POST, OPTIONS"
+  Access-Control-Allow-Credentials: "true"
+  Content-Security-Policy: "frame-ancestors 'self' https://{{ domino_nomadweb_proxy_url }} https://{{ domino_install_proxy_url }} https://{{ settings.hostname }}.{{ settings.domain }}"
 {% else %}
   Access-Control-Allow-Origin: "https://{{ domino_install_proxy_url }}"
   Content-Security-Policy: "frame-ancestors 'self' https://{{ domino_install_proxy_url }}"
@@ -19,15 +24,13 @@ httpHeaders:
       (nomadweb_version_major|int == 1 and nomadweb_version_minor|int == 0 and nomadweb_version_patch|int >= 13)) %}
 oidc:
   issuer: "https://{{ domino_oidc_install_proxy_url }}/auth/protocol/oidc"
-  issuer_metadata_overrides:
-    end_session_endpoint: "https://{{ domino_oidc_install_proxy_url }}/names.nsf?logout"
 {% if domino_oidc_provider_federation_enabled %}
   federated_login:
     vault_scope: "Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}"
     vault_aud: "{{ domino_organization }}-O={{ id_vault_name }}"
 {% endif %}
   client:
-    client_id: {{ domino_oidc_client_id }}
-    client_secret: {{ domino_oidc_client_secret }}
-    redirect_uris: ["https://{{ domino_nomadweb_proxy_url }}/login/callback"]
+    client_id: "{{ domino_oidc_client_id }}_nomad"
+    client_secret: "{{ domino_oidc_client_secret }}"
+    redirect_uris: ["https://{{ domino_nomadweb_proxy_url }}/login/callback", "https://{{ domino_nomadweb_proxy_url }}/logout/callback"]
 {% endif %}
