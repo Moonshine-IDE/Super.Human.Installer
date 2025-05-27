@@ -1,0 +1,49 @@
+---
+# Publish tasks
+
+- name: Set provider list
+  set_fact:
+    providers_to_process: "{{ template_providers }}"
+
+- name: Report publishing status
+  debug:
+    msg: "Publishing {{ template_def.name }} for providers: {{ providers_to_process | join(', ') }}"
+
+- name: Publish for each provider
+  block:
+    - name: Check if provider publish.json exists
+      stat:
+        path: "providers/{{ item }}/publish.json"
+      register: publish_file_stat
+      loop: "{{ providers_to_process }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Publish for provider
+      command: >
+        packer build
+        {% for var_file in default_var_files %}
+        -var-file='{{ var_file }}'
+        {% endfor %}
+        -var-file='{{ template_file }}'
+        providers/{{ item.item }}/publish.json
+      register: publish_result
+      failed_when: publish_result.rc != 0
+      changed_when: publish_result.rc == 0
+      loop: "{{ publish_file_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: item.stat.exists
+
+    - name: Report missing publish.json
+      debug:
+        msg: "Publish configuration not found for provider: {{ item.item }}"
+      loop: "{{ publish_file_stat.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: not item.stat.exists
+
+  rescue:
+    - name: Report publishing error
+      debug:
+        msg: "Error publishing {{ template_def.name }}. Check output for details."

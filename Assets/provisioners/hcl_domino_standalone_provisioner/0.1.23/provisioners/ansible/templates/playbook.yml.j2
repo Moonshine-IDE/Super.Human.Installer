@@ -22,13 +22,23 @@
     {% for role in provision_roles %}
       - {{ role.name }}
     {% endfor %}
-    enabled_roles:
+    enabled_roles: # This list can be used by the progress role if needed
     {% for role in provision_roles %}
-      {% set run_tasks = role.vars.run_tasks if role.vars is defined and 'run_tasks' in role.vars else true %}
+      {% set vars_for_role = role.vars | default({}) %}
+      {% set run_tasks = vars_for_role.run_tasks if 'run_tasks' in vars_for_role else true %}
       {% if run_tasks %}
-      - {{ role.name }}
+      - name: {{ role.name }} # Keep as a list of names or dicts as per your preference
+        # Storing progress related info directly here if useful for other purposes or direct use by progress role
+        # count_progress: {{ vars_for_role.count_progress | default(false) }}
+        # progress_units: {{ vars_for_role.progress_units | default(1) | int }}
       {% endif %}
     {% endfor %}
+
+    # Initialize global_current_progress_step here
+    global_current_progress_step: 0
+
+    # _progress_setup_role_definitions is now expected to be passed in by generate-playbook.yml
+    # when it renders this template. It will be used below when calling the progress role.
   {% endif %}
   {% if playbook_collections is defined and playbook_collections and playbook_collections != "" %}
   collections:
@@ -38,12 +48,21 @@
   {% endif %}
   {% if provision_pre_tasks is defined and provision_pre_tasks and provision_pre_tasks != "" %}
   pre_tasks:
-    {% for pre_task in provision_pre_tasks %}
-    -
-      {{ pre_task }}
+    {# Append user-defined pre_tasks from Hosts.template.yml's 'pre_tasks' key #}
+    {% for user_pre_task_content_block in provision_pre_tasks %}
+    - # This creates the list item for the user-defined pre-task
+      {{ user_pre_task_content_block | indent(2) }} # Indents the YAML string content of the task
     {% endfor %}
   {% endif %}
+
   roles:
+    # Explicitly include the progress role first for setup
+    - role: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: true
+        _progress_role_definitions_to_calculate: "{{ _progress_setup_role_definitions }}"
+
+    # Original roles loop
     {% for role in provision_roles %}
     -
       role: {{ role.name }}
@@ -84,6 +103,7 @@
         {% endif %}
       {% endif %}
     {% endfor %}
+
   {% if provision_post_tasks is defined and provision_post_tasks and provision_post_tasks != "" %}
   post_tasks:
     {% for post_task in provision_post_tasks %}

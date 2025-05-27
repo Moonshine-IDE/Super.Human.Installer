@@ -11,10 +11,12 @@
       get_md5: false
   
   -
-    name: "Waiting for 120 seconds to let Domino fully startup from previous tasks"
-    when: not genesis_packages_installed_check.stat.exists
-    ansible.builtin.pause:
-      seconds: 120
+    name: "Waiting for HTTP Server to start"
+    ansible.builtin.wait_for:
+      path: /local/notesdata/IBM_TECHNICAL_SUPPORT/console.log
+      search_regex: "HTTP Server: Started"
+      timeout: 120
+      msg: "HTTP Server did not start within the timeout period."
   
   -
     name: "Looping over Genesis packages"

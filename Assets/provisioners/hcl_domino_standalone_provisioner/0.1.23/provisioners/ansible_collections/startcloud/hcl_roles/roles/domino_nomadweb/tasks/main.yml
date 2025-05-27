@@ -53,17 +53,17 @@
             get_md5: false
 
         -
-          name: "Downloading Nomad from {{ domino_installer_base_url }}"
+          name: "Downloading Nomad from {{ installer_base_url }}"
           register: nomadwebresult
           until: "nomadwebresult is not failed"
           retries: 3
           ansible.builtin.get_url:
             mode: '0755'
             validate_certs: false
-            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ nomadweb_archive }}"
+            url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ nomadweb_archive }}"
             dest: "{{ installer_dir }}/nomadweb/archives/{{ nomadweb_archive }}"
-            username: "{{ domino_installer_url_user }}"
-            password: "{{ secrets.domino_installer_url_pass }}"
+            username: "{{ installer_url_user }}"
+            password: "{{ secrets.installer_url_pass }}"
           when: >
             not nomad_archive_check.stat.exists and 
             (
@@ -137,17 +137,17 @@
           when: not nomadweb_installed_check.stat.exists and nomad_hotfix_install
           block:
             -
-              name: "Downloading Nomad Hotfix from {{ domino_installer_base_url }}"
+              name: "Downloading Nomad Hotfix from {{ installer_base_url }}"
               register: nomadwebresulthotfix
               until: "nomadwebresulthotfix is not failed"
               retries: 3
               ansible.builtin.get_url:
                 mode: '0755'
                 validate_certs: false
-                url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ nomad_hotfix_archive }}"
+                url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ nomad_hotfix_archive }}"
                 dest: "{{ installer_dir }}/nomadweb/archives/{{ nomad_hotfix_archive }}"
-                username: "{{ domino_installer_url_user }}"
-                password: "{{ secrets.domino_installer_url_pass }}"
+                username: "{{ installer_url_user }}"
+                password: "{{ secrets.installer_url_pass }}"
               when: >
                 not nomad_archive_check.stat.exists and
                 (

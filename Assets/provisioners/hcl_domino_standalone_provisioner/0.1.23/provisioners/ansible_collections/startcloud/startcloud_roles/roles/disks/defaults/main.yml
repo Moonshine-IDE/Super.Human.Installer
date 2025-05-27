@@ -3,3 +3,8 @@ run_tasks: true
 show_help: true
 vm_encrypted: false
 root_unlock_key: pass123
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring system disks"

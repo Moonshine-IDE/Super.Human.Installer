@@ -12,8 +12,13 @@ domino_organization: DEMO
 # Variables for Role Certbot certs.
 certbot_create_if_missing: false
 certbot_create_method: standalone
-certbot_admin_email: "{{ mailer_user }}"
+certbot_admin_email: "{{ email }} | default('support@startcloud.com')"
 certbot_create_standalone_stop_services:
   - nginx
 
-
+# Progress reporting
+count_progress: true
+progress_units: 2 # This role has a bit more to it
+progress_role_description: "Initial SSL certificate setup" # For the first step or as a general fallback
+progress_role_description_step1: "Processing self-signed/CA certificates"
+progress_role_description_step2: "Processing Let's Encrypt certificates"

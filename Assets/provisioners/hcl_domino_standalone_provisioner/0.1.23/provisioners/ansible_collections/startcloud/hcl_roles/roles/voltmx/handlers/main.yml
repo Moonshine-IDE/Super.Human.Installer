@@ -1,0 +1,39 @@
+---
+-
+  name: "Restart VoltMX"
+  listen: Restart voltmx
+  become: true
+  ansible.builtin.service:
+    name: voltmx
+    state: restarted
+    enabled: true
+  register: voltmx_service_restart_details_handler
+  until: voltmx_service_restart_details_handler.state == "started"
+  retries: 3
+  delay: 30
+
+-
+  name: "Stop VoltMX"
+  listen: Stop voltmx
+  become: true
+  ansible.builtin.service:
+    name: voltmx
+    state: stopped
+    enabled: true
+  register: voltmx_service_stop_details_handler
+  until: voltmx_service_stop_details_handler.state == "stopped"
+  retries: 3
+  delay: 30
+
+-
+  name: "Start VoltMX"
+  listen: Start voltmx
+  become: true
+  ansible.builtin.service:
+    name: voltmx
+    state: started
+    enabled: true
+  register: voltmx_service_start_details_handler
+  until: voltmx_service_start_details_handler.state == "started"
+  retries: 3
+  delay: 30

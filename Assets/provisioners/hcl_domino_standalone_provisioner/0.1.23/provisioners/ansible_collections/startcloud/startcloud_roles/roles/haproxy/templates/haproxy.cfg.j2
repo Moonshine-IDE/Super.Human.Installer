@@ -200,7 +200,7 @@ frontend  HTTPS-IN
         acl host_verse                hdr(host)            -i {{ domino_verse_proxy_url }}
 {% endif %}
 {% if voltmx_port_forwards[0].url is defined %}
-        acl host_voltmx               hdr(host)            -i {{ voltmx_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}
+        acl host_voltmx               hdr(host)            -i {{ settings.hostname }}.{{ settings.domain }}
 {% endif %}
 
         ## Application backends

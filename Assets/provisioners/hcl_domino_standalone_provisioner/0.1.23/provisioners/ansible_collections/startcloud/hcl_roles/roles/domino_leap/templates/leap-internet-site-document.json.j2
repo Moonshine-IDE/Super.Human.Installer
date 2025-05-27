@@ -10,15 +10,23 @@
                     "filePath": "names.nsf", 
                     "documents":[
                         { 
+{% if domino_leap_inet_site_create %}
                             "action": "create", 
+{% else %}
+                            "action": "update", 
+							"search": {
+							   "formula":"Form=\"WebSite\" & ISiteName=\"{{ settings.hostname }} Domino Leap\"",
+                               "number":0
+							},
+{% endif %}
                             "computeWithForm": true,
                             "items": {
               					"Form"                       : "WebSite",
-              					"AutomationComment"          : "Domino Leap",
+              					"AutomationComment"          : "{{ settings.hostname }} Domino Leap",
               					"WSIsDflt"                   : "0",
               					"WSHomeURL"                  : "{{ domino_oidc_provider_leap_home_url }}",
               					"ISiteAdrs"                  : [ "{{ domino_leap_proxy_url }}" ],
-              					"ISiteName"                  : "Domino Leap",
+              					"ISiteName"                  : "{{ settings.hostname }} Domino Leap",
               					"ISiteOrg"                   : "{{ domino_organization }}",
               					"WSHostingSrvrs"             : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
               					"HTTPEnableMethods"          : [ "1", "2", "3", "4", "6", "7" ],

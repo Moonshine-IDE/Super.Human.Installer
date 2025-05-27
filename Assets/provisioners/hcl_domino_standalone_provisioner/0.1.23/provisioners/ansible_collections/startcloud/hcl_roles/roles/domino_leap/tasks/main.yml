@@ -33,17 +33,17 @@
             get_md5: false
 
         -
-          name: "Downloading Leap from {{ domino_installer_base_url }}"
+          name: "Downloading Leap from {{ installer_base_url }}"
           register: leapresult
           until: "leapresult is not failed"
           retries: 3
           ansible.builtin.get_url:
             mode: '0755' 
             validate_certs: false
-            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ leap_archive }}"
+            url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ leap_archive }}"
             dest: "{{ installer_dir }}/leap/archives/{{ leap_archive }}"
-            username: "{{ domino_installer_url_user }}"
-            password: "{{ secrets.domino_installer_url_pass }}"
+            username: "{{ installer_url_user }}"
+            password: "{{ secrets.installer_url_pass }}"
           when: not domino_server_installer_check.stat.exists
 
         -
@@ -148,28 +148,87 @@
             msg: "Leap confirmed to be installed"
 
         -
-          name: "Handing Leap/Volt templated JSON to Genesis to create Leap Internet Site Document"
-          ansible.builtin.template:
-            dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/leap-internet-site-document.json"
-            mode: "a+x"
-            owner: "{{ domino_user }}"
-            group: "{{ domino_group }}"
-            src: "leap-internet-site-document.json.j2"
+          name: "Creating/Updating Domino Leap internet Site Document"
+          block:
+              -
+                name: "Handing templated gather_domino_leap_internet_site_doc.json JSON to Genesis"
+                ansible.builtin.template:
+                  dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/gather_domino_leap_internet_site_doc.json"
+                  mode: "a+x"
+                  owner: "{{ domino_user }}"
+                  group: "{{ domino_group }}"
+                  src: "gather_domino_leap_internet_site_doc.json.j2"
 
-        -
-          name: "Waiting until Genesis returns OK"
-          ansible.builtin.wait_for:
-            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/leap-internet-site-document.json"
+              -
+                name: "Waiting until Genesis returns OK after processing gather_domino_leap_internet_site_doc.json"
+                ansible.builtin.wait_for:
+                  path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_leap_internet_site_doc.json"
 
-        -
-          name: "Checking if Genesis reports that it created the Leap Internet Site Document"
-          ansible.builtin.lineinfile:
-            path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/leap-internet-site-document.json"
-            line: "OK"
-            state: present
-          check_mode: true
-          register: presence_inet
-          failed_when: presence_inet is changed
+              -
+                name: "Checking if gather_domino_leap_internet_site_doc.json JSON applied succesfully"
+                ansible.builtin.lineinfile:
+                  path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/gather_domino_leap_internet_site_doc.json"
+                  line: "OK"
+                  state: present
+                check_mode: true
+                register: presence_oidc_gather_for_additional
+                failed_when: presence_oidc_gather_for_additional is changed
+
+              -
+                name: "Checking for leap_internet_site_doc_check"
+                register: leap_internet_site_doc_check
+                ansible.builtin.stat:
+                  path: "/JavaAddin/Genesis/jsonresponse/oidc_domino_leap_internet_site_doc.txt"
+                  get_md5: false
+
+              -
+                name: "Reading OIDC hostnames from file"
+                when: leap_internet_site_doc_check.stat.exists
+                ansible.builtin.slurp:
+                  src: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/oidc_domino_leap_internet_site_doc.txt"
+                register: oidc_provider_file_internet_site_doc_for_leap
+
+              -
+                name: "Processing Domino OIDC Provider Inetsite doc entry"
+                when: leap_internet_site_doc_check.stat.exists
+                ansible.builtin.set_fact:
+                  oidc_provider_file_internet_site_doc_for_leap_additional_raw: "{{ oidc_provider_file_internet_site_doc_for_leap['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
+
+              -
+                name: "Removing OIDCHostname= prefix, checking for Auth URL for server, and ensuring unique entries"
+                when: leap_internet_site_doc_check.stat.exists
+                ansible.builtin.set_fact:
+                  oidc_provider_file_internet_site_doc_for_leap_additional: "{{ oidc_provider_file_internet_site_doc_for_leap_additional_raw | regex_replace('ISiteName=', '') | split(' ') | unique | join(' ') }}"
+
+              -
+                name: "Setting Update/Create on document creation to prevent duplicates by checking oidc_provider_file_internet_site_doc_for_leap_additional for matching hostname"
+                when: leap_internet_site_doc_check.stat.exists
+                ansible.builtin.set_fact:
+                  domino_leap_inet_site_create: "{{ false if settings.hostname + ' Domino Leap' in oidc_provider_file_internet_site_doc_for_leap_additional else domino_leap_inet_site_create | default(true) }}"
+
+              -
+                name: "Handing Leap/Volt templated JSON to Genesis to create Leap Internet Site Document"
+                ansible.builtin.template:
+                  dest: "{{ domino_home_dir }}/JavaAddin/Genesis/json/leap-internet-site-document.json"
+                  mode: "a+x"
+                  owner: "{{ domino_user }}"
+                  group: "{{ domino_group }}"
+                  src: "leap-internet-site-document.json.j2"
+
+              -
+                name: "Waiting until Genesis returns OK"
+                ansible.builtin.wait_for:
+                  path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/leap-internet-site-document.json"
+
+              -
+                name: "Checking if Genesis reports that it created the Leap Internet Site Document"
+                ansible.builtin.lineinfile:
+                  path: "{{ domino_home_dir }}/JavaAddin/Genesis/jsonresponse/leap-internet-site-document.json"
+                  line: "OK"
+                  state: present
+                check_mode: true
+                register: presence_inet
+                failed_when: presence_inet is changed
 
         -
           name: "Setting up OIDC for Leap by Adding Leap to Registered Clients List for Unified Client Configs"
@@ -232,7 +291,7 @@
           failed_when: presence is changed
 
         -
-          name: "Setting up OIDC for Leap by Adding Leap to Registered Clients List for Unified Client Configs"
+          name: "Setting up OIDC for Leap by Adding Leap to OIDC Trusted Providers List for Unified Client Configs"
           when: 
             - domino_oidc_web_apps_use_unified_registered_client
             - domino_oidc_provider_enabled
@@ -276,9 +335,9 @@
                 oidc_hostnames_raw_for_leap: "{{ oidc_hostnames_file_for_leap['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
 
             -
-              name: "Removing OIDCHostname= prefix and checking for domino_leap_proxy_url"
+              name: "Removing OIDCHostname= prefix, checking for domino_leap_proxy_url, and ensuring unique entries"
               ansible.builtin.set_fact:
-                oidc_hostnames_processed_for_leap: "{{ oidc_hostnames_raw_for_leap | regex_replace('^OIDCHostname=', '') }}"
+                oidc_hostnames_processed_for_leap: "{{ oidc_hostnames_raw_for_leap | regex_replace('OIDCHostname=', '') | split(' ') | unique | join(' ') }}"
 
             -
               name: "Appending domino_leap_proxy_url if not present"
@@ -366,14 +425,14 @@
                 oidc_registered_clients_redirect_uris_raw: "{{ oidc_registered_clients_file_redirect_uris['content'] | b64decode | regex_replace('\n', '') | regex_replace('\r', '') }}"
 
             -
-              name: "Removing RC_Name= prefix and checking for Registered client name"
+              name: "Removing RC_Name= prefix, checking for Registered client name, and ensuring unique entries"
               ansible.builtin.set_fact:
-                oidc_registered_clients_processed: "{{ oidc_registered_clients_raw | regex_replace('^RC_Name=', '') }}"
+                oidc_registered_clients_processed: "{{ oidc_registered_clients_raw | regex_replace('RC_Name=', ' ') | split(' ') | unique | join(' ') }}"
 
             -
-              name: "Removing RC_redirect_uris= prefix and checking for domino_leap_proxy_url"
+              name: "Removing RC_redirect_uris= prefix, checking for domino_leap_proxy_url, and ensuring unique entries"
               ansible.builtin.set_fact:
-                oidc_registered_clients_redirect_uri_processed: "{{ oidc_registered_clients_redirect_uris_raw | regex_replace('^RC_redirect_uris=', '') }}"
+                oidc_registered_clients_redirect_uri_processed: "{{ oidc_registered_clients_redirect_uris_raw | regex_replace('RC_redirect_uris=', ' ') | split(' ') | unique | join(' ') }}"
 
             -
               name: "Appending Leap Name if not present"

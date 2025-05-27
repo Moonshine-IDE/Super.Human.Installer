@@ -5,7 +5,7 @@ package_arch:
   - amd64
 package_name: startcloud
 package_version: 0.0.1
-package_maintainer_email: support@startcloud.com
+package_maintainer_email: "{{ email }} | default('support@startcloud.com')"
 package_dependencies:
   - libc6
 package_maintainer_address: "https://www.startcloud.com"

@@ -1,5 +1,7 @@
 ---
 run_tasks: true
+# Import domino_oidc_debug from domino_oidc role if not defined
+domino_oidc_debug: "{{ domino_oidc_debug | default(false) }}"
 nomadweb_version: 1.0.15
 nomadweb_version_major: "{{ nomadweb_version.split('.')[0] }}"
 nomadweb_version_minor: "{{ nomadweb_version.split('.')[1] }}"
@@ -19,9 +21,8 @@ nomadweb_debug: false
 nomadweb_app_switcher_enabled: true
 
 nomad_hotfix_install: false
-nomad_hotfix_version: "HF1"
+nomad_hotfix_version: "IF1"
 nomad_hotfix_archive: "HCL_Nomad_server_{{ nomadweb_version }}-{{ nomad_hotfix_version }}_linux.tar.gz"
-
 installer_url_app_path: "Super.Human.Installer/Nomad"
 domino_nomadweb_port_forwards:
   -

@@ -1,0 +1,194 @@
+-
+  name: "Setting up UTM Shared Network (First Adapter)"
+  when: not convert_nat_dhcp_to_static
+  block:
+    -
+      name: "Placing Netplan into Working directory for UTM Shared Adapter"
+      ansible.builtin.template:
+        src: nat_interface.yaml.j2
+        dest: /etc/netplan/shared_adapter.yaml
+        mode: '0600'
+      vars:
+        macaddress: "{{ first_adapter_details.mac }}"
+        network_name: "shared_adapter"
+      register: shared_adapter_config
+
+    -
+      name: "Waiting for 5 seconds for IP to set for UTM Shared Adapter"
+      when: "shared_adapter_config.changed"
+      ansible.builtin.pause:
+        seconds: 5
+
+    -
+      name: "Setting Networking for UTM Shared Adapter"
+      when: "shared_adapter_config.changed"
+      changed_when: false
+      ansible.builtin.command: netplan apply
+
+    -
+      name: "Waiting for 5 seconds for IP to set for UTM Shared Adapter"
+      when: "shared_adapter_config.changed"
+      ansible.builtin.pause:
+        seconds: 5
+
+-
+  name: "Converting DHCP to Static IP for Shared Adapter"
+  when: convert_nat_dhcp_to_static
+  block:
+    -
+       name: "Grabbing local address for scripts"
+       changed_when: false
+       ansible.builtin.shell: "ip -h route list  dev {{ first_adapter }} default | awk '{ print $3}'"
+       args:
+         executable: /bin/bash
+       register: first_adapter_gateway
+       
+    -
+      name: "Placing Netplan into Working directory"
+      ansible.builtin.template:
+        src: nat_interface.yaml.j2
+        dest: /etc/netplan/shared_adapter.yaml
+        mode: '0600'
+      register: static_shared_adapter_config
+      vars:
+        prefix: "{{ hostvars[inventory_hostname]['ansible_' + first_adapter]['ipv4']['prefix'] }}"
+        macaddress: "{{ first_adapter_details.mac }}"
+        network_name: "shared_adapter"
+        address: "{{ first_adapter_details.ip }}"
+        gateway: "{{ first_adapter_gateway.stdout }}"
+
+    -
+      name: "Setting Networking"
+      when: static_shared_adapter_config.changed
+      changed_when: false
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - "netplan apply"
+
+    -
+      name: "Waiting for 2 seconds for IP to set"
+      when: static_shared_adapter_config.changed
+      ansible.builtin.pause:
+        seconds: 2
+
+-
+  name: "Setting up UTM Emulated VLAN (Second Adapter) for Vagrant SSH"
+  block:
+    -
+      name: "Placing Netplan into Working directory for UTM VLAN Adapter"
+      ansible.builtin.template:
+        src: nat_interface.yaml.j2
+        dest: /etc/netplan/vlan_adapter.yaml
+        mode: '0600'
+      vars:
+        macaddress: "{{ second_adapter_details.mac }}"
+        network_name: "vlan_adapter"
+      register: vlan_adapter_config
+
+    -
+      name: "Waiting for 5 seconds for IP to set for UTM VLAN Adapter"
+      when: "vlan_adapter_config.changed"
+      ansible.builtin.pause:
+        seconds: 5
+
+    -
+      name: "Setting Networking for UTM VLAN Adapter"
+      when: "vlan_adapter_config.changed"
+      changed_when: false
+      ansible.builtin.command: netplan apply
+
+    -
+      name: "Waiting for 5 seconds for IP to set for UTM VLAN Adapter"
+      when: "vlan_adapter_config.changed"
+      ansible.builtin.pause:
+        seconds: 5
+
+-
+  name: "Gathering Networking Configurations"
+  become: true
+  tags: once
+  block:
+    -
+      name: "Gather Networking Details"
+      ansible.builtin.include_tasks: "gather.yml"
+
+-
+  name: "Setting up External Network (Third+ Adapters)"
+  when: networks[0] is defined and networks[0].type == "external"
+  block:
+    -
+      name: "Ensuring there are at least three interfaces for external network"
+      ansible.builtin.fail:
+        msg: "External network configured but no third interface available."
+      when: sorted_interfaces | length < 3
+
+    -
+      name: "Setting third adapter details for external network"
+      ansible.builtin.set_fact:
+        third_adapter: "{{ sorted_interfaces[2] }}"
+        third_adapter_details:
+          name: "{{ sorted_interfaces[2] }}"
+          ip: "{{ hostvars[inventory_hostname]['ansible_' + sorted_interfaces[2]]['ipv4']['address'] | default('') }}"
+          mac: "{{ hostvars[inventory_hostname]['ansible_' + sorted_interfaces[2]]['macaddress'] | default('') }}"
+
+    -
+      name: "Setting Netmask as a fact"
+      ansible.builtin.set_fact:
+        net_mask: "{{ networks[0].address }}/{{ networks[0].netmask }}"
+
+    -
+      name: "Placing Netplan into Working directory for External Adapter"
+      ansible.builtin.template:
+        src: interface.yaml.j2
+        dest: /etc/netplan/external_adapter.yaml
+        mode: '0600'
+      register: external_adapter_config
+      vars:
+        macaddress: "{{ third_adapter_details.mac }}"
+        network_name: "external_adapter"
+
+    -
+      name: "Setting Networking"
+      changed_when: false
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - "netplan apply"
+
+    -
+      name: "Waiting for 2 seconds for IP to set"
+      ansible.builtin.pause:
+        seconds: 2
+
+-
+  name: "When No External Adapter included, Setting configurations to use VLAN adapter IP"
+  when: networks[0] is not defined
+  block:
+    -
+      name: "Placing VLAN adapter IP in file ipaddress.yml into {{ completed_dir }}"
+      ansible.builtin.copy:
+        content: "{{ second_adapter_details.ip }}"
+        dest: "{{ completed_dir }}/ipaddress.yml"
+        mode: '0644'
+
+    -
+      name: "Grabbing local address for scripts"
+      changed_when: false
+      ansible.builtin.shell: "cat {{ completed_dir }}/ipaddress.yml"
+      args:
+        executable: /bin/bash
+      register: netoutput
+
+    -
+      name: "Adding Extra Host Records"
+      ansible.builtin.lineinfile:
+        path: "/etc/hosts"
+        line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain }}"
+        insertbefore: EOF
+
+-
+  name: "Gathering Networking Configurations"
+  become: true
+  block:
+    -
+      name: "Gather Networking Details"
+      ansible.builtin.include_tasks: "gather.yml"

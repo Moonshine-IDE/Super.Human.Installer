@@ -6,3 +6,8 @@ sdkman_update_alternatives:
   - candidate: maven
     name: mvn
     link: /usr/bin/mvn
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Maven via SDKMAN"

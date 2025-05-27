@@ -5,6 +5,18 @@
       "type": "additional",
       "IDFilePath": "{{ domino_home_dir }}/ids/{{ domino_server_id }}",
       "useExistingServerID": {{ use_domino_server_id | lower }},
+{% if domino_major_version >= 14 %}
+      "additionalReplicas": [
+        {
+          "databaseName": "idpcat.nsf",
+          "failOnError": false
+        },
+        {
+          "databaseName": "domcfg.nsf",
+          "failOnError": false
+        }
+      ],
+{% endif %}
 {% else %}
       "type": "first",
 {% endif %}
@@ -32,7 +44,8 @@
     "org": {
       "countryCode": null,
       "orgName": "{{ domino_organization }}",
-      "certifierPassword": "{{ domino_admin_notes_id_password }}",
+      "certifierPassword": "{{ domino_certifier_id_password }}",
+      "certifierIDFilePath": "{{ domino_home_dir }}/ids/{{ domino_certifier_id }}",
       "orgUnitName": null,
       "orgUnitPassword": null
     },
@@ -348,7 +361,7 @@
               "Type": "Connection",
               "PortName": "TCPIP",
               "Source": "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
-              "Destination": "{{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
+              "Destination": "CN={{ origin_server }}.{{ domino_server_domain }}/O={{ domino_organization }}",
               "SourceDomain": "{{ domino_organization }}",
               "DestinationDomain": "{{ domino_organization }}",
               "ConnectionMode": "0",
@@ -380,7 +393,7 @@
               "Form": "WebSite",
               "AutomationComment" : "This default site document is what enabled SNI verification, Domino will try to route the request after initial TLS handshake, to the appropiate internet site doc, so long as you pass the host header via SNI",
               "ISiteOrg": "{{ domino_organization }}",
-              "ISiteName": "Domino Default Web Site",
+              "ISiteName": "{{ settings.hostname }} Default Site",
               "WSIsDflt": "1",
               "WSHostingSrvrs" : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",
               "TCPAnonymous"   : "0",
@@ -415,10 +428,10 @@
               "WSIsDflt"           : "0",
 {% if super_human_portal_enabled %}
               "WSHomeURL"          : "Super.Human.Portal/js-release/index.html",
-              "ISiteName"          : "Super.Human.Portal",
+              "ISiteName"          : "{{ settings.hostname }} Super.Human.Portal",
 {% else %}
               "WSHomeURL"          : "{{ domino_oidc_provider_web_home_url }}",
-              "ISiteName"          : "Domino Web Apps",
+              "ISiteName"          : "{{ settings.hostname }} Domino Web Apps",
 {% endif %}
               "ISiteAdrs"          : [ "{{ domino_install_proxy_url }}", "{{ settings.hostname }}.{{ settings.domain }}" ],
               "WSHostingSrvrs"     : "CN={{ domino_server_name_common }}/O={{ domino_organization }}",

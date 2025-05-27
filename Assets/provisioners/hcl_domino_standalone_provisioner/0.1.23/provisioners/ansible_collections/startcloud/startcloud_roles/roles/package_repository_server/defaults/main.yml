@@ -1,2 +1,3 @@
 ---
 run_tasks: true
+package_server_email: "{{ email }} | default('support@startcloud.com')"

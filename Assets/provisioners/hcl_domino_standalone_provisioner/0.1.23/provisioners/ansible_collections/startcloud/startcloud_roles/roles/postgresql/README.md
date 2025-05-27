@@ -101,7 +101,7 @@ postgresql_databases:
     lc_collate: # defaults to 'en_US.UTF-8'
     lc_ctype: # defaults to 'en_US.UTF-8'
     encoding: # defaults to 'UTF-8'
-    ansible.builtin.template: # defaults to 'template0'
+    template: # defaults to 'template0'
     login_host: # defaults to 'localhost'
     login_password: # defaults to not set
     login_user: # defaults to 'postgresql_user'

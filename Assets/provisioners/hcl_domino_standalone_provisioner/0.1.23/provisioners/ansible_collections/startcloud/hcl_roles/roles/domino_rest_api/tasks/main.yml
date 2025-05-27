@@ -31,17 +31,17 @@
             get_md5: false
 
         -
-          name: "Downloading domino-rest-api from {{ domino_installer_base_url }}"
+          name: "Downloading domino-rest-api from {{ installer_base_url }}"
           register: domino_rest_apiresult
           until: "domino_rest_apiresult is not failed"
           retries: 3
           ansible.builtin.get_url:
             mode: '0755'
             validate_certs: false
-            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ domino_rest_api_archive }}"
+            url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ domino_rest_api_archive }}"
             dest: "{{ installer_dir }}/domino-rest-api/archives/{{ domino_rest_api_archive }}"
-            username: "{{ domino_installer_url_user }}"
-            password: "{{ secrets.domino_installer_url_pass }}"
+            username: "{{ installer_url_user }}"
+            password: "{{ secrets.installer_url_pass }}"
           when: not domino_restapi_installer_check.stat.exists
 
         -

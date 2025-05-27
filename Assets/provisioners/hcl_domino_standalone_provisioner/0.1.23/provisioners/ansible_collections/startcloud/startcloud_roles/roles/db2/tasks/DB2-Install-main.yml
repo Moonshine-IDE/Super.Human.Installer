@@ -47,9 +47,9 @@
     group: "{{ db2grp }}"
     mode: "0755"
     owner: "{{ db2usr }}"
-    path: "/local/{{database_dir}}"
+    path: "/local/{{ database_dir }}"
     state: directory
-  name: "Check if /local/{{database_dir}} data directory is mounted and writeable by user: {{ db2usr }}"
+  name: "Check if /local/{{ database_dir }} data directory is mounted and writeable by user: {{ db2usr }}"
 - 
   file: 
     group: "{{ db2grp }}"

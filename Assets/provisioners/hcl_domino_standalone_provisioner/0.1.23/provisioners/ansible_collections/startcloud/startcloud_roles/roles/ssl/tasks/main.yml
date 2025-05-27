@@ -1,5 +1,24 @@
 ---
 -
+  name: "Managing progress for {{ ansible_role_name }} (Step 1 of 2)"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description_step1 | default(progress_role_description | default('Processing ' + ansible_role_name + ' - Step 1')) }}"
+
+-
   name: "Block to Allow Loading of Variables without running task"
   when: run_tasks
   block:
@@ -135,6 +154,10 @@
             mode: '0644'
             remote_src: true
 
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
     -
       name: "Generating Self Signed Certificate"
       when: selfsigned_enabled and not letsencrypt_enabled
@@ -355,7 +378,7 @@
 
     -
       name: "Beginning Let's Encrypt Provisioning"
-      when: letsencrypt_enabled
+      when: selfsigned_enabled and letsencrypt_enabled
       block:
         -
           name: "Ensuring apt cache is updated"
@@ -384,6 +407,11 @@
           register: haproxy_status
 
         -
+          name: "Check if HAProxy is in enabled_roles"
+          ansible.builtin.set_fact:
+            haproxy_in_enabled_roles: "{{ 'startcloud.startcloud_roles.haproxy' in (enabled_roles | default([])) }}"
+
+        -
           name: "Setting LE entries as a fact to consume"
           ansible.builtin.set_fact:
             le_entries: "{{ ['-d ' + settings.hostname + '.' + settings.domain] }}"
@@ -410,22 +438,22 @@
             --staging
             --email {{ settings.email }}
             {{ le_entries | join(' ') }}
-          when: haproxy_status.changed and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+          when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
           name: "Generating new staging request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --staging --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-          when: not haproxy_status.changed and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
+          when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and letsencrypt_staging_enabled
 
         -
           name: "Generating new certificate request"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }}
-          when: haproxy_status.changed and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+          when: (haproxy_status.changed and not haproxy_in_enabled_roles) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
         -
           name: "Generating new certificate request via HAProxy"
           ansible.builtin.shell: certbot certonly --standalone --noninteractive --agree-tos --key-type rsa --email {{ settings.email }} {{ le_entries | join(' ') }} --http-01-port=8181
-          when: not haproxy_status.changed and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
+          when: (not haproxy_status.changed or (haproxy_status.changed and haproxy_in_enabled_roles)) and not letsencrypt_cert.stat.exists and not letsencrypt_staging_enabled
 
         -
           name: "Remove old certs Directories for SSLs"
@@ -561,3 +589,22 @@
             group: "{{ service_group }}"
             mode: '0777'
             remote_src: true
+
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 2 of 2) - Final"
+  when: count_progress | default(false) and run_tasks
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 2 - Final)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 2 - Final)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description_step2 | default('Processing ' + ansible_role_name + ' - Step 2') }}"

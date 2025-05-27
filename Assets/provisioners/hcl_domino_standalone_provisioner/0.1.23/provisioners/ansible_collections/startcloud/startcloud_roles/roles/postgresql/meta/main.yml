@@ -1,33 +1,29 @@
 ---
-dependencies: []
-
 galaxy_info:
   role_name: postgresql
-  author: geerlingguy
-  description: PostgreSQL server for Linux.
-  company: "Midwestern Mac, LLC"
-  license: "license (BSD, MIT)"
-  min_ansible_version: "2.10"
+  author: MarkProminic
+  description: PostgreSQL server for Linux
+  company: STARTCloud
+  issue_tracker_url: https://github.com/PhoneSwitchboard/switchboard_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
   platforms:
-    - name: ArchLinux
-      versions:
-        - all
-    - name: Fedora
-      versions:
-        - all
-    - name: Ubuntu
-      versions:
-        - xenial
-        - bionic
-        - focal
-        - jammy
     - name: Debian
       versions:
         - buster
         - bullseye
         - bookworm
+
   galaxy_tags:
     - database
     - postgresql
     - postgres
     - rdbms
+
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

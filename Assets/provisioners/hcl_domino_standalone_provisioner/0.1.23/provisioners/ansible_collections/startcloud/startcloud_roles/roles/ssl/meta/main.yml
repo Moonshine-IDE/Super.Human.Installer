@@ -34,3 +34,5 @@ dependencies: []
 
 collections:
   - startcloud.startcloud_roles
+
+allow_duplicates: false

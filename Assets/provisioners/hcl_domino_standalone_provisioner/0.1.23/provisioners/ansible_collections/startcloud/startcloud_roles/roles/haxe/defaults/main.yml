@@ -9,7 +9,7 @@ haxe_version: "4.3.6"
 haxe_home: "/opt/haxe/haxe-{{ haxe_version }}"
 
 # Directory for Haxe libraries
-haxelib_dir: "/opt/haxe/haxelib"
+haxelib_dir: "/opt/haxe/haxelib_default"
 
 # Path to haxe
 haxe: "{{ haxe_home }}/haxe"

@@ -256,7 +256,7 @@
         - { src: "jenkins.desktop" , dest: "/home/{{ user }}/Desktop/jenkins.desktop" }
     
     -
-      command: "dbus-launch gio set {{item}}  \"metadata::trusted\" true"
+      command: "dbus-launch gio set {{ item }}  \"metadata::trusted\" true"
       name: "Ensuring that Desktop Icons are Launchable"
       with_items:
         - "/home/{{ user }}/Desktop/jenkins.desktop"
@@ -272,4 +272,4 @@
         group: "{{ user }}"
         remote_src: true
       with_items:
-        - { src: /vagrant/jobs , dest: "/home/{{user}}/Desktop" }
+        - { src: /vagrant/jobs , dest: "/home/{{ user }}/Desktop" }

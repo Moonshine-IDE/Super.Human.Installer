@@ -32,17 +32,17 @@
             get_md5: false
 
         -
-          name: "Downloading domino-appdev-pack from {{ domino_installer_base_url }}"
+          name: "Downloading domino-appdev-pack from {{ installer_base_url }}"
           register: appdevpackresult
           until: "appdevpackresult is not failed"
           retries: 3
           ansible.builtin.get_url:
             mode: '0755'
             validate_certs: false
-            url: "{{ domino_installer_base_url }}/{{ installer_url_app_path }}/{{ appdevpack_archive }}"
+            url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ appdevpack_archive }}"
             dest: "{{ installer_dir }}/appdevpack/archives/{{ appdevpack_archive }}"
-            username: "{{ domino_installer_url_user }}"
-            password: "{{ secrets.domino_installer_url_pass }}"
+            username: "{{ installer_url_user }}"
+            password: "{{ secrets.installer_url_pass }}"
           when: not appdevpack_installer_check.stat.exists
 
         -
