@@ -18,9 +18,27 @@ Access this page via **Settings -> Manage Global Secrets**.
 
 ![Secrets Management](../Assets/images/docs/secrets.png)
 
+## HCL Download Portal API
+
+You can add a HCL API key, which will allow you to download the various Binaries from [HCL Downloads](https://my.hcltechsw.com/downloads) to use without having to manually find/download and locate the various installer binaries/archives.
+
+You can add multiple keys should you have multiple accounts.
+
+Note: HCL API keys are one time use! If you use the Key before you add it to SHI it will fail. The HCL API Key, is actually a Refresh token, which when first used, exchanges with the HCL servers an "Access Token", This access token is periodically refreshed. SHI does not expose this Access Token as it is not meant for re-use.
+
+To add a API key, Select the Green + Icon on the Manage Global Secrets Page. This will prompt you for two fields.
+
+Then login to the HCL Downloads portal, once you have logged in, in the upper right hand of the page, you should see your Profile. Select your profile, and in the drop down select Manage API Keys.
+
+In the Manage API Keys page, create a new API, It is best practice to name the API and use the same name in the description field in SHI.
+
+Copy the API key to SHI in the API Key Field. Then click Save.
+
+Once this has been completed you can download various software packages via the [File Cache]({% link /Docs/file-cache.md %})
+
 ## Git API Keys / Personal Access Tokens (PATs)
 
-Git API keys (often called Personal Access Tokens or PATs on platforms like GitHub, GitLab, Bitbucket) allow SHI to authenticate with private Git repositories when using the "Import from GitHub" feature on the [Provisioner Import](provisioner-import) page.
+Git API keys (often called Personal Access Tokens or PATs on platforms like GitHub, GitLab, Bitbucket) allow SHI to authenticate with private Git repositories when using the "Import from GitHub" feature on the [Provisioner Import](/Docs/provisioner-import) page.
 
 ### Managing Git API Keys
 
