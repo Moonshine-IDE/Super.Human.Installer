@@ -34,6 +34,7 @@ jobs:
 
       - name: Update rbenv and ruby-build definitions
         run: |
+          source /etc/profile.d/rbenv.sh
           if [ -d "/usr/local/rbenv/plugins/ruby-build" ]; then
             echo "Updating ruby-build..."
             git -C "/usr/local/rbenv/plugins/ruby-build" pull
@@ -43,15 +44,19 @@ jobs:
 
       - name: Install Ruby ${{ env.RUBY_VERSION }} using rbenv
         run: |
+          source /etc/profile.d/rbenv.sh
           rbenv install ${{ env.RUBY_VERSION }} --skip-existing
           rbenv global ${{ env.RUBY_VERSION }}
           echo "Ruby ${{ env.RUBY_VERSION }} installation checked/completed."
 
       - name: Rehash rbenv shims
-        run: rbenv rehash
+        run: |
+          source /etc/profile.d/rbenv.sh
+          rbenv rehash
 
       - name: Install Bundler and Gems
         run: |
+          source /etc/profile.d/rbenv.sh
           gem install bundler -v '~> 2.3'
           bundle config path vendor/bundle
           bundle install --jobs 4 --retry 3
@@ -62,6 +67,7 @@ jobs:
 
       - name: Build with Jekyll
         run: |
+          source /etc/profile.d/rbenv.sh
           bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         working-directory: ./
         env:
