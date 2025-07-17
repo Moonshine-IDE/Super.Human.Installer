@@ -52,7 +52,7 @@ Use this tab to import a provisioner directly from a GitHub repository.
 *   **Organization/User**: The GitHub username or organization owning the repository (e.g., `prominic`).
 *   **Repository**: The name of the repository (e.g., `provisioner-example`).
 *   **Branch**: The specific branch to import (defaults to `main`).
-*   **GitHub Token**: (Optional) Select a pre-configured Git API Token/PAT from your [Secrets Management](secrets-page) to access private repositories. Leave as "None" for public repositories.
+*   **GitHub Token**: (Optional) Select a pre-configured Git API Token/PAT from your [Secrets Management]({% link Docs/secrets-page.md %}) to access private repositories. Leave as "None" for public repositories.
 *   **Download Method**:
     *   **Git Clone (Checkbox Enabled)**: Uses `git clone` to download the repository. This method supports private repositories (with a token) and handles submodules correctly. **This is the only method currently supported for asynchronous background import.**
     *   **HTTP (Checkbox Disabled)**: *[Note: While the UI toggle exists, the underlying asynchronous import currently only functions with Git Clone enabled.]*

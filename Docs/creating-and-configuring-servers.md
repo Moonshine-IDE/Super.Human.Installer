@@ -47,7 +47,7 @@ Fill in the required fields:
 *   Click the "**Configure Roles**" button.
 *   This page lists all software roles defined by the selected provisioner (from its `provisioner.yml`).
 *   **Enable/Disable Roles**: Check the boxes next to the roles you want to install on this server. Some roles might be marked as required by the provisioner and cannot be disabled.
-*   **Locate Installer Files**: For roles that require specific installer files (as defined in the provisioner's metadata), click the "Locate File..." button next to the role. Select the corresponding installer, fixpack, or hotfix file from your local machine. SHI will verify the file using its hash (if known) and associate it with the role for this server instance. Ensure required files are managed via the [File Cache & Hashes](file-cache) manager.
+*   **Locate Installer Files**: For roles that require specific installer files (as defined in the provisioner's metadata), click the "Locate File..." button next to the role. Select the corresponding installer, fixpack, or hotfix file from your local machine. SHI will verify the file using its hash (if known) and associate it with the role for this server instance. Ensure required files are managed via the [File Cache & Hashes]({% link Docs/file-cache.md %}) manager.
 *   Click "**Close**" to return to the main configuration page. The "Configure Roles" button should now indicate if the role configuration is valid (e.g., required files located).
 
 ![Role Selection Page](../Assets/images/docs/standalone-role-selection-page.png)
@@ -82,7 +82,7 @@ Fill in the required fields:
 *   Essential configuration files (`Hosts.yml`) are generated based on your settings and the provisioner's templates.
 *   The server appears in the main "Servers" list with the status "Ready" or "Stopped".
 
-Your server is now configured and ready to be started and provisioned. See [Server Management](vm-management) for the next steps.
+Your server is now configured and ready to be started and provisioned. See [Server Management]({% link Docs/vm-management.md %})) for the next steps.
 
 ## Relevant Files
 

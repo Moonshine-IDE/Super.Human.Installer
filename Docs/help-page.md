@@ -22,7 +22,7 @@ Before seeking further help, please review the troubleshooting sections within t
 1.  **Check Prerequisites**: Ensure compatible versions of VirtualBox, Vagrant, and Git are installed and functioning correctly ([Getting Started](getting-started#software-prerequisites)).
 2.  **Review Console Output**: The server **Console** within SHI provides detailed logs from Vagrant and Ansible. Error messages here are crucial for diagnosis. Use the "Copy" button to easily share logs if needed.
 3.  **Check SHI Logs**: For application-level errors, check the `current.txt` log file located in `<AppStorage>/logs/`. (`<AppStorage>` is the application's data directory, typically found in `~/Library/Application Support/` on macOS, `%APPDATA%` on Windows, or `~/.local/share/` on Linux). Click "Open Logs Directory" on the Support page (accessible via the main menu) for easy access.
-4.  **Verify File Cache**: Ensure all required installer files for your selected roles are present and valid in the [File Cache & Hashes](file-cache) manager (Settings -> Manage Installer Files).
+4.  **Verify File Cache**: Ensure all required installer files for your selected roles are present and valid in the [File Cache & Hashes]({% link Docs/file-cache.md %}) manager (Settings -> Manage Installer Files).
 5.  **Network Configuration**: If experiencing VM network issues, double-check IP address settings, DHCP configuration, and the selected Bridge Adapter in the server's Advanced Configuration.
 
 ## External Resources

@@ -38,7 +38,7 @@ Once this has been completed you can download various software packages via the 
 
 ## Git API Keys / Personal Access Tokens (PATs)
 
-Git API keys (often called Personal Access Tokens or PATs on platforms like GitHub, GitLab, Bitbucket) allow SHI to authenticate with private Git repositories when using the "Import from GitHub" feature on the [Provisioner Import](/Docs/provisioner-import) page.
+Git API keys (often called Personal Access Tokens or PATs on platforms like GitHub, GitLab, Bitbucket) allow SHI to authenticate with private Git repositories when using the "Import from GitHub" feature on the [Provisioner Import]({% link Docs/provisioner-import.md %}) page.
 
 ### Managing Git API Keys
 
@@ -58,7 +58,7 @@ Changes are saved only when you click the main "Save" button at the bottom of th
 
 ### Usage
 
-When using the "Import from GitHub" feature on the [Provisioner Import](provisioner-import) page, the "GitHub Token" dropdown will be populated with the names of the keys you've saved here. Selecting a token allows SHI to clone private repositories associated with that token. Choose "None" for public repositories.
+When using the "Import from GitHub" feature on the [Provisioner Import]({% link Docs/provisioner-import.md %}) page, the "GitHub Token" dropdown will be populated with the names of the keys you've saved here. Selecting a token allows SHI to clone private repositories associated with that token. Choose "None" for public repositories.
 
 ## SSH Keys
 

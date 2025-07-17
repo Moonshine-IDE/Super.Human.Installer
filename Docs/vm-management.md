@@ -93,7 +93,7 @@ SHI provides convenient buttons for accessing your server:
 
 ## Troubleshooting
 
-*   **VM Fails to Start/Provision**: Check the **Console** output for specific errors from Vagrant, VirtualBox, or Ansible. Ensure VirtualBox & Vagrant are installed correctly and running. Verify required installer files are present and valid in the [File Cache](file-cache).
+*   **VM Fails to Start/Provision**: Check the **Console** output for specific errors from Vagrant, VirtualBox, or Ansible. Ensure VirtualBox & Vagrant are installed correctly and running. Verify required installer files are present and valid in the [File Cache]({% link Docs/file-cache.md %}).
 *   **Network Issues**: Ensure the VM's configured IP address doesn't conflict with other devices on your network. Check the selected **Bridge Adapter** in Advanced Configuration if not using DHCP.
 *   **File Sync Errors**: Check permissions on the host directory. If using Rsync on Windows, ensure it's correctly installed and in the system PATH. Consider switching to SCP in Settings if Rsync issues persist.
 *   **"Aborted" State**: This usually means the VM was terminated unexpectedly. Try starting it again. If it persists, the VM image might be corrupted, requiring a `Destroy` and then `Start` to recreate it.
