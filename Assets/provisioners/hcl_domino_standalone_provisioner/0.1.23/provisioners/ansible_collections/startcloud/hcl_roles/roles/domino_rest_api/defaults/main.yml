@@ -10,6 +10,8 @@ domino_rest_api_version: 1.1.2
 domino_rest_api_archive: >-
   {% if domino_rest_api_archive is defined and domino_rest_api_archive is not none and domino_rest_api_archive != '' %}
     {{ domino_rest_api_archive }}
+  {% elif domino_rest_api_version is not defined or domino_rest_api_version is none or domino_rest_api_version == '' %}
+    Domino_REST_API_V1.1.2_Installer.tar.gz
   {% elif domino_rest_api_version is version('1', '==') %}
     Domino_REST_API_V1_Installer.tar.gz
   {% elif domino_rest_api_version is version('1.0.9', '>=') %}
@@ -20,7 +22,9 @@ domino_rest_api_archive: >-
 
 # Generate installer jar name based on version
 domino_rest_api_installer_jar: >-
-  {% if domino_rest_api_version is version('1', '==') %}
+  {% if domino_rest_api_version is not defined or domino_rest_api_version is none or domino_rest_api_version == '' %}
+    restapiInstall.jar
+  {% elif domino_rest_api_version is version('1', '==') %}
     restapiInstall.jar
   {% elif domino_rest_api_version is version('1.0.9', '>=') %}
     restapiInstall-r{{ domino_major_version }}.jar
