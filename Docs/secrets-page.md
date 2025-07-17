@@ -34,7 +34,7 @@ In the Manage API Keys page, create a new API, It is best practice to name the A
 
 Copy the API key to SHI in the API Key Field. Then click Save.
 
-Once this has been completed you can download various software packages via the [File Cache]({% link /Docs/file-cache.md %})
+Once this has been completed you can download various software packages via the [File Cache]({% link Docs/file-cache.md %})
 
 ## Git API Keys / Personal Access Tokens (PATs)
 
