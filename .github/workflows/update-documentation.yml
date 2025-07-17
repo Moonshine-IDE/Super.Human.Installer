@@ -34,8 +34,7 @@ jobs:
 
       - name: Update rbenv and ruby-build definitions
         run: |
-          whoami
-          pwd
+          source ~/.bashrc
           if [ -d "/home/startcloud/.rbenv/plugins/ruby-build" ]; then
             echo "Updating ruby-build..."
             git -C "/home/startcloud/.rbenv/plugins/ruby-build" pull
@@ -45,6 +44,7 @@ jobs:
 
       - name: Install Ruby ${{ env.RUBY_VERSION }} using rbenv
         run: |
+          source ~/.bashrc
           rbenv install ${{ env.RUBY_VERSION }} --skip-existing
           echo "Ruby ${{ env.RUBY_VERSION }} installation checked/completed."
 
@@ -56,6 +56,7 @@ jobs:
 
       - name: Install Bundler and Gems
         run: |
+          source ~/.bashrc
           eval "$(rbenv init - bash)" # Initialize rbenv for this shell session
           gem install bundler -v '~> 2.3' # Install a specific bundler version if needed
           bundle config path vendor/bundle
