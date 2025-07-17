@@ -34,31 +34,25 @@ jobs:
 
       - name: Update rbenv and ruby-build definitions
         run: |
-          source ~/.bashrc
-          if [ -d "/home/startcloud/.rbenv/plugins/ruby-build" ]; then
+          if [ -d "/usr/local/rbenv/plugins/ruby-build" ]; then
             echo "Updating ruby-build..."
-            git -C "/home/startcloud/.rbenv/plugins/ruby-build" pull
+            git -C "/usr/local/rbenv/plugins/ruby-build" pull
           else
             echo "ruby-build plugin not found in rbenv root. Assuming rbenv manages it elsewhere or it's up-to-date."
           fi
 
       - name: Install Ruby ${{ env.RUBY_VERSION }} using rbenv
         run: |
-          source ~/.bashrc
           rbenv install ${{ env.RUBY_VERSION }} --skip-existing
+          rbenv global ${{ env.RUBY_VERSION }}
           echo "Ruby ${{ env.RUBY_VERSION }} installation checked/completed."
-
-      - name: Set Ruby version
-        run: rbenv local ${{ env.RUBY_VERSION }}
 
       - name: Rehash rbenv shims
         run: rbenv rehash
 
       - name: Install Bundler and Gems
         run: |
-          source ~/.bashrc
-          eval "$(rbenv init - bash)" # Initialize rbenv for this shell session
-          gem install bundler -v '~> 2.3' # Install a specific bundler version if needed
+          gem install bundler -v '~> 2.3'
           bundle config path vendor/bundle
           bundle install --jobs 4 --retry 3
 
@@ -68,7 +62,6 @@ jobs:
 
       - name: Build with Jekyll
         run: |
-          eval "$(rbenv init - bash)"
           bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
         working-directory: ./
         env:
