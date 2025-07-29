@@ -7,7 +7,7 @@
       name: "Checking if Nomad is installed by provisioner: {{ nomadweb_version }}"
       register: nomadweb_installed_check
       ansible.builtin.stat:
-        path: "{{ completed_dir }}/nomadweb_install"
+        path: "{{ completed_dir }}/nomadweb_installed"
         get_md5: false
 
     -

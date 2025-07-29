@@ -69,5 +69,5 @@
         -
           name: "PROGRESS ({{ _progress_percentage | default('N/A') }}%) --- {{ progress_description | default('Waiting for details...') }}"
           ansible.builtin.debug:
-            msg: "Progress: {{ _progress_percentage }}% --- {{ progress_description }}"
+            msg: "Progress: ({{ _progress_percentage | default('N/A') }}%) --- {{ progress_description | default('Waiting for details...') }}"
           changed_when: true
