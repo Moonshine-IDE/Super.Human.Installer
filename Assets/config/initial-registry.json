@@ -17,7 +17,7 @@
       {
         "hash": "",
         "fileName": "Domino_14.5_Linux_English_EA1.tar",
-        "description": "HCL Domino Server 14.5 for Linux English",
+        "description": "HCL Domino Server 14.5 for EA1 Linux English",
         "sha256": "3d96498fc5e61bcb6268dbbdb753f0cb7f3cc7b43bdfbd94bc0672370d779c15",
         "version": {
           "majorVersion": "14",
@@ -30,7 +30,7 @@
       {
         "hash": "5aaecfc4dbbe3c610aa47833c13e8d0a",
         "fileName": "Domino_14.5_Linux_English_EA2.tar",
-        "description": "HCL Domino Server 14.5 for Linux English",
+        "description": "HCL Domino Server 14.5 EA2 for Linux English",
         "sha256": "6de1f392a642d3a17b5af744e64ad8a58762afcdda362150e5740199723e7f16",
         "version": {
           "majorVersion": "14",
@@ -130,6 +130,19 @@
       }
     ],
     "hotfixes": [
+      {
+        "hash": "1b64c601f0d9dd6f0e82f383167def9f6eb6521c5fb8659d9f2ffedd13ae48c6",
+        "fileName": "Domino_1450FP1_Linux.tar",
+        "description": "HCL Domino Server 14.5.0 FP1 for Linux English",
+        "sha256": "be0b9c7f631975a7de7735554c4baf2397d458386659e2d5e13c106e400ee6e8",
+        "version": {
+          "majorVersion": "14",
+          "minorVersion": "5",
+          "patch": "1",
+          "fixPackVersion": "FP1",
+          "fullVersion": "14.5.0fp1"
+        }
+      },
       {
         "hash": "",
         "fileName": "1201FP1HF55-linux64.tar",
@@ -742,6 +755,30 @@
           "minorVersion": "0",
           "patch": "15",
           "fullVersion": "1.0.15"
+        }
+      },
+      {
+        "hash": "",
+        "fileName": "HCL_Nomad_server_1.0.16_linux.tar.gz",
+        "description": "HCL Nomad server 1.0.16 for Domino 12.0.2/14.0 Linux",
+        "sha256": "99288096ab617eca1b650bed4773b7e1b75a09346925b4813e631de971ddd4e0",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "0",
+          "patch": "16",
+          "fullVersion": "1.0.16"
+        }
+      },
+      {
+        "hash": "87eef0f363bf7a15720acfe60f62c116b58aa4f75ff0b09c76e5ec8fa8b1f940",
+        "fileName": "HCL_Nomad_server_1.0.17_linux.tar.gz",
+        "description": "HCL Nomad server 1.0.17 for Domino 12.0.2/14.0 Linux",
+        "sha256": "87eef0f363bf7a15720acfe60f62c116b58aa4f75ff0b09c76e5ec8fa8b1f940",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "0",
+          "patch": "17",
+          "fullVersion": "1.0.17"
         }
       }
     ],
