@@ -2,7 +2,7 @@
   "domino": {
     "installers": [
       {
-        "hash": "",
+        "hash": "9acb8b6b88234404135052ded8424d2e",
         "fileName": "Domino_14.5_Linux_English.tar",
         "description": "HCL Domino Server 14.5 for Linux English",
         "sha256": "6775d563e826114702fc4aacf20f5f086459bd151c3bf01a9e659eaff47ebe79",
@@ -770,10 +770,10 @@
         }
       },
       {
-        "hash": "87eef0f363bf7a15720acfe60f62c116b58aa4f75ff0b09c76e5ec8fa8b1f940",
+        "hash": "39076c5eaca33734046744fbc6bbf22e",
         "fileName": "HCL_Nomad_server_1.0.17_linux.tar.gz",
         "description": "HCL Nomad server 1.0.17 for Domino 12.0.2/14.0 Linux",
-        "sha256": "87eef0f363bf7a15720acfe60f62c116b58aa4f75ff0b09c76e5ec8fa8b1f940",
+        "sha256": "75d89f77d987435253913729f781b9170cb0a08de4cbd634b5a02992b1f3db1c",
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
