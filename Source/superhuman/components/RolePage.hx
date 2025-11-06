@@ -688,8 +688,8 @@ class RolePage extends Page {
                                 minorVersionStr = Std.string(Reflect.field(versionInfo, "minorVersion"));
                             }
                             
-                            if (Reflect.hasField(versionInfo, "patch")) {
-                                patchStr = Std.string(Reflect.field(versionInfo, "patch"));
+                            if (Reflect.hasField(versionInfo, "patchVersion")) {
+                                patchStr = Std.string(Reflect.field(versionInfo, "patchVersion"));
                             }
                             
                             Logger.info('RolePage: Domino version: ' + 
@@ -1389,9 +1389,9 @@ class RolePickerItem extends LayoutGroup {
                     // Check for _R<dominoMajor> suffix in patch or fullVersion
                     var dominoSuffix = '_R${_dominoInstallerVersion.majorVersion}';
                     
-                    if (Reflect.hasField(file.version, "patch") && 
-                        Reflect.field(file.version, "patch") != null &&
-                        StringTools.contains(Reflect.field(file.version, "patch"), dominoSuffix)) {
+                    if (Reflect.hasField(file.version, "patchVersion") && 
+                        Reflect.field(file.version, "patchVersion") != null &&
+                        StringTools.contains(Reflect.field(file.version, "patchVersion"), dominoSuffix)) {
                         return true;
                     }
                     
@@ -1405,12 +1405,12 @@ class RolePickerItem extends LayoutGroup {
                     return false;
                     
                 case "domino-rest-api":
-                    // Check for _R<dominoMajor> suffix in patch or fullVersion
+                    // Check for _R<dominoMajor> suffix in patchVersion or fullVersion
                     var dominoSuffix = '_R${_dominoInstallerVersion.majorVersion}';
                     
-                    if (Reflect.hasField(file.version, "patch") && 
-                        Reflect.field(file.version, "patch") != null) {
-                        return StringTools.contains(Reflect.field(file.version, "patch"), dominoSuffix);
+                    if (Reflect.hasField(file.version, "patchVersion") && 
+                        Reflect.field(file.version, "patchVersion") != null) {
+                        return StringTools.contains(Reflect.field(file.version, "patchVersion"), dominoSuffix);
                     }
                     
                     return false;
@@ -2017,7 +2017,7 @@ class RolePickerItem extends LayoutGroup {
                                 'fullVersion=${version.fullVersion}, ' +
                                 'majorVersion=${version.majorVersion}, ' +
                                 'minorVersion=${version.minorVersion}' +
-                                (Reflect.hasField(version, "patch") ? ', patch=' + Reflect.field(version, "patch") : ''));
+                                (Reflect.hasField(version, "patchVersion") ? ', patchVersion=' + Reflect.field(version, "patchVersion") : ''));
                         } catch (e) {
                             Logger.error('${this}: Error logging version info: ${e}');
                         }

@@ -8,7 +8,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "",
           "fullVersion": "14.5.0"
         }
@@ -20,7 +20,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "EA1",
           "fullVersion": "14.5.0_EA1"
         }
@@ -127,7 +127,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
-          "patch": "1",
+          "patchVersion": "1",
           "fixPackVersion": "FP1",
           "fullVersion": "14.5.0fp1"
         }
@@ -139,7 +139,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fixPackVersion": "FP1",
           "fullVersion": "12.0.1fp1if1"
         }
@@ -151,7 +151,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fixPackVersion": "FP1",
           "fullVersion": "12.0.1fp1if2"
         }
@@ -163,7 +163,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "12.0.1if1"
         }
       },
@@ -174,7 +174,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "12.0.1if2"
         }
       },
@@ -185,7 +185,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "12.0.1if3"
         }
       },
@@ -196,7 +196,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP2",
           "fullVersion": "12.0.2fp2if1"
         }
@@ -208,7 +208,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP3",
           "fullVersion": "12.0.2fp3if1"
         }
@@ -220,7 +220,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP3",
           "fullVersion": "12.0.2fp3if2"
         }
@@ -232,7 +232,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP4",
           "fullVersion": "12.0.2fp4if1"
         }
@@ -244,7 +244,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP5",
           "fullVersion": "12.0.2fp5if1"
         }
@@ -256,7 +256,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP5",
           "fullVersion": "12.0.2fp5if2"
         }
@@ -268,7 +268,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP2",
           "fullVersion": "14.0fp2if1"
         }
@@ -280,7 +280,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP2",
           "fullVersion": "14.0fp2if2"
         }
@@ -292,7 +292,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP12",
           "fullVersion": "14.0fp2if3"
         }
@@ -304,7 +304,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP3",
           "fullVersion": "14.0fp3if1"
         }
@@ -316,7 +316,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP3",
           "fullVersion": "14.0fp3if2"
         }
@@ -328,7 +328,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP3",
           "fullVersion": "14.0fp3if3"
         }
@@ -342,7 +342,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "12.0.1fp1"
         }
       },
@@ -353,7 +353,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2fp1"
         }
       },
@@ -364,7 +364,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2fp2"
         }
       },
@@ -375,7 +375,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2fp3"
         }
       },
@@ -386,7 +386,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2fp4"
         }
       },
@@ -397,7 +397,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2fp5"
         }
       },
@@ -408,7 +408,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2fp6"
         }
       },
@@ -419,7 +419,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "14.0fp1"
         }
       },
@@ -430,7 +430,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "14.0fp2"
         }
       },
@@ -441,7 +441,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "14.0fp3"
         }
       },
@@ -452,7 +452,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "14.0fp4"
         }
       }
@@ -467,7 +467,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "1.1.2"
         }
       },
@@ -478,7 +478,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "3",
+          "patchVersion": "3",
           "fullVersion": "1.1.3"
         }
       },
@@ -489,7 +489,7 @@
         "version": {
             "majorVersion": "1",
             "minorVersion": "1",
-            "patch": "4",
+            "patchVersion": "4",
             "fullVersion": "1.1.4"
         }
       },
@@ -500,7 +500,7 @@
         "version": {
             "majorVersion": "1",
             "minorVersion": "1",
-            "patch": "5",
+            "patchVersion": "5",
             "fullVersion": "1.1.5"
         }
       },
@@ -511,7 +511,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "6",
+          "patchVersion": "6",
           "fullVersion": "1.1.6"
         }
       },
@@ -522,7 +522,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "7",
+          "patchVersion": "7",
           "fullVersion": "1.1.7"
         }
       }
@@ -536,7 +536,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "7",
+          "patchVersion": "7",
           "fullVersion": "1.1.7if1"
         }
       }
@@ -551,7 +551,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "7_R1201",
+          "patchVersion": "7_R1201",
           "fullVersion": "1.0.7_R1201"
         }
       },
@@ -562,7 +562,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "7_R1202",
+          "patchVersion": "7_R1202",
           "fullVersion": "1.0.7_R1202"
         }
       },
@@ -573,7 +573,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "8_R1202",
+          "patchVersion": "8_R1202",
           "fullVersion": "1.0.8_R1202"
         }
       },
@@ -584,7 +584,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "8_R1201",
+          "patchVersion": "8_R1201",
           "fullVersion": "1.0.8_R1201"
         }
       },
@@ -595,7 +595,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "9_R1202",
+          "patchVersion": "9_R1202",
           "fullVersion": "1.0.9_R1202"
         }
       },
@@ -606,7 +606,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R14",
+          "patchVersion": "10_R14",
           "fullVersion": "1.0.10_R14"
         }
       },
@@ -617,7 +617,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R12",
+          "patchVersion": "10_R12",
           "fullVersion": "1.0.10_R12"
         }
       },
@@ -628,7 +628,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "11_R14",
+          "patchVersion": "11_R14",
           "fullVersion": "1.0.11_R14"
         }
       },
@@ -639,7 +639,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "11_R12",
+          "patchVersion": "11_R12",
           "fullVersion": "1.0.11_R12"
         }
       },
@@ -650,7 +650,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "12_R14",
+          "patchVersion": "12_R14",
           "fullVersion": "1.0.12_R14"
         }
       },
@@ -661,7 +661,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "12_R12",
+          "patchVersion": "12_R12",
           "fullVersion": "1.0.12_R12"
         }
       },
@@ -672,7 +672,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "13",
+          "patchVersion": "13",
           "fullVersion": "1.0.13"
         }
       },
@@ -683,7 +683,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "14",
+          "patchVersion": "14",
           "fullVersion": "1.0.14"
         }
       },
@@ -694,7 +694,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "15",
+          "patchVersion": "15",
           "fullVersion": "1.0.15"
         }
       },
@@ -705,7 +705,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "16",
+          "patchVersion": "16",
           "fullVersion": "1.0.16"
         }
       },
@@ -716,7 +716,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "17",
+          "patchVersion": "17",
           "fullVersion": "1.0.17"
         }
       }
@@ -729,7 +729,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R14",
+          "patchVersion": "10_R14",
           "fullVersion": "1.0.10if1_R14"
         }
       },
@@ -740,7 +740,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R12",
+          "patchVersion": "10_R12",
           "fullVersion": "1.0.10if1_R12"
         }
       },
@@ -751,7 +751,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R12",
+          "patchVersion": "10_R12",
           "fullVersion": "1.0.12if1_R12"
         }
       },
@@ -762,7 +762,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R14",
+          "patchVersion": "10_R14",
           "fullVersion": "1.0.12if1_R14"
         }
       },
@@ -773,7 +773,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "13",
+          "patchVersion": "13",
           "fullVersion": "1.0.13if1"
         }
       },
@@ -784,7 +784,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "13",
+          "patchVersion": "13",
           "fullVersion": "1.0.13if2"
         }
       },
@@ -795,7 +795,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "15",
+          "patchVersion": "15",
           "fullVersion": "1.0.15if1"
         }
       }
@@ -810,7 +810,7 @@
         "version": {
           "majorVersion": "11",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "11.0.1"
         }
       },
@@ -821,7 +821,7 @@
         "version": {
           "majorVersion": "11",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "11.0.2"
         }
       },
@@ -832,7 +832,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "12.0.1"
         }
       },
@@ -843,7 +843,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "12.0.2"
         }
       },
@@ -854,7 +854,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "14.0.0"
         }
       },
@@ -865,7 +865,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "EA1",
           "fullVersion": "14.5.0_EA1"
         }
@@ -877,7 +877,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "EA2",
           "fullVersion": "14.5.0_EA2"
         }
@@ -889,7 +889,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "EA1",
           "fullVersion": "14.0.0_EA1"
         }
@@ -901,7 +901,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "EA2",
           "fullVersion": "14.0.0_EA2"
         }
@@ -913,7 +913,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "ea_access_release": "EA3",
           "fullVersion": "14.0.0_EA3"
         }
@@ -927,7 +927,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fixPackVersion": "FP1",
           "fullVersion": "12.0.1FP1"
         }
@@ -939,7 +939,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fixPackVersion": "FP2",
           "fullVersion": "12.0.1FP2"
         }
@@ -951,7 +951,7 @@
         "version": {
           "majorVersion": "12",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fixPackVersion": "FP1",
           "fullVersion": "12.0.2FP1"
         }
@@ -963,7 +963,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP1",
           "fullVersion": "14.0.0FP1"
         }
@@ -975,7 +975,7 @@
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fixPackVersion": "FP2",
           "fullVersion": "14.0.0FP2"
         }
@@ -991,7 +991,7 @@
         "version": {
           "majorVersion": "2",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "2.0.1"
         }
       },
@@ -1002,7 +1002,7 @@
         "version": {
           "majorVersion": "2",
           "minorVersion": "1",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "2.1.0"
         }
       },
@@ -1013,7 +1013,7 @@
         "version": {
           "majorVersion": "2",
           "minorVersion": "2",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "2.2.0"
         }
       },
@@ -1024,7 +1024,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "3.0.0"
         }
       },
@@ -1035,7 +1035,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "3.0.2"
         }
       },
@@ -1046,7 +1046,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "1",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "3.1.0"
         }
       },
@@ -1057,7 +1057,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "3.2.0"
         }
       },
@@ -1068,7 +1068,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "3.2.1"
         }
       },
@@ -1080,7 +1080,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "3.2.2"
         }
       },
@@ -1091,7 +1091,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
-          "patch": "3",
+          "patchVersion": "3",
           "fullVersion": "3.2.3"
         }
       },
@@ -1102,7 +1102,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
-          "patch": "4",
+          "patchVersion": "4",
           "fullVersion": "3.2.4"
         }
       }
@@ -1115,7 +1115,7 @@
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "3.2.1if1"
         }
       }
@@ -1130,7 +1130,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "0",
+          "patchVersion": "0",
           "fullVersion": "1.0.0"
         }
       },
@@ -1141,7 +1141,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "1",
+          "patchVersion": "1",
           "fullVersion": "1.0.1"
         }
       },
@@ -1152,7 +1152,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "2",
+          "patchVersion": "2",
           "fullVersion": "1.0.2"
         }
       },
@@ -1163,7 +1163,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "3",
+          "patchVersion": "3",
           "fullVersion": "1.0.3"
         }
       },
@@ -1174,7 +1174,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "4",
+          "patchVersion": "4",
           "fullVersion": "1.0.4"
         }
       },
@@ -1185,7 +1185,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "5",
+          "patchVersion": "5",
           "fullVersion": "1.0.5"
         }
       },
@@ -1196,7 +1196,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "6",
+          "patchVersion": "6",
           "fullVersion": "1.0.6"
         }
       },
@@ -1207,7 +1207,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "7",
+          "patchVersion": "7",
           "fullVersion": "1.0.7"
         }
       },
@@ -1218,7 +1218,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "8",
+          "patchVersion": "8",
           "fullVersion": "1.0.8"
         }
       },
@@ -1230,7 +1230,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "9_R12",
+          "patchVersion": "9_R12",
           "fullVersion": "1.0.9_R12"
         }
       },
@@ -1241,7 +1241,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "9_R14",
+          "patchVersion": "9_R14",
           "fullVersion": "1.0.9_R14"
         }
       },
@@ -1252,7 +1252,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R12",
+          "patchVersion": "10_R12",
           "fullVersion": "1.0.10_R12"
         }
       },
@@ -1263,7 +1263,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "10_R14",
+          "patchVersion": "10_R14",
           "fullVersion": "1.0.10_R14"
         }
       },
@@ -1274,7 +1274,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "11_R12",
+          "patchVersion": "11_R12",
           "fullVersion": "1.0.11_R12"
         }
       },
@@ -1285,7 +1285,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "11_R14",
+          "patchVersion": "11_R14",
           "fullVersion": "1.0.11_R14"
         }
       },
@@ -1296,7 +1296,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "12_R12",
+          "patchVersion": "12_R12",
           "fullVersion": "1.0.12_R12"
         }
       },
@@ -1307,7 +1307,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "12_R14",
+          "patchVersion": "12_R14",
           "fullVersion": "1.0.12_R14"
         }
       },
@@ -1318,7 +1318,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "14_R12",
+          "patchVersion": "14_R12",
           "fullVersion": "1.0.14_R12"
         }
       },
@@ -1329,7 +1329,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "0",
-          "patch": "14_R14",
+          "patchVersion": "14_R14",
           "fullVersion": "1.0.14_R14"
         }
       },
@@ -1340,7 +1340,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "0_R14",
+          "patchVersion": "0_R14",
           "fullVersion": "1.1.0_R14"
         }
       },
@@ -1351,7 +1351,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "0_R12",
+          "patchVersion": "0_R12",
           "fullVersion": "1.1.0_R12"
         }
       },
@@ -1362,7 +1362,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "1_R12",
+          "patchVersion": "1_R12",
           "fullVersion": "1.1.1_R12"
         }
       },
@@ -1373,7 +1373,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "1_R14",
+          "patchVersion": "1_R14",
           "fullVersion": "1.1.1_R14"
         }
       },
@@ -1384,7 +1384,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "2_R14",
+          "patchVersion": "2_R14",
           "fullVersion": "1.1.2_R14"
         }
       },
@@ -1395,7 +1395,7 @@
         "version": {
           "majorVersion": "1",
           "minorVersion": "1",
-          "patch": "2_R12",
+          "patchVersion": "2_R12",
           "fullVersion": "1.1.2_R12"
         }
       }
