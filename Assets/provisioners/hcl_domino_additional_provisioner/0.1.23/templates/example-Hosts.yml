@@ -364,11 +364,6 @@ hosts:
       #verse_archive:
       #verse_base_version:
 
-      ## AppDev Web Pack Variables
-      #appdevpack_hash:
-      #appdevpack_archive:
-      #appdevpack_version:
-
       ## Domino Rest API Variables
       #domino_rest_api_hash:
       #domino_rest_api_version:
@@ -424,9 +419,6 @@ hosts:
         vars:
           run_tasks: false
       - name: startcloud.hcl_roles.domino_verse
-        vars:
-          run_tasks: false
-      - name: startcloud.hcl_roles.domino_appdevpack
         vars:
           run_tasks: false
       - name: startcloud.hcl_roles.domino_rest_api

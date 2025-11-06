@@ -175,11 +175,6 @@ hosts:
       verse_archive: ::VERSE_INSTALLER::
       verse_base_version: ::VERSE_INSTALLER_VERSION::
 
-      # AppDev Web Pack Variables
-      #appdevpack_hash: ::APPDEVPACK_HASH::
-      appdevpack_archive: ::APPDEVPACK_INSTALLER::
-      appdevpack_version: ::APPDEVPACK_INSTALLER_VERSION::
-
       # Domino Rest API Variables
       #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
       domino_rest_api_version: ::DOMINO_REST_API_INSTALLER_VERSION::
@@ -214,7 +209,6 @@ hosts:
       ::ROLE_TRAVELER:: 
       ::ROLE_TRAVELER_HTMO:: 
       ::ROLE_VERSE:: 
-      ::ROLE_APPDEVPACK:: 
       ::ROLE_RESTAPI:: ## Note to SHI devs, This should be called ROLE_DOMINO_RESTAPI, as this is different than startcloud.hcl_roles.domino_vagrant_rest_api
       - name: startcloud.hcl_roles.domino_vagrant_readme
       ::ROLE_MARIADB::  
