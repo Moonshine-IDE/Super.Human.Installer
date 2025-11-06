@@ -45,14 +45,9 @@ typedef SuperHumanCachedFile = {
     originalFilename: String,
     
     /**
-     * MD5 hash of the file -- to be removed soon, we don't want backwards compatability
+     * SHA256 hash of the file (secure file identifier)
      */
-    hash: String,
-    
-    /**
-     * SHA256 hash of the file (more secure)
-     */
-    ?sha256: String,
+    sha256: String,
     
     /**
      * Whether the file exists in the cache directory

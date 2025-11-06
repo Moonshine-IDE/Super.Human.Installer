@@ -629,7 +629,7 @@ class HashManagerPage extends Page {
                     result = a.originalFilename.toLowerCase() < b.originalFilename.toLowerCase() ? -1 : 1;
                 
                 case "hash":
-                    result = a.hash < b.hash ? -1 : 1;
+                    result = a.sha256 < b.sha256 ? -1 : 1;
                 
                 case "role":
                     // Handle potential null values
@@ -958,7 +958,7 @@ class HashManagerPage extends Page {
             _filePathLabel.text = _editingFile.path;
             _filePathContainer.visible = _filePathContainer.includeInLayout = true;
             
-        // Only display SHA256 hash, no fallback to MD5
+        // Only display SHA256 hash
         _hashLabel.text = Reflect.hasField(_editingFile, "sha256") && _editingFile.sha256 != null ? 
                           _editingFile.sha256 : "SHA256 not available";
         }
@@ -1072,7 +1072,7 @@ class HashManagerPage extends Page {
             // If we have a replacement file, handle it differently
             if (_tempSourceFilePath != null && !_editingFile.exists) {
                 // Pass the original hash to the addFile method to handle cleanup
-                var result = SuperHumanFileCache.getInstance().addFile(_tempSourceFilePath, role, type, version, _editingFile.hash);
+                var result = SuperHumanFileCache.getInstance().addFile(_tempSourceFilePath, role, type, version, _editingFile.sha256);
                 if (result != null) {
                     ToastManager.getInstance().showToast("File replaced in cache");
                 } else {
@@ -1253,7 +1253,7 @@ class FileEntryItem extends LayoutGroup {
         
         var hashLabel = new Label();
         hashLabel.wordWrap = false;
-        // Only display SHA256 hash, no fallback to MD5
+        // Only display SHA256 hash 
         var hashToDisplay = Reflect.hasField(cachedFile, "sha256") && cachedFile.sha256 != null ? 
                             cachedFile.sha256 : "SHA256 not available";
         hashLabel.text = hashToDisplay.length > 15 ? hashToDisplay.substr(0, 15) + "..." : hashToDisplay; // Show abbreviated hash if needed
@@ -1360,7 +1360,7 @@ class FileEntryItem extends LayoutGroup {
                 filenameText = expectedFilename;
             } else {
                 // Try to find filename in initial registry
-                var registryEntry = superhuman.config.SuperHumanHashes.findHashEntry(cachedFile.hash);
+                var registryEntry = superhuman.config.SuperHumanHashes.findHashEntry(cachedFile.sha256);
                 if (registryEntry != null && Reflect.hasField(registryEntry, "fileName")) {
                     var fileName = Reflect.field(registryEntry, "fileName");
                     if (fileName != null && fileName != "unknown.unknown") {

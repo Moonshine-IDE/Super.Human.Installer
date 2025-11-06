@@ -41,7 +41,7 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
 						
 				if (installerVersion != null)
 				{
-					if (installerVersion.hash != null)
+					if (installerVersion.sha256 != null)
 					{
 						replace.DOMINO_HASH = installerHash;
 					}

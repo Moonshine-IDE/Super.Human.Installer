@@ -1173,8 +1173,8 @@ class HCLDownloader {
             var fileId = findFileIdByName(catalogJson, _currentFile.originalFilename);
             if (fileId != null) {
                 Logger.info('HCLDownloader: Found file ID in catalog (threaded): ${fileId}');
-                // Store file ID in hash field
-                _currentFile.hash = fileId;
+                // Store file ID in sha256 field
+                _currentFile.sha256 = fileId;
                 getDownloadUrlThreaded();
             } else {
                 triggerError('Failed to find file ID for ${_currentFile.originalFilename} in catalog');
@@ -1204,14 +1204,14 @@ class HCLDownloader {
         // Update current step
         _currentStep = HCLDownloadStep.GettingDownloadURL;
         
-        Logger.info('HCLDownloader: Getting download URL for file ID (threaded): ${_currentFile.hash}');
+        Logger.info('HCLDownloader: Getting download URL for file ID (threaded): ${_currentFile.sha256}');
         
         // Reset redirect tracking
         _followingRedirects = false;
         _finalRedirectUrl = null;
         
         // Construct the download URL using the file ID
-        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.hash + MYHCL_DOWNLOAD_URL_SUFFIX;
+        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.sha256 + MYHCL_DOWNLOAD_URL_SUFFIX;
         Logger.debug('HCLDownloader: Requesting download URL from (threaded): ${downloadUrl}');
         
         // Start following redirects from this URL
@@ -2010,8 +2010,8 @@ class HCLDownloader {
             var fileId = findFileIdByName(catalogJson, _currentFile.originalFilename);
             if (fileId != null) {
                 Logger.info('HCLDownloader: Found file ID in catalog: ${fileId}');
-                // Store file ID in hash field
-                _currentFile.hash = fileId;
+                // Store file ID in sha256 field
+                _currentFile.sha256 = fileId;
                 getDownloadUrl();
             } else {
                 triggerError('Failed to find file ID for ${_currentFile.originalFilename} in catalog');
@@ -2154,14 +2154,14 @@ class HCLDownloader {
         // Update current step
         _currentStep = HCLDownloadStep.GettingDownloadURL;
         
-        Logger.info('HCLDownloader: Getting download URL for file ID: ${_currentFile.hash}');
+        Logger.info('HCLDownloader: Getting download URL for file ID: ${_currentFile.sha256}');
         
         // Reset redirect tracking
         _followingRedirects = false;
         _finalRedirectUrl = null;
         
         // Construct the download URL using the file ID
-        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.hash + MYHCL_DOWNLOAD_URL_SUFFIX;
+        var downloadUrl = MYHCL_DOWNLOAD_URL_PREFIX + _currentFile.sha256 + MYHCL_DOWNLOAD_URL_SUFFIX;
         Logger.debug('HCLDownloader: Requesting download URL from: ${downloadUrl}');
         
         // Start following redirects from this URL

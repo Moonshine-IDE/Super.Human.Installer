@@ -159,6 +159,9 @@ class SuperHumanFileCache extends EventDispatcher {
         // Verify cache integrity (check if files exist)
         verifyCache();
         
+        // Fix any cached files with missing version data
+        fixMissingVersionData();
+        
         // Only save registry if it's been modified during verification
         // This helps ensure we don't unnecessarily overwrite the registry
         saveRegistry();
@@ -274,21 +277,21 @@ class SuperHumanFileCache extends EventDispatcher {
                 // Create a map of existing hashes for quick lookup
                 var existingHashes = new Map<String, Bool>();
                 for (existingFile in existingEntries) {
-                    existingHashes.set(existingFile.hash, true);
+                    existingHashes.set(existingFile.sha256, true);
                 }
                 
                 // Only add entries that don't already exist
                 for (entry in entries) {
-                    var hash:String = null;
-                    if (Reflect.hasField(entry, "hash")) {
-                        hash = Reflect.field(entry, "hash");
+                    var sha256Hash:String = null;
+                    if (Reflect.hasField(entry, "sha256")) {
+                        sha256Hash = Reflect.field(entry, "sha256");
                     } else {
-                        continue; // Skip entries without hash
+                        continue; // Skip entries without sha256 hash
                     }
                     
                     // Skip if this hash already exists in the registry
-                    if (existingHashes.exists(hash)) {
-                        Logger.info('Skipping default hash that already exists in registry: ${hash}');
+                    if (existingHashes.exists(sha256Hash)) {
+                        Logger.info('Skipping default hash that already exists in registry: ${sha256Hash}');
                         continue;
                     }
                     
@@ -298,10 +301,10 @@ class SuperHumanFileCache extends EventDispatcher {
                         originalFilename = Reflect.field(entry, "fileName");
                     } else {
                         // Check if we can find the filename in the initial registry
-                        var foundEntry = SuperHumanHashes.findHashEntry(hash);
+                        var foundEntry = SuperHumanHashes.findHashEntry(sha256Hash);
                         if (foundEntry != null && Reflect.hasField(foundEntry, "fileName")) {
                             originalFilename = Reflect.field(foundEntry, "fileName");
-                            Logger.info('Found filename in hash registry for ${hash}: ${originalFilename}');
+                            Logger.info('Found filename in hash registry for ${sha256Hash}: ${originalFilename}');
                         }
                     }
                     
@@ -311,18 +314,11 @@ class SuperHumanFileCache extends EventDispatcher {
                         versionObj = Reflect.field(entry, "version");
                     }
                     
-                    // Check if this entry has sha256 hash
-                    var sha256Hash:String = null;
-                    if (Reflect.hasField(entry, "sha256")) {
-                        sha256Hash = Reflect.field(entry, "sha256");
-                    }
-                    
                     // Create a cached file entry with default values - use original filename for the path
                     var cachedFile:SuperHumanCachedFile = {
                         path: Path.join([_cacheDirectory, role, type, originalFilename]),
                         originalFilename: originalFilename, // Clean filename without hash prefix
-                        hash: hash,
-                        sha256: sha256Hash, // Include SHA256 hash if available
+                        sha256: sha256Hash, // SHA256 hash as the only identifier
                         exists: false, // File doesn't physically exist yet
                         version: versionObj,
                         type: type,
@@ -429,13 +425,19 @@ class SuperHumanFileCache extends EventDispatcher {
      * @param sourceFilePath Path to the source file
      * @param role Role/product (domino, nomad, etc.)
      * @param type File type (installer, hotfix, fixpack)
+     * @param hash Pre-calculated SHA256 hash
      * @param version Optional version info
      * @param originalHash Optional original hash for replacement
      * @return The cached file entry if successful, null otherwise
      */
-    public function addFile(sourceFilePath:String, role:String, type:String, ?version:Dynamic, ?originalHash:String):SuperHumanCachedFile {
+    public function addFile(sourceFilePath:String, role:String, type:String, hash:String, ?version:Dynamic, ?originalHash:String):SuperHumanCachedFile {
         if (!FileSystem.exists(sourceFilePath)) {
             Logger.error('Source file does not exist: ${sourceFilePath}');
+            return null;
+        }
+        
+        if (hash == null || hash.length == 0) {
+            Logger.error('Hash is required for adding file to cache');
             return null;
         }
         
@@ -448,28 +450,26 @@ class SuperHumanFileCache extends EventDispatcher {
             }
         }
         
-        // Calculate hash with robust error handling -- we will only want to calcuate the sha256 in the future, with no backwards compat for md5
-        var hash:String = null;
-        try {
-            Logger.info('Calculating MD5 hash for: ${sourceFilePath}');
-            var fileSize = FileSystem.stat(sourceFilePath).size;
-            var fileSizeMB = fileSize / (1024 * 1024);
-            Logger.info('File size: ${Std.string(Math.round(fileSizeMB * 100) / 100)} MB');
-            
-            hash = SuperHumanHashes.calculateMD5(sourceFilePath);
-            
-            // Log success
-            if (hash != null) {
-                Logger.info('Successfully calculated hash for ${sourceFilePath}: ${hash}');
-            }
-        } catch (e) {
-            Logger.error('Exception during hash calculation: ${e}');
-            // We'll continue with hash = null, which is handled below
-        }
+        var fileSize = FileSystem.stat(sourceFilePath).size;
+        var fileSizeMB = fileSize / (1024 * 1024);
+        Logger.info('Adding file to cache: ${sourceFilePath}');
+        Logger.info('File size: ${Std.string(Math.round(fileSizeMB * 100) / 100)} MB');
+        Logger.info('Using pre-calculated SHA256 hash: ${hash}');
         
-        if (hash == null) {
-            Logger.error('Failed to calculate hash for: ${sourceFilePath}');
-            return null;
+        // If version is missing or empty, try to get it from hash registry
+        if (version == null || (Reflect.isObject(version) && Reflect.fields(version).length == 0)) {
+            Logger.info('Version data missing for ${sourceFilePath}, looking up from hash registry');
+            var registryVersion = SuperHumanHashes.getInstallerVersion(role, hash);
+            if (registryVersion != null) {
+                version = registryVersion;
+                var versionString = "unknown";
+                if (Reflect.hasField(registryVersion, "fullVersion")) {
+                    versionString = Reflect.field(registryVersion, "fullVersion");
+                }
+                Logger.info('Found version in hash registry: ${versionString}');
+            } else {
+                Logger.warning('No version found in hash registry for ${role} installer with hash ${hash}');
+            }
         }
         
         // Check if a file with this hash already exists in the cache
@@ -511,12 +511,11 @@ class SuperHumanFileCache extends EventDispatcher {
             return null;
         }
         
-        // Initialize cached file with MD5 hash, SHA256 will be added asynchronously
+        // Initialize cached file with SHA256 hash as the only identifier
         var initialCachedFile:SuperHumanCachedFile = {
             path: targetPath,
             originalFilename: originalFilename,  // Store the actual filename without hash prefix
-            hash: hash,
-            sha256: null, // Will be populated asynchronously
+            sha256: hash, // SHA256 hash as the only identifier
             exists: true,
             version: version,
             type: type,
@@ -525,23 +524,6 @@ class SuperHumanFileCache extends EventDispatcher {
         
         // Add to registry
         addToRegistry(initialCachedFile);
-        
-        // Calculate SHA256 hash asynchronously in the background
-        SuperHumanHashes.calculateSHA256Async(targetPath, function(sha256Hash:String) {
-            if (sha256Hash != null) {
-                Logger.info('SHA256 hash calculated: ${sha256Hash} for ${targetPath}');
-                
-                // Update the file entry with SHA256 hash
-                var updatedFile = getFileByHash(hash);
-                if (updatedFile != null) {
-                    updatedFile.sha256 = sha256Hash;
-                    updateFileMetadata(updatedFile);
-                    Logger.info('Updated file cache entry with SHA256 hash');
-                }
-            } else {
-                Logger.warning('Failed to calculate SHA256 hash for ${targetPath}');
-            }
-        });
         
         // Save registry
         saveRegistry();
@@ -556,7 +538,7 @@ class SuperHumanFileCache extends EventDispatcher {
     private function addToRegistry(cachedFile:SuperHumanCachedFile):Void {
         var role = cachedFile.role;
         var type = cachedFile.type;
-        var hash = cachedFile.hash;
+        var hash = cachedFile.sha256;
         
         // Check if role exists
         if (!_registry.exists(role)) {
@@ -575,7 +557,7 @@ class SuperHumanFileCache extends EventDispatcher {
         // Check if hash already exists
         var exists = false;
         for (i in 0...entries.length) {
-            if (entries[i].hash == hash) {
+            if (entries[i].sha256 == hash) {
                 // Update existing entry
                 entries[i] = cachedFile;
                 exists = true;
@@ -595,7 +577,7 @@ class SuperHumanFileCache extends EventDispatcher {
     
     /**
      * Get a cached file by hash
-     * @param hash File hash
+     * @param hash File SHA256 hash
      * @param role Optional role to search in
      * @param type Optional type to search in
      * @return The cached file entry if found, null otherwise
@@ -608,7 +590,7 @@ class SuperHumanFileCache extends EventDispatcher {
                 if (roleMap.exists(type)) {
                     var entries = roleMap.get(type);
                     for (entry in entries) {
-                        if (entry.hash == hash) {
+                        if (entry.sha256 == hash) {
                             return entry;
                         }
                     }
@@ -622,7 +604,7 @@ class SuperHumanFileCache extends EventDispatcher {
                 for (type in roleMap.keys()) {
                     var entries = roleMap.get(type);
                     for (entry in entries) {
-                        if (entry.hash == hash) {
+                        if (entry.sha256 == hash) {
                             return entry;
                         }
                     }
@@ -636,7 +618,7 @@ class SuperHumanFileCache extends EventDispatcher {
                 if (roleMap.exists(type)) {
                     var entries = roleMap.get(type);
                     for (entry in entries) {
-                        if (entry.hash == hash) {
+                        if (entry.sha256 == hash) {
                             return entry;
                         }
                     }
@@ -650,7 +632,7 @@ class SuperHumanFileCache extends EventDispatcher {
                 for (type in roleMap.keys()) {
                     var entries = roleMap.get(type);
                     for (entry in entries) {
-                        if (entry.hash == hash) {
+                        if (entry.sha256 == hash) {
                             return entry;
                         }
                     }
@@ -690,7 +672,7 @@ class SuperHumanFileCache extends EventDispatcher {
         
         var role = cachedFile.role;
         var type = cachedFile.type;
-        var hash = cachedFile.hash;
+        var hash = cachedFile.sha256;
         
         // Check if file exists in registry
         if (!_registry.exists(role)) {
@@ -707,7 +689,7 @@ class SuperHumanFileCache extends EventDispatcher {
         
         // Find entry index
         for (i in 0...entries.length) {
-            if (entries[i].hash == hash) {
+            if (entries[i].sha256 == hash) {
                 index = i;
                 break;
             }
@@ -751,8 +733,19 @@ class SuperHumanFileCache extends EventDispatcher {
             return null;
         }
         
-        // Calculate hash
-        var hash = SuperHumanHashes.calculateMD5(filePath);
+        // Calculate SHA256 hash synchronously - no timeout
+        var hash:String = null;
+        var hashCalculated = false;
+        SuperHumanHashes.calculateSHA256Async(filePath, function(calculatedHash:String) {
+            hash = calculatedHash;
+            hashCalculated = true;
+        });
+        
+        // Wait for hash calculation to complete - no arbitrary timeout
+        while (!hashCalculated) {
+            Sys.sleep(0.1);
+        }
+        
         if (hash == null) {
             return null;
         }
@@ -785,5 +778,72 @@ class SuperHumanFileCache extends EventDispatcher {
         saveRegistry();
         
         return true;
+    }
+    
+    /**
+     * Fix existing cached files that have empty version objects
+     * This method updates cached files with missing version data by looking it up from the hash registry
+     */
+    public function fixMissingVersionData():Void {
+        Logger.info('Fixing cached files with missing version data');
+        var fixedCount = 0;
+        
+        // For each role
+        for (role in _registry.keys()) {
+            var roleMap = _registry.get(role);
+            
+            // For each type
+            for (type in roleMap.keys()) {
+                var entries = roleMap.get(type);
+                
+                // For each cached file
+                for (i in 0...entries.length) {
+                    var cachedFile = entries[i];
+                    
+                    // Check if version is missing or empty
+                    var needsVersionFix = false;
+                    if (cachedFile.version == null) {
+                        needsVersionFix = true;
+                    } else if (Reflect.isObject(cachedFile.version) && Reflect.fields(cachedFile.version).length == 0) {
+                        needsVersionFix = true;
+                    }
+                    
+                    if (needsVersionFix && cachedFile.sha256 != null) {
+                        // Look up version from hash registry
+                        var registryVersion = null;
+                        switch (type) {
+                            case "installers":
+                                registryVersion = SuperHumanHashes.getInstallerVersion(role, cachedFile.sha256);
+                            case "hotfixes":
+                                registryVersion = SuperHumanHashes.getHotfixesVersion(role, cachedFile.sha256);
+                            case "fixpacks":
+                                registryVersion = SuperHumanHashes.getFixpacksVersion(role, cachedFile.sha256);
+                        }
+                        
+                        if (registryVersion != null) {
+                            cachedFile.version = registryVersion;
+                            entries[i] = cachedFile;
+                            fixedCount++;
+                            var versionString = "unknown";
+                            if (Reflect.hasField(registryVersion, "fullVersion")) {
+                                versionString = Reflect.field(registryVersion, "fullVersion");
+                            }
+                            Logger.info('Fixed version data for ${cachedFile.originalFilename}: ${versionString}');
+                        }
+                    }
+                }
+                
+                roleMap.set(type, entries);
+            }
+            
+            _registry.set(role, roleMap);
+        }
+        
+        if (fixedCount > 0) {
+            Logger.info('Fixed version data for ${fixedCount} cached files');
+            saveRegistry();
+        } else {
+            Logger.info('No cached files needed version data fixes');
+        }
     }
 }

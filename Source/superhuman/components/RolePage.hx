@@ -1298,7 +1298,7 @@ class RolePickerItem extends LayoutGroup {
             // Find the cached file with matching hash
             for (i in 0...dropdownItems.length) {
                 var item = dropdownItems.get(i);
-                if (item.file != null && item.file.hash == _roleImpl.role.files.installerHash) {
+                if (item.file != null && item.file.sha256 == _roleImpl.role.files.installerHash) {
                     indexToSelect = i;
                     break;
                 }
@@ -1346,7 +1346,7 @@ class RolePickerItem extends LayoutGroup {
                 (state) -> {
                     if (state.index == 0) {
                         // User wants to locate the file - dialog flag managed by _showFileDialog
-                        _showFileDialog("installers", selectedFile.hash);
+                        _showFileDialog("installers", selectedFile.sha256);
                     } else {
                         // Reset dialog flag and revert selection
                         _isFileDialogOpen = false;
@@ -1360,7 +1360,7 @@ class RolePickerItem extends LayoutGroup {
         // File exists in cache, use it
         _roleImpl.role.files.installer = selectedFile.path;
         _roleImpl.role.files.installerFileName = selectedFile.originalFilename;
-        _roleImpl.role.files.installerHash = selectedFile.hash;
+        _roleImpl.role.files.installerHash = selectedFile.sha256;
         _roleImpl.role.files.installerVersion = selectedFile.version;
         
         updateData();
@@ -1520,7 +1520,7 @@ class RolePickerItem extends LayoutGroup {
                 (state) -> {
                     if (state.index == 0) {
                         // User wants to locate the file - dialog flag managed by _showFileDialog
-                        _showFileDialog("fixpacks", selectedFile.hash);
+                        _showFileDialog("fixpacks", selectedFile.sha256);
                     } else {
                         // Reset dialog flag and revert selection
                         _isFileDialogOpen = false;
@@ -1534,7 +1534,7 @@ class RolePickerItem extends LayoutGroup {
         // Add the fixpack to the role's fixpacks list
         if (!_roleImpl.role.files.fixpacks.contains(selectedFile.path)) {
             _roleImpl.role.files.fixpacks.push(selectedFile.path);
-            _roleImpl.role.files.installerFixpackHash = selectedFile.hash;
+            _roleImpl.role.files.installerFixpackHash = selectedFile.sha256;
             _roleImpl.role.files.installerFixpackVersion = selectedFile.version;
             
             updateData();
@@ -1663,7 +1663,7 @@ class RolePickerItem extends LayoutGroup {
                 (state) -> {
                     if (state.index == 0) {
                         // User wants to locate the file - dialog flag managed by _showFileDialog
-                        _showFileDialog("hotfixes", selectedFile.hash);
+                        _showFileDialog("hotfixes", selectedFile.sha256);
                     } else {
                         // Reset dialog flag and revert selection
                         _isFileDialogOpen = false;
@@ -1677,7 +1677,7 @@ class RolePickerItem extends LayoutGroup {
         // Add the hotfix to the role's hotfixes list
         if (!_roleImpl.role.files.hotfixes.contains(selectedFile.path)) {
             _roleImpl.role.files.hotfixes.push(selectedFile.path);
-            _roleImpl.role.files.installerHotFixHash = selectedFile.hash;
+            _roleImpl.role.files.installerHotFixHash = selectedFile.sha256;
             _roleImpl.role.files.installerHotFixVersion = selectedFile.version;
             
             updateData();
@@ -1722,9 +1722,18 @@ class RolePickerItem extends LayoutGroup {
                 currentDir = Path.directory(path);
                 if (currentDir != null) SuperHumanInstaller.getInstance().config.user.lastuseddirectory = currentDir;
                 
-                // Calculate hash
-                // Soon we will remove all md5 hashing and use only sha256 with no backward compat for md5
-                var fileHash = SuperHumanHashes.calculateMD5(path);
+                // Calculate SHA256 hash - wait until it's done, no timeout
+                var fileHash:String = null;
+                var hashCalculated = false;
+                SuperHumanHashes.calculateSHA256Async(path, function(calculatedHash:String) {
+                    fileHash = calculatedHash;
+                    hashCalculated = true;
+                });
+                
+                // Wait for hash calculation to complete - no arbitrary timeout
+                while (!hashCalculated) {
+                    Sys.sleep(0.1);
+                }
                 
                 if (expectedHash != null && fileHash != expectedHash) {
                     // Hash doesn't match expected value for missing file
@@ -1831,7 +1840,7 @@ class RolePickerItem extends LayoutGroup {
         // If file exists in registry AND physically exists, use it directly
         if (cachedFile != null && cachedFile.exists) {
             Logger.info('${this}: Using existing cached file: ${cachedFile.path}');
-            _useFileBasedOnType(cachedFile.path, fullFileName, cachedFile.hash, cachedFile.version, fileType);
+            _useFileBasedOnType(cachedFile.path, fullFileName, cachedFile.sha256, cachedFile.version, fileType);
             return;
         }
         
@@ -1849,11 +1858,12 @@ class RolePickerItem extends LayoutGroup {
                             path, 
                             _roleImpl.role.value, 
                             fileType, 
+                            fileHash,
                             version
                         );
                         
                         if (result != null) {
-                            _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
+                            _useFileBasedOnType(result.path, fullFileName, result.sha256, result.version, fileType);
                         } else {
                             // Failed to add to cache, use directly
                             _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
@@ -1878,16 +1888,16 @@ class RolePickerItem extends LayoutGroup {
                 (state) -> {
                     if (state.index == 0) {
                         // Add to cache
-                        var version = {};
                         var result = SuperHumanFileCache.getInstance().addFile(
                             path, 
                             _roleImpl.role.value, 
                             fileType, 
-                            version
+                            fileHash,
+                            null
                         );
                         
                         if (result != null) {
-                            _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
+                            _useFileBasedOnType(result.path, fullFileName, result.sha256, result.version, fileType);
                         } else {
                             // Failed to add to cache, use directly
                             _useFileBasedOnType(path, fullFileName, fileHash, null, fileType);
@@ -1912,11 +1922,12 @@ class RolePickerItem extends LayoutGroup {
                             path, 
                             _roleImpl.role.value, 
                             fileType, 
+                            fileHash,
                             version
                         );
                         
                         if (result != null) {
-                            _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
+                            _useFileBasedOnType(result.path, fullFileName, result.sha256, result.version, fileType);
                         } else {
                             // Failed to add to cache, use directly
                             _useFileBasedOnType(path, fullFileName, fileHash, version, fileType);
@@ -1963,11 +1974,12 @@ class RolePickerItem extends LayoutGroup {
                                 path, 
                                 _roleImpl.role.value, 
                                 fileType, 
-                                {}
+                                fileHash,
+                                null
                             );
                             
                             if (result != null) {
-                                _useFileBasedOnType(result.path, fullFileName, result.hash, result.version, fileType);
+                                _useFileBasedOnType(result.path, fullFileName, result.sha256, result.version, fileType);
                             } else {
                                 // Failed to add to cache, use directly
                                 _useFileBasedOnType(path, fullFileName, fileHash, null, fileType);
@@ -2171,7 +2183,7 @@ class RolePickerItem extends LayoutGroup {
                     if (selectedFile != null && selectedFile.exists) {
                         _roleImpl.role.files.installer = selectedFile.path;
                         _roleImpl.role.files.installerFileName = selectedFile.originalFilename;
-                        _roleImpl.role.files.installerHash = selectedFile.hash;
+                        _roleImpl.role.files.installerHash = selectedFile.sha256;
                         _roleImpl.role.files.installerVersion = selectedFile.version;
                         
                         // Handle Domino installer selection
@@ -2311,7 +2323,7 @@ class RolePickerItem extends LayoutGroup {
                         !_roleImpl.role.files.fixpacks.contains(selectedFile.path)) {
                         
                         _roleImpl.role.files.fixpacks.push(selectedFile.path);
-                        _roleImpl.role.files.installerFixpackHash = selectedFile.hash;
+                        _roleImpl.role.files.installerFixpackHash = selectedFile.sha256;
                         _roleImpl.role.files.installerFixpackVersion = selectedFile.version;
                         updateData();
                     }
@@ -2429,7 +2441,7 @@ class RolePickerItem extends LayoutGroup {
                         !_roleImpl.role.files.hotfixes.contains(selectedFile.path)) {
                         
                         _roleImpl.role.files.hotfixes.push(selectedFile.path);
-                        _roleImpl.role.files.installerHotFixHash = selectedFile.hash;
+                        _roleImpl.role.files.installerHotFixHash = selectedFile.sha256;
                         _roleImpl.role.files.installerHotFixVersion = selectedFile.version;
                         updateData();
                     }

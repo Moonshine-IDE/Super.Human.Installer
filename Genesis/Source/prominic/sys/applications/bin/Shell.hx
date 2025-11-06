@@ -346,6 +346,66 @@ class Shell extends AbstractApp {
 
     }
 
+    /**
+     * Runs a system command to calculate SHA256 hash of the given file
+     * @param path Must point to an existing file
+     * @return The SHA256 hash read from stdout. Returns null if the file does not exist
+     */
+    public function sha256( path:String ):String {
+
+        if ( !FileSystem.exists( path ) ) return null;
+
+        Logger.verbose( '${this}: Checking SHA256 at:${path}' );
+
+        #if mac
+        var p = new Process( "shasum", [ "-a", "256", path ] );
+        var b = p.stdout.readAll();
+        var e = p.exitCode();
+        var output = b.toString();
+        var r:EReg = ~/([a-f0-9]{64})/i;
+        if ( r.match( output ) ) {
+            return r.matched( 1 ).toLowerCase();
+        }
+        return null;
+        #end
+
+        #if linux
+        var p = new Process( "sha256sum", [ path ] );
+        var b = p.stdout.readAll();
+        var e = p.exitCode();
+        var output = b.toString();
+        var r:EReg = ~/([a-f0-9]{64})/i;
+        if ( r.match( output ) ) {
+            return r.matched( 1 ).toLowerCase();
+        }
+        return null;
+        #end
+
+        #if windows
+        var r:EReg = ~/SHA256 hash of [^:]+:[\s\r\n]*([a-f0-9]{64})/i;
+        var p = new Process( "certutil", [ "-hashfile", path, "SHA256" ] );
+        var b = p.stdout.readAll();
+        var e = p.exitCode();
+        var a = b.toString();
+        Logger.verbose('${this}: CertUtil SHA256 output: ${a}');
+        if ( r.match( a ) ) {
+            var hash = r.matched( 1 ).toLowerCase();
+            Logger.verbose('${this}: Successfully extracted SHA256 hash: ${hash}');
+            return hash;
+        }
+        // Fallback to simpler regex (any 64-character hex string)
+        var simpleR:EReg = ~/([a-f0-9]{64})/i;
+        if ( simpleR.match( a ) ) {
+            var hash = simpleR.matched( 1 ).toLowerCase();
+            Logger.verbose('${this}: Extracted SHA256 hash with fallback regex: ${hash}');
+            return hash;
+        }
+        Logger.error('${this}: Failed to extract SHA256 hash from certutil output: ${a}');
+        return null;
+        #end
+
+    }
+
     public function openTerminal( ?path:String, launchFileAtPath:Bool = true ) {
 
         Logger.verbose( '${this}: Opening Terminal at:${path}' );
