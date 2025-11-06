@@ -180,9 +180,12 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
                 replace.ROLE_RESTAPI = replaceWith;
                 replace.ROLE_DOMINO_RESTAPI = replaceWith;
             }
-        }
 
-        replace.ROLE_JEDI = RolesUtil.getDominoRole(internalProvisioner.data.version, "jedi", true);
+            if ( r.value == "jedi" ) {
+                replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, r.value, r.enabled);
+                replace.ROLE_JEDI = replaceWith;
+            }
+        }
         //"- name: startcloud_quick_start";
         replace.ROLE_STARTCLOUD_QUICK_START = RolesUtil.getOtherRole(internalProvisioner.data.version, "quick_start");
          //"- name: startcloud_haproxy";

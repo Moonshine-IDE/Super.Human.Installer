@@ -969,6 +969,32 @@ class Server {
             // Trigger update notification
             _propertyChanged(this._provisioner);
             
+            // Update roles based on provisioner version - remove JEDI for older versions
+            var versionStr = data.version.toString();
+            if (versionStr < "0.1.23" || versionStr == "0.1.20" || versionStr == "0.1.21" || versionStr == "0.1.22") {
+                // Remove JEDI from roles for older versions
+                this._roles.value = this._roles.value.filter(function(r) {
+                    var shouldInclude = r.value.toLowerCase() != "jedi";
+                    if (!shouldInclude) {
+                        Logger.info('${this}: Removing JEDI role when switching to provisioner version ${versionStr} (< 0.1.23)');
+                    }
+                    return shouldInclude;
+                });
+            } else if (versionStr >= "0.1.23") {
+                // Add JEDI role if switching to 0.1.23+ and it doesn't exist
+                var hasJedi = this._roles.value.filter(r -> r.value.toLowerCase() == "jedi").length > 0;
+                if (!hasJedi) {
+                    var jediRole:RoleData = {
+                        value: "jedi",
+                        enabled: true, // Default enabled as per requirements
+                        files: {},
+                        isdefault: false
+                    };
+                    this._roles.value.push(jediRole);
+                    Logger.info('${this}: Added JEDI role when switching to provisioner version ${versionStr} (>= 0.1.23)');
+                }
+            }
+            
             // Save the updated data immediately
             this.saveData();
             

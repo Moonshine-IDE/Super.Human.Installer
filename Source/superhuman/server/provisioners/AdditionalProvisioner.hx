@@ -41,7 +41,10 @@ class AdditionalProvisioner extends StandaloneProvisioner {
 			server_organization: "",
 			type: ServerType.Domino,
 			user_email: "",
-            provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.AdditionalProvisioner)[ 0 ].data,
+            provisioner: {
+                type: ProvisionerType.AdditionalProvisioner,
+                version: champaign.core.primitives.VersionInfo.fromString("0.1.23")
+            },
             syncMethod: SyncMethod.Rsync,
 			existingServerName: "",
 			existingServerIpAddress: ""

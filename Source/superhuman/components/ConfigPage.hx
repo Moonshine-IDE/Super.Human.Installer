@@ -145,11 +145,8 @@ class ConfigPage extends Page {
                 break;
             }
         }
-        //Temporary selection of older provisioner on windows, due to bugs in newest one. It's going to be changes with next prov release
-        #if windows
-	        _dropdownCoreComponentVersion.selectedIndex = 1;
-        #end
         _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
+        _dropdownCoreComponentVersion.addEventListener( Event.CHANGE, _dropdownProvisionerChanged );
         _rowCoreComponentVersion.content.addChild( _dropdownCoreComponentVersion );
         _form.addChild( _rowCoreComponentVersion );
 
@@ -459,6 +456,22 @@ class ConfigPage extends Page {
 
         var a = Server.getComputedName( _inputHostname.text, _inputOrganization.text );
         _labelComputedName.text = a.hostname + "." + a.domainName + "/" + a.path;
+
+    }
+
+    function _dropdownProvisionerChanged( e:Event ) {
+        
+        // Immediately update the server's provisioner when dropdown selection changes
+        // This ensures roles are properly filtered when navigating to roles page
+        var dvv:ProvisionerDefinition = cast _dropdownCoreComponentVersion.selectedItem;
+        if (dvv != null && _server != null) {
+            Logger.info('${this}: Provisioner dropdown changed to ${dvv.name}, updating server provisioner');
+            _server.updateProvisioner(dvv.data);
+            
+            // Update roles button icon to reflect any validation changes
+            _buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
+            _buttonRoles.update();
+        }
 
     }
 

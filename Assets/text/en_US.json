@@ -272,7 +272,7 @@
                 "desc":"The HCL Domino REST APIs (previously known as HCL Project KEEP) provide secure REST APIs with access to HCL Domino servers and databases."
             },
             "jedi":{
-                "desc": "Disable/Enable JEDI"
+                "desc": "JEDI (Java-based Domino management). When disabled, uses modern systemd service script which supports auto-updates"
             }
         }
     },

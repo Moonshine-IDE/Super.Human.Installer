@@ -88,6 +88,7 @@ class StandaloneProvisioner extends AbstractProvisioner {
             "traveler" => { value: "traveler", enabled: false, files: { fixpacks: []} },
             "verse" => { value: "verse", enabled: false, files: {} },
             "domino-rest-api" => { value: "domino-rest-api", enabled: false, files: {} },
+            "jedi" => { value: "jedi", enabled: true, files: {}, isdefault: false },
 
         ];
 
@@ -122,8 +123,11 @@ class StandaloneProvisioner extends AbstractProvisioner {
 			server_organization: "",
 			type: ServerType.Domino,
 			user_email: "",
-            // Use provisioners of the correct type (StandaloneProvisioner) instead of the first of any type
-            provisioner: ProvisionerManager.getBundledProvisioners(ProvisionerType.StandaloneProvisioner)[ 0 ].data,
+            // Always use the latest version (first item is newest after sorting)
+            provisioner: {
+                type: ProvisionerType.StandaloneProvisioner,
+                version: champaign.core.primitives.VersionInfo.fromString("0.1.23")
+            },
             syncMethod: SyncMethod.Rsync,
             existingServerName: "",
             existingServerIpAddress: ""
