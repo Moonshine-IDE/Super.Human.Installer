@@ -3,3 +3,4 @@ name: "HCL Standalone Provisioner"
 type: "hcl_domino_standalone_provisioner"
 description: "Default provisioner for standalone Domino servers"
 author: "HCL"
+allow_auto_update: true

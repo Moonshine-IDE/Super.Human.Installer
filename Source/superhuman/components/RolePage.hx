@@ -1444,15 +1444,35 @@ class RolePickerItem extends LayoutGroup {
                     return false;
                     
                 case "domino-rest-api":
-                    // Check for _R<dominoMajor> suffix in patchVersion or fullVersion
-                    var dominoSuffix = '_R${_dominoInstallerVersion.majorVersion}';
+                    // Enhanced logic to handle both major.minor (R14.5) and major-only (R14) suffixes
+                    var filePatchVersion = Reflect.hasField(file.version, "patchVersion") ? 
+                        Reflect.field(file.version, "patchVersion") : null;
                     
-                    if (Reflect.hasField(file.version, "patchVersion") && 
-                        Reflect.field(file.version, "patchVersion") != null) {
-                        return StringTools.contains(Reflect.field(file.version, "patchVersion"), dominoSuffix);
+                    if (filePatchVersion == null) return false;
+                    
+                    // Check for exact major.minor match first (R14.5 for Domino 14.5)
+                    if (_dominoInstallerVersion.minorVersion != null && _dominoInstallerVersion.minorVersion > 0) {
+                        var specificSuffix = '_R${_dominoInstallerVersion.majorVersion}.${_dominoInstallerVersion.minorVersion}';
+                        
+                        // R14.5 versions can ONLY be used with Domino 14.5+
+                        if (StringTools.contains(filePatchVersion, specificSuffix)) {
+                            return true;
+                        }
+                        
+                        // For Domino 14.5+, also allow generic R14 versions (backwards compatibility)
+                        var majorSuffix = '_R${_dominoInstallerVersion.majorVersion}';
+                        if (StringTools.contains(filePatchVersion, majorSuffix) && 
+                            !StringTools.contains(filePatchVersion, "_R${_dominoInstallerVersion.majorVersion}.")) {
+                            return true;
+                        }
+                        
+                        return false;
+                    } else {
+                        // For Domino 14.0, only allow generic R14 versions (block R14.5)
+                        var majorSuffix = '_R${_dominoInstallerVersion.majorVersion}';
+                        return StringTools.contains(filePatchVersion, majorSuffix) && 
+                               !StringTools.contains(filePatchVersion, "_R${_dominoInstallerVersion.majorVersion}.");
                     }
-                    
-                    return false;
                     
                 default:
                     return true; // Non-version-dependent roles are always compatible
