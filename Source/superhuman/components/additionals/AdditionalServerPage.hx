@@ -41,6 +41,7 @@ class AdditionalServerPage extends Page
 		dropdownCoreComponentVersion.itemToText = ( item:ProvisionerDefinition ) -> {
             return item.name;
         };
+		dropdownCoreComponentVersion.addEventListener( openfl.events.Event.CHANGE, _dropdownProvisionerChanged );
 
 		rowCoreComponentHostname.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.text' );
 		inputHostname.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.hostname.prompt' );
@@ -138,6 +139,34 @@ class AdditionalServerPage extends Page
     }
 
 	function _advancedLinkTriggered( e:MouseEvent ) {
+        // Check if server is still valid - it might have been removed if it was provisional
+        if (_server == null) {
+            return;
+        }
+        
+        // Store current form values to server object before navigating
+        // This preserves the data without creating file structure
+        _server.hostname.value = StringTools.trim(inputHostname.text);
+        _server.existingServerName.value = StringTools.trim(inputExistingDominoServer.text);
+        _server.organization.value = StringTools.trim(inputOrganizationDominoServer.text);
+        _server.existingServerIpAddress.value = StringTools.trim(inputExistingServerIp.text);
+        
+        // Save the provisioner selection while preserving serverProvisionerId
+        var currentServerProvisionerId = _server.serverProvisionerId.value;
+        var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
+        _server.updateProvisioner(dvv.data);
+        
+        // Restore the serverProvisionerId if it was lost or changed to version number
+        if (currentServerProvisionerId != null && (_server.serverProvisionerId.value == null || 
+            _server.serverProvisionerId.value == dvv.data.version.toString() || 
+            _server.serverProvisionerId.value != currentServerProvisionerId)) {
+            
+            _server.serverProvisionerId.value = currentServerProvisionerId;
+            champaign.core.logging.Logger.info('${this}: Restored serverProvisionerId to ${currentServerProvisionerId}');
+        }
+        
+        champaign.core.logging.Logger.info('${this}: Stored Additional server form data before navigating to advanced config page');
+        
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER );
 		evt.provisionerType = ProvisionerType.AdditionalProvisioner;
         evt.server = this._server;
@@ -153,6 +182,22 @@ class AdditionalServerPage extends Page
         buttonNewServerId.icon = ( buttonNewServerId.isValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
         buttonNewServerId.text = ( buttonNewServerId.isValid() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
 	}
+
+	function _dropdownProvisionerChanged( e:openfl.events.Event ) {
+        
+        // Immediately update the server's provisioner when dropdown selection changes
+        // This ensures roles are properly filtered when navigating to roles page
+        var dvv:ProvisionerDefinition = cast dropdownCoreComponentVersion.selectedItem;
+        if (dvv != null && _server != null) {
+            champaign.core.logging.Logger.info('${this}: Additional provisioner dropdown changed to ${dvv.name}, updating server provisioner');
+            _server.updateProvisioner(dvv.data);
+            
+            // Update roles button icon to reflect any validation changes
+            buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
+            buttonRoles.update();
+        }
+
+    }
 
 	function _buttonRolesTriggered( e:TriggerEvent ) {
 

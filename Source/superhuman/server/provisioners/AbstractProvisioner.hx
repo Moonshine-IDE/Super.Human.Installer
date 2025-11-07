@@ -414,8 +414,15 @@ class AbstractProvisioner {
 
     public function reinitialize( sourcePath:String ) {
 
-        clearTargetDirectory();
-        _sourcePath = sourcePath;
+        // Only clear the target directory if the source path actually changed
+        // This preserves user customizations when just navigating between pages
+        if (_sourcePath != sourcePath) {
+            Logger.info('${this}: Source path changed from ${_sourcePath} to ${sourcePath}, clearing target directory');
+            clearTargetDirectory();
+            _sourcePath = sourcePath;
+        } else {
+            Logger.info('${this}: Source path unchanged (${sourcePath}), preserving existing files');
+        }
 
     }
 

@@ -146,7 +146,9 @@ class AdditionalServer extends Server {
             (isDHCPEnabled || hasValidNetworkConfig) &&
             hasValidRoles;
 
-        return isValid;
+        // Provisional servers should never be considered valid until explicitly saved
+        // This prevents premature file creation during configuration
+        return isValid && !this.provisional;
 
     }
 

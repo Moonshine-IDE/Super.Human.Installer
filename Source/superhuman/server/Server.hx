@@ -749,7 +749,9 @@ class Server {
             hasSafeId &&
             areRolesOK;
             
-        return isValid;
+        // Provisional servers should never be considered valid until explicitly saved
+        // This prevents premature file creation during configuration
+        return isValid && !this.provisional;
     }
 
     public function locateNotesSafeId( ?callback:()->Void ) {
@@ -1201,7 +1203,6 @@ class Server {
 
     public function areRolesValid():Bool {
         // Check if this is a custom provisioner by looking specifically at the provisioner type
-        // This is the critical check to ensure we don't mix behavior between provisioner types
         var provisionerType = _provisioner != null && _provisioner.data != null ? _provisioner.data.type : null;
         var isCustomProvisioner = (provisionerType != null && 
                                   provisionerType != ProvisionerType.StandaloneProvisioner && 
@@ -1210,16 +1211,13 @@ class Server {
         
         Logger.verbose('${this}: Validating roles for server. Provisioner type: ${provisionerType}, Custom provisioner: ${isCustomProvisioner}');
         
-        // For custom provisioners only, check if the roles have been processed
+        // For custom provisioners, check if roles have been processed and validate metadata requirements
         if (isCustomProvisioner) {
             // Check for the flag set by RolePage.buttonCloseTriggered
             var rolesProcessed = false;
             
-            if (_customProperties != null) {
-                // Check for the rolesProcessed flag that's set when the user visits and closes the roles page
-                if (Reflect.hasField(_customProperties, "rolesProcessed")) {
-                    rolesProcessed = Reflect.field(_customProperties, "rolesProcessed") == true;
-                }
+            if (_customProperties != null && Reflect.hasField(_customProperties, "rolesProcessed")) {
+                rolesProcessed = Reflect.field(_customProperties, "rolesProcessed") == true;
             }
             
             // If the user hasn't visited and closed the roles page, return false to force them to visit
@@ -1227,274 +1225,46 @@ class Server {
                 return false;
             }
             
-            // Even if the roles page was visited, we still need to validate that at least one role is enabled
-            // This ensures users don't just visit the page without making necessary changes
-            
+            // Validate that at least one role is enabled and installer requirements are met
             var hasEnabledRole = false;
-            var validationMessages = new Array<String>();
             
-            // Get custom role definitions from provisioner metadata if available
-            var customRoleMap = new Map<String, Bool>();
-            var hasMetadata = false;
-            
-            // Look for metadata in customProperties
-            if (_customProperties != null && Reflect.hasField(_customProperties, "provisionerDefinition")) {
-                var provDef = Reflect.field(_customProperties, "provisionerDefinition");
-                if (provDef != null && Reflect.hasField(provDef, "metadata")) {
-                    var metadata = Reflect.field(provDef, "metadata");
-                    if (metadata != null && Reflect.hasField(metadata, "roles")) {
-                        var roles = Reflect.field(metadata, "roles");
-                        if (roles != null) {
-                            hasMetadata = true;
-                            // Cast roles to Array<Dynamic> to avoid "can't iterate on Dynamic" error
-                            var rolesArray:Array<Dynamic> = cast roles;
-                            
-                            // Build a map of role names to installer requirements
-                            for (role in rolesArray) {
-                                if (role != null && Reflect.hasField(role, "name")) {
-                                    var requiresInstaller = false;
-                                    
-                                    // Check if role requires installer
-                                    if (Reflect.hasField(role, "installers")) {
-                                        var installers = Reflect.field(role, "installers");
-                                        if (installers != null && Reflect.hasField(installers, "installer")) {
-                                            requiresInstaller = Reflect.field(installers, "installer");
-                                        }
-                                    }
-                                    
-                                    customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // If we have no metadata roles but this is a custom provisioner, 
-            // assume all roles are valid with no installer requirements
-            var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
-
-            // Now validate each role
             for (r in this._roles.value) {
                 if (r.enabled) {
                     hasEnabledRole = true;
                     
-                    // If we have no metadata or the role is in the metadata, it's valid
-                    var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
-                    
-                    if (!isValidRole) {
-                        Logger.warning('${this}: Role ${r.value} is not defined in provisioner metadata, skipping installer check');
-                        continue;
-                    }
-                    
-                    // Check if this is a custom role from the metadata that requires an installer
-                    var requiresInstaller = !noValidMetadataRoles && customRoleMap.exists(r.value) ? 
-                                           customRoleMap.get(r.value) : false;
-                    
-                    // If this role has showInstaller=false explicitly set, don't check installer regardless
-                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
-                        requiresInstaller = false;
-                    }
-                    
-                    // Only check installer file if it's required for this role
-                    if (requiresInstaller) {
+                    // For custom roles, check if installer is required and present
+                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == true) {
                         if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
                             !FileSystem.exists(r.files.installer)) {
-                            
-                            var errorMsg = 'Role ${r.value} is missing required installer file';
-                            Logger.warning('${this}: ${errorMsg}');
-                            validationMessages.push(errorMsg);
-                            
-                            if (console != null && validationMessages.length > 0) {
-                                console.appendText("Role validation failed:", true);
-                                for (msg in validationMessages) {
-                                    console.appendText("- " + msg, true);
-                                }
-                            }
-                            
+                            Logger.warning('${this}: Custom role ${r.value} is missing required installer file');
                             return false;
                         }
                     }
                 }
-            }
-            
-            // Ensure at least one role is enabled
-            if (!hasEnabledRole) {
-                var errorMsg = 'Custom provisioner requires at least one enabled role';
-                Logger.warning('${this}: ${errorMsg}');
-                validationMessages.push(errorMsg);
-                
-                if (console != null && validationMessages.length > 0) {
-                    console.appendText("Role validation failed:", true);
-                    for (msg in validationMessages) {
-                        console.appendText("- " + msg, true);
-                    }
-                }
-                
-                return false;
-            }
-            
-            // If we get here, validation passed
-            return true;
-            
-            // Now proceed with standard custom provisioner role validation
-            var hasEnabledRole = false;
-            var validationMessages = new Array<String>();
-            
-            // Get custom role definitions from provisioner metadata if available
-            var customRoleMap = new Map<String, Bool>();
-            var hasMetadata = false;
-            
-            // Only check for metadata for custom provisioner types
-            if (provisionerType != ProvisionerType.StandaloneProvisioner && 
-                provisionerType != ProvisionerType.AdditionalProvisioner &&
-                _customProperties != null && 
-                Reflect.hasField(_customProperties, "provisionerDefinition")) {
-                
-                var provDef = Reflect.field(_customProperties, "provisionerDefinition");
-                if (provDef != null && Reflect.hasField(provDef, "metadata")) {
-                    var metadata = Reflect.field(provDef, "metadata");
-                    if (metadata != null && Reflect.hasField(metadata, "roles")) {
-                        var roles = Reflect.field(metadata, "roles");
-                        if (roles != null) {
-                            hasMetadata = true;
-                            // Cast roles to Array<Dynamic> to avoid "can't iterate on Dynamic" error
-                            var rolesArray:Array<Dynamic> = cast roles;
-                            
-                            // Build a map of role names to installer requirements
-                            for (role in rolesArray) {
-                                if (role != null && Reflect.hasField(role, "name")) {
-                                    var requiresInstaller = false;
-                                    
-                                    // Check if role requires installer
-                                    if (Reflect.hasField(role, "installers")) {
-                                        var installers = Reflect.field(role, "installers");
-                                        if (installers != null && Reflect.hasField(installers, "installer")) {
-                                            requiresInstaller = Reflect.field(installers, "installer");
-                                        }
-                                    }
-                                    
-                                    customRoleMap.set(Reflect.field(role, "name"), requiresInstaller);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // If we have no metadata roles but this is a custom provisioner, 
-            // assume all roles are valid with no installer requirements
-            var noValidMetadataRoles = (customRoleMap.keys().hasNext() == false);
-            if (noValidMetadataRoles) {
-                if (!hasMetadata) {
-                    Logger.warning('${this}: Warning: No metadata found for custom provisioner');
-                    if (console != null) {
-                        console.appendText("Warning: No metadata found for custom provisioner. This may affect role validation.", true);
-                    }
-                }
-            }
-            
-            // For custom provisioners with no enabled roles, we need at least one
-            for (r in this._roles.value) {
-                if (r.enabled) {
-                    hasEnabledRole = true;
-                    
-                    // If we have no metadata or the role is in the metadata, it's valid
-                    var isValidRole = noValidMetadataRoles || customRoleMap.exists(r.value);
-                    
-                    if (!isValidRole) {
-                        Logger.warning('${this}: Role ${r.value} is not defined in provisioner metadata, skipping installer check');
-                        validationMessages.push('Role ${r.value} is not defined in provisioner metadata');
-                        continue;
-                    }
-                    
-                    // Check if this is a custom role from the metadata that requires an installer
-                    var requiresInstaller = !noValidMetadataRoles && customRoleMap.exists(r.value) ? 
-                                           customRoleMap.get(r.value) : false;
-                    
-                    // If this role has showInstaller=false, don't check installer regardless
-                    if (Reflect.hasField(r, "showInstaller") && Reflect.field(r, "showInstaller") == false) {
-                        requiresInstaller = false;
-                    }
-                    
-                    // Only check installer file if it's required for this role
-                    if (requiresInstaller) {
-                        if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
-                            !FileSystem.exists(r.files.installer)) {
-                            
-                            var errorMsg = 'Role ${r.value} is missing required installer file';
-                            Logger.warning('${this}: ${errorMsg}');
-                            validationMessages.push(errorMsg);
-                            
-                            if (console != null && validationMessages.length > 0) {
-                                console.appendText("Role validation failed:", true);
-                                for (msg in validationMessages) {
-                                    console.appendText("- " + msg, true);
-                                }
-                            }
-                            
-                            return false;
-                        }
-                    }
-                }
-            }
-            
-            if (!hasEnabledRole) {
-                var errorMsg = 'Custom provisioner requires at least one enabled role';
-                Logger.warning('${this}: ${errorMsg}');
-                validationMessages.push(errorMsg);
-                
-                if (console != null && validationMessages.length > 0) {
-                    console.appendText("Role validation failed:", true);
-                    for (msg in validationMessages) {
-                        console.appendText("- " + msg, true);
-                    }
-                }
-                
-                return false;
             }
             
             return hasEnabledRole;
         }
         
-        // Original logic for built-in provisioners
-        var valid:Bool = false;
-        var validationMessages = new Array<String>();
+        // Original logic for built-in provisioners (Standalone/Additional)
+        var hasEnabledRole = false;
         
         for (r in this._roles.value) {
             if (r.enabled) {
-                valid = true;
-                if (r.files.installer == null || r.files.installer == "null" || !FileSystem.exists(r.files.installer)) {
-                    var errorMsg = 'Standard role ${r.value} is missing required installer file';
-                    Logger.warning('${this}: ${errorMsg}');
-                    validationMessages.push(errorMsg);
-                    
-                    if (console != null && validationMessages.length > 0) {
-                        console.appendText("Role validation failed:", true);
-                        for (msg in validationMessages) {
-                            console.appendText("- " + msg, true);
-                        }
+                hasEnabledRole = true;
+                
+                // For standard roles, check installer requirements except for JEDI
+                if (r.value.toLowerCase() != "jedi") {
+                    if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
+                        !FileSystem.exists(r.files.installer)) {
+                        Logger.warning('${this}: Standard role ${r.value} is missing required installer file');
+                        return false;
                     }
-                    
-                    return false;
                 }
             }
         }
         
-        if (!valid) {
-            var errorMsg = 'No enabled roles found for standard provisioner';
-            Logger.warning('${this}: ${errorMsg}');
-            validationMessages.push(errorMsg);
-            
-            if (console != null && validationMessages.length > 0) {
-                console.appendText("Role validation failed:", true);
-                for (msg in validationMessages) {
-                    console.appendText("- " + msg, true);
-                }
-            }
-        }
-        
-        return valid;
+        return hasEnabledRole;
     }
 
     function _getVagrantName():String {

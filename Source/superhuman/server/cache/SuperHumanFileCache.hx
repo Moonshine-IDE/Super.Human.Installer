@@ -141,6 +141,12 @@ class SuperHumanFileCache extends EventDispatcher {
         // Load registry from disk or initialize with defaults
         loadRegistry();
         
+        // Check for and perform cache migration if needed (one-time on upgrade)
+        if (needsCacheMigration()) {
+            Logger.info('Detected legacy cache schema, performing one-time migration');
+            performCacheMigration();
+        }
+        
         // Log initialization state
         var registryPath = Path.join([_cacheDirectory, REGISTRY_FILENAME]);
         
@@ -845,5 +851,135 @@ class SuperHumanFileCache extends EventDispatcher {
         } else {
             Logger.info('No cached files needed version data fixes');
         }
+    }
+    
+    /**
+     * Check if cache migration is needed (detects legacy hash/patch schema)
+     */
+    private function needsCacheMigration():Bool {
+        if (_registry == null) {
+            return false;
+        }
+        
+        // Check for legacy hash field or mixed schemas
+        for (role in _registry.keys()) {
+            var roleMap = _registry.get(role);
+            for (type in roleMap.keys()) {
+                var entries = roleMap.get(type);
+                for (entry in entries) {
+                    // Check for legacy hash field
+                    if (Reflect.hasField(entry, "hash")) {
+                        var hashValue = Reflect.field(entry, "hash");
+                        // If hash field exists and is not empty, this is legacy schema
+                        if (hashValue != null && hashValue != "") {
+                            Logger.info('Found legacy hash field in cache entry, migration needed');
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Perform cache migration from legacy schema to new schema
+     */
+    private function performCacheMigration():Void {
+        Logger.info('Starting cache migration from legacy schema');
+        
+        // Step 1: Preserve existing files that actually exist on disk
+        var preservedFiles = new Array<{
+            path:String, 
+            role:String, 
+            type:String, 
+            originalFilename:String, 
+            sha256:String, 
+            version:Dynamic
+        }>();
+        
+        var preservedCount = 0;
+        var totalFiles = 0;
+        
+        // Scan existing cache for files that physically exist
+        for (role in _registry.keys()) {
+            var roleMap = _registry.get(role);
+            for (type in roleMap.keys()) {
+                var entries = roleMap.get(type);
+                for (entry in entries) {
+                    totalFiles++;
+                    
+                    if (entry.exists && FileSystem.exists(entry.path)) {
+                        // Re-calculate hash for existing file to ensure it's current
+                        var newHash:String = null;
+                        var hashCalculated = false;
+                        
+                        SuperHumanHashes.calculateSHA256Async(entry.path, function(calculatedHash:String) {
+                            newHash = calculatedHash;
+                            hashCalculated = true;
+                        });
+                        
+                        // Wait for hash calculation
+                        while (!hashCalculated) {
+                            Sys.sleep(0.1);
+                        }
+                        
+                        if (newHash != null) {
+                            // Get fresh version data from current hash registry
+                            var freshVersion = null;
+                            switch (type) {
+                                case "installers":
+                                    freshVersion = SuperHumanHashes.getInstallerVersion(role, newHash);
+                                case "hotfixes":
+                                    freshVersion = SuperHumanHashes.getHotfixesVersion(role, newHash);
+                                case "fixpacks":
+                                    freshVersion = SuperHumanHashes.getFixpacksVersion(role, newHash);
+                            }
+                            
+                            preservedFiles.push({
+                                path: entry.path,
+                                role: role,
+                                type: type,
+                                originalFilename: entry.originalFilename,
+                                sha256: newHash,
+                                version: freshVersion
+                            });
+                            
+                            preservedCount++;
+                            Logger.info('Preserved existing file: ${entry.originalFilename} with updated hash and version');
+                        }
+                    }
+                }
+            }
+        }
+        
+        Logger.info('Migration scan complete: ${preservedCount} files preserved out of ${totalFiles} total registry entries');
+        
+        // Step 2: Clear old registry and rebuild with clean schema
+        _registry = new Map<String, Map<String, Array<SuperHumanCachedFile>>>();
+        
+        // Step 3: Re-add preserved files with new schema
+        for (fileInfo in preservedFiles) {
+            var cachedFile:SuperHumanCachedFile = {
+                path: fileInfo.path,
+                originalFilename: fileInfo.originalFilename,
+                sha256: fileInfo.sha256,
+                exists: true,
+                version: fileInfo.version,
+                type: fileInfo.type,
+                role: fileInfo.role
+            };
+            
+            addToRegistry(cachedFile);
+        }
+        
+        // Step 4: Add missing entries from current hash registry
+        initializeWithDefaults();
+        
+        // Step 5: Save migrated registry
+        saveRegistry();
+        
+        Logger.info('Cache migration completed successfully: ${preservedCount} files preserved and registry rebuilt with clean schema');
     }
 }

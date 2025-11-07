@@ -199,9 +199,6 @@ class RolePage extends Page {
     override function updateContent( forced:Bool = false ) {
 
         super.updateContent();
-        
-        // Check if Domino installer is selected and update dependency info
-        checkDominoInstaller();
 
         if ( _listGroup != null) {
 
@@ -587,6 +584,9 @@ class RolePage extends Page {
                     }
                 }
             }
+
+            // NOW check Domino installer status after _dominoRole is properly set
+            checkDominoInstaller();
 
             for (i in coll) {
                 // Create RolePickerItem with dependency info
