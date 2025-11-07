@@ -3078,6 +3078,8 @@ class ProvisionerManager {
         } catch (e) {
             Logger.error('Error copying asset directory ${assetDir} to ${destDir}: ${e}');
         }
+    }
+    
     /**
      * Compare two provisioner type directories using diff command with fallback to metadata comparison
      * @param bundledPath Path to the bundled provisioner type directory
@@ -3248,8 +3250,6 @@ class ProvisionerManager {
             Logger.error('Error copying provisioner type from ${sourcePath} to ${destPath}: ${e}');
             throw e;
         }
-    }
-    
     }
     #end
 
