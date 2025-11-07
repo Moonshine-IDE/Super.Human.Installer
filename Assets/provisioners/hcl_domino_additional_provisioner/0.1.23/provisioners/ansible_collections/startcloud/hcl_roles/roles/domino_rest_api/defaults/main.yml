@@ -1,9 +1,47 @@
 ---
 run_tasks: true
-domino_rest_api_archive: Domino_REST_API_V1_Installer.tar.gz
-domino_rest_api_version: 1
+# Version information - default version if not specified
+domino_rest_api_version: 1.1.5
+
+# Default Domino version if not already defined by domino_install role
+domino_major_version: "{{ domino_major_version | default('14') }}"
+domino_minor_version: "{{ domino_minor_version | default('0') }}"
+
+# Archive name can be explicitly provided
+# If not provided, it will be generated based on version
+
+# Generate archive name based on version
+domino_rest_api_archive: >-
+  {% if domino_rest_api_archive is defined and domino_rest_api_archive is not none and domino_rest_api_archive != '' %}
+    {{ domino_rest_api_archive }}
+  {% elif domino_rest_api_version is not defined or domino_rest_api_version is none or domino_rest_api_version == '' %}
+    Domino_REST_API_V1.1.2_Installer.tar.gz
+  {% elif domino_rest_api_version is version('1', '==') %}
+    Domino_REST_API_V1_Installer.tar.gz
+  {% elif domino_rest_api_version is version('1.1.5', '>=') and domino_minor_version is defined and domino_minor_version|int >= 5 %}
+    Domino_REST_API_V{{ domino_rest_api_version }}_R{{ domino_major_version }}.{{ domino_minor_version }}_Installer.tar.gz
+  {% elif domino_rest_api_version is version('1.0.9', '>=') %}
+    Domino_REST_API_V{{ domino_rest_api_version }}_R{{ domino_major_version }}_Installer.tar.gz
+  {% else %}
+    Domino_REST_API_V{{ domino_rest_api_version }}_Installer.tar.gz
+  {% endif %}
+
+# Generate installer jar name based on version
+domino_rest_api_installer_jar: >-
+  {% if domino_rest_api_version is not defined or domino_rest_api_version is none or domino_rest_api_version == '' %}
+    restapiInstall.jar
+  {% elif domino_rest_api_version is version('1', '==') %}
+    restapiInstall.jar
+  {% elif domino_rest_api_version is version('1.1.5', '>=') and domino_minor_version is defined and domino_minor_version|int >= 5 %}
+    restapiInstall-r{{ domino_major_version }}{{ domino_minor_version }}.jar
+  {% elif domino_rest_api_version is version('1.0.9', '>=') %}
+    restapiInstall-r{{ domino_major_version }}.jar
+  {% else %}
+    restapiInstall.jar
+  {% endif %}
+
 domino_rest_api_debug: true
-installer_url_app_path: "Super.Human.Installer/Domino_rest_api"
+installer_url_app_path: "SHI/Domino_rest_api"
 domino_rest_api_port_forwards:
   -
     guest: "{{ domino_install_port_forwards[0].guest }}"

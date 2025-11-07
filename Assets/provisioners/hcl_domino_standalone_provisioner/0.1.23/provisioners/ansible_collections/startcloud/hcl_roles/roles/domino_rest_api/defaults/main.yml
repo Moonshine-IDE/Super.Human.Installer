@@ -1,7 +1,11 @@
 ---
 run_tasks: true
 # Version information - default version if not specified
-domino_rest_api_version: 1.1.2
+domino_rest_api_version: 1.1.5
+
+# Default Domino version if not already defined by domino_install role
+domino_major_version: "{{ domino_major_version | default('14') }}"
+domino_minor_version: "{{ domino_minor_version | default('0') }}"
 
 # Archive name can be explicitly provided
 # If not provided, it will be generated based on version
@@ -14,6 +18,8 @@ domino_rest_api_archive: >-
     Domino_REST_API_V1.1.2_Installer.tar.gz
   {% elif domino_rest_api_version is version('1', '==') %}
     Domino_REST_API_V1_Installer.tar.gz
+  {% elif domino_rest_api_version is version('1.1.5', '>=') and domino_minor_version is defined and domino_minor_version|int >= 5 %}
+    Domino_REST_API_V{{ domino_rest_api_version }}_R{{ domino_major_version }}.{{ domino_minor_version }}_Installer.tar.gz
   {% elif domino_rest_api_version is version('1.0.9', '>=') %}
     Domino_REST_API_V{{ domino_rest_api_version }}_R{{ domino_major_version }}_Installer.tar.gz
   {% else %}
@@ -26,6 +32,8 @@ domino_rest_api_installer_jar: >-
     restapiInstall.jar
   {% elif domino_rest_api_version is version('1', '==') %}
     restapiInstall.jar
+  {% elif domino_rest_api_version is version('1.1.5', '>=') and domino_minor_version is defined and domino_minor_version|int >= 5 %}
+    restapiInstall-r{{ domino_major_version }}{{ domino_minor_version }}.jar
   {% elif domino_rest_api_version is version('1.0.9', '>=') %}
     restapiInstall-r{{ domino_major_version }}.jar
   {% else %}
@@ -33,7 +41,7 @@ domino_rest_api_installer_jar: >-
   {% endif %}
 
 domino_rest_api_debug: true
-installer_url_app_path: "Super.Human.Installer/Domino_rest_api"
+installer_url_app_path: "SHI/Domino_rest_api"
 domino_rest_api_port_forwards:
   -
     guest: "{{ domino_install_port_forwards[0].guest }}"
