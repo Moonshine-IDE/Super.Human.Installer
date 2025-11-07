@@ -3088,7 +3088,9 @@ class ProvisionerManager {
      */
     static private function _diffProvisionerType(bundledPath:String, userPath:String):Bool {
         try {
-            var process = new Process('diff', ['-r', '--brief', bundledPath, userPath]);
+            // Use diff with --exclude to ignore metadata file (prevents infinite loop from allow_auto_update flag)
+            // The exclude flag prevents metadata differences from triggering unnecessary updates
+            var process = new Process('diff', ['-r', '--brief', '--exclude=${PROVISIONER_METADATA_FILENAME}', bundledPath, userPath]);
             var exitCode = process.exitCode();
             process.close();
             
@@ -3096,25 +3098,38 @@ class ProvisionerManager {
             Logger.info('diff command result for ${Path.withoutDirectory(bundledPath)}: exit code ${exitCode}');
             return exitCode == 1;
         } catch (e) {
-            Logger.warning('diff command failed for ${Path.withoutDirectory(bundledPath)}, using metadata fallback: ${e}');
+            Logger.warning('diff command failed for ${Path.withoutDirectory(bundledPath)}, using targeted file fallback: ${e}');
             
-            // Fallback: Compare provisioner-collection.yml files directly
-            var bundledCollection = Path.addTrailingSlash(bundledPath) + PROVISIONER_METADATA_FILENAME;
-            var userCollection = Path.addTrailingSlash(userPath) + PROVISIONER_METADATA_FILENAME;
-            
-            if (!FileSystem.exists(bundledCollection) || !FileSystem.exists(userCollection)) {
-                Logger.info('Missing collection metadata, assuming differences exist');
-                return true; // Assume differences if metadata missing
-            }
-            
+            // Fallback: Compare key template files directly (avoid metadata infinite loop)
             try {
-                var bundledContent = File.getContent(bundledCollection);
-                var userContent = File.getContent(userCollection);
-                var contentDiffers = bundledContent != userContent;
-                Logger.info('Metadata comparison for ${Path.withoutDirectory(bundledPath)}: ${contentDiffers ? "different" : "identical"}');
-                return contentDiffers;
+                // Check if critical template files differ
+                var templateFiles = ['templates/Hosts.template.yml', 'templates/debug-Hosts.yml', 'templates/example-Hosts.yml'];
+                
+                for (templateFile in templateFiles) {
+                    var bundledTemplate = Path.addTrailingSlash(bundledPath) + templateFile;
+                    var userTemplate = Path.addTrailingSlash(userPath) + templateFile;
+                    
+                    // Skip if either file doesn't exist
+                    if (!FileSystem.exists(bundledTemplate) || !FileSystem.exists(userTemplate)) {
+                        continue;
+                    }
+                    
+                    try {
+                        var bundledContent = File.getContent(bundledTemplate);
+                        var userContent = File.getContent(userTemplate);
+                        if (bundledContent != userContent) {
+                            Logger.info('Template file differs: ${templateFile}');
+                            return true; // Found template differences
+                        }
+                    } catch (e3) {
+                        Logger.warning('Error comparing ${templateFile}: ${e3}');
+                    }
+                }
+                
+                Logger.info('No template differences found in fallback comparison');
+                return false; // No differences in key template files
             } catch (e2) {
-                Logger.error('Metadata comparison also failed: ${e2}');
+                Logger.error('Template comparison fallback also failed: ${e2}');
                 return true; // Assume differences to be safe
             }
         }
@@ -3230,7 +3245,6 @@ class ProvisionerManager {
                 _createDirectoryRecursive(destParent);
             }
             
-            // Use the same zip/unzip approach as the original _copyBundledProvisioners for reliability
             Logger.info('Copying provisioner type from ${sourcePath} to ${destPath}');
             
             // Remove destination if it exists (for clean copy)
@@ -3241,7 +3255,8 @@ class ProvisionerManager {
             // Create destination directory
             FileSystem.createDirectory(destPath);
             
-            // Copy using zip/unzip method for complex directory structures
+            // Use zip/unzip method for reliable copying of complex directory structures
+            // This approach was chosen for good architectural reasons to handle nested paths
             var zipBytes = _zipWholeDirectory(sourcePath);
             _unzipToDirectory(zipBytes, destPath);
             
