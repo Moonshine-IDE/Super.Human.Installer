@@ -3,3 +3,4 @@ name: "HCL Additional Provisioner"
 type: "hcl_domino_additional_provisioner"
 description: "Provisioner for additional Domino servers"
 author: "HCL"
+allow_auto_update: true

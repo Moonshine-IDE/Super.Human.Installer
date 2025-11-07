@@ -2824,6 +2824,7 @@ class ProvisionerManager {
     /**
      * Check if the provisioners directory is empty and copy bundled provisioners if needed
      * This is specific to Mac and Linux, where provisioners are included in the application bundle
+     * Enhanced with surgical per-provisioner content diffing to ensure template fixes reach users
      * @param provisionersDir The path to the provisioners directory
      */
     #if (mac || linux)
@@ -2831,39 +2832,59 @@ class ProvisionerManager {
         Logger.info('Checking if bundled provisioners need to be copied on Mac/Linux');
         
         try {
-            // Check if the directory is empty or has no valid provisioners
-            var isEmpty = true;
-            var hasValidProvisioners = false;
+            // Check if the directory is empty
+            var isEmpty = !FileSystem.exists(provisionersDir) || FileSystem.readDirectory(provisionersDir).length == 0;
             
-            if (FileSystem.exists(provisionersDir)) {
-                var items = FileSystem.readDirectory(provisionersDir);
-                isEmpty = (items.length == 0);
-                
-                // If not empty, check if it has any subdirectories with provisioner-collection.yml files
-                if (!isEmpty) {
-                    Logger.info('Provisioners directory exists with ${items.length} items, checking if valid provisioners exist');
-                    
-                    for (item in items) {
-                        var itemPath = Path.addTrailingSlash(provisionersDir) + item;
-                        if (FileSystem.isDirectory(itemPath)) {
-                            // Check for provisioner-collection.yml file to indicate a valid provisioner directory
-                            var metadataPath = Path.addTrailingSlash(itemPath) + PROVISIONER_METADATA_FILENAME;
-                            if (FileSystem.exists(metadataPath)) {
-                                Logger.info('Found valid provisioner collection: ${item}');
-                                hasValidProvisioners = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+            if (isEmpty) {
+                Logger.info('Provisioners directory empty, copying all bundled provisioners');
+                _copyBundledProvisioners(provisionersDir);
+                return;
             }
             
-            // Copy provisioners if directory is empty or has no valid provisioners
-            if (isEmpty || !hasValidProvisioners) {
-                Logger.info('Provisioners directory is ${isEmpty ? "empty" : "missing valid provisioners"}, copying from application assets');
-                _copyBundledProvisioners(provisionersDir);
-            } else {
-                Logger.info('Provisioners directory already contains valid provisioners, skipping copy');
+            // NEW: Surgical per-provisioner diffing to ensure template fixes reach users
+            var bundledPath = Path.addTrailingSlash(System.applicationDirectory) + "assets/provisioners";
+            
+            // Check if bundled provisioners directory exists
+            if (!FileSystem.exists(bundledPath) || !FileSystem.isDirectory(bundledPath)) {
+                Logger.warning('Bundled provisioners directory not found at ${bundledPath}');
+                return;
+            }
+            
+            var bundledTypes = FileSystem.readDirectory(bundledPath);
+            Logger.info('Found ${bundledTypes.length} bundled provisioner types to check');
+            
+            for (provisionerType in bundledTypes) {
+                var bundledProvisionerPath = Path.addTrailingSlash(bundledPath) + provisionerType;
+                var userProvisionerPath = Path.addTrailingSlash(provisionersDir) + provisionerType;
+                
+                // Skip if not a directory in assets
+                if (!FileSystem.isDirectory(bundledProvisionerPath)) {
+                    continue;
+                }
+                
+                // If user doesn't have this provisioner type at all, copy it
+                if (!FileSystem.exists(userProvisionerPath)) {
+                    Logger.info('User missing provisioner type ${provisionerType}, copying');
+                    _copyProvisionerType(bundledProvisionerPath, userProvisionerPath);
+                    continue;
+                }
+                
+                // Compare this specific provisioner type using diff command
+                var hasDifferences = _diffProvisionerType(bundledProvisionerPath, userProvisionerPath);
+                
+                if (hasDifferences) {
+                    var allowOverwrite = _checkAllowAutoUpdate(userProvisionerPath);
+                    
+                    if (allowOverwrite) {
+                        Logger.info('${provisionerType} differences found, overwriting (allow_auto_update: true)');
+                        _copyProvisionerType(bundledProvisionerPath, userProvisionerPath);
+                    } else {
+                        Logger.info('${provisionerType} differences found, preserving and refreshing');
+                        _preserveAndRefreshProvisioner(provisionerType, bundledProvisionerPath, userProvisionerPath);
+                    }
+                } else {
+                    Logger.info('${provisionerType} content identical, skipping');
+                }
             }
         } catch (e) {
             Logger.error('Error checking provisioners directory: ${e}');
@@ -3057,6 +3078,178 @@ class ProvisionerManager {
         } catch (e) {
             Logger.error('Error copying asset directory ${assetDir} to ${destDir}: ${e}');
         }
+    /**
+     * Compare two provisioner type directories using diff command with fallback to metadata comparison
+     * @param bundledPath Path to the bundled provisioner type directory
+     * @param userPath Path to the user's provisioner type directory
+     * @return Bool True if differences found, false if identical
+     */
+    static private function _diffProvisionerType(bundledPath:String, userPath:String):Bool {
+        try {
+            var process = new Process('diff', ['-r', '--brief', bundledPath, userPath]);
+            var exitCode = process.exitCode();
+            process.close();
+            
+            // diff exit codes: 0 = identical, 1 = differences found, 2 = error
+            Logger.info('diff command result for ${Path.withoutDirectory(bundledPath)}: exit code ${exitCode}');
+            return exitCode == 1;
+        } catch (e) {
+            Logger.warning('diff command failed for ${Path.withoutDirectory(bundledPath)}, using metadata fallback: ${e}');
+            
+            // Fallback: Compare provisioner-collection.yml files directly
+            var bundledCollection = Path.addTrailingSlash(bundledPath) + PROVISIONER_METADATA_FILENAME;
+            var userCollection = Path.addTrailingSlash(userPath) + PROVISIONER_METADATA_FILENAME;
+            
+            if (!FileSystem.exists(bundledCollection) || !FileSystem.exists(userCollection)) {
+                Logger.info('Missing collection metadata, assuming differences exist');
+                return true; // Assume differences if metadata missing
+            }
+            
+            try {
+                var bundledContent = File.getContent(bundledCollection);
+                var userContent = File.getContent(userCollection);
+                var contentDiffers = bundledContent != userContent;
+                Logger.info('Metadata comparison for ${Path.withoutDirectory(bundledPath)}: ${contentDiffers ? "different" : "identical"}');
+                return contentDiffers;
+            } catch (e2) {
+                Logger.error('Metadata comparison also failed: ${e2}');
+                return true; // Assume differences to be safe
+            }
+        }
+    }
+    
+    /**
+     * Check if auto-update is allowed for a provisioner type by reading the collection metadata
+     * @param userProvisionerPath Path to the user's provisioner type directory
+     * @return Bool True if auto-update is allowed (default), false if explicitly disabled
+     */
+    static private function _checkAllowAutoUpdate(userProvisionerPath:String):Bool {
+        var defaultValue = true; // Default to allowing updates for template fix delivery
+        
+        var collectionFile = Path.addTrailingSlash(userProvisionerPath) + PROVISIONER_METADATA_FILENAME;
+        if (!FileSystem.exists(collectionFile)) {
+            Logger.info('No collection metadata found, defaulting to allow_auto_update: ${defaultValue}');
+            return defaultValue; // No metadata = allow updates by default
+        }
+        
+        try {
+            var metadata = Yaml.read(collectionFile);
+            
+            // Handle ObjectMap type (common YAML parser output)
+            if (Std.isOfType(metadata, ObjectMap)) {
+                var objMap:ObjectMap<String, Dynamic> = cast metadata;
+                if (objMap.exists("allow_auto_update")) {
+                    var flagValue = objMap.get("allow_auto_update");
+                    // Only block updates if explicitly set to false
+                    var result = flagValue != false;
+                    Logger.info('Found allow_auto_update flag: ${flagValue}, result: ${result}');
+                    return result;
+                }
+            }
+            // Handle standard object
+            else if (Reflect.hasField(metadata, "allow_auto_update")) {
+                var flagValue = Reflect.field(metadata, "allow_auto_update");
+                var result = flagValue != false;
+                Logger.info('Found allow_auto_update flag: ${flagValue}, result: ${result}');
+                return result;
+            }
+            
+            Logger.info('No allow_auto_update flag found, defaulting to: ${defaultValue}');
+        } catch (e) {
+            Logger.warning('Could not read collection metadata for auto-update check: ${e}');
+        }
+        
+        return defaultValue; // Default to allowing updates
+    }
+    
+    /**
+     * Generate a unique backup path by checking for existing backups and adding counter if needed
+     * @param basePath Base path for the backup
+     * @return String Unique backup path with timestamp and counter if needed
+     */
+    static private function _generateUniqueBackupPath(basePath:String):String {
+        var timestamp = DateTools.format(Date.now(), "%Y-%m-%d_%H-%M-%S");
+        var backupPath = '${basePath}_backup_${timestamp}';
+        
+        // Handle rapid successive startups - add counter if backup path already exists
+        var counter = 1;
+        while (FileSystem.exists(backupPath)) {
+            backupPath = '${basePath}_backup_${timestamp}_${counter}';
+            counter++;
+            Logger.info('Backup path exists, trying: ${backupPath}');
+        }
+        
+        return backupPath;
+    }
+    
+    /**
+     * Preserve existing provisioner and install fresh copy with template fixes
+     * @param provisionerType The provisioner type name (for logging and toast messages)
+     * @param bundledPath Path to the bundled provisioner type directory
+     * @param userPath Path to the user's existing provisioner type directory
+     */
+    static private function _preserveAndRefreshProvisioner(provisionerType:String, bundledPath:String, userPath:String):Void {
+        try {
+            var backupPath = _generateUniqueBackupPath(userPath);
+            
+            Logger.info('Preserving ${provisionerType} provisioner to: ${backupPath}');
+            FileSystem.rename(userPath, backupPath);
+            
+            Logger.info('Installing fresh ${provisionerType} provisioner with template fixes');
+            _copyProvisionerType(bundledPath, userPath);
+            
+            // Show user-friendly notification about the update and backup
+            ToastManager.getInstance().showToast('${provisionerType} updated with latest fixes! Previous version preserved in backup folder.');
+            
+        } catch (e) {
+            Logger.error('Error preserving and refreshing ${provisionerType}: ${e}');
+            // If backup failed, try direct overwrite as fallback
+            try {
+                Logger.warning('Backup failed, attempting direct overwrite of ${provisionerType}');
+                _copyProvisionerType(bundledPath, userPath);
+                ToastManager.getInstance().showToast('${provisionerType} updated (backup failed, but update succeeded)');
+            } catch (e2) {
+                Logger.error('Both backup and direct copy failed for ${provisionerType}: ${e2}');
+                ToastManager.getInstance().showToast('Failed to update ${provisionerType}. Check logs for details.');
+            }
+        }
+    }
+    
+    /**
+     * Copy a single provisioner type from source to destination
+     * @param sourcePath Path to the source provisioner type directory
+     * @param destPath Path to the destination provisioner type directory
+     */
+    static private function _copyProvisionerType(sourcePath:String, destPath:String):Void {
+        try {
+            // Ensure destination parent directory exists
+            var destParent = Path.directory(destPath);
+            if (!FileSystem.exists(destParent)) {
+                _createDirectoryRecursive(destParent);
+            }
+            
+            // Use the same zip/unzip approach as the original _copyBundledProvisioners for reliability
+            Logger.info('Copying provisioner type from ${sourcePath} to ${destPath}');
+            
+            // Remove destination if it exists (for clean copy)
+            if (FileSystem.exists(destPath)) {
+                _deleteDirectory(destPath);
+            }
+            
+            // Create destination directory
+            FileSystem.createDirectory(destPath);
+            
+            // Copy using zip/unzip method for complex directory structures
+            var zipBytes = _zipWholeDirectory(sourcePath);
+            _unzipToDirectory(zipBytes, destPath);
+            
+            Logger.info('Successfully copied provisioner type: ${Path.withoutDirectory(sourcePath)}');
+        } catch (e) {
+            Logger.error('Error copying provisioner type from ${sourcePath} to ${destPath}: ${e}');
+            throw e;
+        }
+    }
+    
     }
     #end
 
