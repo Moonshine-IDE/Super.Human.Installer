@@ -513,7 +513,7 @@ class Server {
     
     function new() {
 
-        _id = Math.floor( Math.random() * 9000 ) + 1000;
+        _id = _generateUniqueServerId();
 
         _action = new Property( null, true );
         _action.onChange.add( _actionChanged );
@@ -2283,6 +2283,74 @@ class Server {
 
         }
 
+    }
+
+    /**
+     * Generate a unique server ID with comprehensive collision detection
+     * Prevents conflicts with existing servers in memory and existing directories on filesystem
+     * @return Int A guaranteed unique server ID
+     */
+    function _generateUniqueServerId():Int {
+        var maxAttempts = 100; // Prevent infinite loops
+        var attempts = 0;
+        
+        while (attempts < maxAttempts) {
+            // Generate random ID in the same range as the original constructor
+            var candidateId = Math.floor( Math.random() * 9000 ) + 1000;
+            
+            // Check if this ID conflicts with any existing server in memory
+            var hasMemoryConflict = false;
+            for (server in ServerManager.getInstance().servers) {
+                if (server.id == candidateId) {
+                    hasMemoryConflict = true;
+                    Logger.verbose('${this}: Server ID ${candidateId} conflicts with existing server in memory');
+                    break;
+                }
+            }
+            
+            if (hasMemoryConflict) {
+                attempts++;
+                continue;
+            }
+            
+            // Check if this ID conflicts with existing directories on filesystem
+            var serverRootDir = ServerManager.getInstance().serverRootDirectory;
+            var hasFilesystemConflict = false;
+            
+            // Check all possible provisioner type directories
+            var provisionerTypes = [
+                ProvisionerType.StandaloneProvisioner,
+                ProvisionerType.AdditionalProvisioner,
+                ProvisionerType.Default,
+                ProvisionerType.Custom
+            ];
+            
+            for (provType in provisionerTypes) {
+                var serverDir = '${serverRootDir}${provType}/${candidateId}';
+                if (FileSystem.exists(serverDir)) {
+                    hasFilesystemConflict = true;
+                    Logger.verbose('${this}: Server ID ${candidateId} conflicts with existing directory: ${serverDir}');
+                    break;
+                }
+            }
+            
+            if (hasFilesystemConflict) {
+                attempts++;
+                continue;
+            }
+            
+            // No conflicts found, this ID is safe to use
+            Logger.info('${this}: Generated unique server ID ${candidateId} after ${attempts + 1} attempts');
+            return candidateId;
+        }
+        
+        // If we exhausted all attempts, log error and return a fallback
+        Logger.error('${this}: Could not generate unique server ID after ${maxAttempts} attempts, using fallback');
+        
+        // Fallback: use current timestamp modulo 9000 + 1000 for emergency uniqueness
+        var fallbackId = (Std.int(Date.now().getTime()) % 9000) + 1000;
+        Logger.warning('${this}: Using timestamp-based fallback ID: ${fallbackId}');
+        return fallbackId;
     }
 
     public function toString():String {
