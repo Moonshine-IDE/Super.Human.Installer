@@ -1942,6 +1942,10 @@ class Server {
                 if ( _provisioner != null ) _provisioner.openWelcomePage();
             }
 
+            // CRITICAL FIX: Clean up resources to prevent CPU leak
+            _stopVagrantUpElapsedTimer();
+            _provisioner.stopFileWatcher();
+
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );
             refreshVirtualBoxInfo();

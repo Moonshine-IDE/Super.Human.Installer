@@ -137,6 +137,7 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
                 //"- name: hcl_domino_traveler" : "- name: domino_traveler"
                 replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, r.value, r.enabled);
             	    
+                replace.TRAVELER_HASH = installerHash;
                 replace.TRAVELER_INSTALLER = installerName;
                 replace.TRAVELER_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
 
@@ -164,6 +165,7 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
                 //"- name: hcl_domino_verse" : "- name: domino_verse"
                 replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, r.value, r.enabled);
        
+                replace.VERSE_HASH = installerHash;
                 replace.VERSE_INSTALLER = installerName;
                 replace.VERSE_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
                 replace.ROLE_VERSE = replaceWith;
@@ -176,7 +178,23 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
                 replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, "rest_api", r.enabled);
 
                 replace.DOMINO_REST_API_INSTALLER = installerName;
-                replace.DOMINO_REST_API_INSTALLER_VERSION = installerVersion == null ? defaultProvisionerFieldValue : installerVersion.fullVersion;
+                
+                // Strip _R<version> suffix from fullVersion before setting the version
+                // This prevents double R in ansible template: V1.1.5_R14.5_R14 -> V1.1.5_R14
+                var cleanVersion = defaultProvisionerFieldValue;
+                if (installerVersion != null && installerVersion.fullVersion != null) {
+                    var fullVersionStr = installerVersion.fullVersion;
+                    // Use regex to remove _R<anything> from the end
+                    var versionRegex = ~/^(.+)_R.+$/;
+                    if (versionRegex.match(fullVersionStr)) {
+                        cleanVersion = versionRegex.matched(1); // Get the version without _R suffix
+                    } else {
+                        cleanVersion = fullVersionStr; // No _R suffix found, use as-is
+                    }
+                }
+                
+                replace.DOMINO_REST_API_INSTALLER_VERSION = cleanVersion;
+                replace.DOMINO_REST_API_HASH = installerHash;
                 replace.ROLE_RESTAPI = replaceWith;
                 replace.ROLE_DOMINO_RESTAPI = replaceWith;
             }
@@ -364,10 +382,15 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             //Verse Variables
             VERSE_INSTALLER: defaultProvisionerFieldValue,
             VERSE_INSTALLER_VERSION: defaultProvisionerFieldValue,
+            VERSE_HASH: defaultProvisionerFieldValue,
       		
+            //Traveler Variables (add missing hash field)
+            TRAVELER_HASH: defaultProvisionerFieldValue,
+            
             //Domino Rest API Variables
             DOMINO_REST_API_INSTALLER_VERSION: defaultProvisionerFieldValue,
             DOMINO_REST_API_INSTALLER: defaultProvisionerFieldValue,
+            DOMINO_REST_API_HASH: defaultProvisionerFieldValue,
             
             //roles
             ROLE_LEAP: defaultRoleFieldValue,

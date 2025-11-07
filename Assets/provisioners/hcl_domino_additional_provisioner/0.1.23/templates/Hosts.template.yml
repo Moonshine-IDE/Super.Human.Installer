@@ -291,19 +291,19 @@ hosts:
       nomadweb_version: ::NOMADWEB_VERSION::
 
       ## Traveler Variables
-      #traveler_hash: ::TRAVELER_HASH::
+      traveler_hash: ::TRAVELER_HASH::
       traveler_archive: ::TRAVELER_INSTALLER::
       traveler_base_version: ::TRAVELER_INSTALLER_VERSION::
       traveler_fixpack_archive: ::TRAVELER_FP_INSTALLER::
       traveler_fixpack_version: ::TRAVELER_FP_INSTALLER_VERSION::
 
       ## Verse Variables
-      #verse_hash: ::VERSE_HASH::
+      verse_hash: ::VERSE_HASH::
       verse_archive: ::VERSE_INSTALLER::
       verse_base_version: ::VERSE_INSTALLER_VERSION::
 
       ## Domino Rest API Variables
-      #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
+      domino_rest_api_hash: ::DOMINO_REST_API_HASH::
       domino_rest_api_version: ::DOMINO_REST_API_INSTALLER_VERSION::
       domino_rest_api_archive: ::DOMINO_REST_API_INSTALLER::
 

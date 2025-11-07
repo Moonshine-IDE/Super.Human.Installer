@@ -2,15 +2,26 @@
   "domino": {
     "installers": [
       {
-        "fileName": "Domino_14.5_Linux_English.tar",
-        "description": "HCL Domino Server 14.5 for Linux English",
-        "sha256": "6775d563e826114702fc4aacf20f5f086459bd151c3bf01a9e659eaff47ebe79",
+        "fileName": "Domino_14.0_Linux_English.tar",
+        "description": "HCL Domino Server 14.0 for Linux English",
+        "sha256": "5fd08b71e946f11308232170553aaca6f4c60c8bb8d91ef6fb89e3f171bad9a5",
+        "version": {
+          "majorVersion": "14",
+          "minorVersion": "0",
+          "patchVersion": "0",
+          "fullVersion": "14.0.0"
+        }
+      },
+      {
+        "fileName": "Domino_14.5_Linux_English_EA3.tar",
+        "description": "HCL Domino Server 14.5 EA3 for Linux English",
+        "sha256": "176885ae7892fadd0ffee6f08064dfcd05d536342b2cbd8f325b08c60a084441",
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
           "patchVersion": "0",
-          "ea_access_release": "",
-          "fullVersion": "14.5.0"
+          "ea_access_release": "EA3",
+          "fullVersion": "14.5.0_EA3"
         }
       },
       {
@@ -108,14 +119,15 @@
         }
       },
       {
-        "fileName": "Domino_14.0_Linux_English.tar",
-        "description": "HCL Domino Server 14.0 for Linux English",
-        "sha256": "5fd08b71e946f11308232170553aaca6f4c60c8bb8d91ef6fb89e3f171bad9a5",
+        "fileName": "140FP3HF34-linux64.tar",
+        "description": "HCL Domino Server 14.0FP3IF3 for Linux64",
+        "sha256": "88bc0d504905d71f5b4807eb4ea397715a9080e980a62d546fdbf8eaca594520",
         "version": {
           "majorVersion": "14",
           "minorVersion": "0",
           "patchVersion": "0",
-          "fullVersion": "14.0.0"
+          "fixPackVersion": "FP3",
+          "fullVersion": "14.0fp3if3"
         }
       }
     ],
@@ -123,7 +135,7 @@
       {
         "fileName": "Domino_1450FP1_Linux.tar",
         "description": "HCL Domino Server 14.5.0 FP1 for Linux English",
-        "sha256": "be0b9c7f631975a7de7735554c4baf2397d458386659e2d5e13c106e400ee6e8",
+        "sha256": "1b64c601f0d9dd6f0e82f383167def9f6eb6521c5fb8659d9f2ffedd13ae48c6",
         "version": {
           "majorVersion": "14",
           "minorVersion": "5",
@@ -413,6 +425,17 @@
         }
       },
       {
+        "fileName": "Domino_1202FP7_Linux.tar",
+        "description": "HCL Domino Server 12.0.2FP7 for Linux",
+        "sha256": "0f31210f9b7be9a077f914f4382adcb5465e7f03a3f95ec199476fe14391ff71",
+        "version": {
+          "majorVersion": "12",
+          "minorVersion": "0",
+          "patchVersion": "2",
+          "fullVersion": "12.0.2fp7"
+        }
+      },
+      {
         "fileName": "Domino_140FP1_Linux.tar",
         "description": "HCL Domino Server 14.0FP1 for Linux",
         "sha256": "9da4297f87544cf7e6520cebf1c5680cd15e8225c8fd2dbdfcd443388d2b8064",
@@ -524,6 +547,28 @@
           "minorVersion": "1",
           "patchVersion": "7",
           "fullVersion": "1.1.7"
+        }
+      },
+      {
+        "fileName": "hcl.dleap-1.1.8.25.zip",
+        "description": "HCL Domino Leap 1.1.8 Install Package",
+        "sha256": "63692f7917f2a3723a7f353454fe13ba208b43aa9394f7a5f474b059c968060a",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "8",
+          "fullVersion": "1.1.8"
+        }
+      },
+      {
+        "fileName": "hcl.dleap-1.1.9.36.zip",
+        "description": "HCL Domino Leap 1.1.9 Install Package",
+        "sha256": "cf30726e3df0edaefd0a6b389832373884a75f27605ae2f3e7b69cab8ed28238",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "9",
+          "fullVersion": "1.1.9"
         }
       }
     ],
@@ -917,6 +962,17 @@
           "ea_access_release": "EA3",
           "fullVersion": "14.0.0_EA3"
         }
+      },
+      {
+        "fileName": "Traveler_14.5_Linux_ML.tar.gz",
+        "description": "HCL Traveler 14.5 for Linux Multilingual",
+        "sha256": "85a57624da2c60e1b932fcce73dc9ff50ecb05f5579552ff871b55179890226e",
+        "version": {
+          "majorVersion": "14",
+          "minorVersion": "5",
+          "patchVersion": "0",
+          "fullVersion": "14.5.0"
+        }
       }
     ],
     "fixpacks": [
@@ -998,7 +1054,7 @@
       {
         "fileName": "HCL_Verse_2.1.0.zip",
         "description": "HCL Verse 2.1.0 for Domino Multiplatform Multilingual",
-        "sha256": "245b93a160601b7bd537f033d1fb91a93a1a2e7a870b031bf7268fc941ddcb94",
+        "sha256": "aa75e54384af55346cef5672392c7d782f954f8652c05660b5fbd7061c1ab0fe",
         "version": {
           "majorVersion": "2",
           "minorVersion": "1",
@@ -1009,7 +1065,7 @@
       {
         "fileName": "HCL_Verse_2.2.0.zip",
         "description": "HCL Verse 2.2.0 for Domino Multiplatform Multilingual",
-        "sha256": "c637e9ca63553d40d0f6d68e943a90e7b63f49bec88f2a77e10e87acaa22f522",
+        "sha256": "fff909213b5dbd7dbbf4f0fc15c41a44fd6d1e3458e94b89d61e4b009a252634",
         "version": {
           "majorVersion": "2",
           "minorVersion": "2",
@@ -1020,7 +1076,7 @@
       {
         "fileName": "HCL_Verse_3.0.0.zip",
         "description": "HCL Verse 3.0 for Domino Multiplatform Multilingual",
-        "sha256": "867a0810ede796afedd34955d7fbbbf51b08bd1bff6b52eeddf669cd51d6bffe",
+        "sha256": "767c9b2a9a333c4441614b52507a128176956cb2c2884e12cf59bbe6e1e3ce29",
         "version": {
           "majorVersion": "3",
           "minorVersion": "0",
@@ -1064,7 +1120,7 @@
       {
         "fileName": "HCL_Verse_3.2.1.zip",
         "description": "HCL Verse 3.2.1 for Domino Multiplatform Multilingual",
-        "sha256": "87feda28be377b836d115c961b0ff6c76d9cc3bd2ada8c4baccead59cd5cc4dd",
+        "sha256": "82c6be585d9a427379a909d392ff865ba8cffa4207e5c9d0a1f71357f0631b4d",
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
@@ -1105,13 +1161,24 @@
           "patchVersion": "4",
           "fullVersion": "3.2.4"
         }
+      },
+      {
+        "fileName": "HCL_Verse_3.2.5.zip",
+        "description": "HCL Verse 3.2.5 for Domino Multiplatform Multilingual",
+        "sha256": "4a882795b5beae1e9dc7610b9f0a860e57e55839b1568db1e7eecf27cc2f18b6",
+        "version": {
+          "majorVersion": "3",
+          "minorVersion": "2",
+          "patchVersion": "5",
+          "fullVersion": "3.2.5"
+        }
       }
     ],
     "hotfixes": [
       {
         "fileName": "HCL_Verse_3.2.1IF1.zip",
         "description": "HCL Verse 3.2.1 Interim Fix 1 for Domino Multiplatform Multilingual",
-        "sha256": "7c5dcd015f5db5cac08cdf116d1266f2acd0355ca6b764508e10e6adc0c4b324",
+        "sha256": "59685e8043acc4d1308e03893f30f4b997a78600a2deb7d82678aae5855bd5ad",
         "version": {
           "majorVersion": "3",
           "minorVersion": "2",
@@ -1397,6 +1464,105 @@
           "minorVersion": "1",
           "patchVersion": "2_R12",
           "fullVersion": "1.1.2_R12"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.3_R12_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.3 Multiplatform Installer For Domino 12",
+        "sha256": "95df4dc7118e3beca37eb921b015da23e71e9ccfc54012a67a21c627fddd535e",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "3_R12",
+          "fullVersion": "1.1.3_R12"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.3_R14_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.3 Multiplatform Installer For Domino 14",
+        "sha256": "36b1bad3ae3320c834616fafee47bfe1ead70eed870141ce16ff278d485e5bd0",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "3_R14",
+          "fullVersion": "1.1.3_R14"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.3.1_R12_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.3.1 Multiplatform Installer For Domino 12",
+        "sha256": "f1eeff909e0cdc2a840a20d50f8564a21dca440330d64f7fc8b38a5f158e47ed",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "3.1_R12",
+          "fullVersion": "1.1.3.1_R12"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.3.1_R14_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.3.1 Multiplatform Installer For Domino 14",
+        "sha256": "0e371f5eeb06931a24a0f00d3ac19057c7ea6697353d25405d6bf53cc5a40e22",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "3.1_R14",
+          "fullVersion": "1.1.3.1_R14"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.4_R12_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.4 Multiplatform Installer For Domino 12",
+        "sha256": "a1455cea3cc9e71db7e790f586c70a2bb0db8cdeae2f65611c31ea5f8e917d5d",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "4_R12",
+          "fullVersion": "1.1.4_R12"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.4_R14_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.4 Multiplatform Installer For Domino 14",
+        "sha256": "a7f222251dfa3476bed5ebf49d92779bef530dc2eea07374afc8522e7230070e",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "4_R14",
+          "fullVersion": "1.1.4_R14"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.5_R12_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.5 Multiplatform Installer For Domino 12",
+        "sha256": "b942df7f78a03c4e63cceeacb8161871af91f300261cd3586b1a69748e4d9ac5",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "5_R12",
+          "fullVersion": "1.1.5_R12"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.5_R14_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.5 Multiplatform Installer For Domino 14",
+        "sha256": "e535bb886645b7cbb6e1164f164d1a6cba69e4432620d656dbbbf1be886bb513",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "5_R14",
+          "fullVersion": "1.1.5_R14"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.5_R14.5_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.5 Multiplatform Installer For Domino 14.5",
+        "sha256": "0077007ff74bdaaa58ac8f5fe49859d287b8ab1bd6d380ea5faf41d20fe57e5b",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "5_R14.5",
+          "fullVersion": "1.1.5_R14.5"
         }
       }
     ]
