@@ -3089,49 +3089,68 @@ class ProvisionerManager {
     static private function _diffProvisionerType(bundledPath:String, userPath:String):Bool {
         try {
             // Use diff with --exclude to ignore metadata file (prevents infinite loop from allow_auto_update flag)
-            // The exclude flag prevents metadata differences from triggering unnecessary updates
-            var process = new Process('diff', ['-r', '--brief', '--exclude=${PROVISIONER_METADATA_FILENAME}', '"${bundledPath}"', '"${userPath}"']);
+            // Use command string syntax (not array) to properly handle quoted paths with spaces
+            var command = 'diff -r --brief --exclude=${PROVISIONER_METADATA_FILENAME} "${bundledPath}" "${userPath}"';
+            Logger.info('Executing diff command: ${command}');
+            
+            var process = new Process(command);
             var exitCode = process.exitCode();
             process.close();
             
             // diff exit codes: 0 = identical, 1 = differences found, 2 = error
             Logger.info('diff command result for ${Path.withoutDirectory(bundledPath)}: exit code ${exitCode}');
+            
+            // If exit code is 2 (error), fall back to template comparison
+            if (exitCode == 2) {
+                Logger.warning('diff command failed with error (exit code 2), falling back to template comparison');
+                return _compareTemplateFiles(bundledPath, userPath);
+            }
+            
             return exitCode == 1;
         } catch (e) {
             Logger.warning('diff command failed for ${Path.withoutDirectory(bundledPath)}, using targeted file fallback: ${e}');
             
-            // Fallback: Compare key template files directly (avoid metadata infinite loop)
-            try {
-                // Check if critical template files differ
-                var templateFiles = ['templates/Hosts.template.yml', 'templates/debug-Hosts.yml', 'templates/example-Hosts.yml'];
+            return _compareTemplateFiles(bundledPath, userPath);
+        }
+    }
+    
+    /**
+     * Compare key template files directly to detect differences
+     * @param bundledPath Path to the bundled provisioner type directory
+     * @param userPath Path to the user's provisioner type directory  
+     * @return Bool True if differences found, false if identical
+     */
+    static private function _compareTemplateFiles(bundledPath:String, userPath:String):Bool {
+        try {
+            // Check if critical template files differ
+            var templateFiles = ['templates/Hosts.template.yml', 'templates/debug-Hosts.yml', 'templates/example-Hosts.yml'];
+            
+            for (templateFile in templateFiles) {
+                var bundledTemplate = Path.addTrailingSlash(bundledPath) + templateFile;
+                var userTemplate = Path.addTrailingSlash(userPath) + templateFile;
                 
-                for (templateFile in templateFiles) {
-                    var bundledTemplate = Path.addTrailingSlash(bundledPath) + templateFile;
-                    var userTemplate = Path.addTrailingSlash(userPath) + templateFile;
-                    
-                    // Skip if either file doesn't exist
-                    if (!FileSystem.exists(bundledTemplate) || !FileSystem.exists(userTemplate)) {
-                        continue;
-                    }
-                    
-                    try {
-                        var bundledContent = File.getContent(bundledTemplate);
-                        var userContent = File.getContent(userTemplate);
-                        if (bundledContent != userContent) {
-                            Logger.info('Template file differs: ${templateFile}');
-                            return true; // Found template differences
-                        }
-                    } catch (e3) {
-                        Logger.warning('Error comparing ${templateFile}: ${e3}');
-                    }
+                // Skip if either file doesn't exist
+                if (!FileSystem.exists(bundledTemplate) || !FileSystem.exists(userTemplate)) {
+                    continue;
                 }
                 
-                Logger.info('No template differences found in fallback comparison');
-                return false; // No differences in key template files
-            } catch (e2) {
-                Logger.error('Template comparison fallback also failed: ${e2}');
-                return true; // Assume differences to be safe
+                try {
+                    var bundledContent = File.getContent(bundledTemplate);
+                    var userContent = File.getContent(userTemplate);
+                    if (bundledContent != userContent) {
+                        Logger.info('Template file differs: ${templateFile}');
+                        return true; // Found template differences
+                    }
+                } catch (e3) {
+                    Logger.warning('Error comparing ${templateFile}: ${e3}');
+                }
             }
+            
+            Logger.info('No template differences found in fallback comparison');
+            return false; // No differences in key template files
+        } catch (e2) {
+            Logger.error('Template comparison fallback also failed: ${e2}');
+            return true; // Assume differences to be safe
         }
     }
     
