@@ -3089,8 +3089,8 @@ class ProvisionerManager {
     static private function _diffProvisionerType(bundledPath:String, userPath:String):Bool {
         try {
             // Use diff with --exclude to ignore metadata file (prevents infinite loop from allow_auto_update flag)
-            // Use command string syntax (not array) to properly handle quoted paths with spaces
-            var command = 'diff -r --brief --exclude=${PROVISIONER_METADATA_FILENAME} "${bundledPath}" "${userPath}"';
+            // Use string concatenation (not interpolation) to properly preserve quotes in Process execution
+            var command = 'diff -r --brief --exclude=' + PROVISIONER_METADATA_FILENAME + ' "' + bundledPath + '" "' + userPath + '"';
             Logger.info('Executing diff command: ${command}');
             
             var process = new Process(command);
