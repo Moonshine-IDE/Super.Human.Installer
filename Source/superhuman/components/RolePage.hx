@@ -80,7 +80,7 @@ class RolePage extends Page {
     final _w:Float = GenesisApplicationTheme.GRID * 140;
     
     // Role dependency definitions
-    private static final ROLES_DEPEND_ON_DOMINO:Array<String> = ["verse", "leap"];
+    private static final ROLES_DEPEND_ON_DOMINO:Array<String> = ["verse", "leap", "jedi"];
     private static final ROLES_VERSION_DEPENDENT:Array<String> = ["nomadweb", "traveler", "domino-rest-api"];
     
     // Domino selection tracking
@@ -199,9 +199,6 @@ class RolePage extends Page {
     override function updateContent( forced:Bool = false ) {
 
         super.updateContent();
-        
-        // Check if Domino installer is selected and update dependency info
-        checkDominoInstaller();
 
         if ( _listGroup != null) {
 
@@ -536,6 +533,31 @@ class RolePage extends Page {
             // Default behavior for built-in provisioners
             var coll = SuperHumanInstaller.getInstance().serverRolesCollection.copy();
 
+            // Filter out JEDI for older provisioner versions (only available in 0.1.23+)
+            var provisionerVersion = _server.provisioner.version;
+            var versionString = Std.string(provisionerVersion);
+            Logger.info('RolePage: Checking provisioner version: ${versionString} for JEDI availability');
+            
+            if (versionString < "0.1.23" || versionString == "0.1.20" || versionString == "0.1.21" || versionString == "0.1.22") {
+                // Remove JEDI from the UI collection
+                coll = coll.filter(function(impl) {
+                    var shouldInclude = impl.role.value.toLowerCase() != "jedi";
+                    if (!shouldInclude) {
+                        Logger.info('RolePage: Filtering out JEDI role for provisioner version ${provisionerVersion} (< 0.1.23)');
+                    }
+                    return shouldInclude;
+                });
+                
+                // Also remove JEDI from the server's roles data
+                _server.roles.value = _server.roles.value.filter(function(r) {
+                    var shouldInclude = r.value.toLowerCase() != "jedi";
+                    if (!shouldInclude) {
+                        Logger.info('RolePage: Removing JEDI from server roles for version ${provisionerVersion} (< 0.1.23)');
+                    }
+                    return shouldInclude;
+                });
+            }
+
             for (impl in coll) {
                 for (r in _server.roles.value) {
                     if (r.value == impl.role.value) {
@@ -548,6 +570,23 @@ class RolePage extends Page {
                     }
                 }
             }
+
+            // Configure JEDI to not show installer buttons (configuration toggle only)
+            // Only do this if JEDI is available for this version
+            if (provisionerVersion >= "0.1.23") {
+                for (impl in coll) {
+                    if (impl.role.value.toLowerCase() == "jedi") {
+                        Reflect.setField(impl.role, "showInstaller", false);
+                        Reflect.setField(impl.role, "showFixpack", false);
+                        Reflect.setField(impl.role, "showHotfix", false);
+                        Logger.info('RolePage: Configured JEDI to hide installer buttons for version ${provisionerVersion}');
+                        break;
+                    }
+                }
+            }
+
+            // NOW check Domino installer status after _dominoRole is properly set
+            checkDominoInstaller();
 
             for (i in coll) {
                 // Create RolePickerItem with dependency info

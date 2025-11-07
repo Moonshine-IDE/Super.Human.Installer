@@ -170,11 +170,6 @@ hosts:
       verse_archive: ::VERSE_INSTALLER:: # HCL_Verse_3.0.0.zip
       verse_base_version: ::VERSE_INSTALLER_VERSION:: # 3.0.0
 
-      # AppDev Web Pack Variables
-      #appdevpack_hash: ::APPDEVPACK_HASH:: # "b84248ae22a57efe19dac360bd2aafc2"
-      appdevpack_archive: ::APPDEVPACK_INSTALLER:: # domino-appdev-pack-1.0.15.tgz
-      appdevpack_version: ::APPDEVPACK_INSTALLER_VERSION:: # 1.0.15
-      
       # Domino Rest API Variables
       #domino_rest_api_hash: ::DOMINO_REST_API_HASH:: # "fa990f9bac800726f917cd0ca857f220"
       domino_rest_api_version: ::DOMINO_REST_API_INSTALLER_VERSION:: # 1
@@ -207,7 +202,6 @@ hosts:
       ::ROLE_TRAVELER::
       ::ROLE_TRAVELER_HTMO::
       ::ROLE_VERSE::
-      ::ROLE_APPDEVPACK::
       ::ROLE_RESTAPI::
       ::ROLE_VOLTMX::
       - name: domino_vagrant_readme

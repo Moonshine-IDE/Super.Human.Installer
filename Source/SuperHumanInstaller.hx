@@ -207,6 +207,14 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		_defaultRoles = superhuman.server.provisioners.StandaloneProvisioner.getDefaultProvisionerRoles();
 
+		// Configure JEDI to not show installer buttons (cleaner approach)
+		var jediRole = _defaultRoles.get("jedi");
+		if (jediRole != null) {
+			Reflect.setField(jediRole, "showInstaller", false);
+			Reflect.setField(jediRole, "showFixpack", false);
+			Reflect.setField(jediRole, "showHotfix", false);
+		}
+
 		var dominoHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino");
 		var dominoHotFixHashes:Array<String> = SuperHumanHashes.getHotFixesHashes("domino");
 		var dominoFixPacksHashes:Array<String> = SuperHumanHashes.getFixPacksHashes("domino");
@@ -226,6 +234,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			new ServerRoleImpl( "Traveler", LanguageManager.getInstance().getString( 'rolepage.roles.traveler.desc' ), _defaultRoles.get( "traveler" ), travelerHashes, null, travelerFixPacksHashes, "(Traveler_14.0.0FP2_Linux_ML.tar.gz)" ),
 			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), verseHashes, "(HCL_Verse_3.0.0.zip)" ),
 			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), restApiHashes, "(Domino_REST_API_V1_Installer.tar.gz)" ),
+			new ServerRoleImpl( "JEDI", LanguageManager.getInstance().getString( 'rolepage.roles.jedi.desc' ), _defaultRoles.get( "jedi" ), [], [], [], "" ),
 
 		];
 

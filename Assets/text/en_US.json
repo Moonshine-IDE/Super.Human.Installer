@@ -89,7 +89,7 @@
     },
     "helppage":{
         "title":"How %1 Works",
-        "text":"%1 leverages the <a href=\"event:VirtualBox\"><font color=\"#4e84ff\"><b>VirtualBox</b></font></a> virtual machine manager and the <a href=\"event:Vagrant\"><font color=\"#4e84ff\"><b>Vagrant</b></font></a> <a href=\"event:DevOps\"><font color=\"#4e84ff\"><b>DevOps</b></font></a> software automation tool to create a Linux based VM on your local computer. There will be one for each <a href=\"event:Domino\"><font color=\"#4e84ff\"><b>Domino</b></font></a> server you create.<br /><br />You should only run 1-2 at a time, depending upon your computer's resources. You can define as many as you like, and in each one you can experiment with different configurations and <a href=\"event:GenesisDirectory\"><font color=\"#4e84ff\"><b>Genesis.Directory</b></font></a> add-ons -- or your own development ideas!<br /><br />The specific steps which are followed based upon the user interface presented by the Super.Human.Installer application are written to a configuration file called a <a href=\"event:YAML\"><font color=\"#4e84ff\"><b>YAML</b></font></a> file. This YAML file provides instructions to Vagrant such as which version of Domino to install and whether to include additional features like Nomad Web and Node.js development using the AppDev Pack.<br /><br />The actual control files and scripts can be inspected by you by clicking the Open Server Directory button on any of the existing server instances.",
+        "text":"%1 leverages the <a href=\"event:VirtualBox\"><font color=\"#4e84ff\"><b>VirtualBox</b></font></a> virtual machine manager and the <a href=\"event:Vagrant\"><font color=\"#4e84ff\"><b>Vagrant</b></font></a> <a href=\"event:DevOps\"><font color=\"#4e84ff\"><b>DevOps</b></font></a> software automation tool to create a Linux based VM on your local computer. There will be one for each <a href=\"event:Domino\"><font color=\"#4e84ff\"><b>Domino</b></font></a> server you create.<br /><br />You should only run 1-2 at a time, depending upon your computer's resources. You can define as many as you like, and in each one you can experiment with different configurations and <a href=\"event:GenesisDirectory\"><font color=\"#4e84ff\"><b>Genesis.Directory</b></font></a> add-ons -- or your own development ideas!<br /><br />The specific steps which are followed based upon the user interface presented by the Super.Human.Installer application are written to a configuration file called a <a href=\"event:YAML\"><font color=\"#4e84ff\"><b>YAML</b></font></a> file. This YAML file provides instructions to Vagrant such as which version of Domino to install and whether to include additional features like Nomad Web.<br /><br />The actual control files and scripts can be inspected by you by clicking the Open Server Directory button on any of the existing server instances.",
         "disclaimer":"All trademarks, logos and brand names are the property of their respective owners"
     },
     "updatepage":{
@@ -268,14 +268,11 @@
             "verse":{
                 "desc":"HCL Verse is an advanced, person-centric webmail interface.  Define your personal VIPs and never miss important messages again"
             },
-            "appdevpack":{
-                "desc":"The AppDev Pack primarily adds Node.js support to Domino Server"
-            },
             "domino-rest-api":{
                 "desc":"The HCL Domino REST APIs (previously known as HCL Project KEEP) provide secure REST APIs with access to HCL Domino servers and databases."
             },
             "jedi":{
-                "desc": "Disable/Enable JEDI"
+                "desc": "JEDI (Java-based Domino management). When disabled, uses modern systemd service script which supports auto-updates"
             }
         }
     },
