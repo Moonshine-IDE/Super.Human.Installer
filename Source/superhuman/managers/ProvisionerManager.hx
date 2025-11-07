@@ -3090,7 +3090,7 @@ class ProvisionerManager {
         try {
             // Use diff with --exclude to ignore metadata file (prevents infinite loop from allow_auto_update flag)
             // The exclude flag prevents metadata differences from triggering unnecessary updates
-            var process = new Process('diff', ['-r', '--brief', '--exclude=${PROVISIONER_METADATA_FILENAME}', bundledPath, userPath]);
+            var process = new Process('diff', ['-r', '--brief', '--exclude=${PROVISIONER_METADATA_FILENAME}', '"${bundledPath}"', '"${userPath}"']);
             var exitCode = process.exitCode();
             process.close();
             
