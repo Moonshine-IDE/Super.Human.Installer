@@ -2,6 +2,18 @@
   "domino": {
     "installers": [
       {
+        "fileName": "Domino_14.5_Linux_English.tar",
+        "description": "HCL Domino Server 14.5 for Linux English",
+        "sha256": "6775d563e826114702fc4aacf20f5f086459bd151c3bf01a9e659eaff47ebe79",
+        "version": {
+          "majorVersion": "14",
+          "minorVersion": "5",
+          "patchVersion": "0",
+          "ea_access_release": "",
+          "fullVersion": "14.5.0"
+        }
+      },
+      {
         "fileName": "Domino_14.0_Linux_English.tar",
         "description": "HCL Domino Server 14.0 for Linux English",
         "sha256": "5fd08b71e946f11308232170553aaca6f4c60c8bb8d91ef6fb89e3f171bad9a5",
