@@ -29,6 +29,20 @@ class BrowserData {
 		}
 		
 		switch browserType {
+			case Browsers.SYSTEM_DEFAULT:
+				if (this.executablePath == "")
+				{
+					#if linux
+					this.executablePath = "xdg-open";
+					#elseif mac
+					this.executablePath = "open";
+					#elseif windows
+					this.executablePath = "start";
+					#end
+				}
+				this.browserName = "System Default";
+				this.downloadUrl = "";
+				this.exists = true; // System commands always exist
 			case Browsers.GOOGLE_CHROME:
 					if (this.executablePath == "")
 					{

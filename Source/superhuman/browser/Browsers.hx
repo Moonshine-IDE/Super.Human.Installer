@@ -6,6 +6,7 @@ import cpp.NativeSys;
 
 class Browsers  
 {
+    public static final SYSTEM_DEFAULT:String = "System Default";
     public static final MOZILLA_FIREFOX:String = "Mozilla Firefox";
     public static final GOOGLE_CHROME:String = "Google Chrome";
     public static final BRAVE:String = "Brave Browser";
@@ -16,7 +17,8 @@ class Browsers
     public static final INTERNET_EXPLORER:String = "Internet Explorer";
     
     public static final DEFAULT_BROWSERS_LIST:Array<BrowserData> = [
-    		new BrowserData(Browsers.MOZILLA_FIREFOX, true),
+    		new BrowserData(Browsers.SYSTEM_DEFAULT, true),
+    		new BrowserData(Browsers.MOZILLA_FIREFOX),
 		new BrowserData(Browsers.GOOGLE_CHROME),
 		new BrowserData(Browsers.BRAVE),
 		new BrowserData(Browsers.OPERA),
@@ -83,18 +85,70 @@ class Browsers
 		}
 		
 		var defaultBrowser = Browsers.getDefaultBrowser();
-		var a = [webAddress];
-		#if mac
-		a = ["-a" + defaultBrowser.executablePath, webAddress];
-		#elseif windows
-		a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${webAddress}"'];
-		#end
 		
-		#if windows
-		var trim = StringTools.trim( a.join( " " ));
-		NativeSys.sys_command(trim);
-		#else
-		Shell.getInstance().open( a );
-		#end	
+		// If no default browser or default doesn't exist, fall back to system default
+		if (defaultBrowser == null || !defaultBrowser.exists) {
+			Logger.warning('Default browser not found or doesn\'t exist, falling back to system default');
+			defaultBrowser = new BrowserData(Browsers.SYSTEM_DEFAULT, true);
+		}
+		
+		try {
+			// Handle System Default browser type specially
+			if (defaultBrowser.browserType == Browsers.SYSTEM_DEFAULT) {
+				#if windows
+				// Use Windows start command to open with system default browser
+				var command = 'start "" "${webAddress}"';
+				Logger.info('Opening URL with system default browser: ${command}');
+				NativeSys.sys_command(command);
+				#elseif mac
+				// Use Mac open command to open with system default browser
+				var a = [webAddress];
+				Logger.info('Opening URL with system default browser using open command');
+				Shell.getInstance().open( a );
+				#elseif linux
+				// Use xdg-open to open with system default browser
+				var a = [webAddress];
+				Logger.info('Opening URL with system default browser using xdg-open');
+				Shell.getInstance().open( a );
+				#end
+				return;
+			}
+			
+			// Handle specific browser types
+			var a = [webAddress];
+			#if mac
+			a = ["-a" + defaultBrowser.executablePath, webAddress];
+			#elseif windows
+			a = ["start", '""', '"${defaultBrowser.executablePath}"', '"${webAddress}"'];
+			#end
+			
+			Logger.info('Opening URL with ${defaultBrowser.browserName}: ${webAddress}');
+			
+			#if windows
+			var trim = StringTools.trim( a.join( " " ));
+			NativeSys.sys_command(trim);
+			#else
+			Shell.getInstance().open( a );
+			#end
+		} catch (e) {
+			Logger.error('Failed to open URL with ${defaultBrowser.browserName}: ${e}');
+			
+			// Final fallback: try system default if we haven't already
+			if (defaultBrowser.browserType != Browsers.SYSTEM_DEFAULT) {
+				Logger.info('Attempting final fallback to system default browser');
+				try {
+					#if windows
+					var fallbackCommand = 'start "" "${webAddress}"';
+					NativeSys.sys_command(fallbackCommand);
+					#elseif mac
+					Shell.getInstance().open( [webAddress] );
+					#elseif linux
+					Shell.getInstance().open( [webAddress] );
+					#end
+				} catch (e2) {
+					Logger.error('Final fallback also failed: ${e2}');
+				}
+			}
+		}
     }
 }
