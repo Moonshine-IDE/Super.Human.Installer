@@ -3088,14 +3088,17 @@ class ProvisionerManager {
      */
     static private function _diffProvisionerType(bundledPath:String, userPath:String):Bool {
         try {
-            // Use diff with --exclude to ignore metadata file (prevents infinite loop from allow_auto_update flag)
-            // Use string concatenation (not interpolation) to properly preserve quotes in Process execution
-            var command = 'diff -r --brief --exclude=' + PROVISIONER_METADATA_FILENAME + ' "' + bundledPath + '" "' + userPath + '"';
-            Logger.info('Executing diff command: ${command}');
+            // Enhanced approach: Use proper path escaping for Mac
+            var excludeArg = "--exclude=" + PROVISIONER_METADATA_FILENAME;
             
-            var process = new Process(command);
-            var exitCode = process.exitCode();
-            process.close();
+            // Escape paths properly by single-quoting and escaping any single quotes within
+            var escapedBundledPath = "'" + StringTools.replace(bundledPath, "'", "'\\''") + "'";
+            var escapedUserPath = "'" + StringTools.replace(userPath, "'", "'\\''") + "'";
+            
+            var diffCmd = 'diff -r --brief ${excludeArg} ${escapedBundledPath} ${escapedUserPath}';
+            Logger.info('Executing diff command: ${diffCmd}');
+            
+            var exitCode = Sys.command("sh", ["-c", diffCmd]);
             
             // diff exit codes: 0 = identical, 1 = differences found, 2 = error
             Logger.info('diff command result for ${Path.withoutDirectory(bundledPath)}: exit code ${exitCode}');
@@ -3109,7 +3112,6 @@ class ProvisionerManager {
             return exitCode == 1;
         } catch (e) {
             Logger.warning('diff command failed for ${Path.withoutDirectory(bundledPath)}, using targeted file fallback: ${e}');
-            
             return _compareTemplateFiles(bundledPath, userPath);
         }
     }
