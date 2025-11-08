@@ -2603,21 +2603,40 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 
 	/**
-	 * Quick check if an application executable exists in PATH without full initialization
-	 * Used for runtime monitoring to detect uninstalled apps
+	 * Quick check if an application executable exists in PATH and is actually usable
+	 * Used for runtime monitoring to detect uninstalled apps and broken symlinks
 	 * @param executable The executable name to check
-	 * @return Bool True if the executable exists in PATH
+	 * @return Bool True if the executable exists and can be executed
 	 */
 	function _quickCheckAppExists(executable:String):Bool {
 		try {
 			#if windows
+			// On Windows, use 'where' command to check existence
 			var process = new sys.io.Process('where', [executable]);
-			#else
-			var process = new sys.io.Process('which', [executable]);
-			#end
 			var exitCode = process.exitCode();
 			process.close();
 			return exitCode == 0;
+			#else
+			// On Mac/Linux, test actual execution to detect broken symlinks
+			// Use a simple help/version command that should work if the app is functional
+			var testProcess:sys.io.Process;
+			if (executable == "vagrant") {
+				testProcess = new sys.io.Process(executable, ['--help']);
+			} else if (executable == "VBoxManage") {
+				testProcess = new sys.io.Process(executable, ['-V']);
+			} else if (executable == "git") {
+				testProcess = new sys.io.Process(executable, ['--version']);
+			} else {
+				// For other executables, fall back to basic which check
+				testProcess = new sys.io.Process('which', [executable]);
+			}
+			
+			var exitCode = testProcess.exitCode();
+			testProcess.close();
+			
+			// Exit codes: 0 = success, 126 = cannot execute (broken symlink), 127 = not found
+			return exitCode == 0;
+			#end
 		} catch (e:Dynamic) {
 			return false;
 		}

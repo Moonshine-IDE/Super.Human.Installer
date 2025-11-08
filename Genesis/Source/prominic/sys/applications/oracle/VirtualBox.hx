@@ -288,8 +288,8 @@ class VirtualBox extends AbstractApp {
     }
 
     /**
-     * Check if VirtualBox executable is available before creating executors
-     * This prevents crashes when VirtualBox is uninstalled during runtime
+     * Check if VirtualBox executable is available and functional before creating executors
+     * This prevents crashes when VirtualBox is uninstalled during runtime and detects broken symlinks
      */
     private function _canCreateExecutor():Bool {
         if (!this.exists || this._path == null || this._executable == null) {
@@ -302,6 +302,28 @@ class VirtualBox extends AbstractApp {
             Logger.warning('${this}: Cannot create executor - VirtualBox executable not found at ${fullPath}');
             return false;
         }
+        
+        #if (!windows)
+        // On Mac/Linux, test actual execution to detect broken symlinks
+        // This catches cases where the symlink exists but points to missing files
+        try {
+            var testProcess = new sys.io.Process(fullPath, ['-V']);
+            var exitCode = testProcess.exitCode();
+            testProcess.close();
+            
+            if (exitCode == 126) {
+                Logger.warning('${this}: Cannot create executor - VirtualBox executable cannot be executed (broken symlink)');
+                return false;
+            } else if (exitCode == 127) {
+                Logger.warning('${this}: Cannot create executor - VirtualBox executable not found in PATH');
+                return false;
+            }
+            // exitCode == 0 means functional, any other code still allows creation (might be different VirtualBox version behavior)
+        } catch (e:Dynamic) {
+            Logger.warning('${this}: Cannot create executor - VirtualBox test execution failed: ${e}');
+            return false;
+        }
+        #end
         
         return true;
     }
