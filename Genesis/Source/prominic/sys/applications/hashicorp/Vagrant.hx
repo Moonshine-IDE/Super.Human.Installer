@@ -311,11 +311,35 @@ class Vagrant extends AbstractApp {
      * Only 1 instance exists, as this is a global command.
      * @return Executor
      */
+    /**
+     * Check if Vagrant executable is available before creating executors
+     * This prevents crashes when Vagrant is uninstalled during runtime
+     */
+    private function _canCreateExecutor():Bool {
+        if (!this.exists || this._path == null || this._executable == null) {
+            Logger.warning('${this}: Cannot create executor - Vagrant not available');
+            return false;
+        }
+        
+        var fullPath = this._path + this._executable;
+        if (!sys.FileSystem.exists(fullPath)) {
+            Logger.warning('${this}: Cannot create executor - Vagrant executable not found at ${fullPath}');
+            return false;
+        }
+        
+        return true;
+    }
+
     public function getGlobalStatus( prune:Bool = false ):AbstractExecutor {
 
         // Return the already running executor if it exists
         if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.GlobalStatus ) )
             return ExecutorManager.getInstance().get( VagrantExecutorContext.GlobalStatus );
+
+        // Check if we can create the executor
+        if (!_canCreateExecutor()) {
+            return null;
+        }
 
         _tempGlobalStatusData = "";
 
@@ -323,10 +347,15 @@ class Vagrant extends AbstractApp {
         args.push( "--machine-readable" );
         if ( prune ) args.push( "--prune" );
 
-        final executor = new Executor( this._path + this._executable, args );
-        executor.onStop.add( _globalStatusExecutorStopped ).onStdOut.add( _globalStatusExecutorStandardOutput );
-        ExecutorManager.getInstance().set( VagrantExecutorContext.GlobalStatus, executor );
-        return executor;
+        try {
+            final executor = new Executor( this._path + this._executable, args );
+            executor.onStop.add( _globalStatusExecutorStopped ).onStdOut.add( _globalStatusExecutorStandardOutput );
+            ExecutorManager.getInstance().set( VagrantExecutorContext.GlobalStatus, executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create global-status executor: ${e}');
+            return null;
+        }
 
     }
 
@@ -435,10 +464,20 @@ class Vagrant extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VagrantExecutorContext.Version ) )
             return ExecutorManager.getInstance().get( VagrantExecutorContext.Version );
 
-        final executor = new Executor( this.path + this._executable, [ "-v" ] );
-        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
-        ExecutorManager.getInstance().set( VagrantExecutorContext.Version, executor );
-        return executor;
+        // Check if we can create the executor
+        if (!_canCreateExecutor()) {
+            return null;
+        }
+
+        try {
+            final executor = new Executor( this.path + this._executable, [ "-v" ] );
+            executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
+            ExecutorManager.getInstance().set( VagrantExecutorContext.Version, executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create version executor: ${e}');
+            return null;
+        }
 
     }
 

@@ -112,11 +112,27 @@ abstract class AbstractApp {
         //
         for ( p in _pathAdditions ) SysTools.addToPath( p );
 
-        var executablePath = Which.getInstance().path + Which.getInstance().executable;
-        final executor = new Executor( executablePath, [ this._executable ] );
-        executor.onStdErr.add( _initStandardError ).onStdOut.add( _initStandardOutput ).onStop.add( _initStop );
-        ExecutorManager.getInstance().set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
-        return executor;
+        try {
+            // Try to create the executor - this will handle missing applications gracefully through Executor.execute()
+            var whichPath = Which.getInstance().path + Which.getInstance().executable;
+            final executor = new Executor( whichPath, [ this._executable ] );
+            executor.onStdErr.add( _initStandardError ).onStdOut.add( _initStandardOutput ).onStop.add( _initStop );
+            ExecutorManager.getInstance().set( '${_name}_${AbstractAppExecutorContext.Init}', executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create initialization executor for ${_name}: ${e}');
+            
+            // Mark as initialized immediately and trigger callbacks directly
+            _initialized = true;
+            _path = null;
+            _initializationComplete();
+            
+            // Trigger callbacks to notify that initialization is complete (even though app failed)
+            for ( f in _onInit ) f( this );
+            
+            // Return null since we can't create a proper executor
+            return null;
+        }
 
     }
 

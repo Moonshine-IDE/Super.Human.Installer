@@ -118,17 +118,65 @@ class Executor extends AbstractExecutor implements IDisposable {
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        var finalArgs = extraArgs != null ? _args.concat( extraArgs ) : _args;
-        _process = new CallbackProcess(_command,  finalArgs);
-        _process.onStdErr = _processOnStdErr;
-        _process.onStdOut = _processOnStdOut;
-        _process.onStop = _processOnStop;
-        _process.start();
-        this._pid = _process.pid;
-        _running = true;
-        for ( f in _onStart ) f( this );
+        // Check if the command executable exists before trying to create process
+        // Skip this check for built-in Windows commands that don't exist as files
+        #if windows
+        var isBuiltinCommand = (_command == "where" || _command == "cmd" || _command == "echo" || 
+                               _command == "dir" || _command == "type" || _command == "find");
+        #else
+        var isBuiltinCommand = false;
+        #end
+        
+        if (!isBuiltinCommand && !sys.FileSystem.exists(_command)) {
+            Logger.error('${this}: Executable not found at ${_command} - cannot execute process');
+            
+            // Set error state
+            _hasErrors = true;
+            _exitCode = 127; // Standard "command not found" exit code
+            _running = false;
+            _stopTime = Sys.time();
+            
+            // Restore working directory before triggering callbacks
+            Sys.setCwd( currentWorkingDirectory );
+            
+            // Trigger error callbacks
+            for ( f in _onStdErr ) f( this, "Process creation failure: Executable not found at ${_command}" );
+            for ( f in _onStop ) f( this );
+            
+            return this;
+        }
 
-        Logger.info( '${this}: execute() in ${Sys.getCwd()}' );
+        var finalArgs = extraArgs != null ? _args.concat( extraArgs ) : _args;
+        
+        try {
+            _process = new CallbackProcess(_command,  finalArgs);
+            _process.onStdErr = _processOnStdErr;
+            _process.onStdOut = _processOnStdOut;
+            _process.onStop = _processOnStop;
+            _process.start();
+            this._pid = _process.pid;
+            _running = true;
+            for ( f in _onStart ) f( this );
+
+            Logger.info( '${this}: execute() in ${Sys.getCwd()}' );
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Process creation failed for ${_command}: ${e}');
+            
+            // Set error state
+            _hasErrors = true;
+            _exitCode = 1;
+            _running = false;
+            _stopTime = Sys.time();
+            
+            // Restore working directory before triggering callbacks
+            Sys.setCwd( currentWorkingDirectory );
+            
+            // Trigger error callbacks
+            for ( f in _onStdErr ) f( this, "Process creation failure: ${e}" );
+            for ( f in _onStop ) f( this );
+            
+            return this;
+        }
 
         Sys.setCwd( currentWorkingDirectory );
 

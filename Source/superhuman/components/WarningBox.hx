@@ -34,14 +34,19 @@ import feathers.controls.Button;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
 import feathers.events.TriggerEvent;
+import feathers.layout.HorizontalAlign;
+import feathers.layout.HorizontalLayout;
 import feathers.layout.HorizontalLayoutData;
 import feathers.layout.VerticalLayout;
 import genesis.application.theme.GenesisApplicationTheme;
+import superhuman.events.SuperHumanApplicationEvent;
 
 @:styleContext
 class WarningBox extends LayoutGroup {
 
     var _button:Button;
+    var _recheckButton:Button;
+    var _buttonGroup:LayoutGroup;
     var _contentGroup:LayoutGroup;
     var _labelText:Label;
     var _labelTitle:Label;
@@ -76,6 +81,19 @@ class WarningBox extends LayoutGroup {
         return value;
     }
     
+    public var recheckAction( get, set ):String;
+    var _recheckAction:String;
+    function get_recheckAction() return _recheckAction;
+    function set_recheckAction( value:String ):String {
+        if ( _recheckAction == value ) return value;
+        _recheckAction = value;
+        if ( _recheckButton != null ) {
+            _recheckButton.text = _recheckAction;
+            _recheckButton.visible = _recheckButton.includeInLayout = (_recheckAction != null && _recheckAction != "");
+        }
+        return value;
+    }
+    
     public function new() {
 
         super();
@@ -100,12 +118,37 @@ class WarningBox extends LayoutGroup {
         if ( _text != null ) _labelText.text = _text;
         _contentGroup.addChild( _labelText );
 
+        // Create button group to hold both buttons horizontally
+        _buttonGroup = new LayoutGroup();
+        _buttonGroup.layoutData = new HorizontalLayoutData();
+        var buttonLayout = new HorizontalLayout();
+        buttonLayout.gap = GenesisApplicationTheme.GRID;
+        buttonLayout.horizontalAlign = HorizontalAlign.CENTER;
+        _buttonGroup.layout = buttonLayout;
+        this.addChild( _buttonGroup );
+
         _button = new Button();
         _button.variant = GenesisApplicationTheme.BUTTON_WARNING;
-        _button.layoutData = new HorizontalLayoutData();
+        _button.width = GenesisApplicationTheme.GRID * 18;
         if ( _action != null ) _button.text = _action;
         _button.addEventListener( TriggerEvent.TRIGGER, _buttonTriggered );
-        this.addChild( _button );
+        _buttonGroup.addChild( _button );
+
+        // Create recheck button
+        _recheckButton = new Button();
+        _recheckButton.variant = GenesisApplicationTheme.BUTTON_WARNING;
+        _recheckButton.width = GenesisApplicationTheme.GRID * 16;
+        _recheckButton.text = "Recheck";
+        _recheckButton.addEventListener( TriggerEvent.TRIGGER, _recheckButtonTriggered );
+        _recheckButton.visible = _recheckButton.includeInLayout = (_recheckAction != null && _recheckAction != "");
+        _buttonGroup.addChild( _recheckButton );
+
+    }
+
+    function _recheckButtonTriggered( e:TriggerEvent ) {
+
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.RECHECK_PREREQUISITES );
+        this.dispatchEvent( event );
 
     }
 

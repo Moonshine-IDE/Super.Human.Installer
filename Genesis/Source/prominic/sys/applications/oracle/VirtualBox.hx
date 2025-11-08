@@ -243,12 +243,22 @@ class VirtualBox extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.BridgedInterfaces ) )
             return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.BridgedInterfaces );
 
+        // Check if we can create the executor
+        if (!_canCreateExecutor()) {
+            return null;
+        }
+
         _tempBridgedInterfaceData = "";
 
-        final executor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
-        executor.onStop.add( _bridgedInterfaceExecutorStop ).onStdOut.add( _bridgedInterfaceExecutorStandardOutput );
-        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.BridgedInterfaces, executor );
-        return executor;
+        try {
+            final executor = new Executor( this.path + this._executable, [ "list", "bridgedifs" ]);
+            executor.onStop.add( _bridgedInterfaceExecutorStop ).onStdOut.add( _bridgedInterfaceExecutorStandardOutput );
+            ExecutorManager.getInstance().set( VirtualBoxExecutorContext.BridgedInterfaces, executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create bridged interfaces executor: ${e}');
+            return null;
+        }
 
     }
 
@@ -258,13 +268,60 @@ class VirtualBox extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.HostInfo ) )
             return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.HostInfo );
 
+        // Check if we can create the executor
+        if (!_canCreateExecutor()) {
+            return null;
+        }
+
         _tempHostInfoData = "";
 
-        final executor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
-        executor.onStdOut.add( _hostInfoExecutorExecutorStandardOutput ).onStop.add( _hostInfoExecutorExecutorStop );
-        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.HostInfo, executor );
-        return executor;
+        try {
+            final executor = new Executor( this.path + this._executable, [ "list", "hostinfo" ]);
+            executor.onStdOut.add( _hostInfoExecutorExecutorStandardOutput ).onStop.add( _hostInfoExecutorExecutorStop );
+            ExecutorManager.getInstance().set( VirtualBoxExecutorContext.HostInfo, executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create host info executor: ${e}');
+            return null;
+        }
 
+    }
+
+    /**
+     * Check if VirtualBox executable is available before creating executors
+     * This prevents crashes when VirtualBox is uninstalled during runtime
+     */
+    private function _canCreateExecutor():Bool {
+        if (!this.exists || this._path == null || this._executable == null) {
+            Logger.warning('${this}: Cannot create executor - VirtualBox not available');
+            return false;
+        }
+        
+        var fullPath = this.path + this._executable;
+        if (!sys.FileSystem.exists(fullPath)) {
+            Logger.warning('${this}: Cannot create executor - VirtualBox executable not found at ${fullPath}');
+            return false;
+        }
+        
+        return true;
+    }
+
+    /**
+     * Create a dummy executor that immediately reports failure
+     * This is used when the real application is not available
+     */
+    private function _createDummyExecutor(context:String, ?machine:VirtualBoxMachine):AbstractExecutor {
+        #if windows
+        var dummyExecutor = new Executor("cmd", ["/c", "echo", "VirtualBox not available"]);
+        #else
+        var dummyExecutor = new Executor("/bin/echo", ["VirtualBox not available"]);
+        #end
+        dummyExecutor.onStop.add(function(executor:AbstractExecutor) {
+            Logger.info('${this}: Dummy executor completed for ${context}');
+            ExecutorManager.getInstance().remove(context);
+            executor.dispose();
+        });
+        return dummyExecutor;
     }
 
     public function getListVMs( longFormat:Bool = false ):AbstractExecutor {
@@ -273,15 +330,25 @@ class VirtualBox extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.ListVMs ) )
             return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.ListVMs );
 
+        // Check if we can create the executor
+        if (!_canCreateExecutor()) {
+            return null;
+        }
+
         _tempListVMsData = "";
         _virtualBoxMachines = [];
         var args:Array<String> = [ "list", "vms" ];
         if ( longFormat ) args.push( "--long" );
 
-        final executor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
-        executor.onStdOut.add( _listVMsExecutorStandardOutput ).onStop.add( _listVMsExecutorStopped );
-        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.ListVMs, executor );
-        return executor;
+        try {
+            final executor = new Executor( this.path + this._executable, args, null, null, null, [ longFormat ] );
+            executor.onStdOut.add( _listVMsExecutorStandardOutput ).onStop.add( _listVMsExecutorStopped );
+            ExecutorManager.getInstance().set( VirtualBoxExecutorContext.ListVMs, executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create list VMs executor: ${e}');
+            return null;
+        }
 
     }
 
@@ -370,10 +437,20 @@ class VirtualBox extends AbstractApp {
         if ( ExecutorManager.getInstance().exists( VirtualBoxExecutorContext.Version ) )
             return ExecutorManager.getInstance().get( VirtualBoxExecutorContext.Version );
 
-        final executor = new Executor( this.path + this._executable, [ "-V" ] );
-        executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
-        ExecutorManager.getInstance().set( VirtualBoxExecutorContext.Version, executor );
-        return executor;
+        // Check if we can create the executor
+        if (!_canCreateExecutor()) {
+            return null;
+        }
+
+        try {
+            final executor = new Executor( this.path + this._executable, [ "-V" ] );
+            executor.onStop.add( _versionExecutorStopped ).onStdOut.add( _versionExecutorStandardOutput );
+            ExecutorManager.getInstance().set( VirtualBoxExecutorContext.Version, executor );
+            return executor;
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Failed to create version executor: ${e}');
+            return null;
+        }
 
     }
 

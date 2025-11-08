@@ -244,16 +244,20 @@ class ServerPage extends Page {
         _warningBoxVagrant = new WarningBox();
         _warningBoxVagrant.title = LanguageManager.getInstance().getString( 'serverpage.vagrant.title' );
         _warningBoxVagrant.action = LanguageManager.getInstance().getString( 'serverpage.vagrant.buttoninstall' );
+        _warningBoxVagrant.recheckAction = LanguageManager.getInstance().getString( 'serverpage.vagrant.buttonrecheck' );
         _warningBoxVagrant.text = LanguageManager.getInstance().getString( 'serverpage.vagrant.text' );
         _warningBoxVagrant.addEventListener( TriggerEvent.TRIGGER, _warningBoxTriggered );
+        _warningBoxVagrant.addEventListener( SuperHumanApplicationEvent.RECHECK_PREREQUISITES, _forwardEvent );
         _warningBoxVagrant.visible = _warningBoxVagrant.includeInLayout = !_vagrantInstalled || _vagrantVersion < SuperHumanGlobals.VAGRANT_MINIMUM_SUPPORTED_VERSION;
         this.addChild( _warningBoxVagrant );
 
         _warningBoxVirtualBox = new WarningBox();
         _warningBoxVirtualBox.title = LanguageManager.getInstance().getString( 'serverpage.virtualbox.title' );
         _warningBoxVirtualBox.action = LanguageManager.getInstance().getString( 'serverpage.virtualbox.buttoninstall' );
+        _warningBoxVirtualBox.recheckAction = LanguageManager.getInstance().getString( 'serverpage.virtualbox.buttonrecheck' );
         _warningBoxVirtualBox.text = LanguageManager.getInstance().getString( 'serverpage.virtualbox.text' );
         _warningBoxVirtualBox.addEventListener( TriggerEvent.TRIGGER, _warningBoxTriggered );
+        _warningBoxVirtualBox.addEventListener( SuperHumanApplicationEvent.RECHECK_PREREQUISITES, _forwardEvent );
         _warningBoxVirtualBox.visible = _warningBoxVirtualBox.includeInLayout = !_virtualBoxInstalled;
         this.addChild( _warningBoxVirtualBox );
 

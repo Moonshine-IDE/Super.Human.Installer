@@ -285,8 +285,34 @@ class ServerManager {
 		Logger.info( '${this}: Refreshing System Info...' );
 
 		var pe = ParallelExecutor.create();
-		if ( refreshVagrant ) pe.add( Vagrant.getInstance().getGlobalStatus() );
-		if ( refreshVirtualBox ) pe.add( VirtualBox.getInstance().getListVMs( true ) );
+		
+		// Add defensive programming to handle missing applications during refresh
+		if ( refreshVagrant ) {
+			try {
+				// Check if Vagrant is still available before attempting to get global status
+				if (Vagrant.getInstance().exists) {
+					pe.add( Vagrant.getInstance().getGlobalStatus() );
+				} else {
+					Logger.warning( '${this}: Vagrant is no longer available, skipping Vagrant refresh' );
+				}
+			} catch (e:Dynamic) {
+				Logger.error( '${this}: Error accessing Vagrant during refresh: ${e}' );
+			}
+		}
+		
+		if ( refreshVirtualBox ) {
+			try {
+				// Check if VirtualBox is still available before attempting to list VMs
+				if (VirtualBox.getInstance().exists) {
+					pe.add( VirtualBox.getInstance().getListVMs( true ) );
+				} else {
+					Logger.warning( '${this}: VirtualBox is no longer available, skipping VirtualBox refresh' );
+				}
+			} catch (e:Dynamic) {
+				Logger.error( '${this}: Error accessing VirtualBox during refresh: ${e}' );
+			}
+		}
+		
 		pe.onStop.add( _refreshVMInfoStopped );
 		ExecutorManager.getInstance().set( ServerManagerExecutorContext.RefreshVMInfo, pe );
 		pe.execute();

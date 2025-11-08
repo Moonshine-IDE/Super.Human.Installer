@@ -108,6 +108,7 @@ import superhuman.server.data.ServerUIType;
 import superhuman.server.definitions.ProvisionerDefinition;
 import sys.io.Process;
 using champaign.core.tools.ObjectTools;
+using StringTools;
 
 class SuperHumanInstaller extends GenesisApplication {
 
@@ -475,6 +476,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.DOWNLOAD_VIRTUALBOX, _downloadVirtualBox );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.RECHECK_PREREQUISITES, _recheckPrerequisites );
 
 		this.addPage( _serverPage, PAGE_SERVER );
 
@@ -1198,6 +1200,39 @@ class SuperHumanInstaller extends GenesisApplication {
 	override function _onWindowFocusIn() {
 
 		super._onWindowFocusIn();
+
+		// RUNTIME MONITORING: Check if apps were uninstalled while SHI was running
+		// This provides real-time feedback when users uninstall software
+		try {
+			var currentVagrantExists = Vagrant.getInstance().exists;
+			var currentVBoxExists = VirtualBox.getInstance().exists;
+			
+			// Quick check if currently detected apps still actually exist by testing the executable
+			#if windows
+			var vagrantStillExists = _quickCheckAppExists("vagrant.exe");
+			var vboxStillExists = _quickCheckAppExists("VBoxManage.exe");
+			#else
+			var vagrantStillExists = _quickCheckAppExists("vagrant");
+			var vboxStillExists = _quickCheckAppExists("VBoxManage");
+			#end
+			
+			// If we detected a change (app was installed but now missing), update status
+			if (currentVagrantExists && !vagrantStillExists) {
+				Logger.warning('${this}: Runtime detection - Vagrant was uninstalled while SHI was running');
+				_serverPage.vagrantInstalled = false;
+				// Force refresh footer to show warning
+				_updateFooterAfterRuntimeChange();
+			}
+			
+			if (currentVBoxExists && !vboxStillExists) {
+				Logger.warning('${this}: Runtime detection - VirtualBox was uninstalled while SHI was running');
+				_serverPage.virtualBoxInstalled = false;
+				// Force refresh footer to show warning
+				_updateFooterAfterRuntimeChange();
+			}
+		} catch (e:Dynamic) {
+			Logger.error('${this}: Error in runtime monitoring: ${e}');
+		}
 
 		if ( !SuperHumanGlobals.CHECK_VAGRANT_STATUS_ON_FOCUS ) return;
 
@@ -2303,6 +2338,257 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	}
 
+	function _recheckPrerequisites( e:SuperHumanApplicationEvent ) {
+
+		Logger.info('${this}: Rechecking prerequisites after user request');
+		ToastManager.getInstance().showToast("Rechecking Vagrant and VirtualBox...");
+
+		#if windows
+		// CRITICAL FIX: Force Windows to expand environment variables to detect newly installed software
+		// This uses cmd to expand %PATH% which includes any new PATH entries from recent installations
+		try {
+			Logger.info('${this}: Refreshing Windows environment variables using cmd PATH expansion');
+			
+			// Use cmd /c echo %PATH% to get the fully expanded current PATH
+			// This forces Windows to expand all environment variables including recent changes
+			var process = new sys.io.Process('cmd', ['/c', 'echo', '%PATH%']);
+			var pathOutput = process.stdout.readAll().toString();
+			var exitCode = process.exitCode();
+			process.close();
+			
+			if (exitCode == 0 && pathOutput != null && pathOutput.trim().length > 0) {
+				var expandedPath = pathOutput.trim();
+				
+				// Only update PATH if we got a reasonable result
+				if (expandedPath.length > 50) { // Basic sanity check
+					Sys.putEnv('PATH', expandedPath);
+					Logger.info('${this}: Updated PATH with expanded environment variables (length: ${expandedPath.length})');
+				} else {
+					Logger.warning('${this}: Expanded PATH too short, keeping existing PATH');
+				}
+			} else {
+				Logger.warning('${this}: Failed to expand PATH environment variables, exit code: ${exitCode}');
+			}
+		} catch (envError:Dynamic) {
+			Logger.warning('${this}: Error expanding PATH environment variables: ${envError}');
+		}
+		#end
+
+		// CRITICAL FIX: Reset application state before recheck to force fresh detection
+		// Clear cached initialization state so getInit() will actually re-run detection
+		try {
+			// Reset Vagrant state
+			var vagrantInstance = Vagrant.getInstance();
+			if (vagrantInstance != null) {
+				// Clear cached executors for this app
+				ExecutorManager.getInstance().remove('Vagrant_${prominic.sys.applications.AbstractAppExecutorContext.Init}');
+				// Reset initialization flags to force re-detection
+				Reflect.setField(vagrantInstance, "_initialized", false);
+				Reflect.setField(vagrantInstance, "_path", null);
+				Logger.info('${this}: Reset Vagrant initialization state');
+			}
+			
+			// Reset VirtualBox state  
+			var vboxInstance = VirtualBox.getInstance();
+			if (vboxInstance != null) {
+				// Clear cached executors for this app
+				ExecutorManager.getInstance().remove('VirtualBox_${prominic.sys.applications.AbstractAppExecutorContext.Init}');
+				// Reset initialization flags to force re-detection
+				Reflect.setField(vboxInstance, "_initialized", false);
+				Reflect.setField(vboxInstance, "_path", null);
+				Logger.info('${this}: Reset VirtualBox initialization state');
+			}
+			
+			// Reset Git state
+			var gitInstance = Git.getInstance();
+			if (gitInstance != null) {
+				// Clear cached executors for this app
+				ExecutorManager.getInstance().remove('Git_${prominic.sys.applications.AbstractAppExecutorContext.Init}');
+				// Reset initialization flags to force re-detection
+				Reflect.setField(gitInstance, "_initialized", false);
+				Reflect.setField(gitInstance, "_path", null);
+				Logger.info('${this}: Reset Git initialization state');
+			}
+		} catch (resetError:Dynamic) {
+			Logger.error('${this}: Error resetting app state for recheck: ${resetError}');
+		}
+
+		// Re-initialize the application instances to detect newly installed software
+		Vagrant.getInstance().onInit.add( _vagrantRecheckInitialized );
+		VirtualBox.getInstance().onInit.add( _virtualBoxRecheckInitialized );
+		Git.getInstance().onInit.add( _gitRecheckInitialized );
+
+		try {
+			// Create a new parallel executor to re-run initialization
+			var recheckExecutor = ParallelExecutor.create();
+			
+			// Add initialization executors with defensive programming
+			try {
+				recheckExecutor.add( Vagrant.getInstance().getInit() );
+			} catch (e:Dynamic) {
+				Logger.error('${this}: Error getting Vagrant init executor during recheck: ${e}');
+			}
+			
+			try {
+				recheckExecutor.add( VirtualBox.getInstance().getInit() );
+			} catch (e:Dynamic) {
+				Logger.error('${this}: Error getting VirtualBox init executor during recheck: ${e}');
+			}
+			
+			try {
+				recheckExecutor.add( Git.getInstance().getInit() );
+			} catch (e:Dynamic) {
+				Logger.error('${this}: Error getting Git init executor during recheck: ${e}');
+			}
+			
+			recheckExecutor.onStop.add( _recheckAppsCompleted );
+			recheckExecutor.execute();
+		} catch (e:Dynamic) {
+			Logger.error('${this}: Critical error during prerequisites recheck: ${e}');
+			ToastManager.getInstance().showToast("Error during recheck - please try again");
+		}
+
+	}
+
+	function _vagrantRecheckInitialized( a:AbstractApp ) {
+
+		Vagrant.getInstance().onInit.remove( _vagrantRecheckInitialized );
+		_serverPage.vagrantInstalled = Vagrant.getInstance().exists;
+
+		if ( Vagrant.getInstance().exists ) {
+			Logger.info( '${this}: Recheck - Vagrant is now installed at ${Vagrant.getInstance().path}' );
+		} else {
+			Logger.warning( '${this}: Recheck - Vagrant is still not installed' );
+		}
+
+	}
+
+	function _virtualBoxRecheckInitialized( a:AbstractApp ) {
+
+		VirtualBox.getInstance().onInit.remove( _virtualBoxRecheckInitialized );
+		_serverPage.virtualBoxInstalled = VirtualBox.getInstance().exists;
+
+		if ( VirtualBox.getInstance().exists ) {
+			Logger.info( '${this}: Recheck - VirtualBox is now installed at ${VirtualBox.getInstance().path}' );
+		} else {
+			Logger.warning( '${this}: Recheck - VirtualBox is still not installed' );
+		}
+
+	}
+
+	function _gitRecheckInitialized( a:AbstractApp ) {
+
+		Git.getInstance().onInit.remove( _gitRecheckInitialized );
+
+		if ( Git.getInstance().exists ) {
+			Logger.info( '${this}: Recheck - Git is installed at ${Git.getInstance().path}' );
+		} else {
+			Logger.warning( '${this}: Recheck - Git is not installed' );
+		}
+
+	}
+
+	function _recheckAppsCompleted( executor:AbstractExecutor ) {
+
+		executor.dispose();
+
+		if( Vagrant.getInstance().initialized && VirtualBox.getInstance().initialized ) {
+
+			if ( VirtualBox.getInstance().exists && Vagrant.getInstance().exists ) {
+
+				Logger.info('${this}: Prerequisites recheck successful - both Vagrant and VirtualBox are now available');
+
+				// Re-run the full prerequisite check to get versions and setup
+				Vagrant.getInstance().onGlobalStatus.add( _vagrantGlobalStatusFinished ).onVersion.add( _vagrantVersionUpdated );
+				VirtualBox.getInstance().onVersion.add( _virtualBoxVersionUpdated ).onListVMs.add( _virtualBoxListVMsUpdated );
+				Git.getInstance().onVersion.add( _gitVersionUpdated );
+				
+				var pe = ParallelExecutor.create();
+				pe.add( 
+					Vagrant.getInstance().getVersion(),
+					VirtualBox.getInstance().getBridgedInterfaces(),
+					VirtualBox.getInstance().getHostInfo(),
+					VirtualBox.getInstance().getVersion(),
+					VirtualBox.getInstance().getListVMs( true ),
+					Git.getInstance().getVersion()
+				);
+
+				var rsyncExecutor = Vagrant.getInstance().getRsyncVersion();
+				if (rsyncExecutor != null)
+				{
+					pe.add(rsyncExecutor);
+				}
+
+				if ( !SuperHumanGlobals.IGNORE_VAGRANT_STATUS ) 
+				{
+					pe.add( Vagrant.getInstance().getGlobalStatus( SuperHumanGlobals.PRUNE_VAGRANT_MACHINES ) );
+				}
+				pe.onStop.add( _recheckPrerequisitesFinished ).execute();
+
+			} else {
+
+				Logger.info('${this}: Prerequisites recheck completed - some tools still missing');
+				ToastManager.getInstance().showToast("Recheck completed - please install missing prerequisites");
+
+			}
+
+		}
+
+	}
+
+	function _recheckPrerequisitesFinished( ?executor:AbstractExecutor ) {
+
+		if ( executor != null ) executor.dispose();
+
+		Logger.info('${this}: Prerequisites recheck finished');
+
+		if( Vagrant.getInstance().initialized && VirtualBox.getInstance().initialized ) {
+
+			if ( !Vagrant.getInstance().exists || !VirtualBox.getInstance().exists ) {
+
+				ToastManager.getInstance().showToast("Please install missing prerequisites and try again");
+				return;
+
+			}
+
+			if ( Vagrant.getInstance().exists && Vagrant.getInstance().version != null && VirtualBox.getInstance().exists ) {
+
+				// Update system info in footer
+				var build:String = #if neko "Neko" #elseif cpp "Native" #else "Unsupported" #end;
+				var isDebug:String = #if debug "Debug | " #else "" #end;
+				var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
+
+				var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
+				
+				// Check if running on Windows
+				var isWindows:Bool = Capabilities.os.toLowerCase().indexOf("windows") >= 0;
+				
+				// Create base system info without rsync
+				var sysInfoBase = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
+				
+				// Add Git information if available
+				if (Git.getInstance().exists && Git.getInstance().version != null) {
+					sysInfoBase += ' | Git: ${Git.getInstance().version}';
+				}
+				
+				// Only add rsync info for non-Windows systems
+				if (!isWindows) {
+					var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
+					_footer.sysInfo = sysInfoBase + ' ' + rsyncVersion;
+				} else {
+					_footer.sysInfo = sysInfoBase;
+				}
+
+				for ( s in ServerManager.getInstance().servers ) s.setServerStatus();
+
+				ToastManager.getInstance().showToast("Prerequisites recheck successful!");
+
+			}
+
+		}
+		
+	}
+
 	function _onVMInfoRefreshed() {
 
 		ServerManager.getInstance().onVMInfoRefreshed.remove( _onVMInfoRefreshed );
@@ -2314,6 +2600,54 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		}
 
+	}
+
+	/**
+	 * Quick check if an application executable exists in PATH without full initialization
+	 * Used for runtime monitoring to detect uninstalled apps
+	 * @param executable The executable name to check
+	 * @return Bool True if the executable exists in PATH
+	 */
+	function _quickCheckAppExists(executable:String):Bool {
+		try {
+			#if windows
+			var process = new sys.io.Process('where', [executable]);
+			#else
+			var process = new sys.io.Process('which', [executable]);
+			#end
+			var exitCode = process.exitCode();
+			process.close();
+			return exitCode == 0;
+		} catch (e:Dynamic) {
+			return false;
+		}
+	}
+
+	/**
+	 * Update footer information after runtime change detection
+	 * This ensures the UI reflects when apps are uninstalled during execution
+	 */
+	function _updateFooterAfterRuntimeChange():Void {
+		try {
+			// Update the footer warning state
+			var vagrantMissing = !Vagrant.getInstance().exists;
+			var vboxMissing = !VirtualBox.getInstance().exists;
+			
+			if (vagrantMissing || vboxMissing) {
+				var warningText = "Prerequisites missing: ";
+				var warnings = [];
+				if (vagrantMissing) warnings.push("Vagrant");
+				if (vboxMissing) warnings.push("VirtualBox");
+				_footer.warning = warningText + warnings.join(", ");
+				
+				Logger.info('${this}: Updated footer warning after runtime change: ${_footer.warning}');
+			} else {
+				// Clear warning if all apps are available
+				_footer.warning = "";
+			}
+		} catch (e:Dynamic) {
+			Logger.error('${this}: Error updating footer after runtime change: ${e}');
+		}
 	}
 
 	/**

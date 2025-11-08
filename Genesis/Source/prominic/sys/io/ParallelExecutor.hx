@@ -61,7 +61,14 @@ class ParallelExecutor extends AbstractExecutor {
 
     public function add( ...executors:AbstractExecutor ):ParallelExecutor {
 
-        for ( e in executors ) _executors.push( e );
+        for ( e in executors ) {
+            // Only add non-null executors to prevent hanging
+            if (e != null) {
+                _executors.push( e );
+            } else {
+                Logger.warning( '${this}: Skipping null executor in ParallelExecutor.add()' );
+            }
+        }
         return this;
 
     }
