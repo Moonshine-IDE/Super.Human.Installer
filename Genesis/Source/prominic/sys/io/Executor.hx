@@ -118,14 +118,12 @@ class Executor extends AbstractExecutor implements IDisposable {
         _numTries = 0;
         _currentExecutionNumber = 1;
 
-        // Check if the command executable exists before trying to create process
+        // WINDOWS ONLY: Check if the command executable exists before trying to create process
         // Skip this check for built-in Windows commands that don't exist as files
+        // Mac/Linux rely on shell PATH resolution and don't need this check
         #if windows
         var isBuiltinCommand = (_command == "where" || _command == "cmd" || _command == "echo" || 
                                _command == "dir" || _command == "type" || _command == "find");
-        #else
-        var isBuiltinCommand = false;
-        #end
         
         if (!isBuiltinCommand && !sys.FileSystem.exists(_command)) {
             Logger.error('${this}: Executable not found at ${_command} - cannot execute process');
@@ -145,6 +143,7 @@ class Executor extends AbstractExecutor implements IDisposable {
             
             return this;
         }
+        #end
 
         var finalArgs = extraArgs != null ? _args.concat( extraArgs ) : _args;
         
