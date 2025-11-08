@@ -31,6 +31,9 @@
         "deleteserver":{
             "title":"Are you sure you want to delete this server?",
             "text":"You're about to delete this server. You can remove the server only from the list, while keeping its files on disk, or you can delete the server and its files as well. The original installer files you might have selected during the configuration process will not be deleted.",
+            "confirmtext":"To confirm this action, type DELETE below:",
+            "placeholder":"Type DELETE to confirm",
+            "validationerror":"You must type DELETE exactly to proceed",
             "buttondelete":"Remove only",
             "buttondeletefiles":"Delete files",
             "buttoncancel":"Cancel"

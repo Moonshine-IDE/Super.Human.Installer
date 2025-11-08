@@ -78,6 +78,7 @@ import prominic.sys.tools.StrTools;
 import prominic.sys.tools.SysTools.CPUArchitecture;
 import superhuman.components.AdvancedConfigPage;
 import superhuman.components.ConfigPage;
+import superhuman.components.DeleteConfirmationDialog;
 import superhuman.components.DynamicAdvancedConfigPage;
 import superhuman.components.DynamicConfigPage;
 import superhuman.components.HelpPage;
@@ -1982,14 +1983,8 @@ class SuperHumanInstaller extends GenesisApplication {
 
 	function _deleteServer( e:SuperHumanApplicationEvent ) {
 
-		Alert.show(
-			LanguageManager.getInstance().getString( 'alert.deleteserver.text' ),
-			LanguageManager.getInstance().getString( 'alert.deleteserver.title' ),
-			[
-				LanguageManager.getInstance().getString( 'alert.deleteserver.buttondelete' ),
-				LanguageManager.getInstance().getString( 'alert.deleteserver.buttondeletefiles' ),
-				LanguageManager.getInstance().getString( 'alert.deleteserver.buttoncancel' )
-			],
+		DeleteConfirmationDialog.show(
+			e.server,
 			( state ) -> {
 
 				switch state.index {
