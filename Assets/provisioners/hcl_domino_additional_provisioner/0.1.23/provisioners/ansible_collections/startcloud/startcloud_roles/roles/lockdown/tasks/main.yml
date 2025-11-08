@@ -57,3 +57,12 @@
       name: Reset ssh connection to apply user changes.
       ansible.builtin.meta: reset_connection
     
+    -
+      name: "Cleaning up specified sensitive files"
+      when: lockdown_file_cleanups_list is defined and lockdown_file_cleanups_list | length > 0 and lockdown_cleanup_debug_files | default(false)
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ lockdown_file_cleanups_list }}"
+      loop_control:
+        label: "{{ item }}"

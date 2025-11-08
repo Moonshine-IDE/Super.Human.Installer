@@ -273,6 +273,9 @@
             },
             "jedi":{
                 "desc": "JEDI (Java-based Domino management). When disabled, uses modern systemd service script which supports auto-updates"
+            },
+            "lockdown":{
+                "desc": "Security lockdown and cleanup. Sets up SSH keys, changes passwords, and optionally removes debug files"
             }
         }
     },

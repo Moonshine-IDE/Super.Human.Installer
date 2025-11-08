@@ -229,6 +229,9 @@ hosts:
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
 
+      ## Lockdown Variables
+      lockdown_cleanup_debug_files: ::LOCKDOWN_CLEANUP_DEBUG_FILES::
+
       ## Use Proxy for downloads and updates
       use_proxy: ::USE_HTTP_PROXY::
       proxy_server: ::HTTP_PROXY_HOST::
@@ -400,3 +403,4 @@ hosts:
       - name: startcloud.startcloud_roles.vagrant_readme
         when: ::ROLE_STARTCLOUD_VAGRANT_README::
       - name: startcloud.startcloud_roles.lockdown
+        when: ::ROLE_LOCKDOWN::

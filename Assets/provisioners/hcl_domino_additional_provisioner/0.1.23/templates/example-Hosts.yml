@@ -442,3 +442,5 @@ hosts:
         vars:
           run_tasks: true
       - name: startcloud.startcloud_roles.lockdown
+        vars:
+          run_tasks: true

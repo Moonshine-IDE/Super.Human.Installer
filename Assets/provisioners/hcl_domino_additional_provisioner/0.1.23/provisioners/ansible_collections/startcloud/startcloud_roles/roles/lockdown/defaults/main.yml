@@ -1,9 +1,15 @@
 ---
 run_tasks: true
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Securing Server"
+
 show_help: true
 lockdown_user_private_key_path: /home/startcloud/.ssh/id_ssh_rsa
 lockdown_use_settings_password: false
 lockdown_new_password: "STARTcloud24@!"
+lockdown_cleanup_debug_files: false
 lockdown:
   - exim4
   - portmap
@@ -11,3 +17,7 @@ lockdown:
   - rpcbind.service
   - rpcbind.socket
   - nfs-kernel-server
+
+# List of files/paths to be cleaned up by the lockdown role.
+# Other roles can append to this list.
+lockdown_file_cleanups_list: []

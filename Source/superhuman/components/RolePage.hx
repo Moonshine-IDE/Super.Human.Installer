@@ -539,20 +539,20 @@ class RolePage extends Page {
             Logger.info('RolePage: Checking provisioner version: ${versionString} for JEDI availability');
             
             if (versionString < "0.1.23" || versionString == "0.1.20" || versionString == "0.1.21" || versionString == "0.1.22") {
-                // Remove JEDI from the UI collection
+                // Remove JEDI and lockdown from the UI collection
                 coll = coll.filter(function(impl) {
-                    var shouldInclude = impl.role.value.toLowerCase() != "jedi";
+                    var shouldInclude = impl.role.value.toLowerCase() != "jedi" && impl.role.value.toLowerCase() != "lockdown";
                     if (!shouldInclude) {
-                        Logger.info('RolePage: Filtering out JEDI role for provisioner version ${provisionerVersion} (< 0.1.23)');
+                        Logger.info('RolePage: Filtering out ${impl.role.value} role for provisioner version ${provisionerVersion} (< 0.1.23)');
                     }
                     return shouldInclude;
                 });
                 
-                // Also remove JEDI from the server's roles data
+                // Also remove JEDI and lockdown from the server's roles data
                 _server.roles.value = _server.roles.value.filter(function(r) {
-                    var shouldInclude = r.value.toLowerCase() != "jedi";
+                    var shouldInclude = r.value.toLowerCase() != "jedi" && r.value.toLowerCase() != "lockdown";
                     if (!shouldInclude) {
-                        Logger.info('RolePage: Removing JEDI from server roles for version ${provisionerVersion} (< 0.1.23)');
+                        Logger.info('RolePage: Removing ${r.value} from server roles for version ${provisionerVersion} (< 0.1.23)');
                     }
                     return shouldInclude;
                 });
@@ -571,8 +571,8 @@ class RolePage extends Page {
                 }
             }
 
-            // Configure JEDI to not show installer buttons (configuration toggle only)
-            // Only do this if JEDI is available for this version
+            // Configure JEDI and lockdown to not show installer buttons (configuration toggle only)
+            // Only do this if JEDI/lockdown are available for this version
             if (provisionerVersion >= "0.1.23") {
                 for (impl in coll) {
                     if (impl.role.value.toLowerCase() == "jedi") {
@@ -580,7 +580,11 @@ class RolePage extends Page {
                         Reflect.setField(impl.role, "showFixpack", false);
                         Reflect.setField(impl.role, "showHotfix", false);
                         Logger.info('RolePage: Configured JEDI to hide installer buttons for version ${provisionerVersion}');
-                        break;
+                    } else if (impl.role.value.toLowerCase() == "lockdown") {
+                        Reflect.setField(impl.role, "showInstaller", false);
+                        Reflect.setField(impl.role, "showFixpack", false);
+                        Reflect.setField(impl.role, "showHotfix", false);
+                        Logger.info('RolePage: Configured lockdown to hide installer buttons for version ${provisionerVersion}');
                     }
                 }
             }
@@ -820,6 +824,10 @@ class RolePickerItem extends LayoutGroup {
     private var _dominoInstallerVersion:Dynamic = null;
     private var _roleFixpacks:Map<String, Array<String>> = null;
     private var _dependencyWarning:Label;
+    
+    // Lockdown sub-toggle
+    private var _lockdownCleanupCheckbox:AdvancedCheckBox;
+    private var _lockdownCleanupGroup:LayoutGroup;
 
     public var role( get, never ):RoleData;
     function get_role() return _roleImpl.role;
@@ -918,6 +926,31 @@ class RolePickerItem extends LayoutGroup {
         _dependencyWarning.includeInLayout = _dependencyWarning.visible = false;
         this.addChild(_dependencyWarning);
 
+        // Create lockdown sub-toggle group (initially hidden)
+        _lockdownCleanupGroup = new LayoutGroup();
+        var lockdownLayout = new HorizontalLayout();
+        lockdownLayout.gap = GenesisApplicationTheme.GRID;
+        lockdownLayout.paddingLeft = GenesisApplicationTheme.GRID * 3; // Indent sub-option
+        lockdownLayout.verticalAlign = VerticalAlign.MIDDLE;
+        _lockdownCleanupGroup.layout = lockdownLayout;
+        _lockdownCleanupGroup.layoutData = new VerticalLayoutData(100);
+        _lockdownCleanupGroup.includeInLayout = _lockdownCleanupGroup.visible = false;
+        
+        // Get current cleanup setting from lockdown role object
+        var currentCleanupSetting = false;
+        if (_roleImpl.role.value.toLowerCase() == "lockdown" && 
+            Reflect.hasField(_roleImpl.role, "cleanupDebugFiles")) {
+            currentCleanupSetting = Reflect.field(_roleImpl.role, "cleanupDebugFiles");
+        }
+        
+        _lockdownCleanupCheckbox = new AdvancedCheckBox("Clean up debug files", currentCleanupSetting);
+        _lockdownCleanupCheckbox.addEventListener(Event.CHANGE, _lockdownCleanupChanged);
+        _lockdownCleanupCheckbox.variant = GenesisApplicationTheme.CHECK_MEDIUM;
+        _lockdownCleanupCheckbox.toolTip = "When enabled, removes setup.json and other debug files after provisioning. Disable for development to preserve java-domino-gradle compatibility.";
+        _lockdownCleanupGroup.addChild(_lockdownCleanupCheckbox);
+        
+        this.addChild(_lockdownCleanupGroup);
+
         var spacer = new LayoutGroup();
         spacer.layoutData = new HorizontalLayoutData( 100 );
         _labelGroup.addChild( spacer );
@@ -1011,6 +1044,19 @@ class RolePickerItem extends LayoutGroup {
 
     }
 
+    function _lockdownCleanupChanged( e:Event ) {
+
+        // Store directly on the lockdown role object (same pattern as showInstaller/showFixpack)
+        for (r in _server.roles.value) {
+            if (r.value.toLowerCase() == "lockdown") {
+                Reflect.setField(r, "cleanupDebugFiles", _lockdownCleanupCheckbox.selected);
+                Logger.info('${this}: Lockdown cleanup debug files set to: ${_lockdownCleanupCheckbox.selected}');
+                break;
+            }
+        }
+
+    }
+
     public function updateData() {
         _installerGroup.removeChildren();
         _installerGroup.visible = _installerGroup.includeInLayout = false;
@@ -1056,6 +1102,12 @@ class RolePickerItem extends LayoutGroup {
         
         // Show/hide all file selection buttons based on role being enabled
         _allFilesGroup.includeInLayout = _allFilesGroup.visible = _roleImpl.role.enabled;
+        
+        // Show/hide lockdown sub-toggle based on lockdown role being enabled
+        var isLockdownRole = _roleImpl.role.value.toLowerCase() == "lockdown";
+        if (_lockdownCleanupGroup != null) {
+            _lockdownCleanupGroup.includeInLayout = _lockdownCleanupGroup.visible = isLockdownRole && _roleImpl.role.enabled;
+        }
         
         // Check if an installer is selected for this role
         var installerSelected = _roleImpl.role.files.installer != null;

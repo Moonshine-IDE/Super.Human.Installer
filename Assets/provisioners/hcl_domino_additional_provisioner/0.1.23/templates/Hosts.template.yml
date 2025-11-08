@@ -207,13 +207,9 @@ hosts:
       haproxy_ssl_redirect: true
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
-      #dns_entries_list:
-      #  - nomadweb
-      #  - domino
-      #  - traveler
-      #  - verse
-      #  - console
-      #  - downloads
+
+      ## Lockdown Variables
+      lockdown_cleanup_debug_files: ::LOCKDOWN_CLEANUP_DEBUG_FILES::
 
       ## Use Proxy for downloads and updates
       use_proxy: ::USE_HTTP_PROXY::
@@ -381,3 +377,4 @@ hosts:
         vars:
           run_tasks: ::ROLE_STARTCLOUD_VAGRANT_README::
       - name: startcloud.startcloud_roles.lockdown
+        when: ::ROLE_LOCKDOWN::

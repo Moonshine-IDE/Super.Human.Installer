@@ -203,7 +203,24 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
                 replaceWith = RolesUtil.getDominoRole(internalProvisioner.data.version, r.value, r.enabled);
                 replace.ROLE_JEDI = replaceWith;
             }
+
+            if ( r.value == "lockdown" ) {
+                replaceWith = RolesUtil.getOtherRole(internalProvisioner.data.version, r.value, r.enabled);
+                replace.ROLE_LOCKDOWN = replaceWith;
+            }
         }
+        
+        // Read lockdown cleanup setting from lockdown role object
+        var lockdownCleanup = false;
+        for (r in internalProvisioner.server.roles.value) {
+            if (r.value.toLowerCase() == "lockdown" && 
+                Reflect.hasField(r, "cleanupDebugFiles")) {
+                lockdownCleanup = Reflect.field(r, "cleanupDebugFiles");
+                break;
+            }
+        }
+        replace.LOCKDOWN_CLEANUP_DEBUG_FILES = lockdownCleanup;
+        
         //"- name: startcloud_quick_start";
         replace.ROLE_STARTCLOUD_QUICK_START = RolesUtil.getOtherRole(internalProvisioner.data.version, "quick_start");
          //"- name: startcloud_haproxy";
@@ -409,7 +426,11 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
             ROLE_MARIADB: defaultRoleFieldValue,
             ROLE_DOCKER: defaultRoleFieldValue,
             ROLE_JEDI: defaultRoleFieldValue,
+            ROLE_LOCKDOWN: defaultRoleFieldValue,
             ROLE_OIDC: true,
+            
+            // Lockdown configuration
+            LOCKDOWN_CLEANUP_DEBUG_FILES: false,
 
             ENV_OPEN_BROWSER: false,
             ENV_SETUP_WAIT: internalProvisioner.server.setupWait.value,

@@ -9,6 +9,7 @@ show_help: true
 lockdown_user_private_key_path: /home/startcloud/.ssh/id_ssh_rsa
 lockdown_use_settings_password: false
 lockdown_new_password: "STARTcloud24@!"
+lockdown_cleanup_debug_files: false
 lockdown:
   - exim4
   - portmap

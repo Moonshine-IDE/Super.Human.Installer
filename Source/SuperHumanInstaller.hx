@@ -215,6 +215,14 @@ class SuperHumanInstaller extends GenesisApplication {
 			Reflect.setField(jediRole, "showHotfix", false);
 		}
 
+		// Configure lockdown to not show installer buttons (like JEDI)
+		var lockdownRole = _defaultRoles.get("lockdown");
+		if (lockdownRole != null) {
+			Reflect.setField(lockdownRole, "showInstaller", false);
+			Reflect.setField(lockdownRole, "showFixpack", false);
+			Reflect.setField(lockdownRole, "showHotfix", false);
+		}
+
 		var dominoHashes:Array<String> = SuperHumanHashes.getInstallersHashes("domino");
 		var dominoHotFixHashes:Array<String> = SuperHumanHashes.getHotFixesHashes("domino");
 		var dominoFixPacksHashes:Array<String> = SuperHumanHashes.getFixPacksHashes("domino");
@@ -235,6 +243,7 @@ class SuperHumanInstaller extends GenesisApplication {
 			new ServerRoleImpl( "Verse", LanguageManager.getInstance().getString( 'rolepage.roles.verse.desc' ), _defaultRoles.get( "verse" ), verseHashes, "(HCL_Verse_3.0.0.zip)" ),
 			new ServerRoleImpl( "Domino REST API", LanguageManager.getInstance().getString( 'rolepage.roles.domino-rest-api.desc' ), _defaultRoles.get( "domino-rest-api" ), restApiHashes, "(Domino_REST_API_V1_Installer.tar.gz)" ),
 			new ServerRoleImpl( "JEDI", LanguageManager.getInstance().getString( 'rolepage.roles.jedi.desc' ), _defaultRoles.get( "jedi" ), [], [], [], "" ),
+			new ServerRoleImpl( "Lockdown", LanguageManager.getInstance().getString( 'rolepage.roles.lockdown.desc' ), _defaultRoles.get( "lockdown" ), [], [], [], "" ),
 
 		];
 

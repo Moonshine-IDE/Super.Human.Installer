@@ -1253,8 +1253,8 @@ class Server {
             if (r.enabled) {
                 hasEnabledRole = true;
                 
-                // For standard roles, check installer requirements except for JEDI
-                if (r.value.toLowerCase() != "jedi") {
+                // For standard roles, check installer requirements except for JEDI and lockdown
+                if (r.value.toLowerCase() != "jedi" && r.value.toLowerCase() != "lockdown") {
                     if (r.files == null || r.files.installer == null || r.files.installer == "null" || 
                         !FileSystem.exists(r.files.installer)) {
                         Logger.warning('${this}: Standard role ${r.value} is missing required installer file');

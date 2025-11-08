@@ -89,6 +89,7 @@ class StandaloneProvisioner extends AbstractProvisioner {
             "verse" => { value: "verse", enabled: false, files: {} },
             "domino-rest-api" => { value: "domino-rest-api", enabled: false, files: {} },
             "jedi" => { value: "jedi", enabled: true, files: {}, isdefault: false },
+            "lockdown" => { value: "lockdown", enabled: true, files: {}, isdefault: false },
 
         ];
 
