@@ -2335,7 +2335,121 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		ServerManager.getInstance().onVMInfoRefreshed.add( _onVMInfoRefreshed );
 		ServerManager.getInstance().refreshVMInfo( true, true );
+		
+		// ENHANCED FEATURE: Also refresh app versions to detect updates during runtime
+		_refreshAppVersions();
 
+	}
+
+	/**
+	 * Refresh application versions to detect updates that occurred while SHI was running
+	 * This updates the footer system info with current versions
+	 */
+	function _refreshAppVersions() {
+		
+		Logger.info('${this}: Refreshing application versions');
+		
+		var versionExecutors = ParallelExecutor.create();
+		var hasExecutors = false;
+		
+		// Only check versions for apps that exist
+		if (Vagrant.getInstance().exists) {
+			try {
+				var vagrantVersionExecutor = Vagrant.getInstance().getVersion();
+				if (vagrantVersionExecutor != null) {
+					versionExecutors.add(vagrantVersionExecutor);
+					hasExecutors = true;
+				}
+			} catch (e:Dynamic) {
+				Logger.warning('${this}: Error creating Vagrant version executor: ${e}');
+			}
+		}
+		
+		if (VirtualBox.getInstance().exists) {
+			try {
+				var vboxVersionExecutor = VirtualBox.getInstance().getVersion();
+				if (vboxVersionExecutor != null) {
+					versionExecutors.add(vboxVersionExecutor);
+					hasExecutors = true;
+				}
+			} catch (e:Dynamic) {
+				Logger.warning('${this}: Error creating VirtualBox version executor: ${e}');
+			}
+		}
+		
+		if (Git.getInstance().exists) {
+			try {
+				var gitVersionExecutor = Git.getInstance().getVersion();
+				if (gitVersionExecutor != null) {
+					versionExecutors.add(gitVersionExecutor);
+					hasExecutors = true;
+				}
+			} catch (e:Dynamic) {
+				Logger.warning('${this}: Error creating Git version executor: ${e}');
+			}
+		}
+		
+		// Add rsync version check for Mac/Linux
+		#if (!windows)
+		if (Vagrant.getInstance().exists) {
+			try {
+				var rsyncExecutor = Vagrant.getInstance().getRsyncVersion();
+				if (rsyncExecutor != null) {
+					versionExecutors.add(rsyncExecutor);
+					hasExecutors = true;
+				}
+			} catch (e:Dynamic) {
+				Logger.warning('${this}: Error creating rsync version executor: ${e}');
+			}
+		}
+		#end
+		
+		if (hasExecutors) {
+			versionExecutors.onStop.add(_refreshAppVersionsCompleted);
+			versionExecutors.execute();
+		} else {
+			Logger.info('${this}: No version executors to run - apps may not be available');
+		}
+	}
+
+	/**
+	 * Handle completion of app version refresh and update footer system info
+	 */
+	function _refreshAppVersionsCompleted(executor:AbstractExecutor) {
+		
+		executor.dispose();
+		Logger.info('${this}: App version refresh completed - updating footer');
+		
+		// Rebuild footer system info with refreshed versions (reuse existing logic)
+		if (Vagrant.getInstance().exists && VirtualBox.getInstance().exists) {
+			
+			var build:String = #if neko "Neko" #elseif cpp "Native" #else "Unsupported" #end;
+			var isDebug:String = #if debug "Debug | " #else "" #end;
+			var ram:Float = StrTools.toPrecision( VirtualBox.getInstance().hostInfo.memorysize, 2, false );
+
+			var rsyncVersionInfo:VersionInfo = Vagrant.getInstance().versionRsync;
+			
+			// Check if running on Windows
+			var isWindows:Bool = Capabilities.os.toLowerCase().indexOf("windows") >= 0;
+			
+			// Create base system info without rsync
+			var sysInfoBase = '${build} | ${isDebug}${Capabilities.os} | ${_cpuArchitecture} | Cores:${VirtualBox.getInstance().hostInfo.processorcorecount} | RAM: ${ram}GB | Vagrant: ${Vagrant.getInstance().version} | VirtualBox:${VirtualBox.getInstance().version}';
+			
+			// Add Git information if available
+			if (Git.getInstance().exists && Git.getInstance().version != null) {
+				sysInfoBase += ' | Git: ${Git.getInstance().version}';
+			}
+			
+			// Only add rsync info for non-Windows systems
+			if (!isWindows) {
+				var rsyncVersion:String = rsyncVersionInfo != "" && rsyncVersionInfo != "0.0.0" ? "| Rsync: " + rsyncVersionInfo : "Rsync: not installed";
+				_footer.sysInfo = sysInfoBase + ' ' + rsyncVersion;
+			} else {
+				_footer.sysInfo = sysInfoBase;
+			}
+			
+			Logger.info('${this}: Updated footer with refreshed app versions');
+		}
 	}
 
 	function _recheckPrerequisites( e:SuperHumanApplicationEvent ) {
