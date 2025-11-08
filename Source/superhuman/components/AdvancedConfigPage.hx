@@ -51,6 +51,7 @@ import genesis.application.theme.GenesisApplicationTheme;
 import openfl.events.Event;
 import prominic.sys.applications.oracle.BridgedInterface;
 import prominic.sys.applications.oracle.VirtualBox;
+import prominic.sys.tools.StrTools;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.Server;
 
@@ -65,7 +66,10 @@ class AdvancedConfigPage extends Page {
     var _cbDHCP:GenesisFormCheckBox;
     var _cbDisableBridgeAdapter:GenesisFormCheckBox;
     var _cbOpenBrowser:GenesisFormCheckBox;
+    var _buttonGeneratePassword:GenesisFormButton;
+    var _buttonTogglePassword:GenesisFormButton;
     var _dropdownNetworkInterface:GenesisFormPupUpListView;
+    var _passwordVisible:Bool = false;
     var _form:GenesisForm;
     var _inputAlertEmail:GenesisFormTextInput;
     var _inputGatewayIP:GenesisFormTextInput;
@@ -73,6 +77,7 @@ class AdvancedConfigPage extends Page {
     var _inputNameServer:GenesisFormTextInput;
     var _inputNetmaskIP:GenesisFormTextInput;
     var _inputNetworkIP:GenesisFormTextInput;
+    var _inputVagrantPassword:GenesisFormTextInput;
     var _label:Label;
     var _labelMandatory:Label;
     var _rowAlertEmail:GenesisFormRow;
@@ -87,6 +92,7 @@ class AdvancedConfigPage extends Page {
     var _rowNetworkIP:GenesisFormRow;
     var _rowNetworkInterface:GenesisFormRow;
     var _rowRAM:GenesisFormRow;
+    var _rowVagrantPassword:GenesisFormRow;
     var _server:Server;
     var _stepperCPUs:GenesisFormNumericStepper;
     var _stepperRAM:GenesisFormNumericStepper;
@@ -284,6 +290,38 @@ class AdvancedConfigPage extends Page {
         _rowDisableBridgeAdapter.content.addChild( _cbDisableBridgeAdapter );
         _form.addChild( _rowDisableBridgeAdapter );
 
+        _rowVagrantPassword = new GenesisFormRow();
+        _rowVagrantPassword.text = "Vagrant User Password";
+        
+        // Create a layout group to hold both the input and the button
+        var passwordGroup = new LayoutGroup();
+        var passwordLayout = new HorizontalLayout();
+        passwordLayout.gap = GenesisApplicationTheme.GRID;
+        passwordLayout.verticalAlign = VerticalAlign.MIDDLE;
+        passwordGroup.layout = passwordLayout;
+        
+        _inputVagrantPassword = new GenesisFormTextInput( _server.vagrantUserPassword.value, "Enter vagrant user password" );
+        _inputVagrantPassword.displayAsPassword = true;
+        _inputVagrantPassword.minLength = 8;
+        _inputVagrantPassword.toolTip = "Password for the vagrant user account on the VM";
+        _inputVagrantPassword.layoutData = new HorizontalLayoutData( 50 );
+        passwordGroup.addChild( _inputVagrantPassword );
+        
+        _buttonGeneratePassword = new GenesisFormButton( "Generate" );
+        _buttonGeneratePassword.addEventListener( TriggerEvent.TRIGGER, _generatePasswordTriggered );
+        _buttonGeneratePassword.toolTip = "Generate a random secure password";
+        _buttonGeneratePassword.layoutData = new HorizontalLayoutData( 25 );
+        passwordGroup.addChild( _buttonGeneratePassword );
+        
+        _buttonTogglePassword = new GenesisFormButton( "Show" );
+        _buttonTogglePassword.addEventListener( TriggerEvent.TRIGGER, _togglePasswordVisibilityTriggered );
+        _buttonTogglePassword.toolTip = "Show or hide the password";
+        _buttonTogglePassword.layoutData = new HorizontalLayoutData( 25 );
+        passwordGroup.addChild( _buttonTogglePassword );
+        
+        _rowVagrantPassword.content.addChild( passwordGroup );
+        _form.addChild( _rowVagrantPassword );
+
         var line = new HLine();
         line.width = _w;
         this.addChild( line );
@@ -334,6 +372,7 @@ class AdvancedConfigPage extends Page {
             _inputNameServer.text = _server.nameServer1.value;
             _inputNameServer2.text = _server.nameServer2.value;
             _inputAlertEmail.text = _server.userEmail.value;
+            _inputVagrantPassword.text = _server.vagrantUserPassword.value;
             _inputNetworkIP.text = _server.networkAddress.value;
             _inputNetmaskIP.text = _server.networkNetmask.value;
             _inputGatewayIP.text = _server.networkGateway.value;
@@ -405,6 +444,30 @@ class AdvancedConfigPage extends Page {
 
     }
 
+    function _generatePasswordTriggered( e:TriggerEvent ) {
+
+        // Generate a random 16-character password using alphanumeric characters
+        var newPassword = StrTools.randomString( StrTools.ALPHANUMERIC, 16 );
+        _inputVagrantPassword.text = newPassword;
+
+    }
+
+    function _togglePasswordVisibilityTriggered( e:TriggerEvent ) {
+
+        // Toggle the password visibility state
+        _passwordVisible = !_passwordVisible;
+        
+        // Update the input field display mode
+        _inputVagrantPassword.displayAsPassword = !_passwordVisible;
+        
+        // Trigger proper Feathers UI revalidation
+        _inputVagrantPassword.setInvalid();
+        
+        // Update the button text
+        _buttonTogglePassword.text = _passwordVisible ? "Hide" : "Show";
+
+    }
+
     override function _cancel( ?e:Dynamic ) {
         // For advanced config, we don't remove provisional servers on cancel
         // Instead, we just return to the basic config page with no changes
@@ -458,6 +521,7 @@ class AdvancedConfigPage extends Page {
         champaign.core.logging.Logger.info('${this}: Set network bridge to "${selectedInterface}"');
         _server.dhcp4.value = _cbDHCP.selected;
         _server.disableBridgeAdapter.value = _cbDisableBridgeAdapter.selected;
+        _server.vagrantUserPassword.value = StringTools.trim( _inputVagrantPassword.text );
 
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SAVE_ADVANCED_SERVER_CONFIGURATION );
         evt.server = _server;

@@ -328,7 +328,7 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
 
          	//vagrant_user
          	SERVER_DEFAULT_USER: "startcloud",
-         	SERVER_DEFAULT_USER_PASS: "STARTcloud24@!",
+         	SERVER_DEFAULT_USER_PASS: internalProvisioner.server.vagrantUserPassword.value,
          	
          	//network
          	NETWORK_ADDRESS: ( internalProvisioner.server.dhcp4.value ) ? "192.168.2.1" : internalProvisioner.server.networkAddress.value,

@@ -762,7 +762,7 @@ override public function generateHostsFileContent():String {
     addBoolToContext("DISABLE_BRIDGE_ADAPTER", _server.disableBridgeAdapter.value);
     addToContext("USER_EMAIL", _server.userEmail.value);
     addToContext("SERVER_DEFAULT_USER", "startcloud");
-    addToContext("SERVER_DEFAULT_USER_PASS", "STARTcloud24@!");
+    addToContext("SERVER_DEFAULT_USER_PASS", _server.vagrantUserPassword.value);
     addToContext("BOX_URL", "https://boxvault.startcloud.com");
     addBoolToContext("SHOW_CONSOLE", false);
     addBoolToContext("POST_PROVISION", true);

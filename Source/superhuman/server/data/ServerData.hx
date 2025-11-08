@@ -40,6 +40,7 @@ typedef ServerData = {
     user_email:String,
     ?user_safeid:Null<String>,
     ?server_provisioner_id:Null<String>,
+    ?vagrant_user_password:String,
 
     ?server_organization:String,
     server_id:Int,
