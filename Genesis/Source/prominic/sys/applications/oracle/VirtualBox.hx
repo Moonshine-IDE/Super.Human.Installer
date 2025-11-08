@@ -497,6 +497,40 @@ class VirtualBox extends AbstractApp {
 
     }
 
+    /**
+     * Override initialization completion to validate broken symlinks
+     * This ensures the exists property reflects actual usability, not just symlink presence
+     */
+    override function _initializationComplete():Void {
+        super._initializationComplete();
+        
+        // On Mac/Linux, validate that the found executable is actually functional
+        // This catches broken symlinks and updates the exists property accordingly
+        #if (!windows)
+        if (_path != null && _executable != null) {
+            try {
+                var fullPath = this.path + this._executable;
+                var testProcess = new sys.io.Process(fullPath, ['-V']);
+                var exitCode = testProcess.exitCode();
+                testProcess.close();
+                
+                if (exitCode == 126 || exitCode == 127) {
+                    // Broken symlink or missing executable - mark as not available
+                    Logger.warning('${this}: Found VirtualBox symlink but executable is broken (exit code ${exitCode}) - marking as unavailable');
+                    _path = null; // This makes exists return false
+                } else {
+                    // Functional executable
+                    Logger.info('${this}: VirtualBox executable validated successfully');
+                }
+            } catch (e:Dynamic) {
+                // Error testing executable - mark as not available
+                Logger.warning('${this}: Error validating VirtualBox executable: ${e} - marking as unavailable');
+                _path = null; // This makes exists return false
+            }
+        }
+        #end
+    }
+
     public override function toString():String {
 
         return '[VirtualBox]';
