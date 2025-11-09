@@ -1955,6 +1955,9 @@ class Server {
             _stopVagrantUpElapsedTimer();
             _provisioner.stopFileWatcher();
 
+            // Refresh VM info to update counts in SystemInfoBox after server startup
+            ServerManager.getInstance().refreshVMInfo(true, true);
+
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );
             refreshVirtualBoxInfo();
