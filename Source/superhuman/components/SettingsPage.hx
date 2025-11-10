@@ -512,12 +512,12 @@ class SettingsPage extends Page {
             Logger.info('${this}: Explorer command result: ${result}');
             #elseif mac
             // Use Shell instance for Mac
-            var result = prominic.sys.applications.bin.Shell.getInstance().open([debugDir]);
-            Logger.info('${this}: Mac open result: ${result}');
+            prominic.sys.applications.bin.Shell.getInstance().open([debugDir]);
+            Logger.info('${this}: Opened debug folder on Mac');
             #elseif linux
             // Use Shell instance for Linux  
-            var result = prominic.sys.applications.bin.Shell.getInstance().open([debugDir]);
-            Logger.info('${this}: Linux xdg-open result: ${result}');
+            prominic.sys.applications.bin.Shell.getInstance().open([debugDir]);
+            Logger.info('${this}: Opened debug folder on Linux');
             #end
             
             ToastManager.getInstance().showToast('Debug packages folder opened.');
