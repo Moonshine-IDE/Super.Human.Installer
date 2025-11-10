@@ -44,6 +44,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final CANCEL_ADVANCED_CONFIGURE_SERVER:String = "cancelAdvancedConfigureServer";
     public static final CANCEL_CONFIGURE_SERVER:String = "cancelConfigureServer";
     public static final CANCEL_PAGE:String = "cancelPage";
+    public static final CLONE_SERVER:String = "cloneServer";
     public static final CLOSE_CONSOLE:String = "closeConsole";
     public static final CLOSE_ROLES:String = "closeRoles";
     public static final CLOSE_SERVICE_TYPE_PAGE:String = "closeServiceTypePage";

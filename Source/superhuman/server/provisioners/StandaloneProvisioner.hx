@@ -136,16 +136,6 @@ class StandaloneProvisioner extends AbstractProvisioner {
 
     }
 
-    static public function getRandomServerId( serverDirectory:String ):Int {
-
-		// Range: 1025 - 9999
-		var r = Math.floor( Math.random() * 8974 ) + 1025;
-
-		if ( FileSystem.exists( '${serverDirectory}${ProvisionerType.StandaloneProvisioner}/${r}' ) ) return getRandomServerId( serverDirectory );
-
-		return r;
-
-	}
 
     static public function getVersionFromFile( path:String ):VersionInfo {
 

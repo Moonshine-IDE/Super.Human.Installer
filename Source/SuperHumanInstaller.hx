@@ -481,6 +481,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.RECHECK_PREREQUISITES, _recheckPrerequisites );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _openVMDetails );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT, _submitServerDebugReport );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.CLONE_SERVER, _cloneServer );
 
 		this.addPage( _serverPage, PAGE_SERVER );
 
@@ -2162,6 +2163,37 @@ class SuperHumanInstaller extends GenesisApplication {
 				_serviceTypePage.updateServiceTypes(_serviceTypesCollection);
 			}
 		}
+	}
+
+	function _cloneServer( e:SuperHumanApplicationEvent ) {
+		Logger.info('${this}: Cloning server ${e.server.id}');
+		
+		// Clone the server using ServerManager
+		var clonedServer = ServerManager.getInstance().cloneServer(e.server);
+		
+		if (clonedServer == null) {
+			Logger.error('${this}: Failed to clone server ${e.server.id}');
+			ToastManager.getInstance().showToast("Failed to clone server");
+			return;
+		}
+		
+		// Add event listener for the new server
+		clonedServer.onUpdate.add(onServerPropertyChanged);
+		
+		// Navigate to appropriate configuration page based on provisioner type
+		var provisionerType = clonedServer.provisioner.type;
+		
+		// Create configure server event for the cloned server
+		var configEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CONFIGURE_SERVER);
+		configEvent.server = clonedServer;
+		configEvent.provisionerType = provisionerType;
+		configEvent.readOnly = false;
+		
+		// Navigate to config page
+		_configureServer(configEvent);
+		
+		ToastManager.getInstance().showToast('Server cloned successfully! New server ID: ${clonedServer.id}');
+		_saveConfig();
 	}
 
 	function _deleteServer( e:SuperHumanApplicationEvent ) {

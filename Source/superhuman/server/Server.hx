@@ -93,7 +93,12 @@ class Server {
     static public function create( data:ServerData, rootDir:String ):Server {
         var sc = new Server();
 
-        sc._id = data.server_id;
+        // Only override the generated unique ID if data has a valid existing ID
+        // This preserves IDs when editing existing servers but allows new ID generation for new/cloned servers
+        if (data.server_id > 0) {
+            sc._id = data.server_id;
+        }
+        // Otherwise keep the unique ID generated in constructor via _generateUniqueServerId()
 
         // Log provisioner type without normalizing it
         if (data.provisioner != null) {

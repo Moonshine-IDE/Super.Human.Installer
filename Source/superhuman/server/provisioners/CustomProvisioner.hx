@@ -578,19 +578,6 @@ override public function copyFiles(?callback:()->Void) {
         }
     }
 
-    /**
-     * Generate a random server ID
-     * @param serverDirectory The server directory
-     * @return A random server ID
-     */
-    static public function getRandomServerId(serverDirectory:String):Int {
-        // Range: 1025 - 9999
-        var r = Math.floor(Math.random() * 8974) + 1025;
-
-        if (FileSystem.exists('${serverDirectory}${ProvisionerType.Custom}/${r}')) return getRandomServerId(serverDirectory);
-
-        return r;
-    }
 
 /**
  * Initialize the server's custom properties with metadata from the provisioner

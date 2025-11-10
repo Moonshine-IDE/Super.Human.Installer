@@ -90,6 +90,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.CLONE_SERVER, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
             #end
@@ -128,6 +129,7 @@ class ServerList extends ListView {
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent);
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _forwardEvent);
             item.removeEventListener( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT, _forwardEvent);
+            item.removeEventListener( SuperHumanApplicationEvent.CLONE_SERVER, _forwardEvent);
             
             #if debug
             item.removeEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
@@ -176,6 +178,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonFtp:GenesisButton;
     var _buttonVMDetails:GenesisButton;
     var _buttonDebugReport:GenesisButton;
+    var _buttonClone:GenesisButton;
            
     var _buttonConfigure:GenesisButton;
 
@@ -392,6 +395,16 @@ class ServerItem extends LayoutGroupItemRenderer {
         var spacer = new LayoutGroup();
         		spacer.layoutData = new HorizontalLayoutData( 100 );
         buttonGroup.addChild( spacer );
+
+        _buttonClone = new GenesisButton();
+        _buttonClone.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
+        _buttonClone.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_COPY );
+        _buttonClone.width = CONTROL_BUTTON_WIDTH;
+        _buttonClone.height = CONTROL_BUTTON_HEIGHT;
+        _buttonClone.enabled = false;
+        _buttonClone.toolTip = "Clone Server";
+        _buttonClone.addEventListener( TriggerEvent.TRIGGER, _buttonCloneTriggered );
+        buttonGroup.addChild( _buttonClone );
 
         _buttonConfigure = new GenesisButton();
         _buttonConfigure.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
@@ -616,6 +629,19 @@ class ServerItem extends LayoutGroupItemRenderer {
 
     }
 
+    function _buttonCloneTriggered( e:TriggerEvent ) {
+
+        Logger.info('${this}: Clone button clicked for server ${_server.id}');
+        
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CLONE_SERVER );
+        event.provisionerType = _server.provisioner.type;
+        event.server = _server;
+        
+        Logger.info('${this}: Dispatching CLONE_SERVER event for server ${_server.id}');
+        this.dispatchEvent( event );
+
+    }
+
     function _copyToClipboard( e:SuperHumanApplicationEvent ) {
 
         e.provisionerType = _server.provisioner.type;
@@ -811,6 +837,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
         _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = false;
         _buttonDebugReport.enabled = _buttonDebugReport.includeInLayout = _buttonDebugReport.visible = false;
+        _buttonClone.enabled = _buttonClone.includeInLayout = _buttonClone.visible = false;
         _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unavailable' );
         _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = false;
 
@@ -830,6 +857,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
                 _buttonDebugReport.enabled = _buttonDebugReport.includeInLayout = _buttonDebugReport.visible = hasError;
+                _buttonClone.enabled = _buttonClone.includeInLayout = _buttonClone.visible = true;
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
@@ -935,6 +963,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
+                _buttonClone.enabled = _buttonClone.includeInLayout = _buttonClone.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unconfigured' );
 
             case ServerStatus.Ready:
@@ -943,6 +972,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _buttonDelete.enabled = _buttonDelete.includeInLayout = _buttonDelete.visible = true;
                 _buttonStart.enabled = _buttonStart.includeInLayout = _buttonStart.visible = true;
+                _buttonClone.enabled = _buttonClone.includeInLayout = _buttonClone.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );
 
             case ServerStatus.Provisioning:
@@ -970,6 +1000,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
                 _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
+                _buttonClone.enabled = _buttonClone.includeInLayout = _buttonClone.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.suspended' );
 
             case ServerStatus.Suspending:

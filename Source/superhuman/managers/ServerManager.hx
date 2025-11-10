@@ -120,22 +120,52 @@ class ServerManager {
         return server;
     }
 
+    /**
+     * Clone an existing server with new ID and reset state
+     * @param originalServer The server to clone
+     * @return The new cloned server instance
+     */
+    public function cloneServer(originalServer:Server):Server {
+        // Get complete configuration data from original server
+        var originalData = originalServer.getData();
+        
+        // Force new ID generation by setting server_id to 0
+        // This ensures Server.create() will use the constructor's _generateUniqueServerId()
+        originalData.server_id = 0;
+        
+        // Create new server with the same data - Server.create() → new Server() will:
+        // - Generate new unique server ID via _generateUniqueServerId() with full collision detection
+        // - Use the new ID since data.server_id is 0
+        // - Reset all VM state and references
+        var clonedServer = createServer(originalData, originalData.provisioner.type);
+        
+        if (clonedServer != null) {
+            // IMPORTANT: Force provisional status since cloned data comes from non-provisional server
+            // The original server's data doesn't carry provisional flag, so we must set it manually
+            clonedServer.markAsProvisional();
+            Logger.info('${this}: Cloned server ${originalServer.id} to new server ${clonedServer.id} and marked as provisional');
+        }
+        
+        return clonedServer;
+    }
+
     public function getDefaultServerData( type:ProvisionerType ):ServerData {
         
         if (Std.string(type) == Std.string(ProvisionerType.StandaloneProvisioner)) 
         {
-            return superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( superhuman.server.provisioners.StandaloneProvisioner.getRandomServerId( _serverRootDirectory ) );
+            // Use dummy ID - Server.create() will replace with unified _generateUniqueServerId()
+            return superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( 0 );
         }
         else if (Std.string(type) == Std.string(ProvisionerType.AdditionalProvisioner)) 
         {
-            return superhuman.server.provisioners.AdditionalProvisioner.getDefaultServerData( superhuman.server.provisioners.AdditionalProvisioner.getRandomServerId( _serverRootDirectory ) );
+            // Use dummy ID - Server.create() will replace with unified _generateUniqueServerId()
+            return superhuman.server.provisioners.AdditionalProvisioner.getDefaultServerData( 0 );
         }
         else
         {
             // For custom provisioner types, use the StandaloneProvisioner as a base
             // This ensures we have a valid ServerData object for any provisioner type
-            var serverId = superhuman.server.provisioners.StandaloneProvisioner.getRandomServerId( _serverRootDirectory );
-            var data = superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( serverId );
+            var data = superhuman.server.provisioners.StandaloneProvisioner.getDefaultServerData( 0 );
             
             // Update the provisioner type to the custom type
             if (data != null && data.provisioner != null) {

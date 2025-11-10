@@ -52,16 +52,6 @@ class AdditionalProvisioner extends StandaloneProvisioner {
 
     }
 
-    static public function getRandomServerId( serverDirectory:String ):Int {
-
-		// Range: 1025 - 9999
-		var r = Math.floor( Math.random() * 8974 ) + 1025;
-
-		if ( FileSystem.exists( '${serverDirectory}${ProvisionerType.AdditionalProvisioner}/${r}' ) ) return getRandomServerId( serverDirectory );
-
-		return r;
-
-	}
 
     public override function generateHostsFileContent():String {
         _hostsTemplate = getFileContentFromSourceTemplateDirectory( StandaloneProvisioner.HOSTS_TEMPLATE_FILE );
