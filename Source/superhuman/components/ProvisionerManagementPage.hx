@@ -977,9 +977,9 @@ class ProvisionerManagementPage extends Page {
         _manageForm.visible = false;
         _manageForm.includeInLayout = false;
         
-        // Description container
+        // Description container - match other tabs' width pattern
         var descContainer = new LayoutGroup();
-        descContainer.width = _width * 0.90;
+        descContainer.width = _width * 0.75; // Match other tabs (was 0.90)
         
         var descLayout = new VerticalLayout();
         descLayout.horizontalAlign = HorizontalAlign.LEFT;
@@ -993,7 +993,7 @@ class ProvisionerManagementPage extends Page {
         descLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.manage.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
-        descLabel.width = _width * 0.85;
+        descLabel.width = _width * 0.70; // Match other tabs (was 0.85)
         descContainer.addChild(descLabel);
         
         _manageForm.addChild(descContainer);
@@ -1006,7 +1006,7 @@ class ProvisionerManagementPage extends Page {
         listLayout.paddingLeft = GenesisApplicationTheme.GRID;
         listLayout.paddingRight = GenesisApplicationTheme.GRID;
         _manageProvisionersList.layout = listLayout;
-        _manageProvisionersList.width = _width * 0.90;
+        _manageProvisionersList.width = _width * 0.75; // Match other tabs (was 0.90)
         
         _manageForm.addChild(_manageProvisionersList);
         
@@ -1069,7 +1069,7 @@ class ProvisionerManagementPage extends Page {
             mainLayout.paddingLeft = GenesisApplicationTheme.GRID;
             mainLayout.paddingRight = GenesisApplicationTheme.GRID;
             mainContainer.layout = mainLayout;
-            mainContainer.width = _width * 0.85;
+            mainContainer.width = (_width * 0.8) - 150; // Match GitHub form field width
             
             // Create a background for this provisioner type
             var typeBg = new RectangleSkin(FillStyle.SolidColor(0x333333));
@@ -1140,16 +1140,68 @@ class ProvisionerManagementPage extends Page {
             infoContainer.addChild(versionsContainer);
             mainContainer.addChild(infoContainer);
             
-            // Create right side container for delete button (vertically centered)
+            // Create right side container for buttons (vertically centered)
             var buttonContainer = new LayoutGroup();
             var buttonLayout = new VerticalLayout();
+            buttonLayout.gap = GenesisApplicationTheme.GRID;
             buttonLayout.horizontalAlign = HorizontalAlign.CENTER;
             buttonLayout.verticalAlign = VerticalAlign.MIDDLE;
             buttonContainer.layout = buttonLayout;
             buttonContainer.layoutData = new HorizontalLayoutData(25); // Take 25% of width
             
+            // Check if this provisioner has GitHub source info
+            var hasGitHubSource = _checkHasGitHubSource(type);
+            
+            // Update status label
+            var updateStatusLabel = new Label();
+            if (hasGitHubSource) {
+                updateStatusLabel.text = ""; // Empty initially for GitHub provisioners
+            } else {
+                updateStatusLabel.text = "Local only";
+            }
+            updateStatusLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+            updateStatusLabel.width = GenesisApplicationTheme.GRID * 12;
+            updateStatusLabel.textFormat = new TextFormat("_sans", 10, 0x999999);
+            
+            // Update button - always enabled for GitHub provisioners
+            var updateButton = new GenesisFormButton("Check");
+            updateButton.width = GenesisApplicationTheme.GRID * 18; // Wider to prevent text cutoff
+            updateButton.enabled = hasGitHubSource; // Enabled for GitHub provisioners
+            
+            if (hasGitHubSource) {
+                updateButton.toolTip = "Check for newer versions on GitHub";
+                
+                // Add click handler for manual update checking
+                updateButton.addEventListener(TriggerEvent.TRIGGER, function(e:TriggerEvent) {
+                    _manualCheckForUpdates(type, updateButton, updateStatusLabel);
+                });
+            } else {
+                updateButton.toolTip = "This provisioner was not imported from GitHub";
+            }
+            
+            // Configure button (for token management)
+            var configureButton = new GenesisFormButton("Configure");
+            configureButton.width = GenesisApplicationTheme.GRID * 18; // Match update button width
+            configureButton.enabled = hasGitHubSource;
+            configureButton.visible = hasGitHubSource;
+            configureButton.includeInLayout = hasGitHubSource;
+            
+            if (hasGitHubSource) {
+                configureButton.toolTip = "Change GitHub token for updates";
+                
+                // Add click handler for configure button
+                configureButton.addEventListener(TriggerEvent.TRIGGER, function(e:TriggerEvent) {
+                    _configureProvisionerToken(type);
+                });
+            }
+            
+            buttonContainer.addChild(updateStatusLabel);
+            buttonContainer.addChild(updateButton);
+            buttonContainer.addChild(configureButton);
+            
+            // Delete button
             var deleteButton = new GenesisFormButton("Delete");
-            deleteButton.width = GenesisApplicationTheme.GRID * 12;
+            deleteButton.width = GenesisApplicationTheme.GRID * 18; // Match other button widths
             deleteButton.enabled = canDelete;
             
             if (canDelete) {
@@ -1161,9 +1213,445 @@ class ProvisionerManagementPage extends Page {
             }
             
             buttonContainer.addChild(deleteButton);
+            
             mainContainer.addChild(buttonContainer);
             
             _manageProvisionersList.addChild(mainContainer);
+        }
+    }
+    
+    /**
+     * Manual update check triggered by user clicking the update button
+     */
+    private function _manualCheckForUpdates(provisionerType:String, updateButton:GenesisFormButton, statusLabel:Label) {
+        // Show checking status
+        statusLabel.text = "Checking...";
+        statusLabel.textFormat = new TextFormat("_sans", 10, 0xFFFFFF);
+        updateButton.enabled = false;
+        updateButton.text = "Checking...";
+        
+        // Call the update check function
+        ProvisionerManager.checkForUpdatesAsync(provisionerType, function(hasUpdate:Bool, localVersion:String, remoteVersion:String, errorMessage:String) {
+            if (errorMessage != "") {
+                // Error occurred during check
+                if (errorMessage.indexOf("No GitHub source") >= 0) {
+                    statusLabel.text = "Local only";
+                    statusLabel.textFormat = new TextFormat("_sans", 10, 0x999999);
+                    updateButton.text = "Check for Updates";
+                    updateButton.enabled = false;
+                } else if (errorMessage.indexOf("Network error") >= 0) {
+                    statusLabel.text = "Check failed";
+                    statusLabel.textFormat = new TextFormat("_sans", 10, 0xFF6666);
+                    updateButton.text = "Retry Check";
+                    updateButton.enabled = true;
+                } else if (errorMessage.indexOf("token") >= 0 || errorMessage.indexOf("auth") >= 0) {
+                    statusLabel.text = "Auth error";
+                    statusLabel.textFormat = new TextFormat("_sans", 10, 0xFF6666);
+                    updateButton.text = "Retry Check";
+                    updateButton.enabled = true;
+                } else {
+                    statusLabel.text = "Check failed";
+                    statusLabel.textFormat = new TextFormat("_sans", 10, 0xFF6666);
+                    updateButton.text = "Retry Check";
+                    updateButton.enabled = true;
+                }
+                updateButton.toolTip = errorMessage;
+            } else if (hasUpdate) {
+                // Update available
+                statusLabel.text = 'v${remoteVersion} available';
+                statusLabel.textFormat = new TextFormat("_sans", 10, 0x66FF66);
+                updateButton.text = "Update";
+                updateButton.enabled = true;
+                updateButton.toolTip = 'Update from v${localVersion} to v${remoteVersion}';
+                
+                // Store a reference to the new update function for this specific button
+                var updateFunction = function(e:TriggerEvent) {
+                    _updateProvisioner(provisionerType, localVersion, remoteVersion);
+                };
+                
+                // Remove all existing listeners and add the new update handler
+                var currentListeners = updateButton.hasEventListener(TriggerEvent.TRIGGER);
+                if (currentListeners) {
+                    // Clear all trigger event listeners by removing and re-adding the button
+                    var parent = updateButton.parent;
+                    var index = parent.getChildIndex(updateButton);
+                    parent.removeChild(updateButton);
+                    parent.addChildAt(updateButton, index);
+                }
+                
+                updateButton.addEventListener(TriggerEvent.TRIGGER, updateFunction);
+            } else {
+                // Up to date
+                statusLabel.text = "Up to date";
+                statusLabel.textFormat = new TextFormat("_sans", 10, 0x66FF66);
+                updateButton.text = "Check";
+                updateButton.enabled = true;
+                updateButton.toolTip = 'Current version v${localVersion} is up to date - click to check again';
+            }
+        });
+    }
+    
+    /**
+     * Check if a provisioner has GitHub source information
+     */
+    private function _checkHasGitHubSource(provisionerType:String):Bool {
+        try {
+            var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+            var provisionerPath = haxe.io.Path.addTrailingSlash(provisionersDir) + provisionerType;
+            var metadataPath = haxe.io.Path.addTrailingSlash(provisionerPath) + "provisioner-collection.yml";
+            
+            if (!sys.FileSystem.exists(metadataPath)) {
+                return false;
+            }
+            
+            var yamlMetadata = yaml.Yaml.read(metadataPath);
+            var githubSource = null;
+            
+            if (Std.isOfType(yamlMetadata, yaml.util.ObjectMap)) {
+                var objMap:yaml.util.ObjectMap<String, Dynamic> = cast yamlMetadata;
+                if (objMap.exists("github_source")) {
+                    githubSource = objMap.get("github_source");
+                }
+            } else if (Reflect.hasField(yamlMetadata, "github_source")) {
+                githubSource = Reflect.field(yamlMetadata, "github_source");
+            }
+            
+            // Check if GitHub source has the required fields - handle both ObjectMap and regular object cases
+            if (githubSource != null) {
+                var organization, repository;
+                
+                if (Std.isOfType(githubSource, yaml.util.ObjectMap)) {
+                    var sourceMap:yaml.util.ObjectMap<String, Dynamic> = cast githubSource;
+                    organization = sourceMap.get("organization");
+                    repository = sourceMap.get("repository");
+                } else {
+                    organization = Reflect.field(githubSource, "organization");
+                    repository = Reflect.field(githubSource, "repository");
+                }
+                
+                return (organization != null && repository != null);
+            }
+            
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Configure the GitHub token for a provisioner
+     */
+    private function _configureProvisionerToken(provisionerType:String) {
+        _showTokenConfigurationDialog(provisionerType);
+    }
+    
+    /**
+     * Show token configuration dialog following app's modal pattern
+     */
+    private function _showTokenConfigurationDialog(provisionerType:String) {
+        // Get current token from provisioner metadata
+        var currentToken = _getCurrentGitHubToken(provisionerType);
+        var currentTokenDisplay = (currentToken != null && currentToken != "") ? currentToken : "None";
+        
+        // Get available GitHub tokens
+        var secrets = SuperHumanInstaller.getInstance().config.secrets;
+        var tokenOptions = [];
+        
+        // Add "None" option first
+        tokenOptions.push({text: "None (Public Repository)", value: ""});
+        
+        // Add all available tokens (excluding the current one)
+        if (secrets != null && secrets.git_api_keys != null && secrets.git_api_keys.length > 0) {
+            for (gitToken in secrets.git_api_keys) {
+                if (gitToken.name != currentToken) {
+                    tokenOptions.push({text: gitToken.name, value: gitToken.name});
+                }
+            }
+        }
+        
+        // Create alert dialog following app pattern
+        var alert = feathers.controls.Alert.show("", "Configure GitHub Token", [], null);
+        alert.width = GenesisApplicationTheme.GRID * 80;
+        
+        // Create content container
+        var content = new LayoutGroup();
+        content.width = GenesisApplicationTheme.GRID * 80;
+        content.layoutData = new VerticalLayoutData(100);
+        
+        var verticalLayout = new VerticalLayout();
+        verticalLayout.gap = GenesisApplicationTheme.GRID * 2;
+        verticalLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
+        verticalLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        verticalLayout.paddingLeft = GenesisApplicationTheme.GRID * 4;
+        verticalLayout.paddingRight = GenesisApplicationTheme.GRID * 4;
+        verticalLayout.horizontalAlign = HorizontalAlign.LEFT;
+        content.layout = verticalLayout;
+        
+        // Provisioner info
+        var infoGroup = new LayoutGroup();
+        infoGroup.layoutData = new VerticalLayoutData(100);
+        
+        var infoLayout = new VerticalLayout();
+        infoLayout.gap = GenesisApplicationTheme.GRID;
+        infoLayout.horizontalAlign = HorizontalAlign.LEFT;
+        infoGroup.layout = infoLayout;
+        
+        var provisionerLabel = new Label();
+        provisionerLabel.text = 'Provisioner: ${provisionerType}';
+        provisionerLabel.wordWrap = true;
+        provisionerLabel.layoutData = new VerticalLayoutData(100);
+        infoGroup.addChild(provisionerLabel);
+        
+        var currentLabel = new Label();
+        currentLabel.text = 'Current Token: ${currentTokenDisplay}';
+        currentLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+        currentLabel.layoutData = new VerticalLayoutData(100);
+        infoGroup.addChild(currentLabel);
+        
+        content.addChild(infoGroup);
+        
+        // Separator
+        var separator = new HLine();
+        separator.alpha = 0.3;
+        separator.width = GenesisApplicationTheme.GRID * 70;
+        separator.layoutData = new VerticalLayoutData(90);
+        content.addChild(separator);
+        
+        // Selection section
+        var selectionGroup = new LayoutGroup();
+        selectionGroup.layoutData = new VerticalLayoutData(100);
+        
+        var selectionLayout = new VerticalLayout();
+        selectionLayout.gap = GenesisApplicationTheme.GRID;
+        selectionLayout.horizontalAlign = HorizontalAlign.LEFT;
+        selectionGroup.layout = selectionLayout;
+        
+        var selectLabel = new Label();
+        selectLabel.text = "Select New Token:";
+        selectLabel.layoutData = new VerticalLayoutData(100);
+        selectionGroup.addChild(selectLabel);
+        
+        // Token dropdown
+        var tokenDropdown = new GenesisFormPupUpListView(new ArrayCollection(tokenOptions));
+        tokenDropdown.itemToText = function(item:Dynamic):String {
+            return item.text;
+        };
+        tokenDropdown.width = GenesisApplicationTheme.GRID * 60;
+        
+        // Set current selection
+        var currentIndex = 0;
+        for (i in 0...tokenOptions.length) {
+            if (tokenOptions[i].value == currentToken) {
+                currentIndex = i;
+                break;
+            }
+        }
+        tokenDropdown.selectedIndex = currentIndex;
+        
+        selectionGroup.addChild(tokenDropdown);
+        content.addChild(selectionGroup);
+        
+        // Button separator
+        var buttonSeparator = new HLine();
+        buttonSeparator.alpha = 0.3;
+        buttonSeparator.width = GenesisApplicationTheme.GRID * 70;
+        buttonSeparator.layoutData = new VerticalLayoutData(90);
+        content.addChild(buttonSeparator);
+        
+        // Button container
+        var buttonGroup = new LayoutGroup();
+        buttonGroup.layoutData = new VerticalLayoutData(100);
+        
+        var buttonLayout = new HorizontalLayout();
+        buttonLayout.gap = GenesisApplicationTheme.GRID * 2;
+        buttonLayout.horizontalAlign = HorizontalAlign.CENTER;
+        buttonGroup.layout = buttonLayout;
+        
+        // OK button
+        var okButton = new GenesisFormButton("OK");
+        okButton.width = GenesisApplicationTheme.GRID * 15;
+        
+        // Cancel button
+        var cancelButton = new GenesisFormButton("Cancel");
+        cancelButton.width = GenesisApplicationTheme.GRID * 15;
+        
+        // Secrets button
+        var secretsButton = new GenesisFormButton("Secrets");
+        secretsButton.width = GenesisApplicationTheme.GRID * 15;
+        
+        buttonGroup.addChild(okButton);
+        buttonGroup.addChild(cancelButton);
+        buttonGroup.addChild(secretsButton);
+        
+        content.addChild(buttonGroup);
+        
+        // Add event handlers
+        okButton.addEventListener(TriggerEvent.TRIGGER, function(e:TriggerEvent) {
+            var selectedItem = tokenDropdown.selectedItem;
+            if (selectedItem != null) {
+                var newTokenName = Reflect.field(selectedItem, "value");
+                
+                // Only update if different from current
+                if (newTokenName != currentToken) {
+                    if (_updateProvisionerGitHubToken(provisionerType, newTokenName)) {
+                        var displayName = (newTokenName == "") ? "None (Public Repository)" : newTokenName;
+                        ToastManager.getInstance().showToast('GitHub token updated to: ${displayName}');
+                        _refreshManageTab();
+                    } else {
+                        ToastManager.getInstance().showToast("Failed to update GitHub token");
+                    }
+                } else {
+                    ToastManager.getInstance().showToast("Token unchanged");
+                }
+            }
+            
+            // Close dialog properly
+            try {
+                feathers.core.PopUpManager.removePopUp(alert);
+            } catch (e:Dynamic) {
+                // Ignore close errors
+            }
+        });
+        
+        cancelButton.addEventListener(TriggerEvent.TRIGGER, function(e:TriggerEvent) {
+            try {
+                feathers.core.PopUpManager.removePopUp(alert);
+            } catch (e:Dynamic) {
+                // Ignore close errors
+            }
+        });
+        
+        secretsButton.addEventListener(TriggerEvent.TRIGGER, function(e:TriggerEvent) {
+            try {
+                feathers.core.PopUpManager.removePopUp(alert);
+            } catch (e:Dynamic) {
+                // Ignore close errors
+            }
+            ToastManager.getInstance().showToast("Opening Secrets page to manage GitHub tokens");
+            _closeImportPage();
+        });
+        
+        // Add custom content to the alert
+        alert.addChild(content);
+    }
+    
+    /**
+     * Update a provisioner to the latest version from GitHub
+     */
+    private function _updateProvisioner(provisionerType:String, localVersion:String, remoteVersion:String) {
+        // Show confirmation dialog
+        var confirmMessage = 'Update "${provisionerType}" from v${localVersion} to v${remoteVersion}?\n\nThis will download and install the new version while keeping the existing version.';
+        
+        feathers.controls.Alert.show(
+            confirmMessage,
+            'Update ${provisionerType}',
+            ["Update", "Cancel"],
+            function(state) {
+                if (state.index == 0) {
+                    // User confirmed update
+                    _performProvisionerUpdate(provisionerType);
+                }
+            }
+        );
+    }
+    
+    /**
+     * Perform the actual provisioner update using the stored GitHub source metadata
+     */
+    private function _performProvisionerUpdate(provisionerType:String) {
+        // Read GitHub source metadata
+        var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+        var provisionerPath = haxe.io.Path.addTrailingSlash(provisionersDir) + provisionerType;
+        var metadataPath = haxe.io.Path.addTrailingSlash(provisionerPath) + "provisioner-collection.yml";
+        
+        try {
+            var yamlMetadata = yaml.Yaml.read(metadataPath);
+            var githubSource = null;
+            
+            if (Std.isOfType(yamlMetadata, yaml.util.ObjectMap)) {
+                var objMap:yaml.util.ObjectMap<String, Dynamic> = cast yamlMetadata;
+                if (objMap.exists("github_source")) {
+                    githubSource = objMap.get("github_source");
+                }
+            } else if (Reflect.hasField(yamlMetadata, "github_source")) {
+                githubSource = Reflect.field(yamlMetadata, "github_source");
+            }
+            
+            if (githubSource == null) {
+                ToastManager.getInstance().showToast("No GitHub source information found for update");
+                return;
+            }
+            
+            // Extract GitHub source details - handle both ObjectMap and regular object cases
+            var organization, repository, branch, tokenName, importMethod;
+            
+            if (Std.isOfType(githubSource, yaml.util.ObjectMap)) {
+                var sourceMap:yaml.util.ObjectMap<String, Dynamic> = cast githubSource;
+                organization = sourceMap.get("organization");
+                repository = sourceMap.get("repository");
+                branch = sourceMap.get("branch");
+                tokenName = sourceMap.get("git_token_name");
+                importMethod = sourceMap.get("import_method");
+            } else {
+                organization = Reflect.field(githubSource, "organization");
+                repository = Reflect.field(githubSource, "repository");
+                branch = Reflect.field(githubSource, "branch");
+                tokenName = Reflect.field(githubSource, "git_token_name");
+                importMethod = Reflect.field(githubSource, "import_method");
+            }
+            
+            if (organization == null || repository == null || branch == null) {
+                ToastManager.getInstance().showToast("Incomplete GitHub source information");
+                return;
+            }
+            
+            // Use the same import method they originally used
+            var useGit = (importMethod == "git");
+            
+            if (!useGit) {
+                ToastManager.getInstance().showToast("Update requires Git clone method, but provisioner was imported via HTTP");
+                return;
+            }
+            
+            // Add listener for the completion event
+            this.addEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerUpdateComplete);
+            
+            // Start the update process (same as import)
+            var executor:AbstractExecutor = ProvisionerManager.importProvisionerFromGitHubAsync(
+                organization, repository, branch, useGit, tokenName, this
+            );
+            
+            if (executor != null) {
+                ToastManager.getInstance().showToast('Starting update of ${provisionerType}...');
+                executor.execute();
+            } else {
+                this.removeEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerUpdateComplete);
+                ToastManager.getInstance().showToast("Failed to start update process");
+            }
+            
+        } catch (e) {
+            ToastManager.getInstance().showToast("Error reading update metadata: " + e);
+        }
+    }
+    
+    /**
+     * Handle completion of provisioner update
+     */
+    private function _onProvisionerUpdateComplete(event:SuperHumanApplicationEvent):Void {
+        // Remove the listener
+        this.removeEventListener(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE, _onProvisionerUpdateComplete);
+        
+        if (event.importSuccess) {
+            ToastManager.getInstance().showToast("Provisioner updated successfully!");
+            
+            // Refresh the manage tab to show new version
+            _refreshManageTab();
+            
+            // Dispatch event to update the application's provisioner cache
+            var updateEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
+            this.dispatchEvent(updateEvent);
+        } else {
+            ToastManager.getInstance().showToast("Update failed: " + event.importMessage);
         }
     }
     
@@ -1198,6 +1686,120 @@ class ProvisionerManagementPage extends Page {
                 }
             }
         );
+    }
+
+    /**
+     * Get the current GitHub token for a provisioner
+     */
+    private function _getCurrentGitHubToken(provisionerType:String):String {
+        try {
+            var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+            var provisionerPath = haxe.io.Path.addTrailingSlash(provisionersDir) + provisionerType;
+            var metadataPath = haxe.io.Path.addTrailingSlash(provisionerPath) + "provisioner-collection.yml";
+            
+            if (!sys.FileSystem.exists(metadataPath)) {
+                return null;
+            }
+            
+            var yamlMetadata = yaml.Yaml.read(metadataPath);
+            var githubSource = null;
+            
+            if (Std.isOfType(yamlMetadata, yaml.util.ObjectMap)) {
+                var objMap:yaml.util.ObjectMap<String, Dynamic> = cast yamlMetadata;
+                if (objMap.exists("github_source")) {
+                    githubSource = objMap.get("github_source");
+                }
+            } else if (Reflect.hasField(yamlMetadata, "github_source")) {
+                githubSource = Reflect.field(yamlMetadata, "github_source");
+            }
+            
+            if (githubSource != null) {
+                var tokenName;
+                
+                if (Std.isOfType(githubSource, yaml.util.ObjectMap)) {
+                    var sourceMap:yaml.util.ObjectMap<String, Dynamic> = cast githubSource;
+                    tokenName = sourceMap.get("git_token_name");
+                } else {
+                    tokenName = Reflect.field(githubSource, "git_token_name");
+                }
+                
+                return tokenName;
+            }
+            
+            return null;
+        } catch (e) {
+            return null;
+        }
+    }
+    
+    /**
+     * Update the GitHub token for a provisioner
+     */
+    private function _updateProvisionerGitHubToken(provisionerType:String, newTokenName:String):Bool {
+        try {
+            var provisionersDir = ProvisionerManager.getProvisionersDirectory();
+            var provisionerPath = haxe.io.Path.addTrailingSlash(provisionersDir) + provisionerType;
+            var metadataPath = haxe.io.Path.addTrailingSlash(provisionerPath) + "provisioner-collection.yml";
+            
+            if (!sys.FileSystem.exists(metadataPath)) {
+                return false;
+            }
+            
+            // Read current metadata
+            var content = sys.io.File.getContent(metadataPath);
+            
+            // Update the git_token_name field using string replacement
+            var lines = content.split("\n");
+            var updatedLines = [];
+            var foundGitTokenLine = false;
+            
+            for (line in lines) {
+                if (line.indexOf("git_token_name:") >= 0) {
+                    // Update the existing git_token_name line
+                    updatedLines.push('  git_token_name: "${newTokenName}"');
+                    foundGitTokenLine = true;
+                } else {
+                    updatedLines.push(line);
+                }
+            }
+            
+            // If no git_token_name line was found, we need to add it to the github_source section
+            if (!foundGitTokenLine) {
+                var newLines = [];
+                var inGithubSource = false;
+                
+                for (line in lines) {
+                    newLines.push(line);
+                    
+                    if (line.indexOf("github_source:") >= 0) {
+                        inGithubSource = true;
+                    } else if (inGithubSource && StringTools.trim(line) == "" || (line.indexOf(":") >= 0 && !StringTools.startsWith(line, "  "))) {
+                        // End of github_source section, add the token line before this
+                        if (StringTools.trim(line) != "") {
+                            newLines.insert(newLines.length - 1, '  git_token_name: "${newTokenName}"');
+                        } else {
+                            newLines.push('  git_token_name: "${newTokenName}"');
+                        }
+                        inGithubSource = false;
+                    }
+                }
+                
+                // If we're still in github_source section at end of file
+                if (inGithubSource) {
+                    newLines.push('  git_token_name: "${newTokenName}"');
+                }
+                
+                updatedLines = newLines;
+            }
+            
+            // Write updated content back to file
+            var updatedContent = updatedLines.join("\n");
+            sys.io.File.saveContent(metadataPath, updatedContent);
+            
+            return true;
+        } catch (e) {
+            return false;
+        }
     }
 
     /**

@@ -1455,14 +1455,130 @@ class ProvisionerManager {
         // Create a YAML string manually since the Yaml library doesn't have a good writer
         var yamlStr = "# Provisioner Collection Metadata\n";
         
-        for (field in Reflect.fields(content)) {
-            var value = Reflect.field(content, field);
-            if (value != null) {
-                yamlStr += '${field}: ${value}\n';
-            }
+        // Handle basic fields first
+        var name = Reflect.field(content, "name");
+        var type = Reflect.field(content, "type");
+        var description = Reflect.field(content, "description");
+        var author = Reflect.field(content, "author");
+        
+        if (name != null) yamlStr += 'name: "${name}"\n';
+        if (type != null) yamlStr += 'type: "${type}"\n';
+        if (description != null) yamlStr += 'description: "${description}"\n';
+        if (author != null) yamlStr += 'author: "${author}"\n';
+        
+        // Handle GitHub source specially - use the stored values directly
+        var githubSource = Reflect.field(content, "github_source");
+        if (githubSource != null) {
+            yamlStr += 'github_source:\n';
+            
+            // Try to access fields directly
+            var org = Reflect.field(githubSource, "organization");
+            var repo = Reflect.field(githubSource, "repository");
+            var branch = Reflect.field(githubSource, "branch");
+            var token = Reflect.field(githubSource, "git_token_name");
+            var method = Reflect.field(githubSource, "import_method");
+            var version = Reflect.field(githubSource, "imported_version");
+            var timestamp = Reflect.field(githubSource, "imported_at");
+            
+            if (org != null) yamlStr += '  organization: "${org}"\n';
+            if (repo != null) yamlStr += '  repository: "${repo}"\n';
+            if (branch != null) yamlStr += '  branch: "${branch}"\n';
+            if (token != null) yamlStr += '  git_token_name: "${token}"\n';
+            if (method != null) yamlStr += '  import_method: "${method}"\n';
+            if (version != null) yamlStr += '  imported_version: "${version}"\n';
+            if (timestamp != null) yamlStr += '  imported_at: "${timestamp}"\n';
         }
         
+        Logger.debug('Final YAML content:\n${yamlStr}');
         File.saveContent(filePath, yamlStr);
+    }
+    
+    /**
+     * Store GitHub source metadata in the provisioner collection metadata
+     * @param provisionerPath Path to the provisioner directory that was imported
+     * @param organization GitHub organization
+     * @param repository GitHub repository
+     * @param branch GitHub branch
+     * @param tokenName GitHub token name used for import
+     * @param importMethod Import method used ("git" or "http")
+     */
+    static private function _storeGitHubSourceMetadata(provisionerPath:String, organization:String, repository:String, branch:String, tokenName:String, importMethod:String):Void {
+        try {
+            // Determine the collection path (might be the provisioner path itself or its parent)
+            var collectionPath:String;
+            var isCollection = FileSystem.exists(Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME);
+            
+            if (isCollection) {
+                // This is a collection import
+                collectionPath = provisionerPath;
+            } else {
+                // This is a version import - find the collection directory
+                var versionMetadata = readProvisionerVersionMetadata(provisionerPath);
+                if (versionMetadata == null) {
+                    Logger.warning('Cannot store GitHub metadata: no version metadata found');
+                    return;
+                }
+                
+                var provisionersDir = getProvisionersDirectory();
+                collectionPath = Path.addTrailingSlash(provisionersDir) + versionMetadata.type;
+            }
+            
+            var collectionMetadataPath = Path.addTrailingSlash(collectionPath) + PROVISIONER_METADATA_FILENAME;
+            
+            // Read existing metadata
+            var existingMetadata = readProvisionerMetadata(collectionPath);
+            if (existingMetadata == null) {
+                Logger.warning('Cannot store GitHub metadata: no existing collection metadata');
+                return;
+            }
+            
+            // Get current version from the latest imported version
+            var currentVersion = "unknown";
+            if (isCollection) {
+                // For collection imports, find the newest version
+                var versions = _getValidVersionDirectories(collectionPath);
+                if (versions.length > 0) {
+                    // Sort versions and get the newest
+                    versions.sort((a, b) -> {
+                        var vA = VersionInfo.fromString(a);
+                        var vB = VersionInfo.fromString(b);
+                        return vB > vA ? 1 : (vB < vA ? -1 : 0);
+                    });
+                    currentVersion = versions[0];
+                }
+            } else {
+                // For version imports, use the version directory name
+                currentVersion = Path.withoutDirectory(Path.removeTrailingSlashes(provisionerPath));
+            }
+            
+            // Create the nested GitHub source object explicitly first
+            var githubSourceData:Dynamic = {};
+            Reflect.setField(githubSourceData, "organization", organization);
+            Reflect.setField(githubSourceData, "repository", repository);
+            Reflect.setField(githubSourceData, "branch", branch);
+            Reflect.setField(githubSourceData, "git_token_name", tokenName != null ? tokenName : "");
+            Reflect.setField(githubSourceData, "import_method", importMethod);
+            Reflect.setField(githubSourceData, "imported_version", currentVersion);
+            Reflect.setField(githubSourceData, "imported_at", DateTools.format(Date.now(), "%Y-%m-%dT%H:%M:%SZ"));
+            
+            Logger.debug('Created GitHub source object with fields: ${Reflect.fields(githubSourceData).join(", ")}');
+            
+            // Create enhanced metadata with GitHub source info
+            var enhancedMetadata:Dynamic = {};
+            Reflect.setField(enhancedMetadata, "name", existingMetadata.name);
+            Reflect.setField(enhancedMetadata, "type", existingMetadata.type);
+            Reflect.setField(enhancedMetadata, "description", existingMetadata.description);
+            Reflect.setField(enhancedMetadata, "author", existingMetadata.author);
+            Reflect.setField(enhancedMetadata, "github_source", githubSourceData);
+            
+            // Write the enhanced metadata back to the file
+            _writeYamlFile(collectionMetadataPath, enhancedMetadata);
+            
+            Logger.info('Stored GitHub source metadata for ${existingMetadata.name}: ${organization}/${repository} (${importMethod})');
+            
+        } catch (e) {
+            Logger.error('Error storing GitHub source metadata: ${e}');
+        }
     }
     
     /**
@@ -1589,6 +1705,8 @@ class ProvisionerManager {
                 organization: organization,
                 repository: repository,
                 branch: branch,
+                tokenName: tokenName,
+                importMethod: useGit ? "git" : "http",
                 eventDispatcher: eventDispatcher
             };
             
@@ -1709,6 +1827,12 @@ class ProvisionerManager {
                         'Provisioner version imported successfully from ${organization}/${repository}.' :
                         'Failed to import provisioner version from ${organization}/${repository}. Check logs for details.';
                 }
+                
+                // Store GitHub source metadata if import was successful
+                if (importSuccess) {
+                    _storeGitHubSourceMetadata(provisionerPath, organization, repository, context.branch, context.tokenName, context.importMethod);
+                }
+                
                 overallSuccess = importSuccess;
             }
         } catch (e) {
@@ -3048,7 +3172,191 @@ class ProvisionerManager {
             Logger.info('Removed entire provisioner type ${deletedType} from cache');
         }
     }
-
+    
+    /**
+     * Check for updates for a provisioner by fetching remote version from GitHub
+     * @param provisionerType The provisioner type to check
+     * @param callback Callback function with parameters: (hasUpdate:Bool, localVersion:String, remoteVersion:String, errorMessage:String)
+     */
+    static public function checkForUpdatesAsync(provisionerType:String, callback:(Bool, String, String, String)->Void):Void {
+        try {
+            // Read the provisioner metadata to get GitHub source info
+            var provisionersDir = getProvisionersDirectory();
+            var provisionerPath = Path.addTrailingSlash(provisionersDir) + provisionerType;
+            var metadata = readProvisionerMetadata(provisionerPath);
+            
+            if (metadata == null) {
+                callback(false, "", "", "No metadata found for provisioner");
+                return;
+            }
+            
+            // Check if this provisioner has GitHub source information
+            var githubSource = null;
+            var metadataPath = Path.addTrailingSlash(provisionerPath) + PROVISIONER_METADATA_FILENAME;
+            
+            try {
+                var yamlMetadata = Yaml.read(metadataPath);
+                if (Std.isOfType(yamlMetadata, ObjectMap)) {
+                    var objMap:ObjectMap<String, Dynamic> = cast yamlMetadata;
+                    if (objMap.exists("github_source")) {
+                        githubSource = objMap.get("github_source");
+                    }
+                } else if (Reflect.hasField(yamlMetadata, "github_source")) {
+                    githubSource = Reflect.field(yamlMetadata, "github_source");
+                }
+            } catch (e) {
+                callback(false, "", "", "Error reading metadata: " + e);
+                return;
+            }
+            
+            if (githubSource == null) {
+                callback(false, "", "", "No GitHub source information found");
+                return;
+            }
+            
+            // Extract GitHub source details - handle both ObjectMap and regular object cases
+            var organization, repository, branch, tokenName;
+            
+            if (Std.isOfType(githubSource, ObjectMap)) {
+                var sourceMap:ObjectMap<String, Dynamic> = cast githubSource;
+                organization = sourceMap.get("organization");
+                repository = sourceMap.get("repository");
+                branch = sourceMap.get("branch");
+                tokenName = sourceMap.get("git_token_name");
+            } else {
+                organization = Reflect.field(githubSource, "organization");
+                repository = Reflect.field(githubSource, "repository");
+                branch = Reflect.field(githubSource, "branch");
+                tokenName = Reflect.field(githubSource, "git_token_name");
+            }
+            
+            if (organization == null || repository == null || branch == null) {
+                callback(false, "", "", "Incomplete GitHub source information");
+                return;
+            }
+            
+            // Get current local version (newest version)
+            var versions = _getValidVersionDirectories(provisionerPath);
+            if (versions.length == 0) {
+                callback(false, "", "", "No local versions found");
+                return;
+            }
+            
+            versions.sort((a, b) -> {
+                var vA = VersionInfo.fromString(a);
+                var vB = VersionInfo.fromString(b);
+                return vB > vA ? 1 : (vB < vA ? -1 : 0);
+            });
+            var localVersion = versions[0];
+            
+            // Use GitHub Contents API instead of raw file access for better authentication
+            var apiUrl = 'https://api.github.com/repos/${organization}/${repository}/contents/provisioner.yml';
+            
+            Logger.info('Checking for updates using GitHub API: ${apiUrl}');
+            
+            // Fetch remote provisioner.yml using GitHub Contents API
+            var http = new haxe.Http(apiUrl);
+            
+            // Add authentication headers if token is available
+            if (tokenName != null && tokenName != "") {
+                var token = _getGitHubToken(tokenName);
+                if (token != null) {
+                    http.setHeader("Authorization", 'Bearer ${token}');
+                    Logger.debug('Using GitHub token for API authentication');
+                }
+            }
+            
+            // Set proper headers for GitHub API
+            http.setHeader("Accept", "application/vnd.github.v3+json");
+            http.setHeader("User-Agent", "SuperHumanInstaller/1.0");
+            
+            http.onData = function(data:String) {
+                try {
+                    // Parse GitHub API response  
+                    var apiResponse = haxe.Json.parse(data);
+                    
+                    // Check if response contains the file content
+                    if (!Reflect.hasField(apiResponse, "content")) {
+                        callback(false, localVersion, "", "Invalid GitHub API response - no content field");
+                        return;
+                    }
+                    
+                    // Decode base64 content
+                    var base64Content = Reflect.field(apiResponse, "content");
+                    var cleanedContent = StringTools.replace(base64Content, "\n", ""); // Remove newlines
+                    var decodedContent = haxe.crypto.Base64.decode(cleanedContent).toString();
+                    
+                    // Parse the provisioner.yml content
+                    var tempFile = "temp_remote_provisioner.yml";
+                    sys.io.File.saveContent(tempFile, decodedContent);
+                    var remoteMetadata = yaml.Yaml.read(tempFile);
+                    sys.FileSystem.deleteFile(tempFile);
+                    
+                    var remoteVersion = null;
+                    if (Std.isOfType(remoteMetadata, ObjectMap)) {
+                        var objMap:ObjectMap<String, Dynamic> = cast remoteMetadata;
+                        if (objMap.exists("version")) {
+                            remoteVersion = Std.string(objMap.get("version"));
+                        }
+                    } else if (Reflect.hasField(remoteMetadata, "version")) {
+                        remoteVersion = Std.string(Reflect.field(remoteMetadata, "version"));
+                    }
+                    
+                    if (remoteVersion == null) {
+                        callback(false, localVersion, "", "No version found in remote provisioner.yml");
+                        return;
+                    }
+                    
+                    // Compare versions
+                    var localVersionInfo = VersionInfo.fromString(localVersion);
+                    var remoteVersionInfo = VersionInfo.fromString(remoteVersion);
+                    
+                    var hasUpdate = remoteVersionInfo > localVersionInfo;
+                    callback(hasUpdate, localVersion, remoteVersion, "");
+                    
+                } catch (apiError) {
+                    callback(false, localVersion, "", "Error processing GitHub API response: " + apiError);
+                }
+            };
+            
+            http.onError = function(error:String) {
+                // Provide more specific error messages for common GitHub API errors
+                var errorMessage = error;
+                if (error.indexOf("404") >= 0) {
+                    errorMessage = "File not found in repository - check if provisioner.yml exists at root level";
+                } else if (error.indexOf("401") >= 0 || error.indexOf("403") >= 0) {
+                    errorMessage = "Authentication failed - check GitHub token permissions";
+                } else if (error.indexOf("rate limit") >= 0) {
+                    errorMessage = "GitHub API rate limit exceeded - please try again later";
+                }
+                
+                callback(false, localVersion, "", "Network error: " + errorMessage);
+            };
+            
+            http.request(false); // GET request
+            
+        } catch (e) {
+            callback(false, "", "", "Error: " + e);
+        }
+    }
+    
+    /**
+     * Get GitHub token from secrets by name
+     * @param tokenName The token name to look up
+     * @return The token value or null if not found
+     */
+    static private function _getGitHubToken(tokenName:String):String {
+        var secrets = SuperHumanInstaller.getInstance().config.secrets;
+        if (secrets == null || secrets.git_api_keys == null) return null;
+        
+        for (gitToken in secrets.git_api_keys) {
+            if (gitToken.name == tokenName) {
+                return gitToken.key;
+            }
+        }
+        return null;
+    }
+    
     /**
      * Check if the provisioners directory is empty and copy bundled provisioners if needed
      * This is specific to Mac and Linux, where provisioners are included in the application bundle
