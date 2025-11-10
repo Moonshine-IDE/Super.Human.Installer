@@ -94,11 +94,26 @@ class ConfigPage extends Page {
 
     var _server:Server;
     var _titleGroup:LayoutGroup;
+    var _readOnly:Bool = false;
+    var _readOnlyLabel:Label;
+    var _readOnlyLayout:LayoutGroup;
 
     public function new() {
 
         super();
 
+    }
+    
+    /**
+     * Set the page in read-only mode
+     * @param readOnly Whether the page should be read-only
+     */
+    public function setReadOnly(readOnly:Bool) {
+        _readOnly = readOnly;
+        // Apply read-only state immediately if components are available
+        if (_form != null) {
+            updateReadOnlyState();
+        }
     }
 
     override function initialize() {
@@ -138,37 +153,39 @@ class ConfigPage extends Page {
             return item.name;
         };
         _dropdownCoreComponentVersion.selectedIndex = 0;
-        for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.StandaloneProvisioner ).length ) {
-            var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.StandaloneProvisioner ).get( i );
-            if ( d.data.version == _server.provisioner.version ) {
-                _dropdownCoreComponentVersion.selectedIndex = i;
-                break;
+        if (_server != null) {
+            for ( i in 0...ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.StandaloneProvisioner ).length ) {
+                var d:ProvisionerDefinition = ProvisionerManager.getBundledProvisionerCollection( ProvisionerType.StandaloneProvisioner ).get( i );
+                if ( d.data.version == _server.provisioner.version ) {
+                    _dropdownCoreComponentVersion.selectedIndex = i;
+                    break;
+                }
             }
         }
-        _dropdownCoreComponentVersion.enabled = !_server.hostname.locked;
+        _dropdownCoreComponentVersion.enabled = _server != null ? !_server.hostname.locked : true;
         _dropdownCoreComponentVersion.addEventListener( Event.CHANGE, _dropdownProvisionerChanged );
         _rowCoreComponentVersion.content.addChild( _dropdownCoreComponentVersion );
         _form.addChild( _rowCoreComponentVersion );
 
         _rowHostname = new GenesisFormRow();
         _rowHostname.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.text' );
-        _inputHostname = new GenesisFormTextInput( _server.hostname.value, LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.prompt' ), _server.hostname.validationKey );
+        _inputHostname = new GenesisFormTextInput( _server != null ? _server.hostname.value : "", LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.prompt' ), _server != null ? _server.hostname.validationKey : null );
         _inputHostname.minLength = 1;
         _inputHostname.restrict = "a-zA-Z0-9.-";
         _inputHostname.toolTip = LanguageManager.getInstance().getString( 'serverconfigpage.form.hostname.tooltip' );
         _inputHostname.addEventListener( Event.CHANGE, _inputHostnameChanged );
-        _inputHostname.enabled = !_server.hostname.locked;
+        _inputHostname.enabled = _server != null ? !_server.hostname.locked : true;
         _rowHostname.content.addChild( _inputHostname );
         _form.addChild( _rowHostname );
 
         _rowOrganization = new GenesisFormRow();
         _rowOrganization.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.orgcert.text' );
-        _inputOrganization = new GenesisFormTextInput( _server.organization.value, LanguageManager.getInstance().getString( 'serverconfigpage.form.orgcert.prompt' ), _server.organization.validationKey );
+        _inputOrganization = new GenesisFormTextInput( _server != null ? _server.organization.value : "", LanguageManager.getInstance().getString( 'serverconfigpage.form.orgcert.prompt' ), _server != null ? _server.organization.validationKey : null );
         _inputOrganization.minLength = 1;
         _inputOrganization.restrict = "a-zA-Z0-9-";
         _inputOrganization.toolTip = LanguageManager.getInstance().getString( 'serverconfigpage.form.orgcert.tooltip' );
         _inputOrganization.addEventListener( Event.CHANGE, _inputHostnameChanged );
-        _inputOrganization.enabled = !_server.organization.locked;
+        _inputOrganization.enabled = _server != null ? !_server.organization.locked : true;
         _rowOrganization.content.addChild( _inputOrganization );
         _form.addChild( _rowOrganization );
 
@@ -184,9 +201,9 @@ class ConfigPage extends Page {
         _buttonSafeId = new GenesisFormButton();
         _buttonSafeId.toolTip = LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.tooltip' );
         _buttonSafeId.addEventListener( TriggerEvent.TRIGGER, _buttonSafeIdTriggered );
-        _buttonSafeId.icon = ( _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING ) ;
-        _buttonSafeId.text = ( _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
-        _buttonSafeId.enabled = !_server.userSafeId.locked;
+        _buttonSafeId.icon = ( _server != null && _server.safeIdExists() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING ) ;
+        _buttonSafeId.text = ( _server != null && _server.safeIdExists() ) ? LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocateagain' ) : LanguageManager.getInstance().getString( 'serverconfigpage.form.safeid.buttonlocate' );
+        _buttonSafeId.enabled = _server != null ? !_server.userSafeId.locked : true;
         _rowSafeId.content.addChild( _buttonSafeId );
         _form.addChild( _rowSafeId );
 
@@ -198,7 +215,7 @@ class ConfigPage extends Page {
         _rowPreviousSafeId.content.addChild( _labelPreviousSafeId );
         _form.addChild( _rowPreviousSafeId );
 
-        if ( !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {
+        if ( _server != null && !_server.safeIdExists() && SuperHumanInstaller.getInstance().config.user.lastusedsafeid != null ) {
 
             _rowPreviousSafeId.visible = _rowPreviousSafeId.includeInLayout = true;
             var p = Path.withoutDirectory( SuperHumanInstaller.getInstance().config.user.lastusedsafeid );
@@ -215,14 +232,28 @@ class ConfigPage extends Page {
         _rowRoles.text = LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.text' );
         _buttonRoles = new GenesisFormButton( LanguageManager.getInstance().getString( 'serverconfigpage.form.roles.button' ) );
         _buttonRoles.addEventListener( TriggerEvent.TRIGGER, _buttonRolesTriggered );
-        _buttonRoles.icon = ( _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
-        _buttonRoles.enabled = !_server.roles.locked;
+        _buttonRoles.icon = ( _server != null && _server.areRolesValid() ) ? GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_OK ) : GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING  );
+        _buttonRoles.enabled = _server != null ? !_server.roles.locked : true;
         _rowRoles.content.addChild( _buttonRoles );
         _form.addChild( _rowRoles );
 
         var line = new HLine();
         line.width = _w;
         this.addChild( line );
+        
+        // Add read-only indicator (initially hidden)
+        _readOnlyLabel = new Label("READ ONLY - Server is currently running or booting up");
+        _readOnlyLabel.variant = GenesisApplicationTheme.LABEL_LARGE;
+        _readOnlyLabel.textFormat = new openfl.text.TextFormat("_sans", 16, 0xFF6B35); // Orange color
+        _readOnlyLabel.layoutData = new HorizontalLayoutData(100);
+        _readOnlyLayout = new LayoutGroup();
+        var readOnlyHLayout = new HorizontalLayout();
+        readOnlyHLayout.horizontalAlign = HorizontalAlign.CENTER;
+        _readOnlyLayout.layout = readOnlyHLayout;
+        _readOnlyLayout.layoutData = new HorizontalLayoutData(100);
+        _readOnlyLayout.addChild(_readOnlyLabel);
+        _readOnlyLayout.visible = _readOnlyLayout.includeInLayout = false;
+        this.addChild( _readOnlyLayout );
 
         _buttonGroup = new LayoutGroup();
         _buttonGroupLayout = new HorizontalLayout();
@@ -237,7 +268,7 @@ class ConfigPage extends Page {
         _buttonCancel.width = GenesisApplicationTheme.GRID * 20;
         _buttonGroup.addChild( _buttonSave );
         _buttonGroup.addChild( _buttonCancel );
-        _buttonSave.enabled = !_server.hostname.locked;
+        _buttonSave.enabled = _server != null ? !_server.hostname.locked : true;
         this.addChild( _buttonGroup );
 
         _labelMandatory = new Label( LanguageManager.getInstance().getString( 'serverconfigpage.form.info' ) );
@@ -245,6 +276,11 @@ class ConfigPage extends Page {
         this.addChild( _labelMandatory );
 
         _inputHostnameChanged( null );
+
+        // Apply read-only state if it was set before initialization
+        if (_readOnly) {
+            updateReadOnlyState();
+        }
 
     }
 
@@ -409,6 +445,9 @@ class ConfigPage extends Page {
             if (forced) {
                 _initializeCommonVariables();
             }
+            
+            // Apply read-only state after all other updates
+            updateReadOnlyState();
         }
 
     }
@@ -435,6 +474,7 @@ class ConfigPage extends Page {
         
         var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.ADVANCED_CONFIGURE_SERVER );
         evt.server = _server;
+        evt.readOnly = _readOnly; // Pass through read-only state
         this.dispatchEvent( evt );
     }
 
@@ -604,5 +644,67 @@ class ConfigPage extends Page {
         
         // Force an immediate save to persist changes
         _server.saveData();
+    }
+    
+    /**
+     * Update the read-only state of all form elements
+     */
+    private function updateReadOnlyState() {
+        if (_form == null || _server == null) return;
+        
+        // Show/hide read-only banner using direct reference
+        if (_readOnlyLayout != null) {
+            _readOnlyLayout.visible = _readOnlyLayout.includeInLayout = _readOnly;
+        }
+        
+        // Disable form elements when in read-only mode - with additional null checks for safety
+        if (_dropdownCoreComponentVersion != null) {
+            _dropdownCoreComponentVersion.enabled = !_readOnly && (_server != null ? !_server.hostname.locked : true);
+        }
+        if (_inputHostname != null) {
+            _inputHostname.enabled = !_readOnly && (_server != null ? !_server.hostname.locked : true);
+        }
+        if (_inputOrganization != null) {
+            _inputOrganization.enabled = !_readOnly && (_server != null ? !_server.organization.locked : true);
+        }
+        if (_buttonSafeId != null) {
+            _buttonSafeId.enabled = !_readOnly && (_server != null ? !_server.userSafeId.locked : true);
+        }
+        if (_buttonRoles != null) {
+            _buttonRoles.enabled = !_readOnly && (_server != null ? !_server.roles.locked : true);
+        }
+        if (_advancedLink != null) {
+            _advancedLink.enabled = !_readOnly;
+            _advancedLink.alpha = _readOnly ? 0.5 : 1.0;
+        }
+        if (_labelPreviousSafeId != null) {
+            _labelPreviousSafeId.enabled = !_readOnly;
+            _labelPreviousSafeId.alpha = _readOnly ? 0.5 : 1.0;
+        }
+        
+        // Disable common variable inputs - with null check
+        if (_commonVariables != null) {
+            for (input in _commonVariables) {
+                if (input != null) {
+                    input.enabled = !_readOnly;
+                }
+            }
+        }
+        
+        // Hide save button in read-only mode, change cancel button to "Close" - with additional safety
+        if (_buttonSave != null) {
+            try {
+                _buttonSave.visible = _buttonSave.includeInLayout = !_readOnly;
+            } catch (e:Dynamic) {
+                // Ignore button visibility errors during initialization
+            }
+        }
+        if (_buttonCancel != null) {
+            try {
+                _buttonCancel.text = _readOnly ? "Close" : LanguageManager.getInstance().getString('serverconfigpage.form.buttons.cancel');
+            } catch (e:Dynamic) {
+                // Ignore button text errors during initialization
+            }
+        }
     }
 }

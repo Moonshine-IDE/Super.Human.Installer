@@ -97,11 +97,26 @@ class AdvancedConfigPage extends Page {
     var _stepperCPUs:GenesisFormNumericStepper;
     var _stepperRAM:GenesisFormNumericStepper;
     var _titleGroup:LayoutGroup;
+    var _readOnly:Bool = false;
+    var _readOnlyLabel:Label;
+    var _readOnlyLayout:LayoutGroup;
 
     public function new() {
 
         super();
 
+    }
+    
+    /**
+     * Set the page in read-only mode
+     * @param readOnly Whether the page should be read-only
+     */
+    public function setReadOnly(readOnly:Bool) {
+        _readOnly = readOnly;
+        // Apply read-only state immediately if components are available
+        if (_form != null) {
+            updateReadOnlyState();
+        }
     }
 
     override function initialize() {
@@ -326,6 +341,20 @@ class AdvancedConfigPage extends Page {
         line.width = _w;
         this.addChild( line );
 
+        // Add read-only indicator (initially hidden)
+        _readOnlyLabel = new Label("READ ONLY - Server is currently running or booting up");
+        _readOnlyLabel.variant = GenesisApplicationTheme.LABEL_LARGE;
+        _readOnlyLabel.textFormat = new openfl.text.TextFormat("_sans", 16, 0xFF6B35); // Orange color
+        _readOnlyLabel.layoutData = new HorizontalLayoutData(100);
+        _readOnlyLayout = new LayoutGroup();
+        var readOnlyHLayout = new HorizontalLayout();
+        readOnlyHLayout.horizontalAlign = HorizontalAlign.CENTER;
+        _readOnlyLayout.layout = readOnlyHLayout;
+        _readOnlyLayout.layoutData = new HorizontalLayoutData(100);
+        _readOnlyLayout.addChild(_readOnlyLabel);
+        _readOnlyLayout.visible = _readOnlyLayout.includeInLayout = false;
+        this.addChild( _readOnlyLayout );
+
         _buttonGroup = new LayoutGroup();
         _buttonGroupLayout = new HorizontalLayout();
         _buttonGroupLayout.gap = GenesisApplicationTheme.GRID * 2;
@@ -356,6 +385,11 @@ class AdvancedConfigPage extends Page {
         _inputAlertEmail.enabled = !_server.userEmail.locked;
 
         _updateForm();
+
+        // Apply read-only state if it was set before initialization
+        if (_readOnly) {
+            updateReadOnlyState();
+        }
 
     }
 
@@ -405,6 +439,9 @@ class AdvancedConfigPage extends Page {
         }
 
         _updateForm();
+        
+        // Apply read-only state after all other updates (call independently of _updateForm)
+        updateReadOnlyState();
     }
 
     function _updateForm() {
@@ -418,21 +455,24 @@ class AdvancedConfigPage extends Page {
             return;
         }
 
-        var canChangeBridgeAdapter:Bool = !_server.disableBridgeAdapter.locked;
-        _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
-        _cbDisableBridgeAdapter.enabled = canChangeBridgeAdapter;
-        _cbDisableBridgeAdapter.update();
-        _cbDisableBridgeAdapter.validateNow();
-        _cbDisableBridgeAdapter.invalidate();
+        // Only apply normal form logic if not in read-only mode
+        if (!_readOnly) {
+            var canChangeBridgeAdapter:Bool = !_server.disableBridgeAdapter.locked;
+            _cbDisableBridgeAdapter.selected = _server.disableBridgeAdapter.value;
+            _cbDisableBridgeAdapter.enabled = canChangeBridgeAdapter;
+            _cbDisableBridgeAdapter.update();
+            _cbDisableBridgeAdapter.validateNow();
+            _cbDisableBridgeAdapter.invalidate();
 
-        var canChangeNetworkValues:Bool = !_server.disableBridgeAdapter.locked && !_server.disableBridgeAdapter.value;
-        _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.networkBridge.locked;
-        _cbDHCP.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
-        _inputNetworkIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
-        _inputGatewayIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
-        _inputNetmaskIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
-        _inputNameServer.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
-        _inputNameServer2.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+            var canChangeNetworkValues:Bool = !_server.disableBridgeAdapter.locked && !_server.disableBridgeAdapter.value;
+            _dropdownNetworkInterface.enabled = canChangeNetworkValues && !_server.networkBridge.locked;
+            _cbDHCP.enabled = canChangeNetworkValues && !_server.dhcp4.locked;
+            _inputNetworkIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+            _inputGatewayIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+            _inputNetmaskIP.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+            _inputNameServer.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+            _inputNameServer2.enabled = canChangeNetworkValues && !_server.dhcp4.locked && !_server.dhcp4.value;
+        }
     }
 
     function _cbDHCP_Or_cbDisableBridgeAdapterChanged( ?e:Event ) {
@@ -527,6 +567,73 @@ class AdvancedConfigPage extends Page {
         evt.server = _server;
         this.dispatchEvent( evt );
 
+    }
+    
+    /**
+     * Update the read-only state of all form elements
+     */
+    private function updateReadOnlyState() {
+        if (_form == null || _server == null) return;
+        
+        // Show/hide read-only banner
+        if (_readOnlyLayout != null) {
+            _readOnlyLayout.visible = _readOnlyLayout.includeInLayout = _readOnly;
+        }
+        
+        // Apply read-only state to form elements
+        if (_readOnly) {
+            // Disable all form inputs in read-only mode
+            if (_dropdownNetworkInterface != null) _dropdownNetworkInterface.enabled = false;
+            if (_cbDHCP != null) _cbDHCP.enabled = false;
+            if (_cbDisableBridgeAdapter != null) _cbDisableBridgeAdapter.enabled = false;
+            if (_cbOpenBrowser != null) _cbOpenBrowser.enabled = false;
+            if (_inputNetworkIP != null) _inputNetworkIP.enabled = false;
+            if (_inputGatewayIP != null) _inputGatewayIP.enabled = false;
+            if (_inputNetmaskIP != null) _inputNetmaskIP.enabled = false;
+            if (_inputNameServer != null) _inputNameServer.enabled = false;
+            if (_inputNameServer2 != null) _inputNameServer2.enabled = false;
+            if (_inputAlertEmail != null) _inputAlertEmail.enabled = false;
+            if (_inputVagrantPassword != null) _inputVagrantPassword.enabled = false;
+            if (_stepperCPUs != null) _stepperCPUs.enabled = false;
+            if (_stepperRAM != null) _stepperRAM.enabled = false;
+            if (_buttonGeneratePassword != null) _buttonGeneratePassword.enabled = false;
+            if (_buttonTogglePassword != null) _buttonTogglePassword.enabled = false;
+            
+            // Hide save button and change cancel to "Close" - with safety checks
+            if (_buttonSave != null) {
+                try {
+                    _buttonSave.visible = _buttonSave.includeInLayout = false;
+                } catch (e:Dynamic) {
+                    // Ignore button visibility errors during initialization
+                }
+            }
+            if (_buttonCancel != null) {
+                try {
+                    _buttonCancel.text = "Close";
+                } catch (e:Dynamic) {
+                    // Ignore button text errors during initialization
+                }
+            }
+        } else {
+            // Re-enable form elements based on their normal logic when not in read-only mode
+            _updateForm(); // This will apply the normal enabled/disabled logic
+            
+            // Show save button and restore cancel text - with safety checks
+            if (_buttonSave != null) {
+                try {
+                    _buttonSave.visible = _buttonSave.includeInLayout = true;
+                } catch (e:Dynamic) {
+                    // Ignore button visibility errors during initialization
+                }
+            }
+            if (_buttonCancel != null) {
+                try {
+                    _buttonCancel.text = LanguageManager.getInstance().getString('serveradvancedconfigpage.form.buttons.cancel');
+                } catch (e:Dynamic) {
+                    // Ignore button text errors during initialization
+                }
+            }
+        }
     }
     
 }

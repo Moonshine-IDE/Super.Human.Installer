@@ -420,6 +420,15 @@ class ServerItem extends LayoutGroupItemRenderer {
         var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CONFIGURE_SERVER );
         event.provisionerType = _server.provisioner.type;
         event.server = _server;
+        
+        // Set readOnly flag if server is in an active state
+        switch ( _server.status.value ) {
+            case ServerStatus.Start( _ ) | ServerStatus.Running( _ ) | ServerStatus.Initializing | ServerStatus.Provisioning:
+                event.readOnly = true;
+            default:
+                event.readOnly = false;
+        }
+        
         this.dispatchEvent( event );
 
     }
@@ -773,6 +782,8 @@ class ServerItem extends LayoutGroupItemRenderer {
             		_buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                     // Show the stop button during provisioning
                     _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
+                    // Show configure button in read-only mode during startup
+                    _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                     
                 if ( provisionedBefore ) {
 
@@ -789,6 +800,8 @@ class ServerItem extends LayoutGroupItemRenderer {
                 } 
 
             case ServerStatus.Initializing:
+                // Show configure button in read-only mode during initialization
+                _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.initializing' );
 
             case ServerStatus.Running( hasError ):
@@ -799,6 +812,8 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
                 _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = true;
+                // Show configure button in read-only mode while running
+                _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
 
                 var ipAddress:String = "";
                 var provisionerVersion:String = "";
@@ -867,6 +882,8 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.ready' );
 
             case ServerStatus.Provisioning:
+                // Show configure button in read-only mode during provisioning
+                _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.provisioning' );
 
             case ServerStatus.RSyncing:

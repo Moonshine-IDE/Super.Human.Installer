@@ -830,6 +830,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		} else {
 			// Use the standard advanced config page for built-in provisioners
 			_advancedConfigPage.setServer(server);
+			_advancedConfigPage.setReadOnly(e.readOnly);
 			_advancedConfigPage.updateContent();
 			this.selectedPageId = PAGE_CONFIG_ADVANCED;
 		}
@@ -841,7 +842,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		// Get the actual class name of the provisioner to determine its type
 		var provisionerClassName = Type.getClassName(Type.getClass(e.server.provisioner));
-		Logger.info('${this}: Configure server with provisioner class: ${provisionerClassName}, type: ${provisionerType}');
+		Logger.info('${this}: Configure server with provisioner class: ${provisionerClassName}, type: ${provisionerType}, readOnly: ${e.readOnly}');
 		
 		// Check if this is a standard provisioner by class name first (most reliable)
 		var isStandardProvisioner = (provisionerClassName == "superhuman.server.provisioners.StandaloneProvisioner" || 
@@ -861,14 +862,14 @@ class SuperHumanInstaller extends GenesisApplication {
 		
 		if (isCustomProvisioner) {
 			// For custom provisioners, use the dynamic config page
-			_showConfigureCustomServer(e.server);
+			_showConfigureCustomServer(e.server, e.readOnly);
 		} else {
 			// For built-in provisioner types, use the standard config pages
 			switch (provisionerType) {
 				case ProvisionerType.AdditionalProvisioner:
-					_showConfigureAdditionalServer(cast(e.server, AdditionalServer));
+					_showConfigureAdditionalServer(cast(e.server, AdditionalServer), e.readOnly);
 				default:
-					_showConfigureServer(e.server);
+					_showConfigureServer(e.server, e.readOnly);
 			}
 		}
 	}
@@ -876,8 +877,9 @@ class SuperHumanInstaller extends GenesisApplication {
 	/**
 	 * Show the dynamic configuration page for custom provisioners
 	 * @param server The server to configure
+	 * @param readOnly Whether to show in read-only mode
 	 */
-	function _showConfigureCustomServer(server:Server) {
+	function _showConfigureCustomServer(server:Server, readOnly:Bool = false) {
 		// Initialize the dynamic config page if it doesn't exist
 		if (_dynamicConfigPage == null) {
 			_dynamicConfigPage = new DynamicConfigPage();
@@ -952,17 +954,19 @@ class SuperHumanInstaller extends GenesisApplication {
 		this.selectedPageId = "page-dynamic-config";
 	}
 
-	function _showConfigureServer( server:Server ) {
+	function _showConfigureServer( server:Server, readOnly:Bool = false ) {
 
 		_configPage.setServer( server );
+		_configPage.setReadOnly( readOnly );
 		_configPage.updateContent( true );
 		this.selectedPageId = PAGE_CONFIG;
 
 	}
 
-	function _showConfigureAdditionalServer( server:AdditionalServer ) {
+	function _showConfigureAdditionalServer( server:AdditionalServer, readOnly:Bool = false ) {
 
 		_additionalServerPage.setServer( server );
+		// Note: AdditionalServerPage will need read-only support added separately
 		_additionalServerPage.updateContent( true );
 		this.selectedPageId = PAGE_ADDITIONAL_SERVER;
 
@@ -1976,6 +1980,9 @@ class SuperHumanInstaller extends GenesisApplication {
 			// Normal destroy operation, not part of server deletion
 			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdestroyed'));
 			_saveConfig();
+			
+			// Refresh VM info to update counts in SystemInfoBox after VM destruction
+			ServerManager.getInstance().refreshVMInfo( true, true );
 		}
 	}
 
@@ -2094,6 +2101,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		ToastManager.getInstance().showToast( LanguageManager.getInstance().getString( 'toast.serverdeleted' ) );
 		_saveConfig();
+		
+		// Refresh VM info to update counts in SystemInfoBox
+		ServerManager.getInstance().refreshVMInfo( true, true );
 	}
 
 	function _createServer( e:SuperHumanApplicationEvent ) {

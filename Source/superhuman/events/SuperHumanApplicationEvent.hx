@@ -111,6 +111,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public var url:String;
     public var importSuccess:Bool = false; // Added for async import
     public var importMessage:String = ""; // Added for async import
+    public var readOnly:Bool = false; // Added for read-only config viewing
     
     public function new( type:String ) {
 
