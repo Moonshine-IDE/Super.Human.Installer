@@ -88,6 +88,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
             #end
@@ -124,6 +125,7 @@ class ServerList extends ListView {
             item.removeEventListener( SuperHumanApplicationEvent.SYNC_SERVER, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent);
+            item.removeEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _forwardEvent);
             
             #if debug
             item.removeEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
@@ -138,6 +140,7 @@ class ServerList extends ListView {
     }
 
     function _forwardEvent( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Forwarding event ${e.type} to parent component');
         this.dispatchEvent( e );
     }
 
@@ -168,7 +171,8 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonOpenDir:GenesisButton;      
     var _buttonOpenTerminal:GenesisButton;
     var _buttonDelete:GenesisButton;  
-    var _buttonFtp:GenesisButton;    
+    var _buttonFtp:GenesisButton;
+    var _buttonVMDetails:GenesisButton;
            
     var _buttonConfigure:GenesisButton;
 
@@ -361,6 +365,16 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonFtp.toolTip = LanguageManager.getInstance().getString( 'serverpage.server.ftp' );
         _buttonFtp.addEventListener( TriggerEvent.TRIGGER, _buttonFtpTriggered );
         buttonGroup.addChild( _buttonFtp );
+
+        _buttonVMDetails = new GenesisButton();
+        _buttonVMDetails.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
+        _buttonVMDetails.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_HELP );
+        _buttonVMDetails.width = CONTROL_BUTTON_WIDTH;
+        _buttonVMDetails.height = CONTROL_BUTTON_HEIGHT;
+        _buttonVMDetails.enabled = false;
+        _buttonVMDetails.toolTip = "View VM Details";
+        _buttonVMDetails.addEventListener( TriggerEvent.TRIGGER, _buttonVMDetailsTriggered );
+        buttonGroup.addChild( _buttonVMDetails );
         
         var spacer = new LayoutGroup();
         		spacer.layoutData = new HorizontalLayoutData( 100 );
@@ -562,6 +576,20 @@ class ServerItem extends LayoutGroupItemRenderer {
 
     }
 
+    function _buttonVMDetailsTriggered( e:TriggerEvent ) {
+
+        Logger.info('${this}: VM Details button clicked for server ${_server.id}');
+        Logger.info('${this}: Server has VM: ${_server.vmExistsInVirtualBox()}');
+        
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.OPEN_VM_DETAILS );
+        event.provisionerType = _server.provisioner.type;
+        event.server = _server;
+        
+        Logger.info('${this}: Dispatching OPEN_VM_DETAILS event for server ${_server.id}');
+        this.dispatchEvent( event );
+
+    }
+
     function _copyToClipboard( e:SuperHumanApplicationEvent ) {
 
         e.provisionerType = _server.provisioner.type;
@@ -755,6 +783,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = false;
         _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = false;
         _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
+        _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = false;
         _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unavailable' );
         _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = false;
 
@@ -772,6 +801,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
+                _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
@@ -812,6 +842,12 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonSSH.enabled = _buttonSSH.includeInLayout = _buttonSSH.visible = true;
                 _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
                 _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = true;
+                
+                var vmExists = _server.vmExistsInVirtualBox();
+                Logger.info('${this}: Server ${_server.id} in Running state - VM exists: ${vmExists}');
+                _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = vmExists;
+                Logger.info('${this}: VM Details button for server ${_server.id} - visible: ${_buttonVMDetails.visible}, enabled: ${_buttonVMDetails.enabled}');
+                
                 // Show configure button in read-only mode while running
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
 
@@ -884,6 +920,7 @@ class ServerItem extends LayoutGroupItemRenderer {
             case ServerStatus.Provisioning:
                 // Show configure button in read-only mode during provisioning
                 _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
+                _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.provisioning' );
 
             case ServerStatus.RSyncing:
@@ -897,11 +934,13 @@ class ServerItem extends LayoutGroupItemRenderer {
 
             case ServerStatus.Aborted:
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
+                _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.aborted' );
 
             case ServerStatus.Suspended:
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
                 _buttonStart.visible = _buttonStart.includeInLayout = _buttonStart.enabled = true;
+                _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.suspended' );
 
             case ServerStatus.Suspending:

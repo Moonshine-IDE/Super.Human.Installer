@@ -86,6 +86,7 @@ import superhuman.components.LoadingPage;
 import superhuman.components.RolePage;
 import superhuman.components.ServerPage;
 import superhuman.components.SettingsPage;
+import superhuman.components.VMDetailsPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
@@ -135,6 +136,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	static public final PAGE_SETUP_APPLICATIONS = "page-setup-applications";
 	static public final PAGE_PROVISIONER_IMPORT = "page-provisioner-import";
 	static public final PAGE_HASH_MANAGER = "page-hash-manager";
+	static public final PAGE_VM_DETAILS = "page-vm-details";
 	
 	static var _instance:SuperHumanInstaller;
 
@@ -176,6 +178,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _secretsPage:SecretsPage;
 	var _provisionerImportPage:ProvisionerManagementPage;
 	var _hashManagerPage:HashManagerPage;
+	var _vmDetailsPage:VMDetailsPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
 	var _serviceTypesCollection:Array<ServiceTypeData>;
@@ -476,6 +479,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.RECHECK_PREREQUISITES, _recheckPrerequisites );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _openVMDetails );
 
 		this.addPage( _serverPage, PAGE_SERVER );
 
@@ -559,6 +563,12 @@ class SuperHumanInstaller extends GenesisApplication {
 		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.SAVE_APP_CONFIGURATION, _saveAppConfiguration );
 		_hashManagerPage.addEventListener( SuperHumanApplicationEvent.OPEN_FILE_CACHE_DIRECTORY, _openFileCacheDirectory );
 		this.addPage( _hashManagerPage, PAGE_HASH_MANAGER );
+		
+		_vmDetailsPage = new VMDetailsPage();
+		_vmDetailsPage.addEventListener( SuperHumanApplicationEvent.CANCEL_PAGE, _closeVMDetailsPage );
+		_vmDetailsPage.addEventListener( SuperHumanApplicationEvent.COPY_TO_CLIPBOARD, _copyToClipboard );
+		_vmDetailsPage.addEventListener( SuperHumanApplicationEvent.OPEN_VIRTUALBOX_GUI, _openVirtualBoxGUI );
+		this.addPage( _vmDetailsPage, PAGE_VM_DETAILS );
 		
 		_navigator.validateNow();
 		this.selectedPageId = PAGE_LOADING;
@@ -1128,6 +1138,42 @@ class SuperHumanInstaller extends GenesisApplication {
         Logger.info('${this}: Opening file cache directory: ${cacheDir}');
         Shell.getInstance().open([cacheDir]);
         ToastManager.getInstance().showToast("Opening cache directory");
+    }
+    
+    /**
+     * Navigate to the VM details page
+     * @param e The event containing the server to show details for
+     */
+    function _openVMDetails( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: _openVMDetails called for server ${e.server.id}');
+        Logger.info('${this}: Server VM exists: ${e.server.vmExistsInVirtualBox()}');
+        Logger.info('${this}: VM Details page exists: ${_vmDetailsPage != null}');
+        
+        // Verify that the server has a VirtualBox VM
+        if (!e.server.vmExistsInVirtualBox()) {
+            Logger.warning('${this}: Cannot show VM details - no VirtualBox VM exists for server ${e.server.id}');
+            ToastManager.getInstance().showToast("No VirtualBox VM found for this server");
+            return;
+        }
+        
+        Logger.info('${this}: Setting server for VM details page');
+        // Set the server for the VM details page
+        _vmDetailsPage.setServer(e.server);
+        
+        Logger.info('${this}: Navigating to VM details page with ID: ${PAGE_VM_DETAILS}');
+        // Navigate to the VM details page
+        this.selectedPageId = PAGE_VM_DETAILS;
+        Logger.info('${this}: Navigation complete, selectedPageId is now: ${this.selectedPageId}');
+    }
+    
+    /**
+     * Close the VM details page
+     * @param e The event
+     */
+    function _closeVMDetailsPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Closing VM details page');
+        // Return to server page
+        this.selectedPageId = PAGE_SERVER;
     }
 
 	function _saveAppConfiguration( e:SuperHumanApplicationEvent ) {

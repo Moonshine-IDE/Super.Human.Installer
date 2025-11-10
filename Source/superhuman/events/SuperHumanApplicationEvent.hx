@@ -102,6 +102,7 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final DOWNLOAD_FILE_COMPLETED:String = "downloadFileCompleted";
     public static final DOWNLOAD_FILE_ERROR:String = "downloadFileError";
     public static final REFRESH_HASH_MANAGER:String = "refreshHashManager";
+    public static final OPEN_VM_DETAILS:String = "openVMDetails";
 
     public var console:Console;
     public var data:String;
