@@ -33,6 +33,7 @@ package superhuman.server;
 import superhuman.server.provisioners.AbstractProvisioner;
 import superhuman.server.provisioners.ProvisionerType;
 import superhuman.application.ApplicationData;
+import superhuman.events.SuperHumanApplicationEvent;
 import prominic.sys.io.Executor;
 import genesis.application.managers.LanguageManager;
 import haxe.Json;
@@ -1512,6 +1513,11 @@ class Server {
         }
 
         this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
+        
+        // Update global VM counts in SystemInfoBox immediately after VM stop
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+        SuperHumanInstaller.getInstance().dispatchEvent(evt);
+        
         refreshVirtualBoxInfo();
     }
 
@@ -1624,6 +1630,10 @@ class Server {
                     this._status.value = ServerStatus.Unknown;
                     this._busy.value = false;
                     
+                    // Update global VM counts immediately
+                    var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+                    SuperHumanInstaller.getInstance().dispatchEvent(evt);
+                    
                     // Try to refresh VirtualBox info to recover
                     if (this._combinedVirtualMachine != null && 
                         this._combinedVirtualMachine.value != null && 
@@ -1669,6 +1679,10 @@ class Server {
                     Logger.error('${this}: Error deleting provisioning proof file: ${e}');
                 }
             }
+
+        // Update global VM counts immediately after manual destroy
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+        SuperHumanInstaller.getInstance().dispatchEvent(evt);
 
             // Update server state based on current status - with safe null checks
             try {
@@ -1732,6 +1746,10 @@ class Server {
         if ( machine.virtualBoxId != this._combinedVirtualMachine.value.virtualBoxMachine.virtualBoxId ) return;
 
         VirtualBox.getInstance().onUnregisterVM.remove( _vmUnregistered );
+
+        // Update global VM counts in SystemInfoBox immediately after VM unregistration
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+        SuperHumanInstaller.getInstance().dispatchEvent(evt);
 
         refreshVirtualBoxInfo();
 
@@ -1886,6 +1904,11 @@ class Server {
     function _vagrantUpStarted( executor:AbstractExecutor ) {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.vagrantupstarted' ) );
+        
+        // Refresh VM info to update counts in SystemInfoBox when VM starts provisioning
+        // This ensures the bottom of the server list page shows the new VM immediately
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+        SuperHumanInstaller.getInstance().dispatchEvent(evt);
 
     }
 
@@ -1965,7 +1988,8 @@ class Server {
             _provisioner.stopFileWatcher();
 
             // Refresh VM info to update counts in SystemInfoBox after server startup
-            ServerManager.getInstance().refreshVMInfo(true, true);
+            var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+            SuperHumanInstaller.getInstance().dispatchEvent(evt);
 
             // Refreshing VirtualBox info
             this._currentAction = ServerAction.GetStatus( false );
@@ -2060,6 +2084,11 @@ class Server {
         this._stopVagrantUpElapsedTimer();
 
         this._currentAction = ServerAction.GetStatus( false );
+        
+        // Update global VM counts in SystemInfoBox immediately after auto-delete
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+        SuperHumanInstaller.getInstance().dispatchEvent(evt);
+        
         refreshVirtualBoxInfo();
 
     }
@@ -2078,6 +2107,11 @@ class Server {
         this._stopVagrantUpElapsedTimer();
 
         this._currentAction = ServerAction.GetStatus( false );
+        
+        // Update global VM counts in SystemInfoBox immediately after provisioning failure halt
+        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+        SuperHumanInstaller.getInstance().dispatchEvent(evt);
+        
         refreshVirtualBoxInfo();
 
     }
@@ -2146,6 +2180,13 @@ class Server {
         _setServerStatus();
 
         this._busy.value = false;
+        
+        // If this refresh was triggered by auto-delete, update VM counts in SystemInfoBox
+        // This ensures the bottom of the server list page shows correct VM counts
+        if (this._currentAction != null && this._currentAction.match(ServerAction.GetStatus(false))) {
+            var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+            SuperHumanInstaller.getInstance().dispatchEvent(evt);
+        }
 
     }
 

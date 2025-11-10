@@ -1155,6 +1155,9 @@ class SuperHumanInstaller extends GenesisApplication {
 		_config.preferences.windowwidth = this._window.width;
 		_config.preferences.windowheight = this._window.height;
 
+		// Stop VM status polling before exit
+		ServerManager.getInstance().stopVMStatusPolling();
+
 		_saveConfig();
 
 		_canExit = false;
@@ -1909,6 +1912,9 @@ class SuperHumanInstaller extends GenesisApplication {
 
 				_loadingPage.stopProgressIndicator();
 				this.selectedPageId = PAGE_SERVER;
+				
+				// Start periodic VM status polling to detect external shutdowns
+				ServerManager.getInstance().startVMStatusPolling();
 
 			}
 
@@ -2068,8 +2074,9 @@ class SuperHumanInstaller extends GenesisApplication {
 			ToastManager.getInstance().showToast(LanguageManager.getInstance().getString('toast.serverdestroyed'));
 			_saveConfig();
 			
-			// Refresh VM info to update counts in SystemInfoBox after VM destruction
-			ServerManager.getInstance().refreshVMInfo( true, true );
+		// Refresh VM info to update counts in SystemInfoBox after VM destruction
+		var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+		this.dispatchEvent(evt);
 		}
 	}
 
@@ -2190,7 +2197,8 @@ class SuperHumanInstaller extends GenesisApplication {
 		_saveConfig();
 		
 		// Refresh VM info to update counts in SystemInfoBox
-		ServerManager.getInstance().refreshVMInfo( true, true );
+		var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
+		this.dispatchEvent(evt);
 	}
 
 	function _createServer( e:SuperHumanApplicationEvent ) {
@@ -2436,6 +2444,18 @@ class SuperHumanInstaller extends GenesisApplication {
 		// ENHANCED FEATURE: Also refresh app versions to detect updates during runtime
 		_refreshAppVersions();
 
+	}
+
+	/**
+	 * Public method to trigger system info refresh - used by periodic polling
+	 * This does the same thing as _refreshSystemInfo but can be called directly
+	 */
+	public function refreshSystemInfoFromPolling() {
+		ServerManager.getInstance().onVMInfoRefreshed.add( _onVMInfoRefreshed );
+		ServerManager.getInstance().refreshVMInfo( true, true );
+		
+		// Also refresh app versions to detect updates during runtime
+		_refreshAppVersions();
 	}
 
 	/**

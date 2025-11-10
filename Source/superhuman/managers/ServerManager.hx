@@ -32,6 +32,7 @@ package superhuman.managers;
 
 import superhuman.server.AdditionalServer;
 import feathers.data.ArrayCollection;
+import superhuman.events.SuperHumanApplicationEvent;
 import champaign.core.logging.Logger;
 import haxe.io.Path;
 import prominic.sys.applications.hashicorp.Vagrant;
@@ -59,6 +60,8 @@ class ServerManager {
     var _onVMInfoRefreshed:List<()->Void>;
     var _serverRootDirectory:String;
     var _servers:ArrayCollection<Server>;
+    var _vmStatusPollTimer:haxe.Timer;
+    var _vmStatusPollingEnabled:Bool = false;
 
     public var onVMInfoRefreshed( get, never ):List<()->Void>;
     function get_onVMInfoRefreshed() return _onVMInfoRefreshed;
@@ -317,6 +320,46 @@ class ServerManager {
 		ExecutorManager.getInstance().set( ServerManagerExecutorContext.RefreshVMInfo, pe );
 		pe.execute();
 
+    }
+
+    /**
+     * Start periodic VM status polling to detect external shutdowns
+     * Polls every 60 seconds for VMs that are running or provisioned
+     */
+    public function startVMStatusPolling() {
+        if (_vmStatusPollingEnabled) return; // Already running
+        
+        Logger.info('${this}: Starting periodic VM status polling (60 second interval)');
+        
+        _vmStatusPollingEnabled = true;
+        _vmStatusPollTimer = new haxe.Timer(60000); // 60 seconds
+        _vmStatusPollTimer.run = _pollVMStatus;
+    }
+    
+    /**
+     * Stop periodic VM status polling
+     */
+    public function stopVMStatusPolling() {
+        if (!_vmStatusPollingEnabled) return; // Already stopped
+        
+        Logger.info('${this}: Stopping periodic VM status polling');
+        
+        _vmStatusPollingEnabled = false;
+        if (_vmStatusPollTimer != null) {
+            _vmStatusPollTimer.stop();
+            _vmStatusPollTimer = null;
+        }
+    }
+    
+    /**
+     * Poll VM status to discover and monitor VMs
+     * Called automatically every 60 seconds to detect external shutdowns and discover new VMs
+     */
+    function _pollVMStatus() {
+        // Call the public method that does exactly the same as manual refresh
+        // This ensures both data refresh AND UI updates work correctly
+        Logger.verbose('${this}: Running periodic VM status check');
+        SuperHumanInstaller.getInstance().refreshSystemInfoFromPolling();
     }
 
     public function toString():String {

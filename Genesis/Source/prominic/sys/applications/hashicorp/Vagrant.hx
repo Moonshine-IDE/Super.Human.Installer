@@ -642,7 +642,7 @@ class Vagrant extends AbstractApp {
         _mutexGlobalStatusStop.acquire();
 
         if ( _metadata == null ) _metadata = { machineCount: 0 };
-        if ( _machines == null ) _machines = [];
+        _machines = []; // Always clear stale data before processing new results
 
         if ( executor.exitCode == 0 ) {
 
