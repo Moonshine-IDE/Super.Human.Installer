@@ -1131,49 +1131,56 @@ class Server {
         // Perform validation
         var isValid = this.isValid();
         if (!isValid) {
-            Logger.warning('${this}: Server validation failed, cannot save Hosts.yml file');
-            
-            if (console != null) {
-                console.appendText("Server validation failed. Please check the following:", true);
+            // Only show validation warnings for non-provisional servers
+            // Provisional servers are expected to be invalid during setup process
+            if (!this.provisional) {
+                Logger.warning('${this}: Server validation failed, cannot save Hosts.yml file');
                 
-                // Log specific validation issues
-                if (!Vagrant.getInstance().exists)
-                    console.appendText("- Vagrant is not installed", true);
+                if (console != null) {
+                    console.appendText("Server validation failed. Please check the following:", true);
                     
-                if (!VirtualBox.getInstance().exists)
-                    console.appendText("- VirtualBox is not installed", true);
+                    // Log specific validation issues
+                    if (!Vagrant.getInstance().exists)
+                        console.appendText("- Vagrant is not installed", true);
+                        
+                    if (!VirtualBox.getInstance().exists)
+                        console.appendText("- VirtualBox is not installed", true);
+                        
+                    if (!this.hostname.isValid())
+                        console.appendText("- Invalid hostname", true);
+                        
+                    // Only show organization validation for standard provisioners
+                    if (!isCustomProvisioner && !this.organization.isValid())
+                        console.appendText("- Invalid organization", true);
+                        
+                    if (this.memory.value < 4)
+                        console.appendText("- Memory allocation less than 4GB", true);
+                        
+                    if (this.numCPUs.value < 1)
+                        console.appendText("- CPU count insufficient", true);
+                        
+                    var isNetworkValid = this.dhcp4.value || (
+                        this.networkBridge.isValid() &&
+                        this.networkAddress.isValid() &&
+                        this.networkGateway.isValid() &&
+                        this.networkNetmask.isValid() &&
+                        this.nameServer1.isValid() &&
+                        this.nameServer2.isValid()
+                    );
                     
-                if (!this.hostname.isValid())
-                    console.appendText("- Invalid hostname", true);
-                    
-                // Only show organization validation for standard provisioners
-                if (!isCustomProvisioner && !this.organization.isValid())
-                    console.appendText("- Invalid organization", true);
-                    
-                if (this.memory.value < 4)
-                    console.appendText("- Memory allocation less than 4GB", true);
-                    
-                if (this.numCPUs.value < 1)
-                    console.appendText("- CPU count insufficient", true);
-                    
-                var isNetworkValid = this.dhcp4.value || (
-                    this.networkBridge.isValid() &&
-                    this.networkAddress.isValid() &&
-                    this.networkGateway.isValid() &&
-                    this.networkNetmask.isValid() &&
-                    this.nameServer1.isValid() &&
-                    this.nameServer2.isValid()
-                );
-                
-                if (!isNetworkValid)
-                    console.appendText("- Network configuration invalid", true);
-                    
-                // Only show SafeID validation for standard provisioners
-                if (!isCustomProvisioner && !this.safeIdExists())
-                    console.appendText("- SafeID file not found", true);
-                    
-                if (!this.areRolesValid())
-                    console.appendText("- Role configuration invalid", true);
+                    if (!isNetworkValid)
+                        console.appendText("- Network configuration invalid", true);
+                        
+                    // Only show SafeID validation for standard provisioners
+                    if (!isCustomProvisioner && !this.safeIdExists())
+                        console.appendText("- SafeID file not found", true);
+                        
+                    if (!this.areRolesValid())
+                        console.appendText("- Role configuration invalid", true);
+                }
+            } else {
+                // For provisional servers, just log debug info without scary warnings
+                Logger.debug('${this}: Provisional server validation deferred - will validate after setup completes');
             }
             
             return;

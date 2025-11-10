@@ -143,7 +143,12 @@ class ServerManager {
             // IMPORTANT: Force provisional status since cloned data comes from non-provisional server
             // The original server's data doesn't carry provisional flag, so we must set it manually
             clonedServer.markAsProvisional();
-            Logger.info('${this}: Cloned server ${originalServer.id} to new server ${clonedServer.id} and marked as provisional');
+            
+            // Reset console state to ensure cloned server doesn't inherit original's console output
+            // The console reference should be null for a fresh server until it actually runs
+            clonedServer.console = null;
+            
+            Logger.info('${this}: Cloned server ${originalServer.id} to new server ${clonedServer.id} and reset console state');
         }
         
         return clonedServer;
