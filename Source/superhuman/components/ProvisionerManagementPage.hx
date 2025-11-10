@@ -57,6 +57,7 @@ import lime.ui.FileDialog;
 import lime.ui.FileDialogType;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.managers.ProvisionerManager;
+import superhuman.server.provisioners.ProvisionerType;
 import feathers.controls.ToggleButton;
 import feathers.utils.DisplayObjectRecycler;
 import openfl.events.Event;
@@ -66,9 +67,9 @@ import prominic.sys.io.AbstractExecutor; // Added for async import
 import genesis.application.components.ProgressIndicator; // Added for spinner
 
 /**
- * A page that provides the user with different methods to import provisioners
+ * A page that provides the user with different methods to import and manage provisioners
  */
-class ProvisionerImportPage extends Page {
+class ProvisionerManagementPage extends Page {
 
     // Constants
     final _width:Float = GenesisApplicationTheme.GRID * 140;
@@ -77,6 +78,7 @@ class ProvisionerImportPage extends Page {
     static final TAB_COLLECTION:Int = 0;
     static final TAB_VERSION:Int = 1;
     static final TAB_GITHUB:Int = 2;
+    static final TAB_MANAGE:Int = 3;
 
     // UI Components
     var _titleGroup:LayoutGroup;
@@ -101,6 +103,10 @@ class ProvisionerImportPage extends Page {
     var _githubBranchInput:GenesisFormTextInput;
     var _githubTokenDropdown:GenesisFormPupUpListView;
     var _githubUseGit:Check;
+    
+    // Manage components
+    var _manageForm:GenesisForm;
+    var _manageProvisionersList:LayoutGroup;
     
     // Common components
     var _buttonGroup:LayoutGroup;
@@ -147,7 +153,7 @@ class ProvisionerImportPage extends Page {
 
         // Title label
         _label = new Label();
-        _label.text = LanguageManager.getInstance().getString("provisionerimportpage.title");
+        _label.text = LanguageManager.getInstance().getString("provisionermanagementpage.title");
         _label.variant = GenesisApplicationTheme.LABEL_LARGE;
         _label.layoutData = new HorizontalLayoutData(100);
         _titleGroup.addChild(_label);
@@ -164,9 +170,10 @@ class ProvisionerImportPage extends Page {
     private function _initializeTabBar() {
         _tabBar = new TabBar();
         _tabBar.dataProvider = new ArrayCollection([
-            { text: LanguageManager.getInstance().getString("provisionerimportpage.tabs.collection"), icon: null },
-            { text: LanguageManager.getInstance().getString("provisionerimportpage.tabs.version"), icon: null },
-            { text: LanguageManager.getInstance().getString("provisionerimportpage.tabs.github"), icon: null }
+            { text: LanguageManager.getInstance().getString("provisionermanagementpage.tabs.collection"), icon: null },
+            { text: LanguageManager.getInstance().getString("provisionermanagementpage.tabs.version"), icon: null },
+            { text: LanguageManager.getInstance().getString("provisionermanagementpage.tabs.github"), icon: null },
+            { text: LanguageManager.getInstance().getString("provisionermanagementpage.tabs.manage"), icon: null }
         ]);
         
         // Set the itemToText function to properly display tab text
@@ -271,7 +278,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.collection.description");
+        descLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.collection.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -282,7 +289,7 @@ class ProvisionerImportPage extends Page {
         
         // Path row
         var pathRow = new GenesisFormRow();
-        pathRow.text = LanguageManager.getInstance().getString("provisionerimportpage.collection.path");
+        pathRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.collection.path");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var label = cast(pathRow.getChildAt(0), feathers.core.FeathersControl);
@@ -296,12 +303,12 @@ class ProvisionerImportPage extends Page {
         pathLayout.verticalAlign = VerticalAlign.MIDDLE;
         pathContainer.layout = pathLayout;
         
-        _collectionPathInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.collection.placeholder"));
+        _collectionPathInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionermanagementpage.collection.placeholder"));
         _collectionPathInput.width = (_width * 0.8) - 150 - GenesisApplicationTheme.GRID * 17; // Reduced to give more space to browse button
         _collectionPathInput.enabled = false;
         
         _buttonBrowseCollection = new Button();
-        _buttonBrowseCollection.text = LanguageManager.getInstance().getString("provisionerimportpage.buttons.browse");
+        _buttonBrowseCollection.text = LanguageManager.getInstance().getString("provisionermanagementpage.buttons.browse");
         _buttonBrowseCollection.width = GenesisApplicationTheme.GRID * 15; // Increased width
         _buttonBrowseCollection.addEventListener(TriggerEvent.TRIGGER, _browseCollectionButtonTriggered);
         
@@ -337,7 +344,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.version.description");
+        descLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.version.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -348,7 +355,7 @@ class ProvisionerImportPage extends Page {
         
         // Path row
         var pathRow = new GenesisFormRow();
-        pathRow.text = LanguageManager.getInstance().getString("provisionerimportpage.version.path");
+        pathRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.version.path");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var label = cast(pathRow.getChildAt(0), feathers.core.FeathersControl);
@@ -362,12 +369,12 @@ class ProvisionerImportPage extends Page {
         pathLayout.verticalAlign = VerticalAlign.MIDDLE;
         pathContainer.layout = pathLayout;
         
-        _versionPathInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.version.placeholder"));
+        _versionPathInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionermanagementpage.version.placeholder"));
         _versionPathInput.width = (_width * 0.8) - 150 - GenesisApplicationTheme.GRID * 17; // Reduced to give more space to browse button
         _versionPathInput.enabled = false;
         
         _buttonBrowseVersion = new Button();
-        _buttonBrowseVersion.text = LanguageManager.getInstance().getString("provisionerimportpage.buttons.browse");
+        _buttonBrowseVersion.text = LanguageManager.getInstance().getString("provisionermanagementpage.buttons.browse");
         _buttonBrowseVersion.width = GenesisApplicationTheme.GRID * 15; // Increased width
         _buttonBrowseVersion.addEventListener(TriggerEvent.TRIGGER, _browseVersionButtonTriggered);
         
@@ -403,7 +410,7 @@ class ProvisionerImportPage extends Page {
         descContainer.layout = descLayout;
         
         var descLabel = new Label();
-        descLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.github.description");
+        descLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.description");
         descLabel.wordWrap = true;
         descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
         descLabel.width = _width * 0.70; // Explicitly set width to constrain text
@@ -414,7 +421,7 @@ class ProvisionerImportPage extends Page {
         
         // GitHub organization/user
         var orgRow = new GenesisFormRow();
-        orgRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.organization");
+        orgRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.organization");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var orgLabel = cast(orgRow.getChildAt(0), feathers.core.FeathersControl);
@@ -422,7 +429,7 @@ class ProvisionerImportPage extends Page {
         if (orgLabel != null) orgLabel.layoutData = new HorizontalLayoutData(20);
         if (orgContent != null) orgContent.layoutData = new HorizontalLayoutData(80);
         
-        _githubOrgInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.github.organizationPlaceholder"));
+        _githubOrgInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionermanagementpage.github.organizationPlaceholder"));
         // Set width to match the other input fields
         _githubOrgInput.width = (_width * 0.8) - 150;
         orgRow.content.addChild(_githubOrgInput);
@@ -430,7 +437,7 @@ class ProvisionerImportPage extends Page {
         
         // GitHub repository
         var repoRow = new GenesisFormRow();
-        repoRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.repository");
+        repoRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.repository");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var repoLabel = cast(repoRow.getChildAt(0), feathers.core.FeathersControl);
@@ -438,14 +445,14 @@ class ProvisionerImportPage extends Page {
         if (repoLabel != null) repoLabel.layoutData = new HorizontalLayoutData(20);
         if (repoContent != null) repoContent.layoutData = new HorizontalLayoutData(80);
         
-        _githubRepoInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionerimportpage.github.repositoryPlaceholder"));
+        _githubRepoInput = new GenesisFormTextInput("", LanguageManager.getInstance().getString("provisionermanagementpage.github.repositoryPlaceholder"));
         _githubRepoInput.width = (_width * 0.8) - 150;
         repoRow.content.addChild(_githubRepoInput);
         _githubForm.addChild(repoRow);
         
         // GitHub branch
         var branchRow = new GenesisFormRow();
-        branchRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.branch");
+        branchRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.branch");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var branchLabel = cast(branchRow.getChildAt(0), feathers.core.FeathersControl);
@@ -453,14 +460,14 @@ class ProvisionerImportPage extends Page {
         if (branchLabel != null) branchLabel.layoutData = new HorizontalLayoutData(20);
         if (branchContent != null) branchContent.layoutData = new HorizontalLayoutData(80);
         
-        _githubBranchInput = new GenesisFormTextInput("main", LanguageManager.getInstance().getString("provisionerimportpage.github.branchPlaceholder"));
+        _githubBranchInput = new GenesisFormTextInput("main", LanguageManager.getInstance().getString("provisionermanagementpage.github.branchPlaceholder"));
         _githubBranchInput.width = (_width * 0.8) - 150;
         branchRow.content.addChild(_githubBranchInput);
         _githubForm.addChild(branchRow);
         
         // GitHub token selection
         var tokenRow = new GenesisFormRow();
-        tokenRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.token");
+        tokenRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.token");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var tokenLabel = cast(tokenRow.getChildAt(0), feathers.core.FeathersControl);
@@ -487,7 +494,7 @@ class ProvisionerImportPage extends Page {
         
         // Download method toggle (similar to FileSyncSetting)
         var gitRow = new GenesisFormRow();
-        gitRow.text = LanguageManager.getInstance().getString("provisionerimportpage.github.downloadmethod");
+        gitRow.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.downloadmethod");
         
         // Adjust column widths for label/content ratio (20%/80%)
         var gitLabel = cast(gitRow.getChildAt(0), feathers.core.FeathersControl);
@@ -504,7 +511,7 @@ class ProvisionerImportPage extends Page {
         
         // HTTP label (left side)
         var httpLabel = new Label();
-        httpLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.github.http");
+        httpLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.http");
         httpLabel.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         
         // Create a styled toggle checkbox resembling the FileSyncSetting
@@ -512,7 +519,7 @@ class ProvisionerImportPage extends Page {
         
         // Git label (right side)
         var gitLabel = new Label();
-        gitLabel.text = LanguageManager.getInstance().getString("provisionerimportpage.github.gitclone");
+        gitLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.github.gitclone");
         gitLabel.variant = GenesisApplicationTheme.LABEL_DEFAULT;
         
         // Add components to toggle container
@@ -546,6 +553,7 @@ class ProvisionerImportPage extends Page {
         _initializeCollectionForm();
         _initializeVersionForm();
         _initializeGitHubForm();
+        _initializeManageForm();
         
         // Initialize the button group
         // Line separator
@@ -561,12 +569,12 @@ class ProvisionerImportPage extends Page {
         _buttonGroup.layout = buttonLayout;
         
         // Import button
-        _buttonImport = new GenesisFormButton(LanguageManager.getInstance().getString("provisionerimportpage.buttons.import"));
+        _buttonImport = new GenesisFormButton(LanguageManager.getInstance().getString("provisionermanagementpage.buttons.import"));
         _buttonImport.addEventListener(TriggerEvent.TRIGGER, _importButtonTriggered);
         _buttonImport.width = GenesisApplicationTheme.GRID * 20;
         
         // Cancel button
-        _buttonCancel = new GenesisFormButton(LanguageManager.getInstance().getString("provisionerimportpage.buttons.cancel"));
+        _buttonCancel = new GenesisFormButton(LanguageManager.getInstance().getString("provisionermanagementpage.buttons.cancel"));
         _buttonCancel.addEventListener(TriggerEvent.TRIGGER, _cancelButtonTriggered);
         _buttonCancel.width = GenesisApplicationTheme.GRID * 20;
         
@@ -649,6 +657,8 @@ class ProvisionerImportPage extends Page {
         _versionForm.includeInLayout = false;
         _githubForm.visible = false;
         _githubForm.includeInLayout = false;
+        _manageForm.visible = false;
+        _manageForm.includeInLayout = false;
         
         // Show the selected form
         switch (tabIndex) {
@@ -671,6 +681,14 @@ class ProvisionerImportPage extends Page {
                 _githubForm.visible = true;
                 _githubForm.includeInLayout = true;
                 _activeTabIndex = TAB_GITHUB;
+                
+            case TAB_MANAGE:
+                // Refresh the manage tab when switching to it
+                _refreshManageTab();
+                
+                _manageForm.visible = true;
+                _manageForm.includeInLayout = true;
+                _activeTabIndex = TAB_MANAGE;
         }
         
         // Update tab bar selection to match (in case this was called programmatically)
@@ -695,7 +713,7 @@ class ProvisionerImportPage extends Page {
             _fd = null;
         });
         
-        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, LanguageManager.getInstance().getString("provisionerimportpage.dialog.selectcollection"));
+        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, LanguageManager.getInstance().getString("provisionermanagementpage.dialog.selectcollection"));
     }
 
     /**
@@ -716,7 +734,7 @@ class ProvisionerImportPage extends Page {
             _fd = null;
         });
         
-        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, LanguageManager.getInstance().getString("provisionerimportpage.dialog.selectversion"));
+        _fd.browse(FileDialogType.OPEN_DIRECTORY, null, null, LanguageManager.getInstance().getString("provisionermanagementpage.dialog.selectversion"));
     }
 
     /**
@@ -759,7 +777,7 @@ class ProvisionerImportPage extends Page {
         var path = _collectionPathInput.text;
         
         if (path == null || StringTools.trim(path) == "") {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.selectcollection"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.selectcollection"));
             return;
         }
         
@@ -767,7 +785,7 @@ class ProvisionerImportPage extends Page {
         var success = ProvisionerManager.importProvisioner(path);
         
         if (success) {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.collectionimportsuccess"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.collectionimportsuccess"));
             
             // Dispatch event to notify the application that a provisioner was imported
             var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
@@ -776,7 +794,7 @@ class ProvisionerImportPage extends Page {
             // Close the page
             _closeImportPage();
         } else {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.collectionimportfail"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.collectionimportfail"));
         }
     }
 
@@ -787,7 +805,7 @@ class ProvisionerImportPage extends Page {
         var path = _versionPathInput.text;
         
         if (path == null || StringTools.trim(path) == "") {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.selectversion"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.selectversion"));
             return;
         }
         
@@ -795,7 +813,7 @@ class ProvisionerImportPage extends Page {
         var success = ProvisionerManager.importProvisionerVersion(path);
         
         if (success) {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.versionimportsuccess"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.versionimportsuccess"));
             
             // Dispatch event to notify the application that a provisioner was imported
             var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.IMPORT_PROVISIONER);
@@ -804,7 +822,7 @@ class ProvisionerImportPage extends Page {
             // Close the page
             _closeImportPage();
         } else {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.versionimportfail"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.versionimportfail"));
         }
     }
 
@@ -814,7 +832,7 @@ class ProvisionerImportPage extends Page {
     private function _importFromGitHub() {
         // Prevent multiple imports at once
         if (_isImporting) {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.importinprogress"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.importinprogress"));
             return;
         }
         
@@ -824,12 +842,12 @@ class ProvisionerImportPage extends Page {
         var useGit = _githubUseGit.selected;
         
         if (org == null || StringTools.trim(org) == "") {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.enterorganization"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.enterorganization"));
             return;
         }
         
         if (repo == null || StringTools.trim(repo) == "") {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.enterrepository"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.enterrepository"));
             return;
         }
         
@@ -840,7 +858,7 @@ class ProvisionerImportPage extends Page {
         
         // Only Git clone is supported for async currently
         if (!useGit) {
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.gitclonerequired"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.gitclonerequired"));
             return;
         }
         
@@ -859,7 +877,7 @@ class ProvisionerImportPage extends Page {
             _spinner.visible = true; // Show spinner
             _spinner.includeInLayout = true;
             _spinner.start(); // Start spinner animation
-            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionerimportpage.toast.startinggithubimport"));
+            ToastManager.getInstance().showToast(LanguageManager.getInstance().getString("provisionermanagementpage.toast.startinggithubimport"));
             
             // Execute the clone process
             executor.execute();
@@ -946,9 +964,242 @@ class ProvisionerImportPage extends Page {
     }
     
     /**
-     * Close the import page
+     * Initialize the manage form for listing and deleting provisioners
+     */
+    private function _initializeManageForm() {
+        _manageForm = new GenesisForm();
+        _manageForm.visible = false;
+        _manageForm.includeInLayout = false;
+        
+        // Description container
+        var descContainer = new LayoutGroup();
+        descContainer.width = _width * 0.90;
+        
+        var descLayout = new VerticalLayout();
+        descLayout.horizontalAlign = HorizontalAlign.LEFT;
+        descLayout.paddingTop = GenesisApplicationTheme.GRID;
+        descLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        descLayout.paddingLeft = GenesisApplicationTheme.GRID;
+        descLayout.paddingRight = GenesisApplicationTheme.GRID;
+        descContainer.layout = descLayout;
+        
+        var descLabel = new Label();
+        descLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.manage.description");
+        descLabel.wordWrap = true;
+        descLabel.textFormat = new TextFormat("_sans", 14, 0xFFFFFF);
+        descLabel.width = _width * 0.85;
+        descContainer.addChild(descLabel);
+        
+        _manageForm.addChild(descContainer);
+        
+        // Create provisioners list directly (no form row wrapper)
+        _manageProvisionersList = new LayoutGroup();
+        var listLayout = new VerticalLayout();
+        listLayout.gap = GenesisApplicationTheme.GRID;
+        listLayout.horizontalAlign = HorizontalAlign.LEFT;
+        listLayout.paddingLeft = GenesisApplicationTheme.GRID;
+        listLayout.paddingRight = GenesisApplicationTheme.GRID;
+        _manageProvisionersList.layout = listLayout;
+        _manageProvisionersList.width = _width * 0.90;
+        
+        _manageForm.addChild(_manageProvisionersList);
+        
+        _formContainer.addChild(_manageForm);
+    }
+    
+    /**
+     * Refresh the manage tab with current provisioner data
+     */
+    private function _refreshManageTab() {
+        // Clear existing provisioner list
+        _manageProvisionersList.removeChildren();
+        
+        // Get all custom provisioners (exclude built-in ones)
+        var allProvisioners = ProvisionerManager.getBundledProvisioners();
+        var customProvisioners = [];
+        
+        for (provisioner in allProvisioners) {
+            var provType = Std.string(provisioner.data.type);
+            if (provType != Std.string(ProvisionerType.StandaloneProvisioner) &&
+                provType != Std.string(ProvisionerType.AdditionalProvisioner) &&
+                provType != Std.string(ProvisionerType.Default)) {
+                customProvisioners.push(provisioner);
+            }
+        }
+        
+        if (customProvisioners.length == 0) {
+            // Show "no provisioners" message
+            var noProvisionersLabel = new Label();
+            noProvisionersLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.manage.noprovisioners");
+            noProvisionersLabel.wordWrap = true;
+            noProvisionersLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+            noProvisionersLabel.width = _width * 0.70;
+            _manageProvisionersList.addChild(noProvisionersLabel);
+            return;
+        }
+        
+        // Group provisioners by type to show each type with its versions
+        var provisionersByType = new Map<String, Array<superhuman.server.definitions.ProvisionerDefinition>>();
+        
+        for (provisioner in customProvisioners) {
+            var type = Std.string(provisioner.data.type);
+            if (!provisionersByType.exists(type)) {
+                provisionersByType.set(type, []);
+            }
+            provisionersByType.get(type).push(provisioner);
+        }
+        
+        // Create UI for each provisioner type
+        for (type in provisionersByType.keys()) {
+            var provisioners = provisionersByType.get(type);
+            
+            // Create container for this provisioner type
+            var typeContainer = new LayoutGroup();
+            var typeLayout = new VerticalLayout();
+            typeLayout.gap = GenesisApplicationTheme.GRID / 2;
+            typeLayout.paddingTop = GenesisApplicationTheme.GRID;
+            typeLayout.paddingBottom = GenesisApplicationTheme.GRID;
+            typeLayout.paddingLeft = GenesisApplicationTheme.GRID;
+            typeLayout.paddingRight = GenesisApplicationTheme.GRID;
+            typeContainer.layout = typeLayout;
+            typeContainer.width = _width * 0.70;
+            
+            // Create a background for this provisioner type
+            var typeBg = new RectangleSkin(FillStyle.SolidColor(0x333333));
+            typeBg.cornerRadius = GenesisApplicationTheme.GRID / 2;
+            typeBg.border = LineStyle.SolidColor(1, 0x444444, 0.3);
+            typeContainer.backgroundSkin = typeBg;
+            
+            // Get the first provisioner for metadata
+            var firstProvisioner = provisioners[0];
+            var metadata = firstProvisioner.metadata;
+            var displayName = metadata != null ? metadata.name : type;
+            var description = metadata != null ? metadata.description : "Custom provisioner";
+            
+            // Type header
+            var typeLabel = new Label();
+            typeLabel.text = displayName;
+            typeLabel.variant = GenesisApplicationTheme.LABEL_DEFAULT;
+            typeLabel.textFormat = new TextFormat("_sans", 16, 0xFFFFFF, true); // Bold
+            typeContainer.addChild(typeLabel);
+            
+            // Description
+            if (description != displayName) {
+                var descLabel = new Label();
+                descLabel.text = description;
+                descLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+                descLabel.wordWrap = true;
+                descLabel.width = _width * 0.60;
+                typeContainer.addChild(descLabel);
+            }
+            
+            // Check usage for this entire provisioner type
+            var usageCheck = ProvisionerManager.canDeleteProvisioner(type);
+            var canDelete = usageCheck.canDelete;
+            var serversUsing = usageCheck.serversUsing;
+            
+            // Usage information
+            var usageLabel = new Label();
+            if (serversUsing.length > 0) {
+                usageLabel.text = 'Used by ${serversUsing.length} server(s)';
+                usageLabel.variant = GenesisApplicationTheme.LABEL_ERROR;
+            } else {
+                usageLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.manage.nousage");
+                usageLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+            }
+            typeContainer.addChild(usageLabel);
+            
+            // Versions list
+            var versionsContainer = new LayoutGroup();
+            var versionsLayout = new VerticalLayout();
+            versionsLayout.gap = GenesisApplicationTheme.GRID / 4;
+            versionsLayout.paddingLeft = GenesisApplicationTheme.GRID;
+            versionsContainer.layout = versionsLayout;
+            
+            for (provisioner in provisioners) {
+                var versionContainer = new LayoutGroup();
+                var versionLayout = new HorizontalLayout();
+                versionLayout.gap = GenesisApplicationTheme.GRID;
+                versionLayout.verticalAlign = VerticalAlign.MIDDLE;
+                versionContainer.layout = versionLayout;
+                versionContainer.width = _width * 0.60;
+                
+                // Version label
+                var versionLabel = new Label();
+                versionLabel.text = 'v${provisioner.data.version}';
+                versionLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
+                versionLabel.layoutData = new HorizontalLayoutData(100); // Fill available space
+                versionContainer.addChild(versionLabel);
+                
+                versionsContainer.addChild(versionContainer);
+            }
+            
+            typeContainer.addChild(versionsContainer);
+            
+            // Delete button container
+            var deleteContainer = new LayoutGroup();
+            var deleteLayout = new HorizontalLayout();
+            deleteLayout.gap = GenesisApplicationTheme.GRID;
+            deleteLayout.horizontalAlign = HorizontalAlign.RIGHT;
+            deleteContainer.layout = deleteLayout;
+            deleteContainer.width = _width * 0.60;
+            
+            var deleteButton = new GenesisFormButton("Delete");
+            deleteButton.width = GenesisApplicationTheme.GRID * 12;
+            deleteButton.enabled = canDelete;
+            
+            if (canDelete) {
+                deleteButton.addEventListener(TriggerEvent.TRIGGER, function(e:TriggerEvent) {
+                    _deleteProvisionerType(type, serversUsing);
+                });
+            } else {
+                deleteButton.toolTip = 'Cannot delete - used by: ${serversUsing.join(", ")}';
+            }
+            
+            deleteContainer.addChild(deleteButton);
+            typeContainer.addChild(deleteContainer);
+            
+            _manageProvisionersList.addChild(typeContainer);
+        }
+    }
+    
+    /**
+     * Delete a provisioner type after confirmation
+     */
+    private function _deleteProvisionerType(provisionerType:String, serversUsing:Array<String>) {
+        // Show confirmation dialog
+        var confirmMessage = 'Are you sure you want to delete the provisioner "${provisionerType}"? This action cannot be undone.';
+        
+        feathers.controls.Alert.show(
+            confirmMessage,
+            'Delete ${provisionerType}',
+            ["Delete", "Cancel"],
+            function(state) {
+                if (state.index == 0) {
+                    // User confirmed deletion
+                    var success = ProvisionerManager.deleteProvisioner(provisionerType);
+                    
+                    if (success) {
+                        ToastManager.getInstance().showToast('Provisioner "${provisionerType}" deleted successfully');
+                        
+                        // Refresh the manage tab to remove the deleted provisioner
+                        _refreshManageTab();
+                        
+                        // Dispatch event to update the application's provisioner cache
+                        var deleteEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_DELETED);
+                        this.dispatchEvent(deleteEvent);
+                    } else {
+                        ToastManager.getInstance().showToast('Failed to delete provisioner "${provisionerType}"');
+                    }
+                }
+            }
+        );
+    }
+
+    /**
+     * Close the management page
      */
     private function _closeImportPage() {
-        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CLOSE_PROVISIONER_IMPORT_PAGE));
+        this.dispatchEvent(new SuperHumanApplicationEvent(SuperHumanApplicationEvent.CLOSE_PROVISIONER_MANAGEMENT_PAGE));
     }
 }

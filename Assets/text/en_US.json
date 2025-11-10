@@ -399,12 +399,13 @@
             }
         }
     },
-    "provisionerimportpage":{
-        "title": "Import Provisioner",
+    "provisionermanagementpage":{
+        "title": "Manage Provisioners",
         "tabs": {
             "collection": "Import Collection",
-            "version": "Import Version",
-            "github": "Import from GitHub"
+            "version": "Import Version", 
+            "github": "Import from GitHub",
+            "manage": "Manage"
         },
         "collection": {
             "description": "Select a directory containing a provisioner collection with a provisioner-collection.yml file and one or more version subdirectories.",
@@ -450,6 +451,17 @@
             "enterrepository": "Please enter a repository name",
             "gitclonerequired": "Async import requires using the 'Git Clone' download method. Please enable it.",
             "startinggithubimport": "Starting GitHub import..."
+        },
+        "manage": {
+            "description": "Manage installed custom provisioners. You can delete provisioners that are not in use by any servers.",
+            "provisioners": "Installed Provisioners:",
+            "noprovisioners": "No custom provisioners installed. Use the Import tabs to add provisioners.",
+            "usage": "Used by %1 server(s)",
+            "nousage": "Not used",
+            "cannotdelete": "Cannot delete provisioner that is used by servers: %1",
+            "confirmdelete": "Are you sure you want to delete this provisioner?",
+            "deletesuccess": "Provisioner deleted successfully",
+            "deletefailed": "Failed to delete provisioner"
         }
     },
     "settingspage":{

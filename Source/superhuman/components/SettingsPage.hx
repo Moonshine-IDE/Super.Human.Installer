@@ -265,7 +265,7 @@ class SettingsPage extends Page {
         _rowProvisioners = new GenesisFormRow();
         _rowProvisioners.text = "Provisioner Management";
         
-        _buttonImportProvisioner = new GenesisFormButton("Import Provisioner");
+        _buttonImportProvisioner = new GenesisFormButton("Manage Provisioners");
         _buttonImportProvisioner.addEventListener(TriggerEvent.TRIGGER, _importProvisioner);
         _rowProvisioners.content.addChild(_buttonImportProvisioner);
         
@@ -432,13 +432,13 @@ class SettingsPage extends Page {
     }
     
     /**
-     * Navigate to the provisioner import page when the Import Provisioner button is clicked
+     * Navigate to the provisioner management page when the Manage Provisioners button is clicked
      * @param e The trigger event
      */
     function _importProvisioner(e:TriggerEvent) {
-        // Dispatch event to open the provisioner import page
-        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE);
-        Logger.info('${this}: Requesting to open provisioner import page');
+        // Dispatch event to open the provisioner management page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_MANAGEMENT_PAGE);
+        Logger.info('${this}: Requesting to open provisioner management page');
         this.dispatchEvent(event);
     }
     

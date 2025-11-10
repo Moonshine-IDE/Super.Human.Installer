@@ -88,8 +88,12 @@ class SuperHumanApplicationEvent extends GenesisApplicationEvent {
     public static final PROVISIONER_DATA_UPDATED:String = "provisionerDataUpdated";
     public static final OPEN_SECRETS_PAGE:String = "openSecretsPage";
     public static final OPEN_EXTERNAL_URL:String = "openExternalUrl";
-    public static final OPEN_PROVISIONER_IMPORT_PAGE:String = "openProvisionerImportPage";
-    public static final CLOSE_PROVISIONER_IMPORT_PAGE:String = "closeProvisionerImportPage";
+    public static final OPEN_PROVISIONER_MANAGEMENT_PAGE:String = "openProvisionerManagementPage";
+    public static final CLOSE_PROVISIONER_MANAGEMENT_PAGE:String = "closeProvisionerManagementPage";
+    public static final DELETE_PROVISIONER:String = "deleteProvisioner";
+    public static final UPDATE_PROVISIONER:String = "updateProvisioner";
+    public static final PROVISIONER_DELETED:String = "provisionerDeleted";
+    public static final PROVISIONER_UPDATED:String = "provisionerUpdated";
     public static final PROVISIONER_IMPORT_COMPLETE:String = "provisionerImportComplete"; // Added for async import
     public static final OPEN_HASH_MANAGER_PAGE:String = "openHashManagerPage";
     public static final CLOSE_HASH_MANAGER_PAGE:String = "closeHashManagerPage";

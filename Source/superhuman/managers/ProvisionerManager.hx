@@ -32,6 +32,8 @@ package superhuman.managers;
 
 import superhuman.config.SuperHumanGlobals;
 import superhuman.server.provisioners.StandaloneProvisioner;
+import superhuman.server.provisioners.ProvisionerType;
+import superhuman.server.Server;
 import champaign.core.logging.Logger;
 import champaign.core.primitives.VersionInfo;
 import feathers.data.ArrayCollection;
@@ -55,7 +57,6 @@ import haxe.zip.Writer;
 import lime.system.System;
 import openfl.filesystem.File;
 import superhuman.server.definitions.ProvisionerDefinition;
-import superhuman.server.provisioners.ProvisionerType;
 import sys.FileSystem;
 import sys.io.File;
 import prominic.sys.applications.git.Git;
@@ -2818,6 +2819,172 @@ class ProvisionerManager {
         } catch (e) {
             Logger.error('Failed to create directory: ${directory} - ${e}');
             throw e;
+        }
+    }
+
+    /**
+     * Get which servers are using a specific provisioner
+     * @param provisionerType The provisioner type to check
+     * @param version Optional specific version to check (if null, checks all versions of the type)
+     * @return Array<Server> List of servers using this provisioner
+     */
+    static public function getProvisionerUsage(provisionerType:String, version:String = null):Array<Server> {
+        var serversUsing = [];
+        var serverManager = superhuman.managers.ServerManager.getInstance();
+        
+        // Scan all servers in the system
+        for (server in serverManager.servers) {
+            if (server.provisioner != null && server.provisioner.data != null) {
+                var serverProvisionerType = Std.string(server.provisioner.data.type);
+                var serverProvisionerVersion = server.provisioner.data.version != null ? 
+                    server.provisioner.data.version.toString() : null;
+                
+                // Check if this server uses the provisioner type
+                if (serverProvisionerType == provisionerType) {
+                    // If checking for specific version, match version
+                    if (version != null) {
+                        if (serverProvisionerVersion == version) {
+                            serversUsing.push(server);
+                            Logger.info('Found server ${server.id} (${server.fqdn}) using ${provisionerType} v${version}');
+                        }
+                    } else {
+                        // If not checking specific version, add all servers of this type
+                        serversUsing.push(server);
+                        Logger.info('Found server ${server.id} (${server.fqdn}) using ${provisionerType} v${serverProvisionerVersion}');
+                    }
+                }
+            }
+        }
+        
+        return serversUsing;
+    }
+
+    /**
+     * Check if a provisioner can be safely deleted
+     * @param provisionerType The provisioner type to check
+     * @param version Optional specific version to check (if null, checks all versions of the type)
+     * @return Dynamic Object with canDelete:Bool and serversUsing:Array<String> (server hostnames)
+     */
+    static public function canDeleteProvisioner(provisionerType:String, version:String = null):{canDelete:Bool, serversUsing:Array<String>} {
+        var serversUsing = getProvisionerUsage(provisionerType, version);
+        var serverHostnames = [];
+        
+        // Convert server objects to user-friendly hostnames
+        for (server in serversUsing) {
+            var hostname = server.fqdn;
+            if (hostname == null || hostname == "" || hostname == "configure.host.name") {
+                // Fallback to server ID if hostname is not properly configured
+                hostname = 'Server #${server.id}';
+            }
+            serverHostnames.push(hostname);
+        }
+        
+        return {
+            canDelete: serversUsing.length == 0,
+            serversUsing: serverHostnames
+        };
+    }
+
+    /**
+     * Delete a provisioner from the system
+     * This will only delete if no servers are using the provisioner
+     * @param provisionerType The provisioner type to delete
+     * @param version Optional specific version to delete (if null, deletes entire provisioner type)
+     * @return Bool True if deletion was successful, false otherwise
+     */
+    static public function deleteProvisioner(provisionerType:String, version:String = null):Bool {
+        Logger.info('Attempting to delete provisioner: ${provisionerType}${version != null ? " v" + version : ""}');
+        
+        // First check if deletion is safe
+        var deletionCheck = canDeleteProvisioner(provisionerType, version);
+        if (!deletionCheck.canDelete) {
+            Logger.warning('Cannot delete provisioner ${provisionerType}: used by servers ${deletionCheck.serversUsing.join(", ")}');
+            return false;
+        }
+        
+        // Only delete custom provisioners - prevent deletion of built-in types
+        if (provisionerType == ProvisionerType.StandaloneProvisioner ||
+            provisionerType == ProvisionerType.AdditionalProvisioner ||
+            provisionerType == ProvisionerType.Default) {
+            Logger.error('Cannot delete built-in provisioner type: ${provisionerType}');
+            return false;
+        }
+        
+        try {
+            var provisionersDir = getProvisionersDirectory();
+            var provisionerTypePath = Path.addTrailingSlash(provisionersDir) + provisionerType;
+            
+            if (!FileSystem.exists(provisionerTypePath)) {
+                Logger.warning('Provisioner type directory does not exist: ${provisionerTypePath}');
+                return false;
+            }
+            
+            if (version != null) {
+                // Delete specific version only
+                var versionPath = Path.addTrailingSlash(provisionerTypePath) + version;
+                
+                if (!FileSystem.exists(versionPath)) {
+                    Logger.warning('Provisioner version directory does not exist: ${versionPath}');
+                    return false;
+                }
+                
+                // Delete the version directory
+                _safeDeleteDirectory(versionPath);
+                Logger.info('Successfully deleted provisioner version: ${provisionerType} v${version}');
+                
+                // Check if this was the last version - if so, delete the entire type directory
+                var remainingVersions = _getValidVersionDirectories(provisionerTypePath);
+                if (remainingVersions.length == 0) {
+                    Logger.info('No versions remaining for ${provisionerType}, deleting entire type directory');
+                    _safeDeleteDirectory(provisionerTypePath);
+                }
+            } else {
+                // Delete entire provisioner type
+                _safeDeleteDirectory(provisionerTypePath);
+                Logger.info('Successfully deleted entire provisioner type: ${provisionerType}');
+            }
+            
+            // Refresh the cache to remove deleted provisioners
+            _refreshCacheAfterDeletion(provisionerType, version);
+            
+            return true;
+            
+        } catch (e) {
+            Logger.error('Error deleting provisioner ${provisionerType}: ${e}');
+            return false;
+        }
+    }
+
+    /**
+     * Refresh the provisioner cache after a deletion
+     * @param deletedType The provisioner type that was deleted
+     * @param deletedVersion Optional specific version that was deleted
+     */
+    static private function _refreshCacheAfterDeletion(deletedType:String, deletedVersion:String = null):Void {
+        if (_cachedProvisioners == null) {
+            return;
+        }
+        
+        if (deletedVersion != null) {
+            // Remove specific version from cache
+            if (_cachedProvisioners.exists(deletedType)) {
+                var typeProvisioners = _cachedProvisioners.get(deletedType);
+                var filteredProvisioners = typeProvisioners.filter(p -> p.data.version.toString() != deletedVersion);
+                
+                if (filteredProvisioners.length == 0) {
+                    // No versions left, remove the entire type from cache
+                    _cachedProvisioners.remove(deletedType);
+                    Logger.info('Removed provisioner type ${deletedType} from cache - no versions remaining');
+                } else {
+                    // Update cache with remaining versions
+                    _cachedProvisioners.set(deletedType, filteredProvisioners);
+                    Logger.info('Removed version ${deletedVersion} of ${deletedType} from cache');
+                }
+            }
+        } else {
+            // Remove entire type from cache
+            _cachedProvisioners.remove(deletedType);
+            Logger.info('Removed entire provisioner type ${deletedType} from cache');
         }
     }
 

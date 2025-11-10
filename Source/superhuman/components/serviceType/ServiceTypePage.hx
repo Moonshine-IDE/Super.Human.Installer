@@ -153,7 +153,7 @@ class ServiceTypePage extends Page {
         _buttonClose.addEventListener( TriggerEvent.TRIGGER, _buttonCloseTriggered );
         _buttonGroup.addChild( _buttonClose );
         
-        _buttonImportProvisioner = new GenesisFormButton("Import Provisioner");
+        _buttonImportProvisioner = new GenesisFormButton("Manage Provisioners");
         _buttonImportProvisioner.addEventListener(TriggerEvent.TRIGGER, _importProvisioner);
         _buttonGroup.addChild(_buttonImportProvisioner);
     }
@@ -220,12 +220,12 @@ class ServiceTypePage extends Page {
     }
     
     /**
-     * Handle the import provisioner button click
+     * Handle the manage provisioners button click
      * @param e The trigger event
      */
     function _importProvisioner(e:TriggerEvent) {
-        // Open the new provisioner import page
-        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE);
+        // Open the new provisioner management page
+        var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_PROVISIONER_MANAGEMENT_PAGE);
         this.dispatchEvent(event);
     }
     

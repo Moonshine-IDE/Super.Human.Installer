@@ -49,7 +49,7 @@ import superhuman.server.provisioners.ProvisionerType;
 import superhuman.components.serviceType.ServiceTypePage;
 import superhuman.components.HashManagerPage;
 import superhuman.components.browsers.SetupBrowserPage;
-import superhuman.components.ProvisionerImportPage;
+import superhuman.components.ProvisionerManagementPage;
 import superhuman.browser.Browsers;
 import superhuman.config.SuperHumanHashes;
 import champaign.core.logging.Logger;
@@ -86,7 +86,6 @@ import superhuman.components.LoadingPage;
 import superhuman.components.RolePage;
 import superhuman.components.ServerPage;
 import superhuman.components.SettingsPage;
-import superhuman.components.ProvisionerImportPage;
 import superhuman.config.SuperHumanConfig;
 import superhuman.config.SuperHumanGlobals;
 import superhuman.events.SuperHumanApplicationEvent;
@@ -175,7 +174,7 @@ class SuperHumanInstaller extends GenesisApplication {
 	var _setupApplicationsPage:SetupApplicationsPage;
 	var _additionalServerPage:AdditionalServerPage;
 	var _secretsPage:SecretsPage;
-	var _provisionerImportPage:ProvisionerImportPage;
+	var _provisionerImportPage:ProvisionerManagementPage;
 	var _hashManagerPage:HashManagerPage;
 	var _browsersCollection:Array<BrowserData>;
 	var _applicationsCollection:Array<ApplicationData>;
@@ -490,7 +489,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CREATE_CUSTOM_SERVER, _createCustomServer );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.CLOSE_SERVICE_TYPE_PAGE, _cancelServiceType );
 		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
-		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage );
+		_serviceTypePage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_MANAGEMENT_PAGE, _openProvisionerManagementPage );
 		this.addPage( _serviceTypePage, PAGE_SERVICE_TYPE );
 		
 		_configPage = new ConfigPage();
@@ -520,7 +519,7 @@ class SuperHumanInstaller extends GenesisApplication {
         _settingsPage.addEventListener( SuperHumanApplicationEvent.REFRESH_DEFAULT_BROWSER, _refreshDefaultBrowser);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_SECRETS_PAGE, _openSecretsPage);
-        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_IMPORT_PAGE, _openProvisionerImportPage);
+        _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_PROVISIONER_MANAGEMENT_PAGE, _openProvisionerManagementPage);
         _settingsPage.addEventListener( SuperHumanApplicationEvent.OPEN_HASH_MANAGER_PAGE, _openHashManagerPage);
 		
 		this.addPage( _settingsPage, PAGE_SETTINGS );
@@ -549,9 +548,10 @@ class SuperHumanInstaller extends GenesisApplication {
 		_setupApplicationsPage.addEventListener( SuperHumanApplicationEvent.CLOSE_APPLICATION_SETUP, _closeSetupAppPage );
 		this.addPage( _setupApplicationsPage, PAGE_SETUP_APPLICATIONS );
 		
-		_provisionerImportPage = new ProvisionerImportPage();
+		_provisionerImportPage = new ProvisionerManagementPage();
 		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.IMPORT_PROVISIONER, _provisionerImported );
-		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.CLOSE_PROVISIONER_IMPORT_PAGE, _closeProvisionerImportPage );
+		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.PROVISIONER_DELETED, _provisionerDeleted );
+		_provisionerImportPage.addEventListener( SuperHumanApplicationEvent.CLOSE_PROVISIONER_MANAGEMENT_PAGE, _closeProvisionerManagementPage );
 		this.addPage( _provisionerImportPage, PAGE_PROVISIONER_IMPORT );
 		
 		_hashManagerPage = new HashManagerPage();
@@ -1088,11 +1088,11 @@ class SuperHumanInstaller extends GenesisApplication {
 	}
 	
     /**
-     * Navigate to the provisioner import page
+     * Navigate to the provisioner management page
      * @param e The event
      */
-    function _openProvisionerImportPage( e:SuperHumanApplicationEvent ) {
-        Logger.info('${this}: Opening provisioner import page');
+    function _openProvisionerManagementPage( e:SuperHumanApplicationEvent ) {
+        Logger.info('${this}: Opening provisioner management page');
         this.selectedPageId = PAGE_PROVISIONER_IMPORT;
     }
     
@@ -1510,7 +1510,7 @@ class SuperHumanInstaller extends GenesisApplication {
         this.selectedPageId = this.previousPageId;
     }
     
-    function _closeProvisionerImportPage(e:SuperHumanApplicationEvent) {
+    function _closeProvisionerManagementPage(e:SuperHumanApplicationEvent) {
         // Return to the previous page or the settings page, depending on where we came from
         if (this.previousPageId != null && this.previousPageId != PAGE_PROVISIONER_IMPORT) {
             this.selectedPageId = this.previousPageId;
@@ -1519,7 +1519,7 @@ class SuperHumanInstaller extends GenesisApplication {
             this.selectedPageId = PAGE_SETTINGS;
         }
         
-        Logger.info('${this}: Closing provisioner import page, returning to ${this.selectedPageId}');
+        Logger.info('${this}: Closing provisioner management page, returning to ${this.selectedPageId}');
     }
     
     /**
@@ -1620,6 +1620,93 @@ class SuperHumanInstaller extends GenesisApplication {
         Logger.info('${this}: Provisioner imported successfully');
         
         // The ServiceTypePage already shows a toast notification, so we don't need one here
+    }
+    
+    /**
+     * Handle the provisioner deleted event
+     * @param e The event
+     */
+    function _provisionerDeleted(e:SuperHumanApplicationEvent) {
+        // Refresh the list of available provisioners after deletion
+        var allProvisioners:Array<ProvisionerDefinition> = ProvisionerManager.getBundledProvisioners();
+        Logger.info('${this}: Available provisioners after deletion: ${allProvisioners.length}');
+        
+        // Reinitialize service types collection
+        _serviceTypesCollection = [];
+        
+        // Group provisioners by type to avoid duplicates
+        var provisionersByType = new Map<String, Array<ProvisionerDefinition>>();
+        
+        for (provisioner in allProvisioners) {
+            var type:String = provisioner.data.type;
+            if (!provisionersByType.exists(type)) {
+                provisionersByType.set(type, []);
+            }
+            provisionersByType.get(type).push(provisioner);
+        }
+        
+        // Create a service type entry for each unique provisioner type
+        for (type in provisionersByType.keys()) {
+            // Get the newest version of this provisioner type
+            var provisioners = provisionersByType.get(type);
+            
+            if (provisioners.length > 0) {
+                var provisioner = provisioners[0];
+                
+                // Determine server UI type based on naming convention or content
+                var serverType = ServerUIType.Domino; // Default to standard Domino
+                
+                // Check if this is an additional server provisioner
+                if (type.indexOf("additional") >= 0) {
+                    serverType = ServerUIType.AdditionalDomino;
+                } else if (type != ProvisionerType.StandaloneProvisioner && type != ProvisionerType.AdditionalProvisioner) {
+                    // This is a custom provisioner type
+                    Logger.info('${this}: Custom provisioner type: ${type}');
+                }
+                
+                // Read the provisioner metadata to get the description
+                var metadata = ProvisionerManager.readProvisionerMetadata(Path.directory(provisioner.root));
+                var description = metadata != null ? metadata.description : provisioner.name;
+                
+                // Get the base name without version
+                var baseName = provisioner.name;
+                var versionIndex = baseName.lastIndexOf(" v");
+                if (versionIndex > 0) {
+                    baseName = baseName.substring(0, versionIndex);
+                }
+                
+                // Add to service types collection
+                _serviceTypesCollection.push({
+                    value: provisioner.name, // Keep the full name with version in the value
+                    description: description,
+                    provisionerType: type,
+                    serverType: serverType,
+                    isEnabled: true,
+                    provisioner: provisioner // Store the actual provisioner definition
+                });
+                
+                Logger.info('${this}: Added provisioner to service types after deletion: ${baseName}, type: ${type}, serverType: ${serverType}');
+            }
+        }
+        
+        // Always update the service types collection in the page
+        if (_serviceTypePage != null) {
+            // Update with the latest collection
+            _serviceTypePage.updateServiceTypes(_serviceTypesCollection);
+            
+            // If we're currently on the service type page, dispatch an event to refresh the UI
+            if (this.selectedPageId == PAGE_SERVICE_TYPE) {
+                Logger.info('${this}: On ServiceTypePage, dispatching refresh event after deletion');
+                
+                // Create a new event for provisioner data update
+                var refreshEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_DATA_UPDATED);
+                
+                // Dispatch to the service type page to trigger a refresh
+                _serviceTypePage.dispatchEvent(refreshEvent);
+            }
+        }
+        
+        Logger.info('${this}: Provisioner deleted successfully, service types updated');
     }
 	
 	function _initializeApplicationsCollection() {
