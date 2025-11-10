@@ -2919,6 +2919,8 @@ class ProvisionerManager {
                 return false;
             }
             
+            var deletionSuccess = false;
+            
             if (version != null) {
                 // Delete specific version only
                 var versionPath = Path.addTrailingSlash(provisionerTypePath) + version;
@@ -2928,29 +2930,88 @@ class ProvisionerManager {
                     return false;
                 }
                 
-                // Delete the version directory
-                _safeDeleteDirectory(versionPath);
-                Logger.info('Successfully deleted provisioner version: ${provisionerType} v${version}');
-                
-                // Check if this was the last version - if so, delete the entire type directory
-                var remainingVersions = _getValidVersionDirectories(provisionerTypePath);
-                if (remainingVersions.length == 0) {
-                    Logger.info('No versions remaining for ${provisionerType}, deleting entire type directory');
-                    _safeDeleteDirectory(provisionerTypePath);
+                // Delete the version directory using the proper method
+                deletionSuccess = _deleteProvisionerDirectory(versionPath);
+                if (deletionSuccess) {
+                    Logger.info('Successfully deleted provisioner version: ${provisionerType} v${version}');
+                    
+                    // Check if this was the last version - if so, delete the entire type directory
+                    var remainingVersions = _getValidVersionDirectories(provisionerTypePath);
+                    if (remainingVersions.length == 0) {
+                        Logger.info('No versions remaining for ${provisionerType}, deleting entire type directory');
+                        var typeDeleteSuccess = _deleteProvisionerDirectory(provisionerTypePath);
+                        if (!typeDeleteSuccess) {
+                            Logger.warning('Failed to delete empty provisioner type directory: ${provisionerTypePath}');
+                        }
+                    }
+                } else {
+                    Logger.error('Failed to delete provisioner version directory: ${versionPath}');
+                    return false;
                 }
             } else {
                 // Delete entire provisioner type
-                _safeDeleteDirectory(provisionerTypePath);
-                Logger.info('Successfully deleted entire provisioner type: ${provisionerType}');
+                deletionSuccess = _deleteProvisionerDirectory(provisionerTypePath);
+                if (deletionSuccess) {
+                    Logger.info('Successfully deleted entire provisioner type: ${provisionerType}');
+                } else {
+                    Logger.error('Failed to delete provisioner type directory: ${provisionerTypePath}');
+                    return false;
+                }
             }
             
-            // Refresh the cache to remove deleted provisioners
-            _refreshCacheAfterDeletion(provisionerType, version);
-            
-            return true;
+            // Only refresh cache if deletion was successful
+            if (deletionSuccess) {
+                // Refresh the cache to remove deleted provisioners
+                _refreshCacheAfterDeletion(provisionerType, version);
+                return true;
+            } else {
+                return false;
+            }
             
         } catch (e) {
             Logger.error('Error deleting provisioner ${provisionerType}: ${e}');
+            return false;
+        }
+    }
+    
+    /**
+     * Safely delete a provisioner directory from the provisioners directory
+     * This method validates that the path is within the correct provisioner directory
+     * and actually deletes the files from disk
+     * @param dirPath Path to the provisioner directory to delete
+     * @return Bool True if deletion was successful, false otherwise
+     */
+    static private function _deleteProvisionerDirectory(dirPath:String):Bool {
+        // Safety checks to prevent deleting important directories
+        if (dirPath == null || dirPath == "" || dirPath.length < 10) {
+            Logger.error('Refusing to delete potentially important directory: ${dirPath}');
+            return false;
+        }
+        
+        // Verify the path is within the provisioners directory
+        var provisionersDir = getProvisionersDirectory();
+        var normalizedDirPath = Path.normalize(dirPath);
+        var normalizedProvisionersDir = Path.normalize(provisionersDir);
+        
+        // The directory path must start with the provisioners directory path
+        if (!StringTools.startsWith(normalizedDirPath, normalizedProvisionersDir)) {
+            Logger.error('Refusing to delete directory outside provisioners directory: ${dirPath}');
+            return false;
+        }
+        
+        // Additional safety check: path must contain the word "provisioner" somewhere
+        if (dirPath.toLowerCase().indexOf("provisioner") < 0) {
+            Logger.error('Refusing to delete directory that does not appear to be a provisioner directory: ${dirPath}');
+            return false;
+        }
+        
+        // Path is validated as safe to delete
+        try {
+            _deleteDirectory(dirPath);
+            Logger.info('Successfully deleted provisioner directory: ${dirPath}');
+            return true;
+        } catch (e) {
+            Logger.error('Error deleting provisioner directory ${dirPath}: ${e}');
             return false;
         }
     }

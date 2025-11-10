@@ -691,6 +691,12 @@ class ProvisionerManagementPage extends Page {
                 _activeTabIndex = TAB_MANAGE;
         }
         
+        // Show/hide Import button based on active tab (hide for Manage tab)
+        // Always keep Cancel button visible
+        var showImportButton = (tabIndex != TAB_MANAGE);
+        _buttonImport.visible = showImportButton;
+        _buttonImport.includeInLayout = showImportButton;
+        
         // Update tab bar selection to match (in case this was called programmatically)
         _tabBar.selectedIndex = tabIndex;
     }
@@ -1053,22 +1059,30 @@ class ProvisionerManagementPage extends Page {
         for (type in provisionersByType.keys()) {
             var provisioners = provisionersByType.get(type);
             
-            // Create container for this provisioner type
-            var typeContainer = new LayoutGroup();
-            var typeLayout = new VerticalLayout();
-            typeLayout.gap = GenesisApplicationTheme.GRID / 2;
-            typeLayout.paddingTop = GenesisApplicationTheme.GRID;
-            typeLayout.paddingBottom = GenesisApplicationTheme.GRID;
-            typeLayout.paddingLeft = GenesisApplicationTheme.GRID;
-            typeLayout.paddingRight = GenesisApplicationTheme.GRID;
-            typeContainer.layout = typeLayout;
-            typeContainer.width = _width * 0.70;
+            // Create main container with horizontal layout for better positioning
+            var mainContainer = new LayoutGroup();
+            var mainLayout = new HorizontalLayout();
+            mainLayout.gap = GenesisApplicationTheme.GRID * 2;
+            mainLayout.verticalAlign = VerticalAlign.MIDDLE;
+            mainLayout.paddingTop = GenesisApplicationTheme.GRID;
+            mainLayout.paddingBottom = GenesisApplicationTheme.GRID;
+            mainLayout.paddingLeft = GenesisApplicationTheme.GRID;
+            mainLayout.paddingRight = GenesisApplicationTheme.GRID;
+            mainContainer.layout = mainLayout;
+            mainContainer.width = _width * 0.85;
             
             // Create a background for this provisioner type
             var typeBg = new RectangleSkin(FillStyle.SolidColor(0x333333));
             typeBg.cornerRadius = GenesisApplicationTheme.GRID / 2;
             typeBg.border = LineStyle.SolidColor(1, 0x444444, 0.3);
-            typeContainer.backgroundSkin = typeBg;
+            mainContainer.backgroundSkin = typeBg;
+            
+            // Create left side container for provisioner info
+            var infoContainer = new LayoutGroup();
+            var infoLayout = new VerticalLayout();
+            infoLayout.gap = GenesisApplicationTheme.GRID / 2;
+            infoContainer.layout = infoLayout;
+            infoContainer.layoutData = new HorizontalLayoutData(75); // Take 75% of width
             
             // Get the first provisioner for metadata
             var firstProvisioner = provisioners[0];
@@ -1081,7 +1095,7 @@ class ProvisionerManagementPage extends Page {
             typeLabel.text = displayName;
             typeLabel.variant = GenesisApplicationTheme.LABEL_DEFAULT;
             typeLabel.textFormat = new TextFormat("_sans", 16, 0xFFFFFF, true); // Bold
-            typeContainer.addChild(typeLabel);
+            infoContainer.addChild(typeLabel);
             
             // Description
             if (description != displayName) {
@@ -1089,8 +1103,8 @@ class ProvisionerManagementPage extends Page {
                 descLabel.text = description;
                 descLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
                 descLabel.wordWrap = true;
-                descLabel.width = _width * 0.60;
-                typeContainer.addChild(descLabel);
+                descLabel.width = _width * 0.55; // Adjust width for left column
+                infoContainer.addChild(descLabel);
             }
             
             // Check usage for this entire provisioner type
@@ -1107,7 +1121,7 @@ class ProvisionerManagementPage extends Page {
                 usageLabel.text = LanguageManager.getInstance().getString("provisionermanagementpage.manage.nousage");
                 usageLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
             }
-            typeContainer.addChild(usageLabel);
+            infoContainer.addChild(usageLabel);
             
             // Versions list
             var versionsContainer = new LayoutGroup();
@@ -1117,32 +1131,22 @@ class ProvisionerManagementPage extends Page {
             versionsContainer.layout = versionsLayout;
             
             for (provisioner in provisioners) {
-                var versionContainer = new LayoutGroup();
-                var versionLayout = new HorizontalLayout();
-                versionLayout.gap = GenesisApplicationTheme.GRID;
-                versionLayout.verticalAlign = VerticalAlign.MIDDLE;
-                versionContainer.layout = versionLayout;
-                versionContainer.width = _width * 0.60;
-                
-                // Version label
                 var versionLabel = new Label();
                 versionLabel.text = 'v${provisioner.data.version}';
                 versionLabel.variant = GenesisApplicationTheme.LABEL_COPYRIGHT;
-                versionLabel.layoutData = new HorizontalLayoutData(100); // Fill available space
-                versionContainer.addChild(versionLabel);
-                
-                versionsContainer.addChild(versionContainer);
+                versionsContainer.addChild(versionLabel);
             }
             
-            typeContainer.addChild(versionsContainer);
+            infoContainer.addChild(versionsContainer);
+            mainContainer.addChild(infoContainer);
             
-            // Delete button container
-            var deleteContainer = new LayoutGroup();
-            var deleteLayout = new HorizontalLayout();
-            deleteLayout.gap = GenesisApplicationTheme.GRID;
-            deleteLayout.horizontalAlign = HorizontalAlign.RIGHT;
-            deleteContainer.layout = deleteLayout;
-            deleteContainer.width = _width * 0.60;
+            // Create right side container for delete button (vertically centered)
+            var buttonContainer = new LayoutGroup();
+            var buttonLayout = new VerticalLayout();
+            buttonLayout.horizontalAlign = HorizontalAlign.CENTER;
+            buttonLayout.verticalAlign = VerticalAlign.MIDDLE;
+            buttonContainer.layout = buttonLayout;
+            buttonContainer.layoutData = new HorizontalLayoutData(25); // Take 25% of width
             
             var deleteButton = new GenesisFormButton("Delete");
             deleteButton.width = GenesisApplicationTheme.GRID * 12;
@@ -1156,10 +1160,10 @@ class ProvisionerManagementPage extends Page {
                 deleteButton.toolTip = 'Cannot delete - used by: ${serversUsing.join(", ")}';
             }
             
-            deleteContainer.addChild(deleteButton);
-            typeContainer.addChild(deleteContainer);
+            buttonContainer.addChild(deleteButton);
+            mainContainer.addChild(buttonContainer);
             
-            _manageProvisionersList.addChild(typeContainer);
+            _manageProvisionersList.addChild(mainContainer);
         }
     }
     
