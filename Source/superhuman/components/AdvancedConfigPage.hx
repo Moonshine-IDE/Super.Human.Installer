@@ -33,6 +33,7 @@ package superhuman.components;
 import genesis.application.components.GenesisFormRow;
 import feathers.controls.Label;
 import feathers.controls.LayoutGroup;
+import feathers.controls.ScrollContainer;
 import feathers.events.TriggerEvent;
 import feathers.layout.HorizontalAlign;
 import feathers.layout.HorizontalLayout;
@@ -66,6 +67,7 @@ class AdvancedConfigPage extends Page {
     var _cbDHCP:GenesisFormCheckBox;
     var _cbDisableBridgeAdapter:GenesisFormCheckBox;
     var _cbOpenBrowser:GenesisFormCheckBox;
+    var _cbShowConsole:GenesisFormCheckBox;
     var _buttonGeneratePassword:GenesisFormButton;
     var _buttonTogglePassword:GenesisFormButton;
     var _dropdownNetworkInterface:GenesisFormPupUpListView;
@@ -86,6 +88,7 @@ class AdvancedConfigPage extends Page {
     var _rowDisableBridgeAdapter:GenesisFormRow;
     var _rowGatewayIP:GenesisFormRow;
     var _rowMisc:GenesisFormRow;
+    var _rowShowConsole:GenesisFormRow;
     var _rowNameServer2:GenesisFormRow;
     var _rowNameServer:GenesisFormRow;
     var _rowNetmaskIP:GenesisFormRow;
@@ -123,6 +126,13 @@ class AdvancedConfigPage extends Page {
 
         super.initialize();
 
+        // Create a vertical layout for the page
+        var pageLayout = new feathers.layout.VerticalLayout();
+        pageLayout.horizontalAlign = HorizontalAlign.CENTER;
+        pageLayout.gap = GenesisApplicationTheme.GRID;
+        this.layout = pageLayout;
+
+        // Create the title group at the top (outside scroll container)
         _titleGroup = new LayoutGroup();
         var _titleGroupLayout = new HorizontalLayout();
         _titleGroupLayout.horizontalAlign = HorizontalAlign.LEFT;
@@ -141,8 +151,25 @@ class AdvancedConfigPage extends Page {
         line.width = _w;
         this.addChild( line );
 
+        // Create a scroll container for the form content
+        var scrollContainer = new ScrollContainer();
+        scrollContainer.variant = superhuman.theme.SuperHumanInstallerTheme.SCROLL_CONTAINER_DARK;
+        scrollContainer.layoutData = new feathers.layout.VerticalLayoutData(100, 100);
+        
+        // Set up vertical layout for the scroll container
+        var scrollLayout = new feathers.layout.VerticalLayout();
+        scrollLayout.horizontalAlign = HorizontalAlign.CENTER;
+        scrollLayout.gap = GenesisApplicationTheme.GRID;
+        scrollLayout.paddingTop = GenesisApplicationTheme.GRID * 2;
+        scrollLayout.paddingBottom = GenesisApplicationTheme.GRID * 2;
+        scrollContainer.layout = scrollLayout;
+        
+        // Add the scroll container to the page
+        this.addChild(scrollContainer);
+
+        // Create the form and add it to the scroll container
         _form = new GenesisForm();
-        this.addChild( _form );
+        scrollContainer.addChild( _form );
 
         _rowNetworkInterface = new GenesisFormRow();
         _rowNetworkInterface.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkinterface.text' );
@@ -296,6 +323,13 @@ class AdvancedConfigPage extends Page {
         _rowMisc.content.addChild( _cbOpenBrowser );
         _form.addChild( _rowMisc );
 
+        _rowShowConsole = new GenesisFormRow();
+        _rowShowConsole.text = "VirtualBox Console";
+        _cbShowConsole = new GenesisFormCheckBox( "Show VirtualBox Console", _server.showConsole.value );
+        _cbShowConsole.toolTip = "Enable if anti-virus software blocks headless VirtualBox VMs from starting";
+        _rowShowConsole.content.addChild( _cbShowConsole );
+        _form.addChild( _rowShowConsole );
+
         _rowDisableBridgeAdapter = new GenesisFormRow();
         _rowDisableBridgeAdapter.text = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.expert.text' );
         _cbDisableBridgeAdapter = new GenesisFormCheckBox( LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.expert.disablebridgeadapter' ), _server.disableBridgeAdapter.value );
@@ -413,6 +447,7 @@ class AdvancedConfigPage extends Page {
             _stepperCPUs.value = _server.numCPUs.value;
             _stepperRAM.value = _server.memory.value;
             _cbOpenBrowser.selected = _server.openBrowser.value;
+            _cbShowConsole.selected = _server.showConsole.value;
             _cbDHCP.selected = _server.dhcp4.value;
 
             _inputNetworkIP.enabled = !_server.dhcp4.value && !_server.disableBridgeAdapter.value && !_server.networkAddress.locked;
@@ -544,6 +579,7 @@ class AdvancedConfigPage extends Page {
         _server.numCPUs.value = Std.int( _stepperCPUs.value );
         _server.memory.value = Std.int( _stepperRAM.value );
         _server.openBrowser.value = _cbOpenBrowser.selected;
+        _server.showConsole.value = _cbShowConsole.selected;
         // Get the selected network interface
         var selectedInterface = _dropdownNetworkInterface.selectedItem.name;
         
@@ -587,6 +623,7 @@ class AdvancedConfigPage extends Page {
             if (_cbDHCP != null) _cbDHCP.enabled = false;
             if (_cbDisableBridgeAdapter != null) _cbDisableBridgeAdapter.enabled = false;
             if (_cbOpenBrowser != null) _cbOpenBrowser.enabled = false;
+            if (_cbShowConsole != null) _cbShowConsole.enabled = false;
             if (_inputNetworkIP != null) _inputNetworkIP.enabled = false;
             if (_inputGatewayIP != null) _inputGatewayIP.enabled = false;
             if (_inputNetmaskIP != null) _inputNetmaskIP.enabled = false;

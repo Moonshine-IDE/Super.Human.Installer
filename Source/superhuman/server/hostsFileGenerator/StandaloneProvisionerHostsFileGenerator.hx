@@ -313,7 +313,7 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
          	SERVER_HOSTNAME: internalProvisioner.server.url.hostname,
          	SERVER_DOMAIN: internalProvisioner.server.url.domainName,
          	SERVER_ID: internalProvisioner.server.id,
-            SHOW_CONSOLE: false,
+            SHOW_CONSOLE: internalProvisioner.server.showConsole.value,
             POST_PROVISION: true,
             BOX_URL: 'https://boxvault.startcloud.com',
             SYNC_METHOD: internalProvisioner.server.syncMethod,

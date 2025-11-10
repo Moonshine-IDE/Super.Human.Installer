@@ -60,6 +60,7 @@ typedef ServerData = {
 
     env_open_browser:Bool,
     env_setup_wait:Int,
+    ?show_console:Bool,
 
     resources_cpu:Int,
     resources_ram:Float,

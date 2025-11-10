@@ -177,6 +177,7 @@ class Server {
         sc._openBrowser.value = data.env_open_browser;
         sc._organization.value = data.server_organization;
         sc._roles.value = data.roles;
+        sc._showConsole.value = (data.show_console != null) ? data.show_console : false;
         sc._setupWait.value = data.env_setup_wait;
         sc._userEmail.value = data.user_email;
         sc._userSafeId.value = data.user_safeid;
@@ -293,6 +294,7 @@ class Server {
     var _openBrowser:Property<Bool>;
     var _organization:ValidatingProperty;
     var _path:Property<String>;
+    var _showConsole:Property<Bool>;
     var _provisionedBeforeStart:Bool;
     var _provisional:Bool = false;
     var _provisioner:StandaloneProvisioner;
@@ -416,6 +418,9 @@ class Server {
     
     public var organization( get, never ):ValidatingProperty;
     function get_organization() return _organization;
+    
+    public var showConsole( get, never ):Property<Bool>;
+    function get_showConsole() return _showConsole;
     
     public var path( get, never ):Property<String>;
     function get_path() return _path;
@@ -574,6 +579,9 @@ class Server {
 
         _organization = new ValidatingProperty( "", _VK_CERTIFIER, 1 );
         _organization.onChange.add( _propertyChanged );
+        
+        _showConsole = new Property( false ); // Default false for headless mode
+        _showConsole.onChange.add( _propertyChanged );
 
         _path = new Property( "" );
         _path.onChange.add( _propertyChanged );
@@ -662,6 +670,7 @@ class Server {
             env_open_browser: this._openBrowser.value,
             server_organization: this._organization.value,
             env_setup_wait: this._setupWait.value,
+            show_console: this._showConsole.value,
             user_email: this._userEmail.value,
             user_safeid: ( this._userSafeId != null && this._userSafeId.value != null ) ? this._userSafeId.value : null,
             server_provisioner_id: ( this._serverProvisionerId != null && this._serverProvisionerId.value != null ) ? this._serverProvisionerId.value : null,
