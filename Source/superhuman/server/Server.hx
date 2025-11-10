@@ -510,6 +510,9 @@ class Server {
     public var webAddress( get, never ):String;
     function get_webAddress() return _getWebAddress();
 
+    public var isVMReady( get, never ):Bool;
+    function get_isVMReady() return _vmIsReady;
+
     public var syncMethod(get, set):SyncMethod;
     function get_syncMethod() return _syncMethod;
     function set_syncMethod( value:SyncMethod ):SyncMethod { _syncMethod = value; return _syncMethod; }
@@ -1405,6 +1408,9 @@ class Server {
     // Flag to indicate if provisioning was canceled
     var _provisioningCanceled:Bool = false;
     
+    // Flag to indicate if VM is ready (booted and responsive)
+    var _vmIsReady:Bool = false;
+    
     public function stop( forced:Bool = false ) {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.stop' ) );
@@ -1515,8 +1521,7 @@ class Server {
         this._currentAction = ServerAction.Stop( _vagrantHaltExecutor.hasErrors || _vagrantHaltExecutor.exitCode > 0 );
         
         // Update global VM counts in SystemInfoBox immediately after VM stop
-        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
-        SuperHumanInstaller.getInstance().dispatchEvent(evt);
+        SuperHumanInstaller.getInstance().refreshSystemInfoFromPolling();
         
         refreshVirtualBoxInfo();
     }
@@ -1646,10 +1651,14 @@ class Server {
                 return;
             }
 
-            // Validate serverId match
-            if (machine.serverId != this._id) {
+            // Enhanced validation for serverId match - handle null serverId case
+            if (machine.serverId != null && machine.serverId != this._id) {
                 Logger.warning('${this}: Vagrant destroy callback for wrong server: ${machine.serverId} vs ${this._id}');
                 return;
+            } else if (machine.serverId == null) {
+                // When serverId is null, the VM was already destroyed/cleaned up externally
+                // We should still process the callback to complete the cleanup for THIS server
+                Logger.info('${this}: Vagrant destroy callback has null serverId - proceeding with cleanup for server ${this._id}');
             }
 
             // First, safely remove the callback to prevent multiple triggers
@@ -1681,8 +1690,8 @@ class Server {
             }
 
         // Update global VM counts immediately after manual destroy
-        var evt = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO);
-        SuperHumanInstaller.getInstance().dispatchEvent(evt);
+        // Call the method directly instead of using events to ensure it works
+        SuperHumanInstaller.getInstance().refreshSystemInfoFromPolling();
 
             // Update server state based on current status - with safe null checks
             try {
@@ -1765,6 +1774,9 @@ class Server {
         _provisioner.startFileWatcher();
 
         this._busy.value = true;
+        
+        // Reset VM readiness flag when starting new provisioning
+        _vmIsReady = false;
 
         _provisionedBeforeStart = this._provisioner.provisioned;
         this.status.value = ServerStatus.Start( this._provisioner.provisioned );
@@ -2006,6 +2018,15 @@ class Server {
     		var vagrantLogging:Bool = SuperHumanInstaller.getInstance().config.preferences.disablevagrantlogging;
         if ( console != null && !vagrantLogging ) console.appendText( new String( data ) );
         _provisioner.updateTaskProgress( data );
+        
+        // Check if VM is ready by parsing vagrant output
+        if (!_vmIsReady && data.indexOf("Machine booted and ready!") >= 0) {
+            _vmIsReady = true;
+            Logger.info('${this}: VM detected as ready - stop button will now be enabled');
+            
+            // Trigger UI update to show stop button
+            _propertyChanged(this);
+        }
         
     }
 

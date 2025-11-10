@@ -299,6 +299,38 @@ class SettingsPage extends Page {
         
         _form.addChild(_rowFileCache);
         
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add Debug Management section
+        var _rowDebug = new GenesisFormRow();
+        _rowDebug.text = "Debug Packages";
+        
+        var _buttonOpenDebugFolder = new GenesisFormButton("Open Debug Folder");
+        _buttonOpenDebugFolder.addEventListener(TriggerEvent.TRIGGER, _openDebugFolder);
+        _rowDebug.content.addChild(_buttonOpenDebugFolder);
+        
+        var _buttonCleanupDebug = new GenesisFormButton("Clear Old Debug Files");
+        _buttonCleanupDebug.addEventListener(TriggerEvent.TRIGGER, _cleanupDebugPackages);
+        _rowDebug.content.addChild(_buttonCleanupDebug);
+        
+        _form.addChild(_rowDebug);
+        
+        spacer = new LayoutGroup();
+        spacer.height = GenesisApplicationTheme.SPACER;
+        _form.addChild( spacer );
+        
+        // Add Feedback & Suggestions section
+        var _rowFeedback = new GenesisFormRow();
+        _rowFeedback.text = "Feedback & Suggestions";
+        
+        var _buttonSubmitFeedback = new GenesisFormButton("Submit Feedback or Idea");
+        _buttonSubmitFeedback.addEventListener(TriggerEvent.TRIGGER, _submitFeedback);
+        _rowFeedback.content.addChild(_buttonSubmitFeedback);
+        
+        _form.addChild(_rowFeedback);
+        
         var line = new HLine();
         line.width = _width;
         this.addChild( line );
@@ -451,6 +483,133 @@ class SettingsPage extends Page {
         var event = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.OPEN_HASH_MANAGER_PAGE);
         Logger.info('${this}: Requesting to open hash manager page');
         this.dispatchEvent(event);
+    }
+    
+    /**
+     * Open the debug packages folder in file explorer
+     * @param e The trigger event
+     */
+    function _openDebugFolder(e:TriggerEvent) {
+        Logger.info('${this}: User requested to open debug folder');
+        
+        try {
+            var debugDir = superhuman.utils.DebugCollector.getDebugPackagesDirectory();
+            Logger.info('${this}: Debug directory path: ${debugDir}');
+            
+            // Create the debug directory if it doesn't exist
+            if (!sys.FileSystem.exists(debugDir)) {
+                sys.FileSystem.createDirectory(debugDir);
+                Logger.info('${this}: Created debug directory: ${debugDir}');
+            }
+            
+            // Use platform-specific folder opening with proper path handling
+            #if windows
+            // Normalize Windows path and use explorer command
+            var windowsPath = StringTools.replace(debugDir, "/", "\\");
+            var command = 'explorer "${windowsPath}"';
+            Logger.info('${this}: Opening Windows folder with command: ${command}');
+            var result = Sys.command(command);
+            Logger.info('${this}: Explorer command result: ${result}');
+            #elseif mac
+            // Use Shell instance for Mac
+            var result = prominic.sys.applications.bin.Shell.getInstance().open([debugDir]);
+            Logger.info('${this}: Mac open result: ${result}');
+            #elseif linux
+            // Use Shell instance for Linux  
+            var result = prominic.sys.applications.bin.Shell.getInstance().open([debugDir]);
+            Logger.info('${this}: Linux xdg-open result: ${result}');
+            #end
+            
+            ToastManager.getInstance().showToast('Debug packages folder opened.');
+            Logger.info('${this}: Successfully opened debug folder: ${debugDir}');
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Error opening debug folder: ${e}');
+            ToastManager.getInstance().showToast('Error opening debug folder: ${e}');
+        }
+    }
+    
+    /**
+     * Clean up old debug packages with user confirmation
+     * @param e The trigger event  
+     */
+    function _cleanupDebugPackages(e:TriggerEvent) {
+        Logger.info('${this}: User requested debug packages cleanup');
+        
+        // Show confirmation dialog before deleting files
+        feathers.controls.Alert.show(
+            "This will permanently delete all debug packages from your system. Are you sure?",
+            "Clear Debug Files",
+            ["Yes, Delete All", "Cancel"],
+            function(result:feathers.data.ButtonBarItemState) {
+                if (result.index == 0) { // "Yes, Delete All" was clicked
+                    _performDebugCleanup();
+                }
+            }
+        );
+    }
+    
+    /**
+     * Actually perform the debug cleanup after user confirmation
+     */
+    function _performDebugCleanup():Void {
+        try {
+            var debugDir = superhuman.utils.DebugCollector.getDebugPackagesDirectory();
+            
+            if (!sys.FileSystem.exists(debugDir)) {
+                ToastManager.getInstance().showToast('No debug packages to clean up.');
+                return;
+            }
+            
+            var deletedCount = 0;
+            var files = sys.FileSystem.readDirectory(debugDir);
+            
+            for (file in files) {
+                var filePath = haxe.io.Path.join([debugDir, file]);
+                
+                // Only delete .zip files to be safe
+                if (sys.FileSystem.exists(filePath) && 
+                    !sys.FileSystem.isDirectory(filePath) && 
+                    haxe.io.Path.extension(file) == "zip") {
+                    
+                    try {
+                        sys.FileSystem.deleteFile(filePath);
+                        deletedCount++;
+                        Logger.info('${this}: Deleted debug package: ${file}');
+                    } catch (e:Dynamic) {
+                        Logger.warning('${this}: Could not delete ${file}: ${e}');
+                    }
+                }
+            }
+            
+            ToastManager.getInstance().showToast('Deleted ${deletedCount} debug packages.');
+            Logger.info('${this}: Debug cleanup completed, deleted ${deletedCount} files');
+            
+        } catch (e:Dynamic) {
+            Logger.error('${this}: Error during debug cleanup: ${e}');
+            ToastManager.getInstance().showToast('Error during debug cleanup.');
+        }
+    }
+    
+    /**
+     * Handle feedback submission button click
+     * @param e The trigger event
+     */
+    function _submitFeedback(e:TriggerEvent) {
+        Logger.info('${this}: User requested feedback submission from settings page');
+        
+        // Show debug report dialog for general feedback/ideas
+        superhuman.components.DebugReportDialog.show(
+            null, // No specific server for general feedback
+            "feedback",
+            function(username:String, email:String, description:String) {
+                Logger.info('${this}: General feedback dialog completed, submitting feedback');
+                
+                // Submit to App Improve system with feedback type
+                superhuman.utils.AppImproveHelper.submitDebugReport(
+                    username, email, "feedback", description, null
+                );
+            }
+        );
     }
     
     /**

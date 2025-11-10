@@ -480,6 +480,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		_serverPage.addEventListener( SuperHumanApplicationEvent.REFRESH_SYSTEM_INFO, _refreshSystemInfo );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.RECHECK_PREREQUISITES, _recheckPrerequisites );
 		_serverPage.addEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _openVMDetails );
+		_serverPage.addEventListener( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT, _submitServerDebugReport );
 
 		this.addPage( _serverPage, PAGE_SERVER );
 
@@ -3035,7 +3036,7 @@ class SuperHumanInstaller extends GenesisApplication {
 
 			LanguageManager.getInstance().getString( 'alert.crash.text' ),
 			LanguageManager.getInstance().getString( 'alert.crash.title' ),
-			[ LanguageManager.getInstance().getString( 'alert.crash.buttonopen' ), LanguageManager.getInstance().getString( 'alert.crash.buttongithub' ), LanguageManager.getInstance().getString( 'alert.crash.buttonclose' ) ],
+			[ LanguageManager.getInstance().getString( 'alert.crash.buttonopen' ), LanguageManager.getInstance().getString( 'alert.crash.buttongithub' ), "Report Bug", LanguageManager.getInstance().getString( 'alert.crash.buttonclose' ) ],
 			( state ) -> {
 
 				switch ( state.index ) {
@@ -3045,6 +3046,9 @@ class SuperHumanInstaller extends GenesisApplication {
 						
 					case 1:
 						_visitSourceCodeNewIssue();
+						
+					case 2:
+						_submitCrashReport();
 
 					default:
 
@@ -3054,6 +3058,63 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		);
 
+	}
+	
+	/**
+	 * Handle crash report submission
+	 */
+	function _submitCrashReport() {
+		Logger.info('${this}: User requested crash report submission');
+		
+		// Show debug report dialog to collect user information
+		superhuman.components.DebugReportDialog.show(
+			null, // No specific server for crash reports
+			"crash",
+			function(username:String, email:String, description:String) {
+				Logger.info('${this}: Crash report dialog completed, collecting debug info');
+				
+				// Get the last uncaught error if available
+				var errorDetails = "Application crash detected";
+				// TODO: Store uncaught error details when they occur for better reporting
+				
+				// Collect crash debug information
+				var debugPackagePath = superhuman.utils.DebugCollector.collectCrashDebugInfo(
+					username, email, description, errorDetails
+				);
+				
+				// Submit to App Improve system
+				superhuman.utils.AppImproveHelper.submitDebugReport(
+					username, email, "crash", description, debugPackagePath
+				);
+			}
+		);
+	}
+
+	/**
+	 * Handle server debug report submission
+	 */
+	function _submitServerDebugReport( e:SuperHumanApplicationEvent ) {
+		Logger.info('${this}: User requested server debug report submission for server ${e.server.id}');
+		
+		// First, collect debug information to generate the package
+		var debugPackagePath = superhuman.utils.DebugCollector.collectServerDebugInfo(
+			e.server, "TempUser", "temp@example.com", "Debug package pre-generation"
+		);
+		
+		// Then show dialog with debug package information
+		superhuman.components.DebugReportDialog.show(
+			e.server,
+			"provision_failure",
+			debugPackagePath,
+			function(username:String, email:String, description:String) {
+				Logger.info('${this}: Server debug report dialog completed, submitting to App Improve');
+				
+				// Submit to App Improve system (debug package already created)
+				superhuman.utils.AppImproveHelper.submitDebugReport(
+					username, email, "provision_failure", description, debugPackagePath
+				);
+			}
+		);
 	}
 
 }

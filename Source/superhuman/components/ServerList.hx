@@ -89,6 +89,7 @@ class ServerList extends ListView {
             item.addEventListener( SuperHumanApplicationEvent.OPEN_SERVER_TERMINAL, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent );
             item.addEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _forwardEvent );
+            item.addEventListener( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT, _forwardEvent );
             #if debug
             item.addEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
             #end
@@ -126,6 +127,7 @@ class ServerList extends ListView {
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_SERVER_DIRECTORY, _forwardEvent );
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_FTP_CLIENT, _forwardEvent);
             item.removeEventListener( SuperHumanApplicationEvent.OPEN_VM_DETAILS, _forwardEvent);
+            item.removeEventListener( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT, _forwardEvent);
             
             #if debug
             item.removeEventListener( SuperHumanApplicationEvent.RESET_SERVER, _forwardEvent );
@@ -173,6 +175,7 @@ class ServerItem extends LayoutGroupItemRenderer {
     var _buttonDelete:GenesisButton;  
     var _buttonFtp:GenesisButton;
     var _buttonVMDetails:GenesisButton;
+    var _buttonDebugReport:GenesisButton;
            
     var _buttonConfigure:GenesisButton;
 
@@ -375,6 +378,16 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonVMDetails.toolTip = "View VM Details";
         _buttonVMDetails.addEventListener( TriggerEvent.TRIGGER, _buttonVMDetailsTriggered );
         buttonGroup.addChild( _buttonVMDetails );
+
+        _buttonDebugReport = new GenesisButton();
+        _buttonDebugReport.variant = GenesisApplicationTheme.BUTTON_SERVER_LIST;
+        _buttonDebugReport.icon = GenesisApplicationTheme.getCommonIcon( GenesisApplicationTheme.ICON_WARNING );
+        _buttonDebugReport.width = CONTROL_BUTTON_WIDTH;
+        _buttonDebugReport.height = CONTROL_BUTTON_HEIGHT;
+        _buttonDebugReport.enabled = false;
+        _buttonDebugReport.toolTip = "Submit Debug Report";
+        _buttonDebugReport.addEventListener( TriggerEvent.TRIGGER, _buttonDebugReportTriggered );
+        buttonGroup.addChild( _buttonDebugReport );
         
         var spacer = new LayoutGroup();
         		spacer.layoutData = new HorizontalLayoutData( 100 );
@@ -590,6 +603,19 @@ class ServerItem extends LayoutGroupItemRenderer {
 
     }
 
+    function _buttonDebugReportTriggered( e:TriggerEvent ) {
+
+        Logger.info('${this}: Debug Report button clicked for server ${_server.id}');
+        
+        var event = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.SUBMIT_DEBUG_REPORT );
+        event.provisionerType = _server.provisioner.type;
+        event.server = _server;
+        
+        Logger.info('${this}: Dispatching SUBMIT_DEBUG_REPORT event for server ${_server.id}');
+        this.dispatchEvent( event );
+
+    }
+
     function _copyToClipboard( e:SuperHumanApplicationEvent ) {
 
         e.provisionerType = _server.provisioner.type;
@@ -784,6 +810,7 @@ class ServerItem extends LayoutGroupItemRenderer {
         _buttonSuspend.includeInLayout = _buttonSuspend.visible = _buttonSuspend.enabled = false;
         _buttonSync.enabled = _buttonSync.includeInLayout = _buttonSync.visible = false;
         _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = false;
+        _buttonDebugReport.enabled = _buttonDebugReport.includeInLayout = _buttonDebugReport.visible = false;
         _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.unavailable' );
         _elapsedTimeLabel.visible = _elapsedTimeLabel.includeInLayout = false;
 
@@ -802,6 +829,7 @@ class ServerItem extends LayoutGroupItemRenderer {
                 _buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
                 _buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
                 _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
+                _buttonDebugReport.enabled = _buttonDebugReport.includeInLayout = _buttonDebugReport.visible = hasError;
                 _statusLabel.text = ( hasError ) ? LanguageManager.getInstance().getString( 'serverpage.server.status.stoppedwitherrors' ) : LanguageManager.getInstance().getString( 'serverpage.server.status.stopped', ( _server.provisioned ) ? '(${LanguageManager.getInstance().getString( 'serverpage.server.status.provisioned' )})' : '' );
 
             case ServerStatus.Stopping( forced ):
@@ -810,8 +838,8 @@ class ServerItem extends LayoutGroupItemRenderer {
             case ServerStatus.Start( provisionedBefore ):
             		_buttonOpenDir.enabled = _buttonOpenDir.includeInLayout = _buttonOpenDir.visible = true;
             		_buttonOpenTerminal.enabled = _buttonOpenTerminal.includeInLayout = _buttonOpenTerminal.visible = true;
-                    // Show the stop button during provisioning
-                    _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = true;
+                    // Only show stop button once VM is actually ready to prevent failed stops
+                    _buttonStop.includeInLayout = _buttonStop.visible = _buttonStop.enabled = _server.isVMReady;
                     // Show configure button in read-only mode during startup
                     _buttonConfigure.enabled = _buttonConfigure.includeInLayout = _buttonConfigure.visible = true;
                     
@@ -935,6 +963,7 @@ class ServerItem extends LayoutGroupItemRenderer {
             case ServerStatus.Aborted:
                 _buttonDestroy.enabled = _buttonDestroy.includeInLayout = _buttonDestroy.visible = true;
                 _buttonVMDetails.enabled = _buttonVMDetails.includeInLayout = _buttonVMDetails.visible = _server.vmExistsInVirtualBox();
+                _buttonDebugReport.enabled = _buttonDebugReport.includeInLayout = _buttonDebugReport.visible = true;
                 _statusLabel.text = LanguageManager.getInstance().getString( 'serverpage.server.status.aborted' );
 
             case ServerStatus.Suspended:

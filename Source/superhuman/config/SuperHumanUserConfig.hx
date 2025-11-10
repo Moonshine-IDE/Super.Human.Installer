@@ -34,5 +34,7 @@ typedef SuperHumanUserConfig = {
 
     ?lastuseddirectory:String,
     ?lastusedsafeid:String,
+    ?debugReportUsername:String,
+    ?debugReportEmail:String,
 
 }

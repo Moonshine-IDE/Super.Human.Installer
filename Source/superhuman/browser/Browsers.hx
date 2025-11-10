@@ -76,13 +76,13 @@ class Browsers
     		return defaultBrowser;
     }
     
-    public static function openLink(webAddress:String) {
+    public static function openLink(webAddress:String):Bool {
     		if ( webAddress == null || webAddress.length == 0 ) {
-
 			Logger.error( 'Web address is invalid: \"${webAddress}\"' );
-			return;
-
+			return false;
 		}
+		
+		Logger.info('Browsers.openLink: Attempting to open URL: ${webAddress}');
 		
 		var defaultBrowser = Browsers.getDefaultBrowser();
 		
@@ -92,26 +92,31 @@ class Browsers
 			defaultBrowser = new BrowserData(Browsers.SYSTEM_DEFAULT, true);
 		}
 		
+		Logger.info('Using browser: ${defaultBrowser.browserName} (${defaultBrowser.browserType})');
+		
 		try {
 			// Handle System Default browser type specially
 			if (defaultBrowser.browserType == Browsers.SYSTEM_DEFAULT) {
 				#if windows
 				// Use Windows start command to open with system default browser
 				var command = 'start "" "${webAddress}"';
-				Logger.info('Opening URL with system default browser: ${command}');
-				NativeSys.sys_command(command);
+				Logger.info('Opening URL with system default browser command: ${command}');
+				var result = NativeSys.sys_command(command);
+				Logger.info('System command result: ${result}');
+				return result == 0;
 				#elseif mac
 				// Use Mac open command to open with system default browser
 				var a = [webAddress];
 				Logger.info('Opening URL with system default browser using open command');
 				Shell.getInstance().open( a );
+				return true;
 				#elseif linux
 				// Use xdg-open to open with system default browser
 				var a = [webAddress];
 				Logger.info('Opening URL with system default browser using xdg-open');
 				Shell.getInstance().open( a );
+				return true;
 				#end
-				return;
 			}
 			
 			// Handle specific browser types
@@ -123,12 +128,17 @@ class Browsers
 			#end
 			
 			Logger.info('Opening URL with ${defaultBrowser.browserName}: ${webAddress}');
+			Logger.info('Command args: ${a}');
 			
 			#if windows
 			var trim = StringTools.trim( a.join( " " ));
-			NativeSys.sys_command(trim);
+			Logger.info('Final Windows command: ${trim}');
+			var result = NativeSys.sys_command(trim);
+			Logger.info('Specific browser command result: ${result}');
+			return result == 0;
 			#else
 			Shell.getInstance().open( a );
+			return true;
 			#end
 		} catch (e) {
 			Logger.error('Failed to open URL with ${defaultBrowser.browserName}: ${e}');
@@ -139,16 +149,23 @@ class Browsers
 				try {
 					#if windows
 					var fallbackCommand = 'start "" "${webAddress}"';
-					NativeSys.sys_command(fallbackCommand);
+					Logger.info('Fallback command: ${fallbackCommand}');
+					var result = NativeSys.sys_command(fallbackCommand);
+					Logger.info('Fallback command result: ${result}');
+					return result == 0;
 					#elseif mac
 					Shell.getInstance().open( [webAddress] );
+					return true;
 					#elseif linux
 					Shell.getInstance().open( [webAddress] );
+					return true;
 					#end
 				} catch (e2) {
 					Logger.error('Final fallback also failed: ${e2}');
+					return false;
 				}
 			}
+			return false;
 		}
     }
 }
