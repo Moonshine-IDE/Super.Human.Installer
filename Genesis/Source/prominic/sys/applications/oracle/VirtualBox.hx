@@ -939,7 +939,10 @@ class VirtualBox extends AbstractApp {
 
                         }
 
-                        _virtualBoxMachines.push( currentMachine );
+                        // Only add machines with valid names to prevent empty/malformed entries from inflating the count
+                        if (currentMachine.name != null && currentMachine.name.length > 0) {
+                            _virtualBoxMachines.push( currentMachine );
+                        }
 
                     }
 
@@ -948,6 +951,13 @@ class VirtualBox extends AbstractApp {
             }
 
         }
+
+        // Diagnostic logging to help identify counting issues
+        Logger.info('${this}: VBoxMachines found:');
+        for (i in 0..._virtualBoxMachines.length) {
+            Logger.info('${i + 1}. ${_virtualBoxMachines[i].name}');
+        }
+        Logger.info('${this}: Total: ${_virtualBoxMachines.length}');
 
     }
 
