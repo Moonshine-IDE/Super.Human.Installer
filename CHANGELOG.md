@@ -11,41 +11,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## Super Human Installer [1.6.0]
 
-TODO:  Summary
-
-TODO:  Categorize and review description:
-* Add option to Disable JeDI and use Nashed service ([#174](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/174))
-* Release preparation 1.6.0 ([#173](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/173))
-* Super.Human.Installer Development v1.4.3 Has High CPU load ([#168](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/168))
-* java-domino-gradle Role Broken for Local Instances ([#167](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/167))
-* Provisioners Failing to Update in Super.Human.Installer Development 1.4.x ([#166](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/166))
-* Vagrant and Virtualbox Installation Error ([#165](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/165))
-* Domino AppDevPack is deprecated ([#163](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/163))
-* Modifying Advanced Properties of a existing VM deletes and recreates the servers instances folder ([#160](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/160))
-* Prevent Instance ID Conflicts ([#151](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/151))
-* Expose JEDI in roles page of the server ([#141](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/141))
-* Remove hardcoded passwords from Hosts.template.yml ([#114](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/114))
-* Super.Human.Installer does not detect a VM shutdown ([#107](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/107))
-* Headless mode blocked by some Anti-Virus ([#98](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/98))
-* Super Human Installer report both missing items VirtualBox and Vagrant while one is uninstalled ([#73](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/73))
-* MacOS: When we remove VirtualBox from Applications Super Human Installer hangs ([#72](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/72))
-* Console Output Copy Does Nothing On Windows ([#61](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/61))
-* Core: Add support for TM-symbol-in-a-circle in text fields ([#33](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/33))
-* Core/UI: Create menu and page for Provisioners ([#25](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/25))
-* UI: Allow opening Server Config Page in read-only mode while the server is booting up or running ([#18](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/18))
-* Core/UI: Add Duplicate Server ([#13](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/13))
-* Core/UI: Add "Recheck" button if Vagrant/VBox is not installed or unsupported versions are installed ([#11](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/11))
-* UI: Request 'DELETE' in a TextInput if the user is trying to delete a server ([#8](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/8))
-
+The 1.6.0 release of Super.Human.Installer enhances server management with major UI improvements, adds provisioner customization capabilities, improves application stability, and removes deprecated components.
 
 ### Added
 
+- Added ability to duplicate existing servers for faster configuration ([#13](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/13))
+- Added "Recheck" button to detect Vagrant/VirtualBox installation or version updates while app is running ([#11](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/11))
+- Added delete confirmation requiring 'DELETE' text input when removing servers ([#8](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/8))
+- Added read-only mode for Server Config Page while server is booting up or running ([#18](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/18))
+- Added menu and page for managing custom provisioners with delete functionality ([#25](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/25))
+- Added support for trademark and copyright symbols (™, ©) in text fields ([#33](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/33))
+- Added option to expose console output for VMs to address anti-virus blocking in headless mode ([#98](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/98))
+- Added configurable default password management for VMs in Hosts.template.yml ([#114](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/114))
+- Added JEDI role to server roles page with configuration options ([#141](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/141))
+- Added option to disable JeDI and use Nashed service instead ([#174](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/174))
+- Added Lockdown role with option to delete debugging/setup files ([#167](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/167))
+- Added detailed VM information page ([#35](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/35))
+- Added log collection and app improvement request functionality ([#12](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/12))
 
 ### Changed
 
-
+- Improved VM state detection with periodic refresh to detect external changes ([#107](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/107))
+- Enhanced role validation logic to preserve user customizations in source path handling ([#160](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/160))
+- Updated initial registry with latest versions of Traveler, Verse, and other installers
+- Removed deprecated Domino AppDevPack from available options ([#163](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/163))
+- Added support for HCL Domino REST API 14.5 minor version subtype
 
 ### Fixed
+
+- Fixed application crash when VirtualBox is removed from Applications on macOS ([#72](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/72))
+- Fixed issue where both VirtualBox and Vagrant were reported as missing when only one was uninstalled ([#73](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/73))
+- Fixed console output copy functionality on Windows ([#61](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/61))
+- Fixed Instance ID conflicts by preventing duplicate IDs ([#151](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/151))
+- Fixed issue where modifying Advanced Properties of existing VM deleted and recreated the servers instances folder ([#160](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/160))
+- Fixed browser configuration error during Vagrant and VirtualBox installation ([#165](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/165))
+- Fixed provisioners failing to update in development builds on macOS ([#166](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/166))
+- Fixed java-domino-gradle role for local instances ([#167](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/167))
+- Fixed high CPU load issue in development version ([#168](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/168))
+- Fixed warning when saving provisional servers before folder structure is created ([#13](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/13))
+- Fixed VirtualBox machine count detection ([#63](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/63))
 
 
 
