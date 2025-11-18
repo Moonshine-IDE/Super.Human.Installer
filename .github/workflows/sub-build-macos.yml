@@ -93,7 +93,7 @@ jobs:
       - name: Installing hxcpp
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.89
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.98
           pushd .
           cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
@@ -102,7 +102,7 @@ jobs:
       - name: Installing dependencies
         working-directory: Build
         run: |
-          haxelib install lime 8.2.2
+          haxelib install lime 8.3.0
           haxelib install format
           haxelib install hxp
           haxelib git yaml https://github.com/Sword352/hx-yaml master
@@ -111,7 +111,7 @@ jobs:
       - name: Installing OpenFL
         working-directory: Build
         run: |
-          haxelib install openfl 9.4.1
+          haxelib install openfl 9.5.0
 
       - name: Configuring OpenFL
         working-directory: Build
