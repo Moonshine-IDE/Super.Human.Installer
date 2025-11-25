@@ -62,7 +62,7 @@
       },
       {
         "fileName": "Domino_14.5_Linux_English_EA2refresh.tar",
-        "description": "HCL Domino Server 14.5 for Linux English",
+        "description": "HCL Domino Server 14.5 EA2refresh for Linux English",
         "sha256": "43b17373714fe89a62e9a78240a94cbd38a5b7f366f31a9f59d5afb63b96cc50",
         "version": {
           "majorVersion": "14",
@@ -74,7 +74,7 @@
       },
       {
         "fileName": "Domino_14.0_Linux_English_EA1.tar",
-        "description": "HCL Domino Server 14.0 for Linux English",
+        "description": "HCL Domino Server 14.0 EA1 for Linux English",
         "sha256": "9dcf9fb8b5ef2a02a06dfcb5c1cc53f12b992bf69c354c0245553ef325889e1f",
         "version": {
           "majorVersion": "14",
@@ -86,7 +86,7 @@
       },
       {
         "fileName": "Domino_14.0_Linux_English_EA2.tar",
-        "description": "HCL Domino Server 14.0 for Linux English",
+        "description": "HCL Domino Server 14.0 EA2 for Linux English",
         "sha256": "290867a1eb0bc13f377e103ee3809e88b3f4a0c6f14a39a1c3714efbe5942371",
         "version": {
           "majorVersion": "14",
@@ -98,7 +98,7 @@
       },
       {
         "fileName": "Domino_14.0_Linux_English_EA3.tar",
-        "description": "HCL Domino Server 14.0 for Linux English",
+        "description": "HCL Domino Server 14.0 EA3 for Linux English",
         "sha256": "8174c1a927571ba61b4c084c5863de6d7f48ed0d5ab9e293f7476fd41b9835c0",
         "version": {
           "majorVersion": "14",
@@ -106,6 +106,18 @@
           "patchVersion": "0",
           "ea_access_release": "EA3",
           "fullVersion": "14.0.0_EA3"
+        }
+      },
+      {
+        "fileName": "Domino_14.5.1_Linux_English_EA1.tar",
+        "description": "HCL Domino Server 14.5.1 for Linux English",
+        "sha256": "b950cdfecf0d87d89a6ca64c8e24b5c23e46724b364cb34e2a1d84a124a1742e",
+        "version": {
+          "majorVersion": "14",
+          "minorVersion": "5",
+          "patchVersion": "1",
+          "ea_access_release": "EA1",
+          "fullVersion": "14.5.1_EA1"
         }
       },
       {
@@ -1184,6 +1196,17 @@
           "patchVersion": "5",
           "fullVersion": "3.2.5"
         }
+      },
+      {
+        "fileName": "HCL_Verse_3.2.6.zip",
+        "description": "HCL Verse 3.2.6 for Domino Multiplatform Multilingual",
+        "sha256": "856455adfa5e9437de15179ca7e487602e661f0b2f8f9a21afccf0a98d077dfc",
+        "version": {
+          "majorVersion": "3",
+          "minorVersion": "2",
+          "patchVersion": "6",
+          "fullVersion": "3.2.6"
+        }
       }
     ],
     "hotfixes": [
@@ -1575,6 +1598,39 @@
           "minorVersion": "1",
           "patchVersion": "5_R14.5",
           "fullVersion": "1.1.5_R14.5"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.6_R12_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.6 Multiplatform Installer For Domino 12",
+        "sha256": "b4ef8beb26df5b029275ce28e6466ad3d04c281ed7efbb078af0bd651fba2e69",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "6_R12",
+          "fullVersion": "1.1.6_R12"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.6_R14_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.6 Multiplatform Installer For Domino 14",
+        "sha256": "a2f2122e95c6b7b80a8bea21434045054182b2ae5cc83ca3660165890961028b",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "6_R14",
+          "fullVersion": "1.1.6_R14"
+        }
+      },
+      {
+        "fileName": "Domino_REST_API_V1.1.6_R14.5_Installer.tar.gz",
+        "description": "HCL Domino REST API V1.1.6 Multiplatform Installer For Domino 14.5",
+        "sha256": "e55bb7b7289a1c9118169bd6a09060bea1adc4f056601a38ab54dc9ead4ec5e2",
+        "version": {
+          "majorVersion": "1",
+          "minorVersion": "1",
+          "patchVersion": "6_R14.5",
+          "fullVersion": "1.1.6_R14.5"
         }
       }
     ]
