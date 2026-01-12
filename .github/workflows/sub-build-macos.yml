@@ -93,7 +93,7 @@ jobs:
       - name: Installing hxcpp
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.98
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.98.112
           pushd .
           cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml

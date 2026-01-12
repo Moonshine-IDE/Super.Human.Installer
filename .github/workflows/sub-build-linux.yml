@@ -83,7 +83,7 @@ jobs:
       - name: Install dependencies
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.98
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.98.112
           pushd .
           cd /home/startcloud/SuperHumanInstaller-runner/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
