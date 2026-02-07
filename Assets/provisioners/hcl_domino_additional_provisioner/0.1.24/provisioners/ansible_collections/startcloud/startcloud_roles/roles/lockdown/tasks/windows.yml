@@ -1,0 +1,79 @@
+---
+-
+  name: "Lowering password complexity requirements"
+  community.windows.win_security_policy:
+    section: System Access
+    key: PasswordComplexity
+    value: 0
+
+-
+  name: "Changing default user password (using settings password)"
+  when: 
+    - lockdown_use_settings_password | default(false)
+    - vagrant_user_pass is defined
+  ansible.windows.win_user:
+    name: "{{ vagrant_user | default('Administrator') }}"
+    password: "{{ vagrant_user_pass }}"
+    state: present
+
+-
+  name: "Changing default user password (using lockdown password)"
+  when: 
+    - not lockdown_use_settings_password
+    - lockdown_new_password is defined
+  ansible.windows.win_user:
+    name: "{{ vagrant_user | default('Administrator') }}"
+    password: "{{ lockdown_new_password }}"
+    state: present
+
+-
+  name: "Restoring original password complexity requirements"
+  community.windows.win_security_policy:
+    section: System Access
+    key: PasswordComplexity
+    value: 1
+
+-
+  name: "Reset WinRM connection to apply user changes"
+  ansible.builtin.meta: reset_connection
+
+-
+  name: "Cleaning up specified sensitive files and directories"
+  when: 
+    - lockdown_file_cleanups_list is defined
+    - lockdown_file_cleanups_list | length > 0
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: absent
+  loop: "{{ lockdown_file_cleanups_list }}"
+  loop_control:
+    label: "{{ item }}"
+  ignore_errors: true
+
+-
+  name: "Removing temporary files and caches"
+  when: lockdown_cleanup_temp | default(true)
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "C:\\Windows\\Temp\\*"
+    - "C:\\Users\\*\\AppData\\Local\\Temp\\*"
+    - "C:\\Windows\\Prefetch\\*"
+  ignore_errors: true
+
+-
+  name: "Clearing Windows event logs (if specified)"
+  when: lockdown_clear_event_logs | default(false)
+  ansible.windows.win_powershell:
+    script: |
+      $logs = Get-WinEvent -ListLog * | Where-Object {$_.RecordCount -gt 0}
+      foreach ($log in $logs) {
+        try {
+          Clear-WinEvent -LogName $log.LogName -Force
+          Write-Output "Cleared log: $($log.LogName)"
+        } catch {
+          Write-Output "Could not clear log: $($log.LogName) - $($_.Exception.Message)"
+        }
+      }
+  ignore_errors: true

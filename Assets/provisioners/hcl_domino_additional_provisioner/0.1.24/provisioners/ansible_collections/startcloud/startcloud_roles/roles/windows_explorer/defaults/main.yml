@@ -1,0 +1,13 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Windows Explorer"
+
+# defaults file for windows_explorer
+
+# Show hidden files and folders
+show_hidden_files: true
+
+# Show system/super-hidden files
+show_super_hidden_files: false

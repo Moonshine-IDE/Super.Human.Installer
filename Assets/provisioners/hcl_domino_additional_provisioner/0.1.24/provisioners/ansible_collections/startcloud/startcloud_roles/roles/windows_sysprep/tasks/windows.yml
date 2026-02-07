@@ -1,0 +1,52 @@
+
+-
+  name: "Configuring AutoUnattend.xml and Post Provisioning Setup scripts"
+  when: prepare_template
+  block:
+    -
+      name: "Creating STARTcloud Directories"
+      ansible.builtin.win_file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - C:\temp
+        - C:\Windows\Temp\packer
+        - C:\vagrant
+        - C:\Windows\Setup\Scripts
+
+    #-
+    #  name: "Copying SetupComplete.cmd"
+    #  ansible.windows.win_template:
+    #    src: SetupComplete.cmd.j2
+    #    dest: C:\Windows\Setup\Scripts\SetupComplete.cmd
+
+    -
+      name: "Copying provision-Autounattend.ps1 to packer directory"
+      ansible.windows.win_template:
+        src: provision-Autounattend.ps1.j2
+        dest: C:\Windows\Temp\packer\Autounattend.ps1
+
+    -
+      name: "Copying provision-Autounattend.xml to packer directory"
+      when: distro_version == "10"
+      ansible.windows.win_template:
+        src: win10-provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+    -
+      name: "Copying provision-Autounattend.xml to packer directory"
+      when: distro_version == "2022"
+      ansible.windows.win_template:
+        src: server2022-provision-Autounattend.xml.j2
+        dest: C:\Windows\Temp\packer\Autounattend.xml
+
+    -
+      name: "Preparing for Sysprep"
+      when: prepare_sysprep
+      block:
+        -
+          name: "Create sysprep.bat"
+          ansible.windows.win_copy:
+            dest: C:\Windows\Temp\packer\sysprep.bat
+            content: |
+              C:\Windows\System32\Sysprep\sysprep.exe /generalize /oobe /quiet /shutdown /unattend:C:\Windows\Temp\packer\Autounattend.xml

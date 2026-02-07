@@ -1,0 +1,18 @@
+---
+# Default variables
+build: true
+package: true
+publish: true
+
+# Default var files
+default_var_files:
+  - definitions/cloud-credentials.json
+  - definitions/vendor.json
+
+# Cleanup after build
+run_cleanup: true
+
+# Optional template filter - leave empty to build all templates
+# Set to template name to build just one specific template
+# Example: template_filter: "Debian 12 Server"
+template_filter: ""

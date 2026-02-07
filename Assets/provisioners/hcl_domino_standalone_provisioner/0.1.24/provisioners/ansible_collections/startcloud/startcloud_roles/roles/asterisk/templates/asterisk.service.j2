@@ -1,0 +1,33 @@
+[Unit]
+Description=Asterisk PBX and telephony daemon
+After=network.target
+
+[Service]
+Type=simple
+Environment=HOME={{ asterisk_lib_dir }}
+#if systemd do not provide hostname and you need to use ${ENV(HOSTNAME)}
+#Environment=HOSTNAME=%H
+WorkingDirectory={{ asterisk_lib_dir }}
+User=asterisk
+Group=asterisk
+ExecStart=/usr/sbin/asterisk -mqf -C {{ asterisk_config_dir }}/asterisk.conf
+ExecReload=/usr/sbin/asterisk -rx 'core reload'
+
+#if /var/run is a tmpfs, this will create {{ asterisk_run_dir }} on start
+#RuntimeDirectory=asterisk
+
+#Nice=0
+#UMask=0002
+LimitCORE=infinity
+#LimitNOFILE=
+Restart=always
+RestartSec=4
+
+# Prevent duplication of logs with color codes to /var/log/messages
+StandardOutput=null
+
+PrivateTmp=true
+
+
+[Install]
+WantedBy=multi-user.target

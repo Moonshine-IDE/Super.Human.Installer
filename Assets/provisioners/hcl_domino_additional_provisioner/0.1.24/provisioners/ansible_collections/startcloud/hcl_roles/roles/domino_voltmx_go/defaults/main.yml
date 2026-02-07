@@ -1,0 +1,19 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing VoltMX Go"
+
+installer_url_app_path: "SHI/VoltMXGo"
+
+# Download File
+voltmx_go_installer_archive: HCLVoltMXGO_Plugin_Installer_Tool_Linux_V2.1.tar.gz
+
+# Extracted VoltMX Go Plugin Installer
+voltmx_go_plugin_installer_bin: "VoltMXGoInstallationTool-9.5.18.3.bin"
+
+## VoltMX Go Installer
+voltmx_go_install_dir: "{{ voltmx_installation_dir }}/VoltMXGoPluginInstaller"
+voltmx_go_installer_bin: "VoltMXGoPluginInstaller"
+
+install_voltmx_go_plugin: true

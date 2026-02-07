@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=STARTcloud Boot Splash
+Description=STARTclouds Boot Splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/startcloud
+ScriptFile=/usr/share/plymouth/themes/startcloud/startcloud.script

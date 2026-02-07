@@ -1,0 +1,21 @@
+---
+run_tasks: true
+# Version information - default version if not specified
+domino_rest_api_version: 1.1.5
+
+# Default Domino version if not already defined by domino_install role
+domino_major_version: "{{ domino_major_version | default('14') }}"
+domino_minor_version: "{{ domino_minor_version | default('0') }}"
+
+# Archive name determined by set_fact in tasks/main.yml
+
+domino_rest_api_debug: true
+installer_url_app_path: "SHI/Domino_rest_api"
+domino_rest_api_port_forwards:
+  -
+    guest: "{{ domino_install_port_forwards[0].guest }}"
+    url: "restapi"
+  -
+    guest: "{{ domino_install_port_forwards[1].guest }}"
+    url: "restapi"
+domino_rest_api_proxy_url: "{{ domino_rest_api_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

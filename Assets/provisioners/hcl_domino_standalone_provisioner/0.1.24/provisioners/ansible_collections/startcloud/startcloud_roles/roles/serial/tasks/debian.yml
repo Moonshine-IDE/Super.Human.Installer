@@ -1,0 +1,103 @@
+---
+-
+  name: "Creating directory for Auto Login in Terminal"
+  ansible.builtin.file:
+    path: /etc/systemd/system/serial-getty@ttyS0.service.d
+    state: directory
+    mode: "0755"
+
+-
+  name: "Enabling Auto Login configuration"
+  when: enable_auto_login
+  ansible.builtin.lineinfile:
+    create: true
+    line: "{{ item }}"
+    mode: "0644"
+    path: /etc/systemd/system/serial-getty@ttyS0.service.d/override.conf
+  with_items:
+    - "[Service]"
+    - ExecStart=
+    - "ExecStart=/sbin/agetty --autologin root -8 --keep-baud 115200,38400,9600 ttyS0 $TERM"
+
+-
+  name: "Enabling serial getty service"
+  when: enable_auto_login
+  ansible.builtin.systemd:
+    name: serial-getty@ttyS0.service
+    enabled: true
+    state: started
+    daemon_reload: true
+
+-
+  name: "Ensuring getty on tty0 is enabled"
+  when: enable_auto_login
+  ansible.builtin.systemd:
+    name: getty@tty0.service
+    enabled: true
+    state: started
+
+-
+  name: "Setting fact for serial console configuration"
+  ansible.builtin.set_fact:
+    serial_console_configured: true
+    serial_grub_cmdline: "{{ grub_cmdline_linux_default }}"
+
+-
+  name: "Ensuring that a Serial Terminal is enabled in Grub"
+  ansible.builtin.lineinfile:
+    line: "{{ item.line }}"
+    path: /etc/default/grub
+    regexp: "{{ item.regexp }}"
+  with_items:
+    - line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_cmdline_linux_default }}"'
+      regexp: ^GRUB_CMDLINE_LINUX_DEFAULT=
+    - line: 'GRUB_CMDLINE_LINUX="{{ grub_cmdline_linux }}"'
+      regexp: ^GRUB_CMDLINE_LINUX=
+    - line: 'GRUB_TERMINAL_INPUT="console serial"'
+      regexp: ^#?GRUB_TERMINAL_INPUT=
+    - line: 'GRUB_TERMINAL_OUTPUT="gfxterm serial"'
+      regexp: ^#?GRUB_TERMINAL_OUTPUT=
+    - line: 'GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"'
+      regexp: ^#?GRUB_SERIAL_COMMAND=
+    - line: 'GRUB_TIMEOUT=5'
+      regexp: ^GRUB_TIMEOUT=
+    - line: 'GRUB_TIMEOUT_STYLE=menu'
+      regexp: ^GRUB_TIMEOUT_STYLE=
+    - line: 'GRUB_HIDDEN_TIMEOUT_QUIET=false'
+      regexp: ^#?GRUB_HIDDEN_TIMEOUT_QUIET=
+
+-
+  name: "Updating Grub"
+  ansible.builtin.apt:
+    name:
+      - grub-efi-amd64-bin
+      - grub-pc-bin
+    state: present
+    update_cache: true
+
+-
+  name: "Installing Grub for BIOS systems"
+  ansible.builtin.command: grub-install --target=i386-pc /dev/vda
+  register: grub_intall
+  changed_when: grub_intall.rc != 0
+
+-
+  name: "Generating Grub configuration"
+  ansible.builtin.command: update-grub
+  register: grub_config
+  changed_when: grub_config.rc != 0
+
+-
+  name: "Creating proper EFI Directory for all BIOS/UEFI Loaders"
+  ansible.builtin.file:
+    path: /boot/efi/EFI/BOOT
+    state: directory
+    mode: "0755"
+
+-
+  name: "Copying Grub EFI file"
+  ansible.builtin.copy:
+    src: /boot/efi/EFI/debian/grubx64.efi
+    dest: /boot/efi/EFI/BOOT/BOOTX64.EFI
+    remote_src: true
+    mode: "644"

@@ -1,0 +1,8 @@
+Write-Host "Configure OpenSSH"
+$ACL = Get-ACL C:\Windows\Temp\packer\
+$Group = New-Object System.Security.Principal.NTAccount("Builtin", "Administrators")
+$ACL.SetOwner($Group)
+Set-Acl -Path C:\Windows\Temp\packer\ -AclObject $ACL -Recurse
+
+Set-Service -Name 'sshd' -StartupType Automatic
+Start-Service -Name 'sshd'

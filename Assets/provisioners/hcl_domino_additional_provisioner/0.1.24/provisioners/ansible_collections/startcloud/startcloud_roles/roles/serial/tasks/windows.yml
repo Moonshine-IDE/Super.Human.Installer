@@ -1,0 +1,15 @@
+---
+-
+  name: "Enabling Windows Emergency Management Services (EMS) and Serial Console capability"
+  ansible.windows.win_shell: |
+    DISM /Online /Add-Capability /CapabilityName:Windows.Desktop.EMS-SAC.Tools~~~~0.0.1.0
+  register: ems_sac_result
+  ignore_errors: true
+  when: ansible_distribution == "Microsoft Windows 10 Enterprise" or ansible_distribution == "Microsoft Windows 10 Pro"
+
+-
+  name: "Enabling Serial Emergency Management Console"
+  ansible.windows.win_shell: |
+    bcdedit /ems ON
+    bcdedit /bootems ON
+    bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200

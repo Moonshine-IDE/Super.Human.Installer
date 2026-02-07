@@ -1,0 +1,6 @@
+---
+# Prominic-specific antivirus configuration
+
+# Antivirus installation settings
+install_sophos: false
+install_clamav: true

@@ -1,0 +1,58 @@
+---
+- name: Process template {{ template_def.name }}
+  block:
+    - name: Set template variables
+      set_fact:
+        template_file: "{{ template_def.path }}"
+        template_providers: "{{ template_def.providers }}"
+        
+    - name: Check if template exists
+      stat:
+        path: "{{ template_file }}"
+      register: template_stat
+      
+    - name: Skip if template doesn't exist
+      meta: end_play
+      when: not template_stat.stat.exists
+    
+    - name: Load template content
+      slurp:
+        path: "{{ template_file }}"
+      register: template_content
+      when: template_stat.stat.exists
+    
+    - name: Parse template JSON
+      set_fact:
+        template_json: "{{ template_content.content | b64decode | from_json }}"
+      when: template_stat.stat.exists
+      
+    - name: Determine if Windows template
+      set_fact:
+        is_windows: "{{ 'windows' in template_file }}"
+      when: template_stat.stat.exists
+    
+    - name: Set build task file
+      set_fact:
+        build_task: "provisioners/packer/build-ansible.json" if is_windows else "provisioners/packer/build-ansible-local.json"
+      when: template_stat.stat.exists
+      
+    - name: Include build tasks
+      include_tasks: build.yml
+      when: build | bool and template_stat.stat.exists
+      
+    - name: Include package tasks
+      include_tasks: package.yml
+      when: package | bool and template_stat.stat.exists
+      
+    - name: Include publish tasks
+      include_tasks: publish.yml
+      when: publish | bool and template_stat.stat.exists
+      
+    - name: Run cleanup
+      include_tasks: cleanup.yml
+      when: run_cleanup | bool and template_stat.stat.exists
+
+  rescue:
+    - name: Report template processing error
+      debug:
+        msg: "Error processing template {{ template_def.name }}. Check output for details."

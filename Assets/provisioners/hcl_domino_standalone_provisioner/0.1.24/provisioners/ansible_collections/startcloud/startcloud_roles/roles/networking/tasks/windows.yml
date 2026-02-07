@@ -1,0 +1,166 @@
+---
+-
+  name: "Gathering networking configurations"
+  block:
+    -
+      name: "Gathering Ansible facts"
+      ansible.builtin.setup:
+
+    -
+      name: "Discovering Windows network adapters"
+      ansible.windows.win_powershell:
+        script: |
+          $adapters = Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Sort-Object InterfaceIndex
+          $result = @()
+          foreach ($adapter in $adapters) {
+            $ip = (Get-NetIPAddress -InterfaceIndex $adapter.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress
+            $result += @{
+              Name = $adapter.Name
+              InterfaceAlias = $adapter.InterfaceAlias
+              InterfaceIndex = $adapter.InterfaceIndex
+              MacAddress = $adapter.MacAddress
+              IPAddress = $ip
+              Description = $adapter.InterfaceDescription
+            }
+          }
+          return $result | ConvertTo-Json
+      register: windows_adapters
+      changed_when: false
+
+    -
+      name: "Parsing network adapter information"
+      ansible.builtin.set_fact:
+        parsed_adapters: "{{ windows_adapters.output[0] | from_json }}"
+
+    -
+      name: "Ensuring there are at least two interfaces"
+      ansible.builtin.fail:
+        msg: "Less than two network interfaces found."
+      when: parsed_adapters | length < 2
+
+    -
+      name: "Identifying primary and vagrant interfaces"
+      ansible.builtin.set_fact:
+        primary_adapter: "{{ parsed_adapters | selectattr('InterfaceAlias', 'match', '.*_0$') | first }}"
+        vagrant_adapter: "{{ parsed_adapters | selectattr('InterfaceAlias', 'match', '.*_1$') | first }}"
+
+    -
+      name: "Storing first adapter details"
+      ansible.builtin.set_fact:
+        first_adapter_details:
+          name: "{{ primary_adapter.InterfaceAlias }}"
+          ip: "{{ primary_adapter.IPAddress | default('') }}"
+          mac: "{{ primary_adapter.MacAddress | default('') }}"
+          index: "{{ primary_adapter.InterfaceIndex }}"
+
+    -
+      name: "Storing second adapter details"
+      ansible.builtin.set_fact:
+        second_adapter_details:
+          name: "{{ vagrant_adapter.InterfaceAlias }}"
+          ip: "{{ vagrant_adapter.IPAddress | default('') }}"
+          mac: "{{ vagrant_adapter.MacAddress | default('') }}"
+          index: "{{ vagrant_adapter.InterfaceIndex }}"
+
+    -
+      name: "Displaying stored first adapter details"
+      ansible.builtin.debug:
+        msg: "First adapter: {{ first_adapter_details.name }}, IP: {{ first_adapter_details.ip }}, MAC: {{ first_adapter_details.mac }}"
+
+    -
+      name: "Displaying stored second adapter details"
+      ansible.builtin.debug:
+        msg: "Second adapter: {{ second_adapter_details.name }}, IP: {{ second_adapter_details.ip }}, MAC: {{ second_adapter_details.mac }}"
+
+-
+  name: "Configuring interface priorities"
+  block:
+    -
+      name: "Setting permanent interface to low metric"
+      ansible.windows.win_powershell:
+        script: |
+          $routes = Get-NetRoute -InterfaceAlias "{{ first_adapter_details.name }}" -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue
+          foreach ($route in $routes) {
+            Set-NetRoute -DestinationPrefix $route.DestinationPrefix -InterfaceAlias "{{ first_adapter_details.name }}" -NextHop $route.NextHop -RouteMetric 1 -Confirm:$false
+          }
+          Write-Output "Set permanent interface {{ first_adapter_details.name }} to metric 1"
+
+    -
+      name: "Setting vagrant NAT interface to high metric"
+      ansible.windows.win_powershell:
+        script: |
+          $routes = Get-NetRoute -InterfaceAlias "{{ second_adapter_details.name }}" -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue
+          foreach ($route in $routes) {
+            Set-NetRoute -DestinationPrefix $route.DestinationPrefix -InterfaceAlias "{{ second_adapter_details.name }}" -NextHop $route.NextHop -RouteMetric 100 -Confirm:$false
+          }
+          Write-Output "Set vagrant NAT interface {{ second_adapter_details.name }} to metric 100"
+
+-
+  name: "Configuring DNS settings"
+  when: networks[0] is defined and networks[0].dns is defined
+  ansible.windows.win_dns_client:
+    adapter_names: "{{ first_adapter_details.name }}"
+    dns_servers:
+      - "{{ networks[0].dns[0]['nameserver'] }}"
+      - "{{ networks[0].dns[1]['nameserver'] }}"
+
+-
+  name: "Setting host records"
+  block:
+    -
+      name: "Creating DNS aliases list"
+      ansible.builtin.set_fact:
+        dns_aliases: "{{ [settings.hostname] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain)) | list }}"
+
+    -
+      name: "Creating Windows hosts entries"
+      community.windows.win_hosts:
+        state: present
+        canonical_name: "{{ settings.hostname }}.{{ settings.domain }}"
+        ip_address: "{{ second_adapter_details.ip }}"
+        aliases: "{{ dns_aliases }}"
+
+-
+  name: "Creating IP Address artifacts"
+  block:
+    -
+      name: "Creating adapter details structure"
+      ansible.builtin.set_fact:
+        adapter_details: |
+          adapters:
+          - ip: {{ first_adapter_details.ip | default('') }}
+            mac: '{{ first_adapter_details.mac | default('') }}'
+            name: {{ first_adapter_details.name | default('') }}
+          - ip: {{ second_adapter_details.ip | default('') }}
+            mac: '{{ second_adapter_details.mac | default('') }}'
+            name: {{ second_adapter_details.name | default('') }}
+
+    -
+      name: "Creating required directories"
+      ansible.windows.win_file:
+        path: "{{ item }}"
+        state: directory
+      loop:
+        - "C:\\vagrant\\support-bundle"
+        - "C:\\vagrant\\completed"
+
+    -
+      name: "Writing adapter details to files"
+      ansible.windows.win_copy:
+        content: "{{ item.content }}"
+        dest: "{{ item.dest }}"
+      loop:
+        - dest: "C:\\vagrant\\completed\\ipaddress.yml"
+          content: "{{ second_adapter_details.ip | default('') }}"
+        - dest: "C:\\vagrant\\support-bundle\\adapters.json"
+          content: "{{ adapter_details | from_yaml | to_nice_json }}"
+        - dest: "C:\\vagrant\\support-bundle\\provisioned-adapters.yml"
+          content: "{{ adapter_details }}"
+
+-
+  name: "Loading Bhyve networking tasks"
+  when: ansible_product_name == "OmniOS HVM"
+  block:
+    -
+      name: "Including Bhyve-specific tasks"
+      ansible.builtin.include_tasks: "bhyve/windows.yml"

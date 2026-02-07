@@ -1,0 +1,30 @@
+galaxy_info:
+  role_name: remote_access
+  author: MarkProminic
+  description: Configure RDP and OpenSSH for remote access
+  company: STARTCloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Windows
+      versions:
+        - '10'
+        - '11'
+        - '2019'
+        - '2022'
+
+  galaxy_tags: 
+    - windows
+    - rdp
+    - ssh
+    - remote
+    - access
+
+dependencies:
+  - role: startcloud.startcloud_roles.firewall
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

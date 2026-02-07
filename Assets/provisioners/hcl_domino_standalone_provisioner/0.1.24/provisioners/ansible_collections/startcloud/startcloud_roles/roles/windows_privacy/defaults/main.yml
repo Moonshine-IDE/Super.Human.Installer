@@ -1,0 +1,80 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Windows Privacy, Telemetry, and Debloat Settings"
+
+# defaults file for windows_privacy
+
+# Windows Security settings
+disable_security_notifications: true
+
+# Telemetry and data collection
+disable_telemetry: true
+disable_feedback: true
+disable_location_tracking: true
+disable_activity_history: true
+disable_wifi_sense: true
+
+# Cortana and search
+disable_cortana: true
+disable_bing_search: true
+
+# Bloatware prevention
+disable_consumer_features: true
+disable_content_delivery: true
+remove_appx_bloatware: true
+
+# Services
+disable_diagnostics_tracking: true
+disable_telemetry_tasks: true
+
+# Browser debloating
+debloat_edge: true
+
+# Performance optimizations
+optimize_performance: true
+disable_hibernation: true
+
+# Enhanced privacy features
+enhanced_privacy: true
+disable_homegroup: true
+disable_gameDVR: true
+
+# AppX packages to remove (safe list based on ChrisTitusTech)
+appx_packages_to_remove:
+  - "Microsoft.BingNews"
+  - "Microsoft.BingWeather"
+  - "Microsoft.BingSports"
+  - "Microsoft.BingFinance"
+  - "Microsoft.GetHelp"
+  - "Microsoft.Getstarted"
+  - "Microsoft.MicrosoftSolitaireCollection"
+  - "Microsoft.People"
+  - "Microsoft.WindowsAlarms"
+  - "Microsoft.WindowsFeedbackHub"
+  - "Microsoft.WindowsMaps"
+  - "Microsoft.WindowsSoundRecorder"
+  - "Microsoft.ZuneMusic"
+  - "Microsoft.ZuneVideo"
+  - "Microsoft.MicrosoftStickyNotes"
+  - "microsoft.windowscommunicationsapps"
+  - "Microsoft.549981C3F5F10"  # Cortana
+  - "*CandyCrush*"
+  - "*BubbleWitch*"
+  - "*Twitter*"
+  - "*Facebook*"
+  - "*Netflix*"
+  - "*Spotify*"
+  - "*LinkedIn*"
+
+# Scheduled tasks to disable
+telemetry_tasks_to_disable:
+  - "Microsoft\\Windows\\Application Experience\\Microsoft Compatibility Appraiser"
+  - "Microsoft\\Windows\\Application Experience\\ProgramDataUpdater"
+  - "Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator"
+  - "Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip"
+  - "Microsoft\\Windows\\Feedback\\Siuf\\DmClient"
+  - "Microsoft\\Windows\\Feedback\\Siuf\\DmClientOnScenarioDownload"
+  - "Microsoft\\Windows\\Windows Error Reporting\\QueueReporting"
+  - "Microsoft\\Windows\\Maps\\MapsUpdateTask"

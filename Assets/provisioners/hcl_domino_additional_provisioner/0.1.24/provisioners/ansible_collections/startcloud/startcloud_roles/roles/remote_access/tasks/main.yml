@@ -1,0 +1,150 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Enabling Remote Desktop"
+      when: enable_rdp
+      ansible.windows.win_regedit:
+        path: HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server
+        name: fDenyTSConnections
+        data: 0
+        type: dword
+
+    -
+      name: "Gathering Windows Facts"
+      ansible.windows.setup:
+
+    -
+      name: "Installing OpenSSH Server"
+      when: enable_openssh
+      block:
+        -
+          name: "Create InstallOpenSSHServer.ps1"
+          ansible.windows.win_copy:
+            dest: "{{ openssh_install_script_path }}"
+            content: |
+              Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+              Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+
+        -
+          name: "Creating scheduled task to install OpenSSH Server"
+          community.windows.win_scheduled_task:
+            name: InstallOpenSSHServerTask
+            description: Install OpenSSH Server
+            actions:
+              - path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+                arguments: -ExecutionPolicy Bypass -File {{ openssh_install_script_path }}
+            triggers:
+              - type: registration
+            username: SYSTEM
+            state: present
+            enabled: true
+
+        -
+          name: "Executing the scheduled task"
+          ansible.windows.win_shell: schtasks /Run /TN "InstallOpenSSHServerTask"
+
+        -
+          name: "Waiting for the scheduled task to complete"
+          ansible.windows.win_shell: |
+            $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+            while ($task.State -eq "Running") {
+              Start-Sleep -Seconds 5
+              $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+            }
+
+        -
+          name: "Checking if task completed successfully"
+          ansible.windows.win_shell: |
+            $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+            while ($task.State -eq "Running") {
+              Start-Sleep -Seconds 5
+              $task = Get-ScheduledTask -TaskName "InstallOpenSSHServerTask"
+            }
+            if ($task.LastTaskResult -eq 0) {
+              $completedSuccessfully = $true
+            } else {
+              $completedSuccessfully = $false
+            }
+            $completedSuccessfully
+          register: task_result
+
+        -
+          name: "Delete the scheduled task if it completed successfully"
+          community.windows.win_scheduled_task:
+            name: InstallOpenSSHServerTask
+            state: absent
+          when: task_result.stdout == "True"
+
+        -
+          name: "Starting and Setting the SSHD Service to Automatic"
+          ansible.windows.win_service:
+            name: sshd
+            state: started
+            start_mode: auto
+
+        -
+          name: "Waiting for file C:\\ProgramData\\ssh\\sshd_config to exist before continuing"
+          ansible.windows.win_wait_for:
+            path: C:\ProgramData\ssh\sshd_config
+            timeout: 1800
+
+    -
+      name: "Server-specific configurations"
+      when: ansible_os_family == "Windows" and "server" in ansible_distribution.lower()
+      block:
+        -
+          name: "Disabling Server Manager on Login"
+          ansible.windows.win_regedit:
+            path: HKCU:\Software\Microsoft\ServerManager
+            name: DoNotOpenServerManagerAtLogon
+            data: 1
+            type: dword
+
+        -
+          name: "Removing unwanted features"
+          ansible.windows.win_feature:
+            name: AzureArcSetup
+            state: absent
+
+        -
+          name: "Enabling NFS Client"
+          ansible.windows.win_feature:
+            name: "NFS-Client"
+            state: present
+
+        -
+          name: "Enabling Telnet Client"
+          ansible.windows.win_feature:
+            name: "Telnet-Client"
+            state: present
+
+#    -
+#      name: "Desktop-specific configurations"
+#      when: ansible_os_family == "Windows" and "server" not in ansible_distribution.lower()
+#      block:
+#        -
+#          name: "Enabling Telnet Client"
+#          ansible.windows.win_shell: |
+#            dism /online /Enable-Feature /FeatureName:TelnetClient

@@ -1,0 +1,378 @@
+---
+-
+  name: "Ensuring STARTcloud Theme files are present"
+  block:
+    -
+      name: "Creating STARTcloud Directories"
+      ansible.builtin.win_file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - C:\opt
+        - C:\opt\STARTcloud
+        - C:\opt\STARTcloud\backgrounds
+
+    -
+      name: "Finding Public Desktop Shortcuts"
+      ansible.builtin.win_find:
+        paths: "C:\\Users\\Public\\Desktop"
+        patterns: "*.lnk"
+      register: desktop_shortcuts
+      ignore_errors: yes
+
+    -
+      name: "Removing Public Desktop Shortcuts"
+      ansible.builtin.win_file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ desktop_shortcuts.files }}"
+      when: desktop_shortcuts.files is defined
+      ignore_errors: yes
+
+    -
+      name: "Creating Chromium Intial Preferences"
+      when: chocolatey_packages is defined and 'chromium' in chocolatey_packages
+      ansible.builtin.win_template:
+        src: initial_preferences.json.j2
+        dest: C:\Program Files\Chromium\Application\initial_preferences.json
+        newline_sequence: '\n'
+        backup: true
+
+    -
+      name: "Adding Background Image"
+      ansible.windows.win_copy:
+        src: startcloud-desktop.jpg
+        dest: C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg
+
+    -
+      name: "Adding Background Image"
+      ansible.windows.win_copy:
+        src: startcloud.png
+        dest: C:\opt\STARTcloud\backgrounds\startcloud.png
+
+-
+  name: "Adjusting Theme Settings"
+  block:
+    -
+      name: "Adjusting Theme Settings AppsUseLightTheme"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: AppsUseLightTheme
+        data: 0
+        type: dword
+
+    -
+      name: "Adjust Theme Settings SystemUsesLightTheme"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
+        name: SystemUsesLightTheme
+        data: 0
+        type: dword
+
+    -
+      name: "Adjusting Theme Settings TaskbarMn"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarMn
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Adjusting Theme Settings ShowTaskViewButton"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: ShowTaskViewButton
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Adjusting Theme Settings TaskbarDa"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarDa
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Adjusting Theme Settings TaskbarAl"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+        name: TaskbarAl
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Adjusting Theme Settings SearchboxTaskbarMode"
+      ansible.windows.win_regedit:
+        path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
+        name: SearchboxTaskbarMode
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+-
+  name: "Adjusting Default User Settings"
+  ansible.windows.win_shell: |
+    try {
+        REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize") {
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name AppsUseLightTheme -Value 0 -Type Dword -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" -Name SystemUsesLightTheme -Value 0 -Type Dword -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced") {
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarMn -Value 0 -Type Dword -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "HKLM:\Default\Control Panel\Desktop") {
+            Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name Wallpaper -Value "C:\opt\STARTcloud\backgrounds\startcloud-desktop.jpg" -Type String -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name WallpaperStyle -Value "6" -Type String -ErrorAction SilentlyContinue
+            Set-ItemProperty -Path "HKLM:\Default\Control Panel\Desktop" -Name TileWallpaper -Value "0" -Type String -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar") {
+            Set-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Internet Explorer\Toolbar" -Name Locked -Value 1 -Type Dword -ErrorAction SilentlyContinue
+        }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced") {
+            if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowTaskViewButton -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowTaskViewButton -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+            }
+            if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarDa -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarDa -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+            }
+            if (-not (Get-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarAl -ErrorAction SilentlyContinue)) {
+                New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name TaskbarAl -Value 0 -PropertyType Dword -Force -ErrorAction SilentlyContinue
+            }
+        }
+        if (Test-Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes") {
+            New-ItemProperty -Path "HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes" -Name CurrentTheme -Value "C:\Users\Default\AppData\Local\Microsoft\Windows\Themes\STARTcloud.theme" -PropertyType String -Force -ErrorAction SilentlyContinue
+        }
+        try { reg delete "HKLM\Default\software\Microsoft\Windows\CurrentVersion\Run" /v OneDriveSetup /f 2>$null } catch {}
+        try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f 2>$null } catch {}
+        try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "OneTimeUpgrade" /t Reg_DWORD /d 1 2>$null } catch {}
+        try { reg Add "HKLM\Default\Software\Microsoft\Windows\CurrentVersion\DesktopSpotlight\Settings" /f /v "EnabledState" /t Reg_DWORD /d 0 2>$null } catch {}
+    } finally {
+        try { REG UNLOAD HKLM\Default 2>$null } catch {}
+    }
+    exit 0
+
+-
+  name: "Adjusting Default User Settings"
+  ansible.windows.win_shell: |
+    takeown /f C:\Windows\Web\Screen\img100.jpg
+    takeown /f C:\Windows\Web\4K\Wallpaper\Windows\*.*
+    icacls C:\Windows\Web\Screen\img100.jpg /Grant 'Administrators:(F)'
+    icacls C:\Windows\Web\4K\Wallpaper\Windows\*.* /Grant 'Administrators:(F)'
+    Remove-Item C:\Windows\Web\Screen\img100.jpg
+    Remove-Item C:\Windows\Web\4K\Wallpaper\Windows\*.*
+
+-
+  name: "Adding Background Image"
+  ansible.windows.win_copy:
+    src: startcloud-desktop.jpg
+    dest: C:\Windows\Web\Screen\img100.jpg
+
+-
+  name: "Adding Background Image"
+  ansible.windows.win_copy:
+    src: "4k/{{ item }}"
+    dest: "C:\\Windows\\Web\\4K\\Wallpaper\\Windows\\{{ item }}"
+  with_items:
+    - img0_1024x768.jpg
+    - img0_1366x768.jpg
+    - img0_2160x3840.jpg
+    - img0_3840x2160.jpg
+    - img0_768x1366.jpg
+    - img0_1200x1920.jpg
+    - img0_1600x2560.jpg 
+    - img0_2560x1600.jpg
+    - img0_768x1024.jpg
+
+-
+  name: "Configuring Local Group Policy Settings"
+  block:
+    -
+      name: "Start Menu - Remove Music icon from Start Menu"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderMusic
+        name: value
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Start Menu - Remove Pictures icon from Start Menu"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderPictures
+        name: value
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Start Menu - Remove Videos link from Start Menu"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\PolicyManager\default\Start\AllowPinnedFolderVideos
+        name: value
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Start Menu - Remove Games link from Start Menu"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: NoStartMenuMyGames
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Start Menu - Remove Search link from Start Menu"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: NoSearchFilesInStartMenu
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Start Menu - Enable Run as Different User command"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: ShowRunasDifferentuserinStart
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Taskbar - Remove People Bar from taskbar"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: HidePeopleBar
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Taskbar - Hide Task View Button"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: HideTaskViewButton
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Taskbar - Remove Meet Now icon"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer
+        name: HideSCAMeetNow
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Taskbar - Disable Show Windows Store apps on taskbar"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: NoPinningStoreToTaskbar
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Search - Disable Search the Internet"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+        name: ConnectedSearchUseWeb
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Search - Do not search Internet"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+        name: DisableWebSearch
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Search - Do not search communications"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+        name: ConnectedSearchUseWebOverMeteredConnections
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Search - Remove Search Computer Link"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: NoSearchComputerLinkInStartMenu
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Search - Remove See more results / Search Everywhere link"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: NoSearchInternetInStartMenu
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Search - Configure search on taskbar (hide)"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+        name: SearchboxTaskbarMode
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Privacy - Turn off user tracking"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search
+        name: AllowSearchToUseLocation
+        data: 0
+        type: dword
+        state: present
+      ignore_errors: yes
+
+    -
+      name: "Display - Start screen to appear on display user is using"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer
+        name: MonitorOverride
+        data: 1
+        type: dword
+        state: present
+      ignore_errors: yes

@@ -1,0 +1,43 @@
+--- 
+- 
+  name: "Installing Latest Stable Source for haproxy"
+  tags: haproxy
+  yum: "name=centos-release-scl state=present"
+- 
+  name: "Installing haproxy"
+  tags: haproxy
+  yum: 
+    name: 
+      - rh-haproxy18-haproxy
+      - rh-haproxy18-haproxy-syspaths
+- 
+  name: "Configuring haproxy"
+  tags: haproxy
+  template: 
+    src: "haproxy.cfg.j2"
+    dest: "/etc/opt/rh/rh-haproxy18/haproxy/haproxy.cfg"
+- 
+  file: 
+    group: haproxy
+    mode: "0777"
+    owner: haproxy
+    path: /etc/haproxy/
+    recurse: true
+  name: "Change file ownership, group and permissions"
+- 
+  name: "Configuring haproxy"
+  notify: "reload haproxy"
+  tags: haproxy
+  template: 
+    dest: /etc/haproxy/db2healthcheck.sh
+    src: db2healthcheck.sh
+    group: haproxy
+    mode: "0777"
+    owner: haproxy
+
+- 
+  name: "Starting haproxy"
+  service: 
+    name: rh-haproxy18-haproxy
+    state: started
+  tags: haproxy

@@ -1,0 +1,478 @@
+---
+-
+  name: "Installing Java for keystore operations"
+  chocolatey.chocolatey.win_chocolatey:
+    name: openjdk
+    state: present
+
+-
+  name: "Detecting Java installation path"
+  ansible.windows.win_powershell:
+    script: |
+      $javaPath = Get-ChildItem "C:\Program Files\OpenJDK" | Where-Object { $_.Name -like "jdk-*" } | Select-Object -First 1 -ExpandProperty FullName
+      if ($javaPath) {
+        Write-Output $javaPath
+      } else {
+        # Fallback path based on major version only
+        Write-Output "C:\Program Files\OpenJDK\jdk-{{ java_version }}"
+      }
+  register: detected_java_path
+  changed_when: false
+
+-
+  name: "Setting JAVA_HOME environment variable"
+  ansible.windows.win_environment:
+    name: JAVA_HOME
+    value: "{{ detected_java_path.output[0] }}"
+    level: machine
+
+-
+  name: "Adding Java to system PATH"
+  ansible.windows.win_path:
+    elements:
+      - "{{ detected_java_path.output[0] }}\\bin"
+    scope: machine
+    state: present
+
+-
+  name: "Creating directories for SSL certificates"
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ win_cert_dir }}"
+    - "{{ win_cert_dir }}\\key"
+    - "{{ win_cert_dir }}\\crt"
+    - "{{ win_cert_dir }}\\csr"
+    - "{{ win_cert_dir }}\\pfx"
+    - "{{ win_cert_dir }}\\kyr"
+    - "{{ win_cert_dir }}\\jks"
+    - "{{ win_cert_dir }}\\combined"
+    - "{{ win_cert_dir }}\\ca"
+
+-
+  name: "Using existing Certificate"
+  when: not selfsigned_enabled and not letsencrypt_enabled
+  block:
+    -
+      name: "Copying signed SSL key"
+      ansible.windows.win_copy:
+        src: "ssls/key/default-signed.key"
+        dest: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
+        remote_src: true
+
+    -
+      name: "Copying signed SSL certificate"
+      ansible.windows.win_copy:
+        src: "ssls/key/default-signed.crt"
+        dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Copying signed SSL CA"
+      ansible.windows.win_copy:
+        src: "ssls/key/default-signed.ca"
+        dest: "{{ win_cert_dir }}\\ca\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+      ignore_errors: true
+
+    -
+      name: "Generating signed PKCS12 file with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\default-signed.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\default-signed.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          return [System.Convert]::ToBase64String($pfxBytes)
+      register: signed_pkcs12_result
+
+    -
+      name: "Writing signed PKCS12 file"
+      ansible.windows.win_copy:
+        content: "{{ signed_pkcs12_result.output[0] | b64decode }}"
+        dest: "{{ win_cert_dir }}\\pfx\\default-signed.pfx"
+
+    -
+      name: "Copying signed SSL PFX"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\pfx\\default-signed.pfx"
+        dest: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        remote_src: true
+
+    -
+      name: "Creating keystore for signed certificate with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\default-signed.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\default-signed.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
+          [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
+          $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\default-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          Remove-Item $tempPfx
+          return "Signed JKS keystore created successfully"
+
+    -
+      name: "Copying JKS keystore"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\jks\\default-signed.jks"
+        dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}.jks"
+        remote_src: true
+
+    -
+      name: "Installing certificate in Windows Certificate Store"
+      ansible.windows.win_certificate_store:
+        path: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        password: "{{ cert_pass }}"
+        store_location: "{{ cert_store_location }}"
+        store_name: "{{ cert_store_name }}"
+        key_storage: "{{ cert_key_storage }}"
+        key_exportable: "{{ cert_key_exportable }}"
+        state: present
+
+-
+  name: "Generating Self Signed Certificate"
+  when: selfsigned_enabled and not letsencrypt_enabled
+  block:
+    -
+      name: "Generating Certificate Authority"
+      when: not generate_self_signed_certificate_authority
+      block:
+        -
+          name: "Copying root CA private key"
+          ansible.windows.win_copy:
+            src: "ssls/ca/ca-certificate.key"
+            dest: "{{ win_cert_dir }}\\ca\\ca-certificate.key"
+
+        -
+          name: "Copying root CA certificate"
+          ansible.windows.win_copy:
+            src: "ssls/ca/ca-certificate.crt"
+            dest: "{{ win_cert_dir }}\\ca\\ca-certificate.crt"
+
+    -
+      name: "Generating Certificate Authority"
+      when: generate_self_signed_certificate_authority
+      block:
+        -
+          name: "Creating private key for Certificate Authority with PowerShell"
+          ansible.windows.win_powershell:
+            script: |
+              $rsa = [System.Security.Cryptography.RSA]::Create({{ private_key_size }})
+              $privateKeyPem = "-----BEGIN PRIVATE KEY-----`n"
+              $privateKeyPem += [System.Convert]::ToBase64String($rsa.ExportPkcs8PrivateKey(), [System.Base64FormattingOptions]::InsertLineBreaks)
+              $privateKeyPem += "`n-----END PRIVATE KEY-----"
+              return $privateKeyPem
+          register: ca_private_key_result
+
+        -
+          name: "Writing CA private key to file"
+          ansible.windows.win_copy:
+            content: "{{ ca_private_key_result.output[0] }}"
+            dest: "{{ win_cert_dir }}\\ca\\ca-certificate.key"
+
+        -
+          name: "Creating self-signed CA certificate with PowerShell"
+          ansible.windows.win_powershell:
+            script: |
+              $privateKeyPem = Get-Content "{{ win_cert_dir }}\\ca\\ca-certificate.key" -Raw
+              $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
+              $rsa = [System.Security.Cryptography.RSA]::Create()
+              $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
+              $subject = "CN={{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
+              $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+              $basicConstraints = [System.Security.Cryptography.X509Certificates.X509BasicConstraintsExtension]::new($true, $false, 0, $true)
+              $req.CertificateExtensions.Add($basicConstraints)
+              $keyUsage = [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension]::new([System.Security.Cryptography.X509Certificates.X509KeyUsageFlags]::KeyCertSign, $true)
+              $req.CertificateExtensions.Add($keyUsage)
+              $cert = $req.CreateSelfSigned((Get-Date), (Get-Date).AddYears(10))
+              $certBytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+              $certPem = "-----BEGIN CERTIFICATE-----`n"
+              $certPem += [System.Convert]::ToBase64String($certBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
+              $certPem += "`n-----END CERTIFICATE-----"
+              return $certPem
+          register: ca_cert_result
+
+        -
+          name: "Writing CA certificate to file"
+          ansible.windows.win_copy:
+            content: "{{ ca_cert_result.output[0] }}"
+            dest: "{{ win_cert_dir }}\\ca\\ca-certificate.crt"
+
+    -
+      name: "Setting DNS entries as fact"
+      ansible.builtin.set_fact:
+        dns_entries: "{{ ['DNS:' + settings.hostname + '.' + settings.domain] }}"
+
+    -
+      name: "Setting DNS subdomain entries as fact"
+      ansible.builtin.set_fact:
+        dns_entries: "{{ dns_entries | default([]) + ['DNS:' + item + '.' + settings.hostname + '.' + settings.domain] }}"
+      loop: "{{ dns_entries_list }}"
+
+    -
+      name: "Creating clean DNS names list for PowerShell certificate generation"
+      ansible.builtin.set_fact:
+        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) }}"
+
+    -
+      name: "Generating server private key with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" genrsa -out "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" {{ private_key_size }}'
+
+    -
+      name: "Creating OpenSSL config for CSR with SAN"
+      ansible.windows.win_copy:
+        content: |
+          [req]
+          distinguished_name = req_distinguished_name
+          req_extensions = v3_req
+          prompt = no
+
+          [req_distinguished_name]
+          CN = {{ settings.hostname }}.{{ settings.domain }}
+          O = {{ organization }}
+          C = {{ countrycode }}
+
+          [v3_req]
+          subjectAltName = @alt_names
+
+          [alt_names]
+          {% for dns_name in powershell_dns_names %}
+          DNS.{{ loop.index }} = {{ dns_name }}
+          {% endfor %}
+        dest: "{{ win_cert_dir }}\\csr\\openssl.conf"
+
+    -
+      name: "Creating CSR for server certificate with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" req -new -key "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -out "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -config "{{ win_cert_dir }}\\csr\\openssl.conf"'
+
+    -
+      name: "Generating CA-signed certificate with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" x509 -req -in "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.csr" -CA "{{ win_cert_dir }}\\ca\\ca-certificate.crt" -CAkey "{{ win_cert_dir }}\\ca\\ca-certificate.key" -CAcreateserial -out "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -days 3650 -extensions v3_req -extfile "{{ win_cert_dir }}\\csr\\openssl.conf" -passin "pass:{{ ca_cert_pass }}"'
+
+    -
+      name: "Copying self-signed SSL key"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key"
+        dest: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
+        remote_src: true
+
+    -
+      name: "Copying self-signed certificate"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt"
+        dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Generating self signed PKCS12 file with OpenSSL"
+      ansible.windows.win_command:
+        cmd: '"C:\Program Files\Git\usr\bin\openssl.exe" pkcs12 -export -out "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -inkey "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.key" -in "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.crt" -passout "pass:{{ cert_pass }}"'
+
+    -
+      name: "Copying PKCS12 file"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx"
+        dest: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        remote_src: true
+
+    -
+      name: "Creating keystore for self-signed certificate with keytool"
+      ansible.windows.win_command:
+        cmd: '"{{ detected_java_path.output[0] }}\\bin\\keytool.exe" -importkeystore -srckeystore "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.pfx" -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -noprompt'
+
+    -
+      name: "Copying JKS keystore"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks"
+        dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}.jks"
+        remote_src: true
+
+    -
+      name: "Installing self-signed certificate in Windows Certificate Store"
+      ansible.windows.win_certificate_store:
+        path: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        password: "{{ cert_pass }}"
+        store_location: "{{ cert_store_location }}"
+        store_name: "{{ cert_store_name }}"
+        key_storage: "{{ cert_key_storage }}"
+        key_exportable: "{{ cert_key_exportable }}"
+        state: present
+
+-
+  name: "Beginning Let's Encrypt Provisioning"
+  when: selfsigned_enabled and letsencrypt_enabled
+  block:
+    -
+      name: "Setting LE entries as fact"
+      ansible.builtin.set_fact:
+        le_entries: "{{ [settings.hostname + '.' + settings.domain] }}"
+
+    -
+      name: "Adding subdomain entries to LE entries"
+      ansible.builtin.set_fact:
+        le_entries: "{{ le_entries + [item + '.' + settings.hostname + '.' + settings.domain] }}"
+      loop: "{{ dns_entries_list }}"
+
+    -
+      name: "Creating clean DNS names list for PowerShell certificate generation"
+      ansible.builtin.set_fact:
+        powershell_dns_names: "{{ ([settings.hostname + '.' + settings.domain] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain) | list)) | to_json }}"
+
+    -
+      name: "Checking if certificate exists"
+      ansible.windows.win_stat:
+        path: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+      register: letsencrypt_cert
+
+    -
+      name: "Creating private key for Let's Encrypt with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $rsa = [System.Security.Cryptography.RSA]::Create({{ private_key_size }})
+          $privateKeyPem = "-----BEGIN PRIVATE KEY-----`n"
+          $privateKeyPem += [System.Convert]::ToBase64String($rsa.ExportPkcs8PrivateKey(), [System.Base64FormattingOptions]::InsertLineBreaks)
+          $privateKeyPem += "`n-----END PRIVATE KEY-----"
+          return $privateKeyPem
+      register: letsencrypt_private_key_result
+
+    -
+      name: "Writing Let's Encrypt private key to file"
+      ansible.windows.win_copy:
+        content: "{{ letsencrypt_private_key_result.output[0] }}"
+        dest: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+
+    -
+      name: "Creating CSR for Let's Encrypt with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $dnsNames = @({{ powershell_dns_names | map('quote') | join(', ') }})
+          $subject = "CN={{ settings.hostname }}.{{ settings.domain }}, O={{ organization }}, C={{ countrycode }}"
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key" -Raw
+          $privateKeyBytes = [System.Convert]::FromBase64String(($privateKeyPem -replace "-----BEGIN PRIVATE KEY-----" -replace "-----END PRIVATE KEY-----" -replace "`n" -replace "`r"))
+          $rsa = [System.Security.Cryptography.RSA]::Create()
+          $rsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$null)
+          $req = [System.Security.Cryptography.X509Certificates.CertificateRequest]::new($subject, $rsa, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+          $sanBuilder = [System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder]::new()
+          foreach ($dns in $dnsNames) { $sanBuilder.AddDnsName($dns) }
+          $req.CertificateExtensions.Add($sanBuilder.Build())
+          $csrBytes = $req.CreateSigningRequest()
+          $csrPem = "-----BEGIN CERTIFICATE REQUEST-----`n"
+          $csrPem += [System.Convert]::ToBase64String($csrBytes, [System.Base64FormattingOptions]::InsertLineBreaks)
+          $csrPem += "`n-----END CERTIFICATE REQUEST-----"
+          return $csrPem
+      register: letsencrypt_csr_result
+
+    -
+      name: "Writing CSR for Let's Encrypt to file"
+      ansible.windows.win_copy:
+        content: "{{ letsencrypt_csr_result.output[0] }}"
+        dest: "{{ win_cert_dir }}\\csr\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.csr"
+
+    -
+      name: "Creating Let's Encrypt certificate with HTTP-01 challenge"
+      community.crypto.acme_certificate:
+        account_key_src: "{{ win_cert_dir }}\\key\\account.key"
+        account_email: "{{ settings.email }}"
+        csr_content: "{{ letsencrypt_csr_result.output[0] }}"
+        dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        fullchain_dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt-fullchain.crt"
+        challenge: http-01
+        acme_directory: "{{ 'https://acme-staging-v02.api.letsencrypt.org/directory' if letsencrypt_staging_enabled else 'https://acme-v02.api.letsencrypt.org/directory' }}"
+        remaining_days: 60
+        terms_agreed: true
+        modify_account: false
+      register: acme_challenge
+      when: not letsencrypt_cert.stat.exists
+
+    -
+      name: "Completing Let's Encrypt certificate validation"
+      community.crypto.acme_certificate:
+        account_key_src: "{{ win_cert_dir }}\\key\\account.key"
+        account_email: "{{ settings.email }}"
+        csr_content: "{{ letsencrypt_csr_result.output[0] }}"
+        dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        fullchain_dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt-fullchain.crt"
+        challenge: http-01
+        acme_directory: "{{ 'https://acme-staging-v02.api.letsencrypt.org/directory' if letsencrypt_staging_enabled else 'https://acme-v02.api.letsencrypt.org/directory' }}"
+        remaining_days: 60
+        data: "{{ acme_challenge }}"
+        modify_account: false
+      when: acme_challenge is changed
+
+    -
+      name: "Copying Let's Encrypt certificate"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt"
+        dest: "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}.crt"
+        remote_src: true
+
+    -
+      name: "Copying Let's Encrypt private key"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key"
+        dest: "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}.key"
+        remote_src: true
+
+    -
+      name: "Generating Let's Encrypt PKCS12 file with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          return [System.Convert]::ToBase64String($pfxBytes)
+      register: letsencrypt_pkcs12_result
+
+    -
+      name: "Writing Let's Encrypt PKCS12 file"
+      ansible.windows.win_copy:
+        content: "{{ letsencrypt_pkcs12_result.output[0] | b64decode }}"
+        dest: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfx"
+
+    -
+      name: "Copying Let's Encrypt PFX"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.pfx"
+        dest: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        remote_src: true
+
+    -
+      name: "Creating keystore for Let's Encrypt certificate with PowerShell"
+      ansible.windows.win_powershell:
+        script: |
+          $certPem = Get-Content "{{ win_cert_dir }}\\crt\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.crt" -Raw
+          $privateKeyPem = Get-Content "{{ win_cert_dir }}\\key\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.key" -Raw
+          $certWithKey = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPem($certPem, $privateKeyPem)
+          $pfxBytes = $certWithKey.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, "{{ cert_pass }}")
+          $tempPfx = [System.IO.Path]::GetTempFileName() + ".pfx"
+          [System.IO.File]::WriteAllBytes($tempPfx, $pfxBytes)
+          $keytoolPath = "{{ detected_java_path.output[0] }}\\bin\\keytool.exe"
+          & $keytoolPath -importkeystore -srckeystore $tempPfx -srcstoretype PKCS12 -srcstorepass "{{ cert_pass }}" -destkeystore "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks" -deststoretype JKS -deststorepass "{{ cert_pass }}" -alias 1 -destalias "{{ settings.hostname }}.{{ settings.domain }}"
+          Remove-Item $tempPfx
+          return "Let's Encrypt JKS keystore created successfully"
+
+    -
+      name: "Copying Let's Encrypt JKS"
+      ansible.windows.win_copy:
+        src: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}-letsencrypt.jks"
+        dest: "{{ win_cert_dir }}\\jks\\{{ settings.hostname }}.{{ settings.domain }}.jks"
+        remote_src: true
+
+    -
+      name: "Installing Let's Encrypt certificate in Windows Certificate Store"
+      ansible.windows.win_certificate_store:
+        path: "{{ win_cert_dir }}\\pfx\\{{ settings.hostname }}.{{ settings.domain }}.pfx"
+        password: "{{ cert_pass }}"
+        store_location: "{{ cert_store_location }}"
+        store_name: "{{ cert_store_name }}"
+        key_storage: "{{ cert_key_storage }}"
+        key_exportable: "{{ cert_key_exportable }}"
+        state: present

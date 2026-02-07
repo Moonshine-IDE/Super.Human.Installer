@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE database SYSTEM 'xmlschemas/domino_11_0_1.dtd'>
+<!-- Example that imports only a single form -->
+<!-- remove database properties:
+- replicaid
+- path
+- title
+- increatemaxfields
+- compressdata
+-->
+<database xmlns='http://www.lotus.com/dxl' version='11.0' maintenanceversion='1.0' >
+<!-- remove databaseinfo -->
+<form name='HelloWorld' publicaccess='false' designerversion='8.5.3' renderpassthrough='true'>
+<!-- Remove from form:
+- noteinfo
+- created
+- modified
+- revised
+- lastaccessed
+- addedtofile
+- updatedby
+- wassignedby
+-->
+<body><richtext>
+<pardef id='1'/>
+<par def='1'>Hello, World!</par>
+<par def='1'/>
+<par def='1'>Your first greeting:  <field type='text' kind='editable' name='Greeting'/><compositedata
+ type='98' prevtype='65418' nexttype='222' afterparcount='6' containertype='65418'
+ aftercontainercount='1' afterbegincount='3'>
+Yg4BAIQAAAAAAAAAAAA=
+</compositedata></par></richtext></body>
+<item name='$$ScriptName' summary='false' sign='true'><text>HelloWorld</text></item></form>
+</database>
+
+

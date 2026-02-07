@@ -1,0 +1,82 @@
+---
+- 
+  name: "Downloading MySQL APT configuration package"
+  ansible.builtin.get_url:
+    url: https://repo.mysql.com/mysql-apt-config_0.8.30-1_all.deb
+    dest: /tmp/mysql-apt-config.deb
+    timeout: 60
+
+-
+  name: "Pre-configuring MySQL APT configuration options"
+  ansible.builtin.shell: |
+    echo "mysql-apt-config mysql-apt-config/select-server select mysql-8.0" | sudo debconf-set-selections
+    echo "mysql-apt-config mysql-apt-config/select-product select Ok" | sudo debconf-set-selections
+  changed_when: false
+
+-
+  name: "Installing MySQL APT configuration"
+  ansible.builtin.command: dpkg -i /tmp/mysql-apt-config.deb
+  args:
+    creates: /etc/apt/sources.list.d/mysql.list
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+-
+  name: "Updating apt cache"
+  ansible.builtin.apt:
+    update_cache: true
+
+-
+  name: "Ensuring MySQL Python libraries are installed"
+  ansible.builtin.apt:
+    name: "{{ mysql_python_package_debian }}"
+    state: present
+
+-
+  name: "Setting MySQL root password before installation"
+  ansible.builtin.shell: |
+    echo "mysql-server mysql-server/root_password password {{ mysql_root_password }}" | sudo debconf-set-selections
+    echo "mysql-server mysql-server/root_password_again password {{ mysql_root_password }}" | sudo debconf-set-selections
+  args:
+    creates: "{{ mysql_config_file }}"
+  when: 
+    - mysql_root_password is defined and mysql_root_password != ""
+
+-
+  name: "Ensuring MySQL packages are installed"
+  ansible.builtin.apt:
+    name: "{{ __mysql_packages }}"
+    state: present
+    policy_rc_d: 101
+    update_cache: true
+    force_apt_get: true
+    dpkg_options: 'force-confdef,force-confold'
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  register: deb_mysql_install_packages
+
+# Because MySQL starts as part of the install process, we need to stop
+# mysql and remove the logfiles in case the user set a custom log file size.
+-
+  name: "Ensuring MySQL is stopped after initial install"
+  ansible.builtin.service:
+    name: "{{ mysql_daemon }}"
+    state: stopped
+
+-
+  name: "Deleting innodb log files created by apt package after initial install"
+  ansible.builtin.file:
+    path: "{{ mysql_datadir }}/{{ item }}"
+    state: absent
+  with_items:
+    - ib_logfile0
+    - ib_logfile1
+
+-
+  name: "Configuring MySQL to allow remote connections"
+  ansible.builtin.lineinfile:
+    path: /etc/mysql/mysql.conf.d/mysqld.cnf
+    regexp: '^bind-address\s+'
+    line: 'bind-address = 0.0.0.0'
+    state: present
+  notify: Restart mysql

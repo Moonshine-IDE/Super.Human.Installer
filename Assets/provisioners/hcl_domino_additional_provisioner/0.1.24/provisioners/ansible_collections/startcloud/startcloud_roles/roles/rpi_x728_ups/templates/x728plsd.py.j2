@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+import RPi.GPIO as GPIO
+import time
+
+def my_callback(channel):
+    if GPIO.input(6):     # if port 6 == 1
+        print ("---AC Power Loss OR Power Adapter Failure---")
+        print ("Shutdown in 5 seconds")
+        time.sleep(5)
+        GPIO.output(26, GPIO.HIGH)
+        time.sleep(3)
+        GPIO.output(26, GPIO.LOW)
+    else:                  # if port 6 != 1
+        print ("---AC Power OK,Power Adapter OK---")
+
+try:
+  GPIO.setmode(GPIO.BCM)
+  GPIO.setup(6, GPIO.IN)
+  GPIO.setup(26, GPIO.OUT)
+  GPIO.setwarnings(False)
+
+  GPIO.add_event_detect(6, GPIO.BOTH, callback=my_callback)
+  eval(input("Testing Started"))
+
+except KeyboardInterrupt:
+    # here you put any code you want to run before the program
+    # exits when you press CTRL+C
+    print("Exiting") # print value of counter
+
+#except:
+#    # this catches ALL other exceptions including errors.
+#    # You won't get any error messages for debugging
+#    # so only use it once your code is working
+#    print("Exiting") # print value of counter
+
+finally:
+    GPIO.cleanup() # this ensures a clean exit
+    print("Other error or exception occurred!")

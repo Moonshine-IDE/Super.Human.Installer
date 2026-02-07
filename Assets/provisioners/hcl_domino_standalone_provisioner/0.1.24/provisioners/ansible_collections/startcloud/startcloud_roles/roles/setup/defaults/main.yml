@@ -1,0 +1,22 @@
+---
+run_tasks: true
+show_help: true
+installer_dir: /vagrant/installers
+completed_dir: /vagrant/completed
+timezone: 'America/Chicago'
+win_timezone: 'Central Standard Time'
+debug_all: false
+provisioner_name: Ad-Hoc Playbook
+provisioner_version: v0.0.0
+core_provisioner_version: v0.0.0
+
+email: support@startcloud.com
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Performing initial system setup"
+
+installer_base_url: "{{ secrets.installer_base_url }}"
+installer_url_user: "{{ secrets.installer_url_user }}"
+installer_url_pass: "{{ secrets.installer_url_pass }}"

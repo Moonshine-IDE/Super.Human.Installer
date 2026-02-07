@@ -1,0 +1,182 @@
+---
+-
+  name: "Running Server Only Configurations"
+  when: "vm_type == 'desktop'"
+  block:
+    -
+      name: Setting User Dconf
+      ansible.builtin.copy:
+        content: |
+          user-db:user
+          system-db:gdm
+          file-db:/usr/share/gdm/greeter-dconf-defaults
+        dest: /etc/dconf/profile/gdm
+        mode: "0774"
+
+    -
+      name: "Setting Login Screen Appearance"
+      ansible.builtin.template:
+        src: 00-login-screen.j2
+        dest: /etc/dconf/db/gdm.d/00-login-screen
+        mode: "0774"
+
+    -
+      name: "Setting Screensaver Setings"
+      ansible.builtin.template:
+        src: 00-session.j2
+        dest: /etc/dconf/db/local.d/00-session
+        mode: "0774"
+
+    -
+      name: "Setting Screensaver Setings"
+      ansible.builtin.template:
+        src: 00-power.j2
+        dest: /etc/dconf/db/local.d/00-power
+        mode: "0774"
+
+    -
+      name: "Downloading ubuntu-gdm-set-background"
+      ansible.builtin.get_url:
+        mode: '+x'
+        url: "https://raw.githubusercontent.com/PRATAP-KUMAR/ubuntu-gdm-set-background/main/ubuntu-gdm-set-background"
+        dest: "/usr/local/bin/ubuntu-gdm-set-background"
+
+-
+  name: "Running General Configurations"
+  when: "vm_type == 'server' or vm_type == 'desktop'"
+  block:
+    -
+      name: "Ensuring apt cache is updated"
+      ansible.builtin.apt:
+        cache_valid_time: 3600
+        update_cache: true
+
+    -
+      name: "Upgrading all apt packages"
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: true
+
+    -
+      name: "Adding Additional packages"
+      ansible.builtin.apt:
+        name: "{{ theme_packages }}"
+        state: present
+
+    -
+      name: "Creating STARTcloud Theme Folder"
+      ansible.builtin.file:
+        mode: '0755'
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "/usr/share/plymouth/themes/startcloud"
+
+    -
+      name: "Registering STARTcloud Theme Files"
+      ansible.builtin.find:
+        paths: "{{ role_path }}/files/"
+        file_type: any
+      register: files
+
+    -
+      name: "Copying Theme files"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "{{ item.path }}"
+        dest: /usr/share/plymouth/themes/startcloud/
+      loop: "{{ files.files }}"
+
+    -
+      name: "Copying Plymouth daemon configuration"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "plymouthd.conf"
+        dest: /etc/plymouth/plymouthd.conf
+
+    -
+      name: "Copying Grub Background Image files"
+      ansible.builtin.copy:
+        mode: '0644'
+        src: "startcloud-grub.png"
+        dest: /boot/grub/
+      loop: "{{ files.files }}"
+
+    -
+      name: "Setting theme-specific GRUB parameters"
+      ansible.builtin.set_fact:
+        theme_grub_params: "loglevel=3 rd.systemd.show_status=false rd.udev.log_level=3 vt.global_cursor_default=0 plymouth.ignore-serial-consoles splash"
+
+    -
+      name: "Build final GRUB command line using serial role variables"
+      ansible.builtin.set_fact:
+        grub_cmdline: "{{ serial_grub_cmdline }} {{ theme_grub_params }}"
+
+    -
+      name: "Configuring Grub for Plymouth and Theme"
+      ansible.builtin.lineinfile:
+        line: "{{ item.line }}"
+        path: /etc/default/grub
+        regexp: "{{ item.regexp }}"
+      with_items:
+        - line: 'GRUB_CMDLINE_LINUX_DEFAULT="{{ grub_cmdline }}"'
+          regexp: ^GRUB_CMDLINE_LINUX_DEFAULT=
+        - line: 'GRUB_CMDLINE_LINUX=""'
+          regexp: ^GRUB_CMDLINE_LINUX=
+        - line: 'GRUB_BACKGROUND="/boot/grub/startcloud-grub.png"'
+          regexp: ^GRUB_BACKGROUND=
+        - line: 'GRUB_TIMEOUT=5'
+          regexp: ^GRUB_TIMEOUT=
+          when: serial_console_configured is not defined
+        - line: 'GRUB_TIMEOUT_STYLE=menu'
+          regexp: ^GRUB_TIMEOUT_STYLE=
+          when: serial_console_configured is not defined
+        - line: 'GRUB_TERMINAL_INPUT="console serial"'
+          regexp: ^#?GRUB_TERMINAL_INPUT=
+          when: serial_console_configured is not defined
+        - line: 'GRUB_TERMINAL_OUTPUT="gfxterm serial"'
+          regexp: ^#?GRUB_TERMINAL_OUTPUT=
+          when: serial_console_configured is not defined
+        - line: 'GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"'
+          regexp: ^#?GRUB_SERIAL_COMMAND=
+          when: serial_console_configured is not defined
+        - line: 'GRUB_GFXMODE="1024x768x32,auto"'
+          regexp: ^#?GRUB_GFXMODE=
+        - line: 'GRUB_GFXPAYLOAD_LINUX="keep"'
+          regexp: ^#?GRUB_GFXPAYLOAD_LINUX=
+        - line: 'GRUB_HIDDEN_TIMEOUT_QUIET=false'
+          regexp: ^#?GRUB_HIDDEN_TIMEOUT_QUIET=
+          when: serial_console_configured is not defined
+
+    -
+      name: "Setting quiet boot in GRUB Linux script"
+      ansible.builtin.replace:
+        path: /etc/grub.d/10_linux
+        regexp: '^quiet_boot="0"'
+        replace: 'quiet_boot="1"'
+
+    -
+      name: "Setting STARTcloud Theme as default"
+      community.general.alternatives:
+        name: default.plymouth
+        path: /usr/share/plymouth/themes/startcloud/startcloud.plymouth
+        link: /usr/share/plymouth/themes/default.plymouth
+        priority: 100
+
+    -
+      name: "Setting Plymouth default theme"
+      ansible.builtin.command: plymouth-set-default-theme startcloud
+      register: plymouth_theme
+      changed_when: plymouth_theme.rc == 0
+
+    -
+      name: "Updating initramfs"
+      ansible.builtin.command: update-initramfs -u
+      register: update_initramfs
+      changed_when: update_initramfs.rc == 0
+
+    -
+      name: "Updating GRUB"
+      ansible.builtin.command: update-grub
+      register: update_grub
+      changed_when: update_grub.rc == 0

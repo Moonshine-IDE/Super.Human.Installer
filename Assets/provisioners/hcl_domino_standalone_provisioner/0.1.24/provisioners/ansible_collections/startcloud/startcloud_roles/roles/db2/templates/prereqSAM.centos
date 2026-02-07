@@ -1,0 +1,3200 @@
+#! /bin/sh
+#  ARICENT_PROLOG_BEGIN_TAG
+#  This is an automatically generated prolog.
+#
+# (C) Copyright 2019. Aricent Holdings Luxembourg S.a.r.l. All rights reserved.
+#
+#  ARICENT_PROLOG_END_TAG
+#
+# IBM_PROLOG_BEGIN_TAG 
+# This is an automatically generated prolog. 
+#  
+#  
+#  
+# Licensed Materials - Property of IBM 
+#  
+# Restricted Materials of IBM 
+#  
+# (C) COPYRIGHT International Business Machines Corp. 2002,2017 
+# All Rights Reserved 
+#  
+# US Government Users Restricted Rights - Use, duplication or 
+# disclosure restricted by GSA ADP Schedule Contract with IBM Corp. 
+#  
+# IBM_PROLOG_END_TAG 
+# @(#)39   1.3.1.39	 src/sam/install/prereqSAM.sh, clpkg.CHARM, sam_rsa41svc, rsa41svcs003g 5/24/17 11:10:00
+#
+# Licensed Materials - Property of IBM
+#=========================================================================
+# Use this script to check prerequisites for installation of SAMP
+#
+# Version: SAMP 4.1.0.5
+#
+# Syntax:
+#	  ./prereqSAM  [options: see SAMP base reference]
+# Output:
+#	 - return code 0 if all prerequisites are met, other return codes indicate
+#          that prerequisites failed or could not be checked.
+#	 - detailed log of prereq checks in /tmp/prereqSAM.<#>.log.
+#
+# All prerequsites are kept in a list near the top of this script.
+# This list must be maintained with every new version of SAM.
+# Change Activity:
+#   20051128 ws Initial version made from installSAM 2.1.1.0
+#   20051212 ws Add -d option (packages directory)
+#   20060113 ws Fix SuSE package detection.
+#   20060201 ws Fix PR1P0004UMu - OS detection on s390x.
+#   20060208 ws Fix PR1P0238WBl - Distribution check.
+#   20060209 ws Fix PR1P0243WBl - check pdksh on any distro.
+#   20060209 ws Fix PR1P0244WBl - check perl on any distro.
+#   20060223 ws Fix PR1P0266WBl - SuSE 8.1 with SP3 not recognized.
+#   20060328 ws Fix PR1P0037MNa - checking for ksh package to specific.
+#   20060508 ws Fix PR1P0105KKo - no checking for min SUSE 9.1.
+#                        PR1P0116UMu - no checking for min SUSE 10.0
+#                        PR1P0112WBl - no checking for min RH 4.0
+#   20060519 ws Fix false -d detection
+#   20060818 ws fix to stringent checking for Red Hat (AS vs ES)
+#   20060906 ws Adapt prereqs to 2.2.0.0
+#   20061026 ws Adapt prereqs to 2.2.1.0 lift RSCT for AIX to 2.3.10/2.4.6 (c003)
+#   20061113 ws Fix RSCT version problem (more than 1 digit version) reported by Frank Ning.
+#   20070116 ws Fix RH new version format: 'Red Hat Enterprise Linux Server release 4.92 (Tikanga)'
+#                    and expand level to 4 digits in order to handle level in
+#                    e.g. 4.5(req) > 4.123(given) correctly (level 5000 > 1230)
+#   20070222 ws Check upgrade path 21xx -> 2202 not allowed  (c004)
+#   20070223 ws RedHat 5.0 support  RSCT for AIX to 2.3.11/2.4.7
+#   20070314 ws consume --noliccheck option from installSAM for conditional upgrade check
+#   20070327 ws Adapt prereqs for libpam.so (reported by Frank Ning)
+#   20070411 ws Added db2 AIX prereq lines for storagerm.
+#   20070420 ws allow upgrade to GA 2300 from 1.2
+#   20070509 ws min prereq SUSE 10.1
+#   20070519 ws fix P2300594RBa AIX prereq confusing messages
+#   20070518 ws AIX61 support (for F.Ning DB2)
+#   20070604 ws Fix P2300610RKa Paused in Russian locale.
+#   20070613 ws Extend prereqs from RH4 to RH5 remove cfgsamadapter prereqs (c005)
+#   20070702 ws RSCT prereqs AIX 2.3.11.3/2.4.7.3
+#   20070816 ws version 3.1.0.0 - fix too low min RH version 4.0, must be 4.5
+#   20070924 ws Fix PTM P23S0057MAf installSAM can't detect RH 4.5 properly
+#   20070930 ws AIX6
+#   20071018 ws switch to RSCT rene 2.4.8.0, 2.5.0.0
+#   20071023 ws drop AIX 5.2 support
+#   20071119 ws fix checkSAMPkg() PMR 20501,057,649 APAR IZ09311
+#   20080109 ws Add prereq checking for SunOS
+#   20080125 ws Change libpam prereq to /lib/libpam to catch 64 bit version
+#   20080131 ws AIX 5.3 RSCT 2.4.9.0, AIX 6.1 RSCT 2.5.1.0
+#   20080209 ws DCR11 install RSCT for AIX
+#   20080402 ws Added libstdc++ 64bit for RH
+#   20080407 ws Fixed P3101473ASc: SUN prereq packages
+#   20080521 rb Implemented simple rsct.basic.rte upgrade test
+#   20080526 rb Fixed getRSCTVersionFromOSVersion() and rsct.basic.rte upgrade test
+#   20080916 rb Added check for pam 32-bit on all RHEL
+#   20090122 rb Changed perl check pkg name to perl-base for SLES 11.0
+#   20090220 rb Changed pam check pkg name to pam-32-bit for SLES 11.0
+#   20090512 rb AIX 5.3 RSCT 2.4.11.1, AIX 6.1 RSCT 2.5.3.1
+#   20090623 rb AIX 5.3 RSCT 2.4.11.2, AIX 6.1 RSCT 2.5.3.2
+#   20090703 rb Added Linux s390 os definition for RedHat
+#   20090811 rb AIX 5.3 RSCT 2.4.11.3, AIX 6.1 RSCT 2.5.3.3
+#   20090811 rb Added SLES 11.0 as supported version
+#   20090915 rb Added ppc64 checking path for SLES11 and pam-32bit
+#   20090922 rb Fixed P31S0883MAf: ppc64 for RH missing
+#   20091117 rb AIX 5.3 RSCT 2.4.11.5, AIX 6.1 RSCT 2.5.3.5
+#   20091211 rb Added consistency check for AIX systems: lppchk -v (P3201100MAf)
+#   20091216 rb Restricted consistency check for AIX systems to rsct* and sam* (P3201178MAf)
+#   20100108 rb Filter out message: 0504-226 No fileset entries were found that match the name - sam* (P3201203MAf)
+#   20100301 rb AIX 5.3 RSCT 2.4.13.0, AIX 6.1 RSCT 2.5.5.0
+#   20100305 rb Removed consistency check for AIX systems (lppchk -v) because of problems
+#   20100322 ej AIX 5.3 RSCT 2.4.13.1, AIX 6.1 RSCT 2.5.5.1, RH & SuSE releases adjusted
+#   20100408 rb Changed WPAR dirs to check from "/usr /opt" to "/usr/bin /usr/sbin/rsct /opt"
+#   20100503 rb sam3210
+#   20100806 rb Changes for AIX 7 support
+#   20100916 rb AIX 5.3 RSCT 2.4.13.3, AIX 6.1 RSCT 3.1.0.1
+#   20101118 rb sam3220
+#   20101118 rb Added RHEL 6.0 as supported version
+#   20101203 rb Adjusted prereqs for RHEL
+#   20101213 rb Added compat-libstdc++-33 for RHEL6 (needed by rsct.64bit)
+#   20110815 rb AIX 5.3 RSCT 2.4.13.5, AIX 6.1 RSCT 3.1.1.1
+#   20110907 ej Added libstdc++ for SLES11, adjusted RSCT levels, commented SLES9, corrected SLES10 prerequs (10_1 vs. 10_l)
+#   20110916 rb Refactored prereq architecture checking, updated prereqs for SLES 11 & RHEL 6
+#   20110927 rb Added ksh to possible list of missing packages
+#   20111206 rb Fixed pam (32 bit) and libstdc++ (32 bit) check for RHEL
+#   20111208 rb Removed AIX 5300-00 from supported platforms
+#   20120123 rb Added HACMP/PowerHA cluster check
+#   20120322 rb AIX 5.3 RSCT 2.4.13.8, AIX 6.1 RSCT 3.1.2.3
+#   20120322 rb Fixed parsing error for /etc/SuSE-release
+#   20130201 rb Changed minimum Java prereq from version 1.4.2 to 1.5.0
+#   20130204 rb AIX 6.1/7.1 RSCT 3.1.4.3
+#   20130404 rb sam4100
+#   20130604 ej Added librtas for ppc64 as required prereq
+#   20130725 rb Fix librtas check on ppc64 Linux -> librtas-32bit
+#   20130802 rb Blocked installation on Solaris
+#   20130821 rb Show missing packages in stdout in addition to log file
+#   20130924 rb Split librtas check for SLES 10 (librtas) and SLES 11 (librtas-32bit)
+#   20130926 rb Change SLES 11 requirement from libstdc++4. to libstdc++6
+#   20130927 rb Added specific SLES 11.3+ rule for libstdc++6
+#   20140217 bi AIX 6.1/7.1 RSCT 3.1.5.3
+#   20140328 ej Added JavaX.jre as package to search for (AIX 7, IV54979)
+#   20140708 ej sam4101
+#   20140925 as RTC 31415 Changes for 64bit and Ubuntu
+#   20140930 as RTC 31702 Fix ksh check
+#   20141006 as RTC 31792 Fix extractInstVersion
+#   20141007 as RTC 31887 validateInstallPackage
+#   20141021 ej RTC 31965 Java prereq level check for AIX
+#   20141219 as RTC 32657 RHEL 7.1 support
+#   20150115 as RTC 33729 Fix check of libstdc++ for SLES 11.1
+#   20150116 as RTC 33542 sam4102
+#   20150122 as RTC 33942 Fix version check for RHEL 7.1
+#   20150123 as RTC 33863 Changed required sam upgrade version to 4.1.0.0
+#   20150303 as RTC 34115 Fix check for 'rsct.opt.stackdump' on AIX
+#   20150330 as RTC 35556 Fix libstdc++ check for SLES 11.2 
+#   20150330 ej AIX RSCT level now 3.2.0.6
+#   20150512 ej AIX RSCT level now 3.2.0.7
+#   20151214 ej RTC 40506 AIX 7.2 added
+#   20160128 as RTC 41282 Fix message truncated
+#   20160204 as RTC 41489 Added prereqs for RHEL 7.2
+#   20160307 as AIX RSCT level now 3.2.1.2
+#   20160607 as RTC 43591 Add option --useibmjre in installSAM/prereqSAM
+#   20160630 ej RTC 44335 pLinux 64bit: check/handle installed rsct.core package
+#   20170505 vk Failed for Java version 641
+#   20180313 vk Adjusted for RSCT 3232 and Java8 support fixpack 4.1.0.4
+#   20180516 Am  librtas check on  ppc64le RHEL as required prereq
+#   20190131 Pr RTC 22425 checkInstallPackage is for correct platform 
+#   20190325 vk RTC 22480 SAM4105 changes 
+#   20190924 Pr RTC 22595 IJ19744-PrereqSAM fails on the TSAMP4105 package if x86_64 directory is renamed.
+#=========================================================================
+#
+# Prereqisites definitions
+# Three kinds of entries:
+# 'OS Versions'
+# 'List of Packages'
+# 'Prereq package specs'
+#----------------------------------
+#-----------------------------------------------------------------------------------------------------
+# 'OS Versions'
+#-----------------------------------------------------------------------------------------------------
+# Definition of prereq OS versions keyword=value pairs:
+#    <OS>_<arch>_<distro>_VERSIONS="<version-values>"
+#    where <OS>: { AIX | Linux }
+#          <arch>: { i386 | i386x | ppc | ppc64 | ppc64le | s390 | s390x } 
+#                  e.g. i386x == x86_64 (64 bit), s390x == s390 64 bit, ppc64 == ppc 64 bit, ppc64le == ppc64 little endian 
+#          <distro>: { IBM | RH | SUSE }
+#    <version-values> are OS specific version levels
+# Examples:  AIX_ppc_IBM_VERSIONS="5200-00 5300-00"
+#            Linux_s390_SUSE="8.3 9.0"
+# Rule: 1. After composing "<OS>_<arch>_<distro>_VERSIONS" a keyword defined below must be found. E.g.
+#          after detecting:
+#          OS = Linux, arch = ppc, distro = SUSE,
+#          a keyword Linux_ppc_SUSE_VERSIONS must be found in the OS versions below.
+#       2. The detected version of operating system information must match any of the <version-values>.
+#          E.g. if on AIX  detection using 'oslevel -r' returned 5300-00, then the version '5300'
+#          matched the second version value in AIX_ppc_IBM_VERSIONS="5200-00 5300-00"
+#          Each value in <version-values> is of the form:
+#                  <version>-<level> for AIX and
+#                  <version>.<level> for Linux
+#       3. <level> in <version-values> is the minimum level.
+#         The prereq check is successful if the <level> is equal
+#         or higher within the <version>. E.g. Detecting 8.4 on SUSE s390 Linux has a match in:
+#         Linux_s390_SUSE="8.3 9.0".
+#------------------
+# OS Versions AIX
+AIX_ppc_IBM_VERSIONS="7100-04 7200-00"      # since 4.1.0.4
+#------------------
+# OS Versions SUSE
+# 4.1.0.5
+Linux_i386_SUSE_VERSIONS="10.1 11.0"
+Linux_i386x_SUSE_VERSIONS="10.1 11.0"
+Linux_x86_64_SUSE_VERSIONS="12.0 15.0"
+Linux_ppc_SUSE_VERSIONS="10.1 11.0"
+Linux_ppcx_SUSE_VERSIONS="10.1 11.0"
+Linux_ppc64_SUSE_VERSIONS="12.0 15.0"
+Linux_ppc64le_SUSE_VERSIONS="12.0 15.0"
+Linux_s390_SUSE_VERSIONS="10.1 11.0"
+Linux_s390l_SUSE_VERSIONS="10.1 11.0"
+Linux_s390x_SUSE_VERSIONS="12.0 15.0"
+#------------------
+# OS Versions Ubuntu 
+# 4.1.0.5
+Linux_amd64_Ubuntu_VERSIONS="14.04 16.04 18.04"
+Linux_ppc64el_Ubuntu_VERSIONS="14.04 16.04 18.04"
+#------------------
+# OS Versions RedHat
+# 4.1.0.1
+Linux_i386_RH_VERSIONS="5.0 6.0" 
+Linux_i386x_RH_VERSIONS="5.0 6.0"   
+Linux_x86_64_RH_VERSIONS="7.0"         
+Linux_ppc_RH_VERSIONS="5.0 6.0"       
+Linux_ppcx_RH_VERSIONS="5.0 6.0"       
+Linux_ppc64_RH_VERSIONS="7.0"      
+Linux_ppc64le_RH_VERSIONS="7.0"      
+Linux_s390_RH_VERSIONS="5.0 6.0"
+Linux_s390l_RH_VERSIONS="5.0 6.0"
+Linux_s390x_RH_VERSIONS="7.0"   
+
+#----------------------------
+# OS versions SunOS (Solaris)
+SunOS_sparc_SUN_VERSIONS="" # no SunOS support in 4.1.0.0 or higher
+
+#-----------------------------------------------------------------------------------------------------
+#  'List of packages'
+#-----------------------------------------------------------------------------------------------------
+# Specifies the suffixes of keywords in 'prereq package specs'.
+# Definition of list of packages keyword=value pairs:
+# <OS>_PKGS="<suffix list">
+#
+# Definition prereq packages spec keyword=value pairs:
+#   <OS>_<arch>_<distro>_<version>_<level>_PKG_<package>="<specific-package expression>"
+#    where <OS>: { AIX | Linux | SunOS }
+#          <arch>: { i386 | i386x | ppc | s390 | s390x | aaa } 'aaa' means any architecture
+#          <distro>: { IBM | RH | SUSE | SUN | ddd } 'ddd' means any distro
+#          <version>_<level>: If '<version>_<level>' is 'v_l' it is applicable to any version of AIX or Linux
+#          <package>: One of the suffixes in the Suffix list.
+#-----------------------------------------------------------------------------------------------------
+# List of packages or other prereqs for AIX
+#AIX_PKGS="CPPRUNTIME JAVA RSCTCORE RSCTBASIC WPAR"
+AIX_PKGS="CPPRUNTIME JAVA WPAR RSCTCORE RSCTBASIC RSCTSTORAGERM RSCTSTACKDUMP" 
+
+# AIX prereq package specs:
+#
+#   CCPRUNTIME  values of the form "<run-time-pkg-name> <version>"
+#               e.g. "xlC.aix50.rte 7.0.0.1"
+#   Checked by default prereq check function: checkAIXPrereqs
+AIX_ppc_IBM_5300_00_PKG_CPPRUNTIME="xlC.aix50.rte 7.0.0.1"
+
+#   JAVA version value of the form "<v><r><m>"
+#   Checked by default prereq check function: checkAIXJAVA
+#        e.g. "142" Note it is "500"/"600"/"700" for higher Java levels (lslpp -l !)
+# Rule: Equal or higher version of Java is allowed (change also in installSAM).
+AIX_ppc_IBM_v_l_PKG_JAVA="700"
+# Since Java level detection is cumbersome and not consistent, now using the
+# lpp fileset levels on AIX
+AIX_ppc_JAVA_FIXLEVEL_6="265"   # "6.0.0.265"
+AIX_ppc_JAVA_FIXLEVEL_7="145"   # "7.0.0.145"
+AIX_ppc_JAVA_FIXLEVEL_71="25"   # "7.1.0.25"
+AIX_ppc_JAVA_FIXLEVEL_8="507"   # "8.0.0.507"
+
+#   RSCTCORE/RSCTBASIC  values of the form "<run-time-pkg-name> <version>"
+#                       e.g. "rsct.core.rte 2.4.3.1"
+#   Checked by default prereq check function: checkAIXPrereqs
+# AIX since 4.1.0.5
+RSCT_VERSION="3.2.4.3"    # rsct level !!! NOW TO BE USED FOR AIX AND 64-bit Linux/Ubuntu on POWER !!!
+
+AIX_ppc_IBM_v_l_PKG_RSCTCORE="rsct.core.rmc $RSCT_VERSION"
+AIX_ppc_IBM_v_l_PKG_RSCTBASIC="rsct.basic.rte $RSCT_VERSION"
+AIX_ppc_IBM_v_l_PKG_RSCTSTORAGERM="rsct.opt.storagerm 3.2.4.0"
+AIX_ppc_IBM_v_l_PKG_RSCTSTACKDUMP="rsct.opt.stackdump $RSCT_VERSION"
+AIX_ppc_IBM_v_l_PKG_WPAR="/usr/bin /usr/sbin/rsct /opt"		# old: "/usr /opt"
+
+#-----------------------------------------------------------------------------------------------------
+# List of packages(rpms) for Linux:
+Linux_PKGS="KSH PERL PERL_SYSLOG LIBSTD LIBSTD64 COMPATLIBSTD64 PAM LIBRTAS GLIBC SERVICELOG RSCTCORE DEVICEMAPPER"
+
+# ALL checked by default prereq check function: checkLinuxPrereqs
+# e.g. values "perl /perl$" will cause the following check rpm -ql perl | grep -E "/perl$"
+# Make sure to escape + in the name, like: "compat-libstdc++-33-3.2.3 ^/usr/lib/libstdc\+\+.so.5$"
+# Optionally include the requested arch as third field in the string, like: 
+# "librtas ^/usr/lib/librtas.so.1$ ppc". Make sure to check how the actual package is named on the target platform.
+# E.g.: On SLES some 32 bit libraries are marked as x86_64, like: "libstdc++46-32bit-4.6.1_20110701-0.13.9.x86_64"
+# As fallback, the package name can also contain regex and will be evaluated as:
+# rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | grep <pkgname>
+# <OS>_<arch>_<distro>_<v>_<l>_<package>
+# any architecture:  _aaa_
+# any distro:        _ddd_
+# any version_level: _v_l_
+#
+# In addition there is the possibility to define prereqs for a certain distro version and all higher versions:
+# <OS>_aaa_<distro>_<v>_<l>plus_<package>
+# <OS>_<arch>_<distro>_<v>_<l>plus_<package>
+# This checks the current patch level and decrements it till the first match is found or 0 is reached.
+# To specify a prereq for RHEL 7.1 and higher one could specify the following which would also match for RHEL 7.2, 7.3 etc.: 
+# Linux_aaa_RH_7_1plus_PKG_PERL_SYSLOG="perl-Sys-Syslog /Sys/Syslog.pm$"
+#
+# PLEASE NOTE: If multiple possible matches for prereqs are introduced for RHEL, the following performance improvement 
+#              in function checkLinuxPrereqs needs to be removed:
+#                if [ "$DISTRO" != "SUSE" ] ; then
+#                  continue
+#                fi
+#              Currently all prereqs for RH are distinct so that the next prereq can be checked when one is found.
+
+# Linux ksh
+Linux_aaa_ddd_v_l_PKG_KSH="ksh"
+
+# JAVA version value of the form "<v>.<r>.<m>.<f>"
+# Checked by default prereq check function: checkLinuxJAVA
+# Rule: Equal or higher version of Java is allowed (change also in installSAM).
+Linux_aaa_ddd_v_l_PKG_JAVA="1.7.0.0"
+
+# SLES librtas
+Linux_ppc_SUSE_v_l_PKG_LIBRTAS="librtas ^/lib/librtas.so.1"
+Linux_ppc_SUSE_10_l_PKG_LIBRTAS="librtas ^/usr/lib/librtas.so.1 ppc"
+Linux_ppc_SUSE_11_l_PKG_LIBRTAS="librtas-32bit ^/usr/lib/librtas.so.1 ppc"
+Linux_ppcx_SUSE_10_l_PKG_LIBRTAS="librtas ^/usr/lib/librtas.so.1 ppc"
+Linux_ppcx_SUSE_11_l_PKG_LIBRTAS="librtas-32bit ^/usr/lib/librtas.so.1 ppc64"
+Linux_ppc64_SUSE_v_l_PKG_LIBRTAS="librtas ^/usr/lib64/librtas.so.1 ppc64"
+
+# SLES perl
+Linux_aaa_SUSE_10_l_PKG_PERL="perl /perl$"
+Linux_aaa_SUSE_11_l_PKG_PERL="perl-base /perl$"
+Linux_aaa_SUSE_12_l_PKG_PERL="perl-base /perl$"
+Linux_aaa_SUSE_15_l_PKG_PERL="perl-base /perl$"
+
+# SLES libstdc++
+# SLES 11.0 - 11.1
+Linux_i386_SUSE_11_0plus_PKG_LIBSTD="libstdc++43 ^/usr/lib/libstdc\+\+.so.6$"
+Linux_i386x_SUSE_11_0plus_PKG_LIBSTD="libstdc++43-32bit ^/usr/lib/libstdc\+\+.so.6$ x86_64"
+Linux_ppcx_SUSE_11_0plus_PKG_LIBSTD="libstdc++43-32bit ^/usr/lib/libstdc\+\+.so.6$ ppc64"
+Linux_s390l_SUSE_11_0plus_PKG_LIBSTD="libstdc++43-32bit ^/usr/lib/libstdc\+\+.so.6$ s390x"
+
+# SLES 11.2
+Linux_i386_SUSE_11_2_PKG_LIBSTD="libstdc++46 ^/usr/lib/libstdc\+\+.so.6$"
+Linux_i386x_SUSE_11_2_PKG_LIBSTD="libstdc++46-32bit ^/usr/lib/libstdc\+\+.so.6$ x86_64"
+Linux_ppcx_SUSE_11_2_PKG_LIBSTD="libstdc++46-32bit ^/usr/lib/libstdc\+\+.so.6$ ppc64"
+Linux_s390l_SUSE_11_2_PKG_LIBSTD="libstdc++46-32bit ^/usr/lib/libstdc\+\+.so.6$ s390x"
+
+# SLES 11.3 and higher
+Linux_i386_SUSE_11_3plus_PKG_LIBSTD="libstdc++6 ^/usr/lib/libstdc\+\+.so.6$"
+Linux_i386x_SUSE_11_3plus_PKG_LIBSTD="libstdc++6-32bit ^/usr/lib/libstdc\+\+.so.6$ x86_64"
+Linux_ppcx_SUSE_11_3plus_PKG_LIBSTD="libstdc++6-32bit ^/usr/lib/libstdc\+\+.so.6$ ppc64"
+Linux_s390l_SUSE_11_3plus_PKG_LIBSTD="libstdc++6-32bit ^/usr/lib/libstdc\+\+.so.6$ s390x"
+
+# SLES pam (notice that ppc/ppc64 is different than i386/i386x and s390/s390x!)
+Linux_i386_SUSE_v_l_PKG_PAM="pam ^/lib/libpam.so"
+Linux_i386x_SUSE_v_l_PKG_PAM="pam-32bit ^/lib/libpam.so"
+Linux_ppc_SUSE_10_l_PKG_PAM="pam ^/lib/libpam.so"
+Linux_ppc_SUSE_11_l_PKG_PAM="pam-32bit ^/lib/libpam.so"
+Linux_ppcx_SUSE_11_l_PKG_PAM="pam-32bit ^/lib/libpam.so"
+Linux_ppcx_SUSE_10_l_PKG_PAM="pam ^/lib/libpam.so"
+Linux_s390_SUSE_v_l_PKG_PAM="pam ^/lib/libpam.so"
+Linux_s390l_SUSE_v_l_PKG_PAM="pam-32bit ^/lib/libpam.so"
+
+# SLES glibc (notice that ppc/ppc64 is different than i386/i386x and s390/s390x!)
+Linux_i386_SUSE_v_l_PKG_GLIBC="glibc-locale ^/usr/lib/gconv/UNICODE.so$"
+Linux_i386x_SUSE_v_l_PKG_GLIBC="glibc-locale-32bit ^/usr/lib/gconv/UNICODE.so$ x86_64"
+Linux_ppcx_SUSE_10_l_PKG_GLIBC="glibc-locale ^/usr/lib/gconv/UNICODE.so$ ppc"
+Linux_ppcx_SUSE_11_l_PKG_GLIBC="glibc-locale-32bit ^/usr/lib/gconv/UNICODE.so$ ppc64"
+Linux_s390_SUSE_v_l_PKG_GLIBC="glibc-locale ^/usr/lib/gconv/UNICODE.so$ s390"
+Linux_s390l_SUSE_v_l_PKG_GLIBC="glibc-locale-32bit ^/usr/lib/gconv/UNICODE.so$ s390x"
+Linux_aaa_SUSE_12_l_PKG_GLIBC="glibc-locale ^/usr/lib64/gconv/UNICODE.so"
+Linux_aaa_SUSE_15_PKG_GLIBC="glibc-locale ^/usr/lib64/gconv/UNICODE.so"
+
+# SLES servicelog
+Linux_ppc64le_SUSE_15_0plus_PKG_SERVICELOG="servicelog ^/usr/bin/servicelog$ ppc64le"
+
+# RHEL perl
+Linux_aaa_RH_v_l_PKG_PERL="perl /perl$"
+
+# RHEL perl-Sys-Syslog
+Linux_aaa_RH_7_1plus_PKG_PERL_SYSLOG="perl-Sys-Syslog /Sys/Syslog.pm$"
+
+# RHEL libstdc++
+Linux_i386x_RH_v_l_PKG_LIBSTD="libstdc++ ^/usr/lib/libstdc\+\+.so.6$ i686"
+Linux_ppc_RH_v_l_PKG_LIBSTD="libstdc++ ^/usr/lib/libstdc\+\+.so.6$"
+Linux_ppcx_RH_v_l_PKG_LIBSTD="libstdc++ ^/usr/lib/libstdc\+\+.so.6$ ppc"
+Linux_s390l_RH_v_l_PKG_LIBSTD="libstdc++ ^/usr/lib/libstdc\+\+.so.6$ s390"
+
+# RHEL pam
+Linux_i386x_RH_v_l_PKG_PAM="pam ^/lib/libpam.so.0 i686"
+Linux_ppc_RH_v_l_PKG_PAM="pam ^/lib/libpam.so.0"
+Linux_ppcx_RH_v_l_PKG_PAM="pam ^/lib/libpam.so.0 ppc"
+Linux_s390l_RH_v_l_PKG_PAM="pam ^/lib/libpam.so.0 s390"
+
+# RHEL libstdc++ 64bit
+Linux_ppcx_RH_v_l_PKG_LIBSTD64="libstdc++ ^/usr/lib64/libstdc\+\+.so.6$ ppc64"
+Linux_i386x_RH_v_l_PKG_LIBSTD64="libstdc++ ^/usr/lib64/libstdc\+\+.so.6$ x86_64"
+Linux_s390l_RH_v_l_PKG_LIBSTD64="libstdc++ ^/usr/lib64/libstdc\+\+.so.6$ s390x"
+
+# RHEL compat-libstdc++ for rsct.64bit
+Linux_ppcx_RH_v_l_PKG_COMPATLIBSTD64="compat-libstdc++-33 ^/usr/lib64/libstdc\+\+.so.5$ ppc64"
+Linux_i386x_RH_v_l_PKG_COMPATLIBSTD64="compat-libstdc++-33 ^/usr/lib64/libstdc\+\+.so.5$ x86_64"
+Linux_s390l_RH_v_l_PKG_COMPATLIBSTD64="compat-libstdc++-33 ^/usr/lib64/libstdc\+\+.so.5$ s390x"
+
+# RHEL ppc librtas
+Linux_ppc_RH_v_l_PKG_LIBRTAS="librtas ^/lib/librtas.so.1"
+Linux_ppcx_RH_v_l_PKG_LIBRTAS="librtas ^/usr/lib/librtas.so.1"
+Linux_ppc64_RH_v_l_PKG_LIBRTAS="librtas ^/usr/lib64/librtas.so.* ppc64"
+Linux_ppc64le_RH_v_l_PKG_LIBRTAS="librtas ^/usr/lib64/librtas.so.* ppc64le"
+
+#RHEL glibc
+Linux_ppc_RH_v_l_PKG_GLIBC="glibc ^/usr/lib/gconv/UNICODE.so$"
+Linux_ppcx_RH_v_l_PKG_GLIBC="glibc ^/usr/lib/gconv/UNICODE.so$ ppc64"
+Linux_s390l_RH_v_l_PKG_GLIBC="glibc ^/usr/lib/gconv/UNICODE.so$ s390x"
+
+#RHEL servicelog
+Linux_ppc64_RH_7_2plus_PKG_SERVICELOG="servicelog ^/usr/bin/servicelog$ ppc64"
+Linux_ppc64le_RH_7_2plus_PKG_SERVICELOG="servicelog ^/usr/bin/servicelog$ ppc64le"
+
+#RHEL device-mapper-libs for s390
+Linux_s390l_RH_6_l_PKG_DEVICEMAPPER="device-mapper-libs ^/lib/libdevmapper.so.1"
+
+# Linux/Ubuntu on ppc (64bit)
+Linux_ppc64_ddd_v_l_PKG_RSCTCORE="rsct.core $RSCT_VERSION"
+Linux_ppc64le_ddd_v_l_PKG_RSCTCORE="rsct.core $RSCT_VERSION"
+Linux_ppc64el_ddd_v_l_PKG_RSCTCORE="rsct.core $RSCT_VERSION"
+
+# Ubuntu perl
+Linux_aaa_Ubuntu_v_l_PKG_PERL="perl /perl$"
+
+#-----------------------------------------------------------------------------------------------------
+# List of packages for SunOS
+SUN_PKGS="SUNWCSU SUNWXCU4 SUNWLIBC SUNWCSL \
+          SUNWCSLR SUNWSCPU SUNWLIBMSR SUNWLIBMS \
+          SUNWESU SUNWLOC SUNWGZIP SUNWCSR \
+          SUNWXWRTL SUNWPERL"
+# Value represents a SunOS package that can be queried with pkginfo -q
+SunOS_sparc_SUN_v_l_PKG_SUNWCSU="SUNWcsu"
+SunOS_sparc_SUN_v_l_PKG_SUNWXCU4="SUNWxcu4"
+SunOS_sparc_SUN_v_l_PKG_SUNWLIBC="SUNWlibC"
+SunOS_sparc_SUN_v_l_PKG_SUNWCSL="SUNWcsl"
+SunOS_sparc_SUN_v_l_PKG_SUNWCSLR="SUNWcslr"
+SunOS_sparc_SUN_v_l_PKG_SUNWSCPU="SUNWscpu"
+SunOS_sparc_SUN_v_l_PKG_SUNWLIBMSR="SUNWlibmsr"
+SunOS_sparc_SUN_v_l_PKG_SUNWLIBMS="SUNWlibms"
+SunOS_sparc_SUN_v_l_PKG_SUNWESU="SUNWesu"
+SunOS_sparc_SUN_v_l_PKG_SUNWLOC="SUNWloc"
+SunOS_sparc_SUN_v_l_PKG_SUNWGZIP="SUNWgzip"
+SunOS_sparc_SUN_v_l_PKG_SUNWCSR="SUNWcsr"
+SunOS_sparc_SUN_v_l_PKG_SUNWXWRTL="SUNWxwrtl"
+SunOS_sparc_SUN_v_l_PKG_SUNWPERL="SUNWperl.*core"
+  
+                                                 
+#c004
+# Minimum sam package version for upgrade if exists
+REQ_SAM_UPGRADE_VERSION="4.1.0.0"
+# End of prereq package specifications
+#######################################################################################################
+
+PN=`basename $0` # strip program name from call arg[0]
+DIR=`dirname $0` # strip directory from call arg[0]
+SCRIPT=$PN': '
+MSG_NAME=installSAM # messages are in installSAM.*.msg files
+# version of rsct getRSCTVersionFromOSVersion
+RSCT_VSN=
+
+OS_FLAG=`uname -a | grep -c "Ubuntu"`
+if [ "$OS_FLAG" -eq 1 ] ; then
+  OS="Linux"
+  DISTRO="Ubuntu"
+else
+  OS=`uname -s`   # distinguish "Linux" "AIX" before trying to determine platform
+fi
+
+DATE=`date`
+HOST_NAME=`hostname`
+ARCH=''
+ARCH_64=0  # indicate if this is a 64 bit architecture
+PLATFORM=''
+PKGDIR=''
+
+# English only messages:
+ENMSG_NOARCH="${SCRIPT}Cannot determine architecture -exit."
+ENMSG_NOLANG="${SCRIPT}Cannot determine language - will use English."
+ENMSG_NOLIC="${SCRIPT}Cannot find license files - will show English license."
+ENMSG_NONLS="${SCRIPT}The language currently set is not supported :"
+ENMSG_LANGINST="${SCRIPT}If you want to cancel $SCRIPT to set a supported language, type 'y':"
+ENMSG_NODEFLANG="${SCRIPT}Default language not found -exit."
+ENMSG_CONTEN="${SCRIPT}Will continue in English."
+ENMSG_LOG_STARTED="${SCRIPT}>>> Prerequisite on $HOST_NAME check - log started :"
+ENMSG_LOG_ENDED="${SCRIPT}<<< Prerequisite on $HOST_NAME check - log ended :"
+ENMSG_NOT_PERFORMED="${SCRIPT}Prerequisite checking was not performed."
+ENMSG_NO_DIR="${SCRIPT}Directory specified with option -d does not exist:"
+ENMSG_NO_PKGDIR="${SCRIPT}Directory specified with option -d does not contain required files:"
+ENMSG_NO_LOGDIR="${SCRIPT}Unable to create log file. Maybe the path does not exist:"
+ENMSG_PACKINCORRECT="${SCRIPT}Failed to install as the installation package for this architecture and OS is invalid. Required package is"
+
+USAGE1="Usage:" 
+USAGE2="      prereqSAM [-d inst_pkg_dir] [-l log_file] [--useibmjre path_to_ibm_jre]" 
+
+# Return codes from prereqSAM script
+RC_OK=0
+RC_PREREQ_VERSION=20
+RC_PREREQ_NOT_INST=21
+RC_PREREQ_OSVERSION=22
+RC_PREREQ_UNABLE=23
+RC_PREREQ_NOTRW=24
+
+# allows to add options:
+OPTIONS=$*
+OPT_SILENT=0
+OPT_NOLICCHECK=0
+OPT_NOAIXRSCT=0
+OPT_USE_IBM_JRE=0
+OPT_IBM_JRE_PATH=''
+OPT_DIR=''
+OPT_LOG_FILE=''
+
+#----------------------------------
+# functions
+#----------------------------------
+
+# function logit
+# log and conditionally echo message
+# parameters:
+#  $1 message
+# Side effects:
+#  if OPT_SILENT==1 do not echo message
+#  log message in file prereqSAM.PID.log
+#
+logit () {
+  echo "$1" >> $INST_LOG
+  if [ $OPT_SILENT -eq 0 ] ; then
+     echo "$1"
+  fi
+}
+
+
+# function makeLog
+# paramters:
+#  $1 prefix of log file
+# Make log file of the form: /tmp/$1.#.log
+# where # is a number that does not exist yet in
+# existing log files.
+# returns log file name.
+makeLog () {
+   NUM=`ls /tmp/$1.*.log 2>/dev/null | sed s/"\/tmp\/$1\."//g | sed s/"\.log"//g | sort -nr |head -1`
+   if [ -n "$NUM" ] ; then
+      NUM=`expr $NUM + 1`
+   else
+      NUM=1
+   fi
+   INST_LOG=/tmp/$1.$NUM.log
+   echo $INST_LOG
+}
+
+
+# function os_version
+# Display OS name, version and arch
+#
+os_version () {
+    case "`uname -s`" in
+        AIX)
+            echo "AIX `oslevel | awk -F. '{print $1"."$2}'`"
+            ;;
+        Linux)
+            # Check if lsb_release command exists
+            type lsb_release > /dev/null 2>&1 
+            if [ $? -eq 0 ] ; then
+                case "`lsb_release -i | awk '{print $3$4}'`" in
+                    RedHatEnterpriseServer)
+                        echo "RHEL `lsb_release -r | awk '{print $2}'` `uname -p`"
+                        ;;
+                    SUSELINUX)
+                        echo "SLES `lsb_release -r | awk '{print $2}'`.`cat /etc/*-release | grep PATCHLEVEL | awk '{print $3}'` `uname -p`"
+                        ;;
+                    Ubuntu)
+                        echo "Ubuntu `lsb_release -r | awk '{print $2}'` `uname -p`"
+                        ;;
+                esac
+            else
+                if [ -f /etc/os-release ] ; then
+                    LINUX_DISTRO=`$GREP "^NAME=" /etc/os-release | cut -d\" -f2`
+                    LINUX_VERSION=`$GREP "^VERSION_ID=" /etc/os-release | cut -d\" -f2`
+                fi
+                # Map distro name
+                case "$LINUX_DISTRO" in 
+                   "Red Hat Enterprise Linux Server"|"CentOS Linux")
+                      LINUX_DISTRO="RHEL"
+                      ;;
+                esac
+                echo "$LINUX_DISTRO $LINUX_VERSION `uname -p`"           
+            fi
+            ;;
+        SunOS)
+            echo "SunOS `uname -r` `uname -p`"
+            ;;
+    esac
+}
+
+
+# function instexit.
+# exit installation with return code.
+# parameters:
+#  $1 RC
+#  $2 if exists then skip processing acc. to flag
+#     "NONE" no output
+#     "NONLS" no NLS related text
+# Side effects:
+#  exits script after logging.
+#
+instexit () {
+  if [ -z "$2" ] || [ "$2" = "0" ] ; then
+     if [ $1 -eq 0 ] ; then
+        case "$OS" in
+           AIX) logit "$I60 $OS $IS_VERSION"
+           ;;
+           Linux|SunOS) 
+                  logit "$I60"
+                  logit "$IS_VERSION"
+           ;;
+        esac
+     else
+        case "$OS" in
+           AIX) logit "$I61 ${OS} $IS_VERSION"
+           ;;
+           Linux|SunOS) 
+                  #logit "$I61 ${OS} ${ARCH} ${DISTRO}"
+                  #logit "$IS_VERSION"
+                  logit "$I61 `os_version`"
+           ;;
+        esac
+        #logit "$I62 $1"
+        case "$1" in
+           $RC_PREREQ_VERSION) logit "$I64"
+           ;;
+           $RC_PREREQ_NOT_INST) logit "$I65$MISSING_PKGS"
+           ;;
+           $RC_PREREQ_OSVERSION) logit "$I66"
+           ;;
+           $RC_PREREQ_UNABLE) logit "$I67"
+           ;;
+        esac
+        #echo "$I63"  >> $INST_LOG
+        #echo " - $RC_PREREQ_VERSION - $I64" >> $INST_LOG
+        #echo " - $RC_PREREQ_NOT_INST - $I65" >> $INST_LOG
+        #echo " - $RC_PREREQ_OSVERSION - $I66" >> $INST_LOG
+        #echo " - $RC_PREREQ_UNABLE - $I67" >> $INST_LOG
+        if [ $OPT_SILENT -eq 0 ] ; then
+           echo "$I68 $INST_LOG"
+        fi
+     fi
+  fi
+  if [ -z "$2" ] || [ "$2" = "0" ] || [ "$2" = "NONLS" ] ; then
+     if [ -z "$OPT_LOG_FILE" ] ; then
+        DATE=`date`
+        echo "$ENMSG_LOG_ENDED $DATE" >> $INST_LOG
+     fi
+  fi
+  exit $1
+}
+
+# function getASCII
+# get the ASCII NLS string from $NLS_FILE
+# if string is not available get from prereqSAM.en_US.msg - English
+# parameters:
+#  $1 ASCII key to search for NLS string
+#  $2 == 1, if removal of trailing CR(13) is required
+# return:
+#  ASCII NLS string with $SCRIPT prefix
+#
+getASCII () {
+  # find NLS text for pattern xxx=<NLS text>
+  R=${SCRIPT}`cat $NLS_FILE | $GREP $1= | sed s/$1=//`
+  #echo "R='$R'"
+  if [ "$R" = "$SCRIPT" ] ; then
+     # assume: not yet available as translated text, use English
+     R=${SCRIPT}`cat "$MSG_DIR/$MSG_NAME.en_US.msg" | $GREP $1= | sed s/$1=//`
+  fi
+  if [ "$R" != "$SCRIPT" ] && [ $2 -eq 1 ] ; then
+     # remove CR
+     #R=`echo $R |$AWK 'BEGIN {RS="\x0D\x0A"} {gsub("\x0D\x0A","\x0A"); print; exit;}'`
+     # TODO: Only remove if CRLF detected. Otherwise message will be truncated.
+     RCNT=`echo $R | wc -c`
+     RCNT=`expr $RCNT - 1`
+     R=`echo $R | cut -b1-$RCNT`
+  fi
+  echo $R
+}
+
+
+# function mapLanguage
+# get similar language: e.g.
+# if $1 is en_US.iso885915 then map to en_US
+# parameters:
+#  $1 language currently set
+#
+mapLanguage () {
+   MAPPED_LANG=$NLS_LANG
+   # try map utf8 -> UTF-8
+   IS_UTF8=`echo $1 | $GREP -c utf8`
+   if [ $IS_UTF8 -ne 0 ] && [ "$OS" = "Linux" ] ; then
+      MAPPED_LANG=`echo $1 | sed s/'.utf8'/'.UTF-8'/`
+   else # not UTF-8
+      # extract first part like 'en_' from 'en_UK'
+      LANG_PREFIX=`echo $1 | sed s/_.*/_/`
+
+      case "$LANG_PREFIX" in
+          en_) MAPPED_LANG=$LANG_PREFIX"US"
+          ;;
+          de_) MAPPED_LANG=$LANG_PREFIX"DE"
+          ;;
+          es_) MAPPED_LANG=$LANG_PREFIX"ES"
+          ;;
+          fr_) MAPPED_LANG=$LANG_PREFIX"FR"
+          ;;
+          it_) MAPPED_LANG=$LANG_PREFIX"IT"
+          ;;
+          pt_) MAPPED_LANG=$LANG_PREFIX"BR"
+          ;;
+          ja_)
+             IS_EUC=`echo $1 | $GREP -ic eucjp`
+             if [ $IS_EUC -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"JP.eucJP"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"JP"
+                fi
+             else
+                MAPPED_LANG=$LANG_PREFIX"JP"
+             fi
+          ;;
+          ko_)
+             IS_EUC=`echo $1 | $GREP -ic euckr`
+             if [ $IS_EUC -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"KR.eucKR"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"KR"
+                fi
+             else
+                MAPPED_LANG=$LANG_PREFIX"KR"
+             fi
+          ;;
+          zh_)
+             IS_GBK=`echo $1 | $GREP -ic gbk`
+             if [ $IS_GBK -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"CN.GBK"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"CN"
+                fi
+                break
+             fi
+             IS_GB18=`echo $1 | $GREP -ic gb18030`
+             if [ $IS_GB18 -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"CN.GB18030"
+                else
+                   MAPPED_LANG="Zh_CN"
+                fi
+                break
+             fi
+             IS_GB23=`echo $1 | $GREP -ic gb2312`
+             if [ $IS_GB23 -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"CN.GB2312"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"CN"
+                fi
+                break
+             fi
+             IS_TWEUC=`echo $1 | $GREP -ic euctw`
+             if [ $IS_TWEUC -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"TW.eucTW"
+                else
+                   MAPPED_LANG=$LANG_PREFIX"TW"
+                fi
+                break
+             fi
+             IS_TWBIG5=`echo $1 | $GREP -ic big5`
+             if [ $IS_TWBIG5 -ne 0 ] ; then
+                if [ "$OS" = "Linux" ] ; then
+                   MAPPED_LANG=$LANG_PREFIX"TW.Big5"
+                else
+                   MAPPED_LANG="Zh_TW"
+                fi
+                break
+             fi
+             IS_TW=`echo $1 | $GREP -ic tw`
+             if [ $IS_TW -ne 0 ] ; then
+                MAPPED_LANG=$LANG_PREFIX"TW"
+             else
+                MAPPED_LANG=$LANG_PREFIX"CN"
+             fi
+          ;;
+      esac
+   fi
+   #echo "mapped to: "$MAPPED_LANG
+   NLS_LANG=$MAPPED_LANG
+}
+
+# function compare_version
+# This function compares two version strings from $1 and $2 e.g. "3.1.0.0", "3.1.1" 
+# and returns the result of the comparison which is one the following values: -1, 1 or 0.
+# parameters:
+# $1 version string e.g. "3.1.0.0"
+# $2 version string e.g. "3.2.0.0"
+# return 1  if version of $1 > $2
+# return 0  if version of $1 == $2
+# return -1 if version of $1 < $2
+#
+compare_version() {
+  version1=$1
+  version2=$2
+  
+  compRC=0
+  
+  # Make sure variables are defined
+  if [ -z "$version1" ] ; then
+    version1 = "0.0.0.0"
+  fi
+  if [ -z "$version2" ] ; then
+    version2 = "0.0.0.0"
+  fi
+  
+  # Remove illegal characters
+  version1=`echo $version1 | sed 's/[^0-9\.]//g'`
+  version2=`echo $version2 | sed 's/[^0-9\.]//g'`
+  
+  # Split version into parts
+  V1_V=`echo $version1 | awk '{split($0,a,"."); print a[1]}'`
+  V1_R=`echo $version1 | awk '{split($0,a,"."); print a[2]}'`
+  V1_M=`echo $version1 | awk '{split($0,a,"."); print a[3]}'`
+  V1_F=`echo $version1 | awk '{split($0,a,"."); print a[4]}'`
+  
+  if [ "x${V1_V}" = "x" ] ; then
+    V1_V=0
+  fi
+  if [ "x${V1_R}" = "x" ] ; then
+    V1_R=0
+  fi
+  if [ "x${V1_M}" = "x" ] ; then
+    V1_M=0
+  fi
+  if [ "x${V1_F}" = "x" ] ; then
+    V1_F=0
+  fi   
+
+  V2_V=`echo $version2 | awk '{split($0,a,"."); print a[1]}'`
+  V2_R=`echo $version2 | awk '{split($0,a,"."); print a[2]}'`
+  V2_M=`echo $version2 | awk '{split($0,a,"."); print a[3]}'`
+  V2_F=`echo $version2 | awk '{split($0,a,"."); print a[4]}'`
+ 
+  if [ "x${V2_V}" = "x" ] ; then
+    V2_V=0
+  fi
+  if [ "x${V2_R}" = "x" ] ; then
+    V2_R=0
+  fi
+  if [ "x${V2_M}" = "x" ] ; then
+    V2_M=0
+  fi
+  if [ "x${V2_F}" = "x" ] ; then
+    V2_F=0
+  fi 
+  
+  # Compare version parts from left to right
+  if [ $V1_V -lt $V2_V ] ; then
+    compRC=-1
+  elif [ $V1_V -gt $V2_V ] ; then
+    compRC=1
+  else
+    if [ $V1_R -lt $V2_R ] ; then
+      compRC=-1
+    elif [ $V1_R -gt $V2_R ] ; then
+      compRC=1
+    else
+      if [ $V1_M -lt $V2_M ] ; then
+        compRC=-1
+      elif [ $V1_M -gt $V2_M ] ; then
+        compRC=1
+      else
+        if [ $V1_F -lt $V2_F ] ; then
+          compRC=-1
+        elif [ $V1_F -gt $V2_F ] ; then
+          compRC=1
+        fi   
+      fi      
+    fi    
+  fi
+  
+  echo $compRC  
+}
+
+# function compVersion
+# compare versions from $1 and $2
+# parameters:
+# $1 prereq pkg version
+# $2 installed pkg version
+# return RC_PREREQ_VERSION if version of $1(prereq) > $2(installed)
+# return 0 if version of $1 <= $2
+# return RC_PREREQ_UNABLE if versions could not be compared
+#
+#
+compVersion () {
+   CMPRC=$RC_PREREQ_UNABLE
+   # delimit the version x.x.x.x-yydddd with #x.x.x.x-yydddd#, then cut the
+   # version field and remove the . (3x) and the - to get the version as a number
+   # There may be versions like x.x.x.x-0 or x.x.x.x-yyddd, where yy is the last 2 digits of the year and
+   # ddd is the day in the year. Versions like x.x.x.x-0 must be extended to x.x.x.x-00000 for
+   # successful comparison
+   VT1=`extend0 $1`
+   VT2=`extend0 $2`
+   V1=`echo $VT1 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}-[0-9]\{5\}/#&#/g' | cut -s -d '#' -f2 | sed 's/\.//g' | sed 's/-//g'`
+   V2=`echo $VT2 | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}-[0-9]\{5\}/#&#/g' | cut -s -d '#' -f2 | sed 's/\.//g' | sed 's/-//g'`
+   if [ -n "$V1" ] && [ -n "$V2" ] ; then
+      if [ $V1 -gt $V2 ] ; then
+         CMPRC=$RC_PREREQ_VERSION
+      else
+         CMPRC=0 # OK
+      fi
+   fi
+   echo $CMPRC
+}
+
+# function extend0
+# check if version from $1 has only -0 appended, if yes extend by -00000
+# parameters:
+# $1 Name 1 with a version
+#
+# return changed version  x.x.x.x-00000 if version was x.x.x.x-0
+#
+extend0 () {
+   # There may be versions like x.x.x.x-0 or x.x.x.x-yyddd where yy is the last 2 digits of the year and
+   # ddd is the day in the year.
+   VOUT=""
+   COUNT1=`echo $1 | $GREP -Ec "\-0$"`             # detect x.x.x.x-0
+   COUNT2=`echo $1 | $GREP -Ec "\-0\."`            # detect x.x.x.x-0.<arch>.rpm
+   COUNT3=`echo $1 | $GREP -Ec "\-[0-9]\{5\}\."`   # detect x.x.x.x-yyddd.<arch>.rpm
+   if [ $COUNT3 -eq 1 ] ; then
+      # detect x.x.x.x-yyddd.<arch>.rpm - leave as is
+      VOUT=$1
+   elif [ $COUNT2 -eq 1 ] ; then
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         # detect x.x.x.x-0.<arch>.deb
+         # chop off appendix -0.<arch>.deb to append -00000
+         VOUT=`echo $1 | sed 's/\-0\..*\.deb//'`
+      else
+         # detect x.x.x.x-0.<arch>.rpm
+         # chop off appendix -0.<arch>.rpm to append -00000
+         VOUT=`echo $1 | sed 's/\-0\..*\.rpm//'`
+      fi
+      VOUT=$VOUT"-00000"
+   elif [ $COUNT1 -eq 1 ] ; then
+      # detect x.x.x.x-0
+      VOUT=$1"0000"
+   else
+      # x.x.x.x
+      VOUT=$1"-00000"
+   fi
+   echo $VOUT
+}
+
+# function expand0s
+# Expand an integer for a number of zeros.
+# parameters:
+# $1 integer to expand
+# $2 number of digits to expand
+# return expanded integer
+# Examples:
+# expand 9 3   returns 900
+# expand 921 3 returns 921
+#
+expand0s () {
+   RET=$1
+   if [ $RET -ne 0 ] ; then
+      WC=`echo $1 | wc -m`
+      WC=`expr ${WC} - 1`    # wc always return 1 more than actual count
+      ZEROS=`expr $2 - $WC`  # number of zeros left to expand
+      while [ "$ZEROS" -gt 0 ]
+      do
+         RET=${RET}0
+         ZEROS=`expr ${ZEROS} - 1`
+      done
+   fi
+   echo $RET
+}
+
+# function extractInstVersion
+# Extract version from installed package
+# parameters:
+# $1 name of package
+# return package version: any of the form x.x.x.x
+#
+extractInstVersion () {
+   VERSION=""
+   case "$OS" in
+       AIX)
+           INST=`lslpp -l $1 2>/dev/null | $GREP -E $1 | head -1`
+           if [ -n "$INST" ] ; then
+              VERSION=`echo $INST | sed s/"\.sco"// | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2`
+           fi
+       ;;
+       Linux)
+           if [ "$DISTRO" = "Ubuntu" ]; then
+              INST=`dpkg-query -W -f='${binaryPackage};${Version}\n' $1 2> /dev/null`
+           else
+              INST=`rpm -q $1 --qf '%{NAME};%{VERSION}-%{RELEASE}\n' 2>/dev/null`
+           fi
+           RC=$?
+           if [ $RC -eq 0 ] && [ -n "$INST" ] ; then
+              VERSION=`echo $INST | sed s/"\.sco"// | sed s/"\.efix1"// | cut -d\; -f2`
+           fi
+       ;;
+       SunOS)
+           INST=`pkginfo -x $1 2>/dev/null`
+           if [ $RC -eq 0 ] && [ -n "$INST" ] ; then
+              # extract version among line with name and revision
+              VERSION=`echo $INST | sed s/"\.sco"// | sed s/.*\)// | sed s/,.*// | tail -1`
+           fi
+       ;;
+   esac
+   echo $VERSION
+}
+
+# function validateInstallPackage
+# Check if correct installation package for architecture and OS is used
+# parameters:
+# $1 package directory
+# $2 specify if 64-bit package. Specify 1 for 64-bit and 0 for 32-bit.
+#
+validateInstallPackage () {
+PKG_CHK_DIR=$1
+USE_ARCH_64=$2
+
+if [ ! -d "${PKG_CHK_DIR}" ] ; then
+   if [ $USE_ARCH_64 -eq 1 ] ; then
+      # 64-bit deliverable on system where only 32-bit deliverable supported
+      logit "$I131"
+   else
+      # 32-bit deliverable on 64-bit system
+      logit "$I132"
+   fi
+   instexit $RC_PREREQ_UNABLE
+fi
+}
+
+############################## version detection functions #####################################
+# AIX Check if version matches any of the required versions
+# $1 required versions, e.g. "5200-00 5300-00"
+# $2 existing version of the form: 5x00-xx
+# return matching version from $1, e.g. "5300_00" , otherwise ''
+checkVersionAIX () {
+   VSN_OK=''
+   DETECTED_VERSION=$2
+   # strip existing version and level:
+   VSN_IS=`echo $2 | cut -f1 -d-`
+   LVL_IS=`echo $2 | cut -f2 -d-`
+   for VSN in $1
+   do
+      # split required <version>-<level>
+      RQV=`echo $VSN | cut -f1 -d-`
+      RQL=`echo $VSN | cut -f2 -d-`
+      if [ $RQV -eq $VSN_IS ] ; then
+         if [ $RQL -eq 0 ] ; then
+            VSN_OK="${RQV}_${RQL}"
+            break # version is OK, real level may be > 0 - is acceptable
+         elif [ -n "$LVL_IS" ] ; then
+            # There is a level and required level - do compare
+            # Rule is required level <= is level
+            if [ $RQL -le $LVL_IS ] ; then
+               VSN_OK="${RQV}_${RQL}"
+               break # OK - required level <= is level
+            fi
+         fi
+      fi
+   done
+   echo $VSN_OK
+}
+
+# SUSE i386,ppc,s390 - check if version matches any of the required versions
+# $1 required versions, e.g. "8.3 9.0"
+# $2 existing version of the flavors:
+#
+# flavor 1:
+# SuSE SLES-8 (i386)                    --> 8.1
+# VERSION = 8.1
+#
+# Special processing for SUSE Version 8 Patchlevel 3/4 , where patchlevel is not indicated (stays 8.1).
+# remove it part once we are beyond 8.x as minimum version
+# s390/s390x/i386 8.3 is kernel level 2.4.21 or higher!
+# ppc             8.4 is kernel level 2.4.21 or higher!
+#
+# flavor 2:
+# SUSE LINUX Enterprise Server 9 (aaa)  ---> 9.2
+# VERSION = 9
+# PATCHLEVEL = 2
+#
+# flavor 3:
+# SUSE SLES 9.2 (x586)                  --> 9.2
+# VERSION = 9.2
+# return matching version from $1, with the dot replaced by _, e.g. "9_0",
+#        otherwise ''
+checkVersionaaaSUSE () {
+   VSN_OK=''
+   # strip existing version (flavor 1 and 2):
+   #VSN_IS=`echo $2 | $GREP VERSION | sed s/".*VERSION = "// | awk '{print $1}'`
+   VSN_IS=`echo "$2" | $GREP "^VERSION_ID=" | cut -d\" -f2`
+   # try get patchlevel
+   #LVLP_IS=`echo $2 | $GREP PATCHLEVEL | sed s/".*PATCHLEVEL = "// | awk '{print $1}'`
+   LVL_IS=''
+   # Check for flavor 1 and 3
+   HAS_V_L=`echo $VSN_IS | $GREP -Ec "\."`
+   if [ $HAS_V_L -eq 0 ] ; then
+      # flavor 2 consider patchlevel
+         # no patch level, assume 0
+         LVL_IS=0
+   else
+      # flavor 1
+      # split <version>.<level> (keep statements in this order!)
+      LVL_IS=`echo $VSN_IS | cut -f2 -d.`
+      VSN_IS=`echo $VSN_IS | cut -f1 -d.`
+      # Have a patchlevel
+      #echo "LVL_IS: $LVL_IS" >> $INST_LOG
+      #echo "LVLP_IS: $LVLP_IS" >> $INST_LOG
+   fi
+   LVL_IS_NOEXP=$LVL_IS
+   # expand level to 4 digits in order to handle level in e.g. 4.5(req) > 4.123(given) correctly (5000 > 1230)
+   LVL_IS=`expand0s $LVL_IS 4`  # expand to 4 digits
+   for VSN in $1
+   do
+      # split required <version>.<level>
+      RQV=`echo $VSN | cut -f1 -d.`
+      RQL=`echo $VSN | cut -f2 -d.`
+      XPRQL=`expand0s $RQL 4`  # expand to 4 digits
+      if [ $RQV -eq $VSN_IS ] ; then
+         if [ $RQL -eq 0 ] ; then
+            #VSN_OK="${RQV}_${RQL}"
+            VSN_OK="${VSN_IS}_${LVL_IS_NOEXP}"
+            break # version is OK, real level may be > 0 - is acceptable
+         elif [ -n "$LVL_IS" ] ; then
+            # There is a level and required level - do compare
+            # Rule is required level <= is level
+            if [ $XPRQL -le $LVL_IS ] ; then
+               #VSN_OK="${RQV}_${RQL}"
+               VSN_OK="${VSN_IS}_${LVL_IS_NOEXP}"
+               break # OK - required level <= is level
+            fi
+         fi
+      fi
+   done
+   echo $VSN_OK
+}
+
+# RH i386,ppc,s390 - check if version matches any of the required versions
+# $1 required versions, e.g. "3.5 4.0"
+# $2 existing version of the form:
+# flavor 1:
+#   Red Hat Enterprise Linux AS release 4 (Nahant Update 1)  --> 4.1
+#   Red Hat Enterprise Linux ES release 4 (Nahant Update 1)  --> 4.1
+#   or:
+#   Red Hat Enterprise Linux AS release 3 (Taroon Update 2)  --> 3.2
+#
+# flavor 2:
+#   Red Hat Enterprise Linux Server release 4.92 (Tikanga)
+#
+# return matching version from $1, with the dot replaced by _, e.g. "4_0",
+#        otherwise ''
+checkVersionaaaRH () {
+   VSN_OK=''
+   # strip existing version and level:
+   VSN_IS=`echo $2 | $GREP release | sed s/".*release "// | sed s/" (.*"// | sed s/[^0-9.]//g`
+   # split existing <version>.<level> try flavor 2
+   LVL_IS=`echo $VSN_IS | cut -s -f2 -d.`
+   VSN_IS=`echo $VSN_IS | cut -f1 -d.`
+   if [ -z "$LVL_IS" ] ; then
+      # is flavor 1
+      LVL_IS=`echo $2 | $GREP Update | sed s/".*Update "// | sed s/").*"//`
+   fi
+   if [ -n "$LVL_IS" ] ; then
+      LVL_IS_NOEXP=$LVL_IS
+      # expand level to 4 digits in order to handle level in e.g. 4.5(req) > 4.123(given) correctly (5000 > 1230)
+      LVL_IS=`expand0s $LVL_IS 4`  # expand to 4 digits
+   fi
+   for VSN in $1
+   do
+      # split required <version>.<level>
+      RQV=`echo $VSN | cut -s -f1 -d.`
+      RQL=`echo $VSN | cut -s -f2 -d.`
+      XPRQL=`expand0s $RQL 4`  # expand to 4 digits
+      if [ $RQV -eq $VSN_IS ] ; then
+         if [ $RQL -eq 0 ] ; then
+            #VSN_OK="${RQV}_${RQL}"
+            VSN_OK="${VSN_IS}_${LVL_IS_NOEXP}"
+            break # version is OK, real level may be > 0 - is acceptable
+         elif [ -n "$LVL_IS" ] ; then
+            # There is a level and required level - do compare
+            # Rule is required level <= is level
+            if [ $XPRQL -le $LVL_IS ] ; then
+               VSN_OK="${RQV}_${RQL}"
+               break # OK - required level <= is level
+            fi
+         fi
+      fi
+   done
+   echo $VSN_OK
+}
+
+# SUN sparc - check if version matches any of the required versions
+# $1 required versions, e.g. "10.0"
+# $2 existing version of the flavors:
+# flavor 1:
+#                       Solaris 10 1/06 s10s_u1wos_19a SPARC
+#           Copyright 2005 Sun Microsystems, Inc.  All Rights Reserved.
+#                        Use is subject to license terms.
+#                           Assembled 07 December 2005
+#
+# No other flavors seen yet.
+# return matching version from $1, with the dot replaced by _, e.g. "9_0",
+#        otherwise ''
+checkVersionSUN () {
+   VSN_OK=''
+   # strip existing version (flavor 1 and 2):
+   VSN_IS=`echo $2 | $GREP Solaris | sed s/".*Solaris "// | sed s/" .*SPARC.*"//`
+   # detection of level not supported yet
+   for VSN in $1
+   do
+      # split required <version>.<level>
+      RQV=`echo $VSN | cut -f1 -d.`
+      RQL=`echo $VSN | cut -f2 -d.`
+      if [ $RQV -eq $VSN_IS ] ; then
+         VSN_OK="${RQV}_${RQL}"
+         break # version is OK, real level may be > 0 - is acceptable
+      fi
+   done
+   echo $VSN_OK
+}
+
+# UBUNTU amd64,ppc64el - check if version matches any of the required versions
+# $1 required versions, e.g. "14.0"
+# $2 existing version of the form:
+# flavor 1:
+#   NAME="Ubuntu"
+#   VERSION="14.04, Trusty Tahr"
+#   ID=ubuntu
+#   ID_LIKE=debian
+#   PRETTY_NAME="Ubuntu Trusty Tahr (development branch)"
+#   VERSION_ID="14.04"
+#   HOME_URL="http://www.ubuntu.com/"
+#   SUPPORT_URL="http://help.ubuntu.com/"
+#   BUG_REPORT_URL="http://bugs.launchpad.net/ubuntu/"
+#
+# return matching version from $1, with the dot replaced by _, e.g. "14_0",
+#        otherwise ''
+checkVersionaaaUbuntu () {
+   VSN_OK=''
+   # strip existing version and level:
+   VSN_IS=`echo $2 | $GREP "VERSION_ID=" | sed s/".*VERSION_ID=\""// | sed s/"\".*"//`
+   # split existing <version>.<level> try flavor 2
+   LVL_IS=`echo $VSN_IS | cut -s -f2 -d.`
+   VSN_IS=`echo $VSN_IS | cut -f1 -d.`
+   if [ -z "$LVL_IS" ] ; then
+      LVL_IS=0
+      #LVL_IS=`echo $2 | $GREP Update | sed s/".*Update "// | sed s/").*"//`
+   fi
+   if [ -n "$LVL_IS" ] ; then
+      # expand level to 4 digits in order to handle level in e.g. 4.5(req) > 4.123(given) correctly (5000 > 1230)
+      LVL_IS=`expand0s $LVL_IS 4`  # expand to 4 digits
+   fi
+   for VSN in $1
+   do
+      # split required <version>.<level>
+      RQV=`echo $VSN | cut -s -f1 -d.`
+      RQL=`echo $VSN | cut -s -f2 -d.`
+      XPRQL=`expand0s $RQL 4`  # expand to 4 digits
+      if [ $RQV -eq $VSN_IS ] ; then
+         if [ $RQL -eq 0 ] ; then
+            VSN_OK="${RQV}_${RQL}"
+            break # version is OK, real level may be > 0 - is acceptable
+         elif [ -n "$LVL_IS" ] ; then
+            # There is a level and required level - do compare
+            # Rule is required level <= is level
+            if [ $XPRQL -le $LVL_IS ] ; then
+               VSN_OK="${RQV}_${RQL}"
+               break # OK - required level <= is level
+            fi
+         fi
+      fi
+   done
+   echo $VSN_OK
+}
+
+
+############################## prereq package checking functions #####################################
+
+# AIX Check prereqs for several categoires
+# $1 matching required version, e.g. "5300"
+# return 0 if all prereqs met.
+checkAIXPrereqs () {
+   RET_PREREQ_RC=0
+   if [ -z "$1" ] ; then
+      RET_PREREQ_RC=$RC_PREREQ_OSVERSION
+   else
+      for PKG in $AIX_PKGS
+      do
+         # form name for package and check if a value
+         # for it exists
+         #echo "test Checking for package: ${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG\}"\``
+         #echo "test After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+         if [ -z "$PKG_PREREQ" ] ; then
+            # check if any version(pattern: 'v_l') package exists
+            #echo "test Checking for package: ${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG" >> $INST_LOG
+            #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG")
+            PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG\}"\``
+         fi
+         #echo "test After all checks found package: '$PKG_PREREQ'" >> $INST_LOG
+         if [ -z "$PKG_PREREQ" ] ; then
+            # no value to check for with this package
+            #echo "test No values specified for package? : ' '${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG'" >> $INST_LOG
+            continue
+         else
+            PREREQ_RC=0
+            # have a value for that package
+            case "$PKG" in
+               JAVA) RESULT=`checkAIXJAVA "$PKG_PREREQ"`
+                     PREREQ_RC=`echo $RESULT | cut -f1 -d ' '`
+                     MISSING_PKG=`echo "$RESULT" | cut -f2- -d ' '`
+               ;;
+               WPAR) PREREQ_RC=`checkAIXWPAR "$PKG_PREREQ"`
+               ;;
+               *) echo "$I69 $PKG_PREREQ" >> $INST_LOG
+                  RESULT=`checkAIXInstPkg "$PKG_PREREQ"`
+                  PREREQ_RC=`echo $RESULT | cut -f1 -d ' '`
+                  MISSING_PKG=`echo "$RESULT" | cut -f2- -d ' '`
+               ;;
+            esac
+            #echo "test: After checking package: $PKG: '$PREREQ_RC', '$RESULT', '$MISSING_PKG'" >> $INST_LOG
+            if [ ! -z $MISSING_PKG ]
+            then
+               if [ -z "$MISSING_PKGS" ] ; then
+                   MISSING_PKGS="$MISSING_PKG"
+               else
+                   MISSING_PKGS="$MISSING_PKGS, $MISSING_PKG"
+               fi
+               MISSING_PKG=
+            fi
+            #echo "test: After checking package: $PREREQ_RC: '$PREREQ_RC'" >> $INST_LOG
+            # set worst RC
+            if [ $RET_PREREQ_RC -lt $PREREQ_RC ] ; then
+               RET_PREREQ_RC=$PREREQ_RC
+            fi
+            #echo "test: After checking package: $PKG new RC: '$RET_PREREQ_RC'" >> $INST_LOG
+         fi
+      done
+   fi
+   echo "$RET_PREREQ_RC $MISSING_PKGS"
+}
+
+# AIX Check prereqs for several categories
+#
+# $1 Prereq package name and runtime version,
+#    e.g. "xlC.aix50.rte 7.0.0.1"
+# return 0 if all prereqs met.
+#        1 if prereq version > installed version
+#        2 if comparison failed
+checkAIXInstPkg ()  {
+
+   PIRC=$RC_PREREQ_UNABLE
+   PKGN=`echo $1 | cut -d' ' -f1`
+   PKGVERSION=`echo $1 | cut -d' ' -f2`
+   echo "$I70 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+   INSTVERSION=`extractInstVersion $PKGN`
+   IS_RSCT=`echo $PKGN | grep -c "^rsct."`
+   if [ $IS_RSCT -ne 0 ] ; then
+      # determine installed RSCT level (set to "1.1.0.0" in case RSCT is not installed)
+      if [ -f /usr/bin/ctversion ]
+      then
+         RSCTVERSION=`/usr/bin/ctversion | cut -d' ' -f2`
+      else
+         lslpp -l rsct.core.utils >/dev/null 2>&1
+         lslppRC=$?
+         if [ $lslppRC -eq 0 ]
+         then
+            RSCTVERSION=`lslpp -lc rsct.core.utils | grep -v Id | awk '{split($0,a,":"); print a[3]}' | sort -u`
+         else
+            RSCTVERSION="1.1.0.0"
+         fi
+      fi
+      RSCTcompRC=$(compare_version "$PKGVERSION" "$RSCTVERSION")
+   fi
+   if [ -n "$INSTVERSION" ] ; then
+      # check if rsct, because we assume it to be correct, so we can manage it
+      if [ $IS_RSCT -ne 0 ] && [ $OPT_NOAIXRSCT -eq 0 ] ; then
+         # rsct is either fine installed or will be upgraded by installSAM
+         echo "$I71 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+         PIRC=0  # to avoid failure of installSAM
+         if [ $RSCTcompRC -eq 1 ] ; then     # PKGVERSION > RSCTVERSION
+            # msg: RSCT will be installed ...
+            echo "$I117 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+         else
+		    # msg: RSCT package is installed ...
+            echo "$I73 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+         fi
+      else
+         echo "$I71 '$PKGN' '$INSTVERSION'" >> $INST_LOG
+         PIRC=`compVersion $PKGVERSION $INSTVERSION`
+         if [ $PIRC -eq $RC_PREREQ_VERSION ] ; then
+            echo "$I72 $PKGN" >> $INST_LOG   
+         elif [ $PIRC -eq 0 ] ; then
+            echo "$I73 $PKGN" >> $INST_LOG
+         else
+            echo "$I74 $PKGN" >> $INST_LOG   
+         fi   
+      fi
+   else
+      if [ $IS_RSCT -ne 0 ] && [ $OPT_NOAIXRSCT -eq 0 ] && [ $RSCTcompRC -ge 0 ] ; then
+         # rsct must be installed or upgraded by installSAM
+         PIRC=0  # to avoid failure of installSAM
+         echo "$I117 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+      else
+         PIRC=$RC_PREREQ_NOT_INST 
+         echo "$I75 $PKGN" >> $INST_LOG   
+         MISSING_PKG="$PKGN"
+      fi   
+   fi
+   echo "$PIRC $MISSING_PKG"
+}
+
+# AIX Check prereqs for Java
+#
+# return 0 if all prereqs met.
+#        1 if prereq version > installed version
+#        2 if comparison failed
+checkAIXJAVA () {
+   PIRC=$RC_PREREQ_UNABLE
+
+   EXJPKGS=`lslpp -l Java* | $GREP -E "Java[0-9]+.(jre|rte|sdk)" | sort -u | awk '{print \$2}'`
+   ISJVERSION="0"
+   AIX_REQ_JAVA_VERSION="0"
+   EXJPKG=""
+   if [ -n "$EXJPKGS" ] ; then
+      for EXJPKG in $EXJPKGS
+      do
+         ISJV=`echo $EXJPKG  | sed 's/[1-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2 `
+         ISJVer=`echo $ISJV | cut -d. -f1`
+         ISJRel=`echo $ISJV | cut -d. -f2`
+         ISJFix=`echo $ISJV | cut -d. -f4`
+         case $ISJVer in
+           6) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_6 ]
+              then
+                 ISJVERSION=$ISJV
+              fi
+              ISJPKG=$EXJPKG
+              AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_6
+              ;;
+           7) case $ISJRel in
+                0) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_7 ]
+                   then
+                      ISJVERSION=$ISJV
+                   fi
+                   ISJPKG=$EXJPKG
+                   AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_7
+                   ;;
+                1) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_71 ]
+                   then
+                      ISJVERSION=$ISJV
+                   fi
+                   ISJPKG=$EXJPKG
+                   AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_71
+                   ;;
+              esac
+              ;;
+           8) if [ $ISJFix -ge $AIX_ppc_JAVA_FIXLEVEL_8 ]
+              then
+                 ISJVERSION=$ISJV
+              fi
+              ISJPKG=$EXJPKG
+              AIX_REQ_JAVA_VERSION=$ISJVer"."$ISJRel".0."$AIX_ppc_JAVA_FIXLEVEL_8
+              ;;
+         esac
+      done
+   fi
+   if [ "$ISJVERSION" = "0" ] ; then
+      if [ "$AIX_REQ_JAVA_VERSION" = "0" ] ; then
+         # no java exists
+         PIRC=$RC_PREREQ_NOT_INST
+         echo "$I37 6.0.0.$AIX_ppc_JAVA_FIXLEVEL_6" >> $INST_LOG
+         MISSING_PKG="Java (32-bit) 6.0.0.$AIX_ppc_JAVA_FIXLEVEL_6"
+      else
+         # version too low
+         PIRC=$RC_PREREQ_VERSION
+         echo "$I36 $ISJPKG" >> $INST_LOG
+         echo "$I37 $AIX_REQ_JAVA_VERSION" >> $INST_LOG
+      fi
+   else
+      echo "$I73 Java $ISJVERSION" >> $INST_LOG
+      PIRC=0
+   fi
+   echo "$PIRC $MISSING_PKG"
+}
+
+# AIX Check WPAR
+#
+# $1 pathes that should be writable
+# return 0 if all prereqs met.
+#        RC_PREREQ_NOTRW if a path is not
+#        RC_PREREQ_UNABLE if test failed
+checkAIXWPAR ()  {
+   PIRC=$RC_PREREQ_UNABLE
+
+   AIX_RW_PATHES=$1
+   RO_PATHES=""
+   if [ -n "$AIX_RW_PATHES" ] ; then
+      for RWPATH in $AIX_RW_PATHES
+      do
+         if [ ! -w "$RWPATH" ] ; then
+            RO_PATHES="$RO_PATHES $RWPATH"
+         fi
+      done
+   fi
+   if [ -n "$RO_PATHES" ] ; then # check if any pathes are not R/W
+      # Any pathes are not rw
+      PIRC=$RC_PREREQ_NOTRW
+      ROMSG="$I105"
+      IS_WPAR=`uname -W` 2>/dev/null
+      if [ $? -eq 0 ] && [ $IS_WPAR -ne 0 ] ; then
+         # Read only is due to WPAR
+         ROMSG="$I106"
+      fi
+      echo "$ROMSG $RO_PATHES" >> $INST_LOG
+   else
+      # all pathes are R/W
+      PIRC=0
+   fi
+   echo $PIRC
+}
+
+# Get RSCT version from AIX version
+#
+# $1 AIX version 
+# Returns nothing. sets RSCT_VSN.
+getRSCTVersionFromOSVersion () {
+   AIX_VR=`echo $1 | cut -c1,2`
+   case $AIX_VR in
+      61) RSCT_VSN=$RSCT_VERSION
+      ;;
+      71) RSCT_VSN=$RSCT_VERSION
+      ;;
+      72) RSCT_VSN=$RSCT_VERSION
+      ;;
+      *) RSCT_VSN=$RSCT_VERSION
+      ;;
+   esac
+}
+
+# Linux Check prereqs for Java
+#
+# $1 Required Java version e.g. 1.7.0.0
+# $2 JRE directory e.g. /usr/lib/jvm/jre-1.7.1
+# $3 Java archictecure. Specify 1 for 64-bit and 0 for 32-bit.
+#
+# return $checkLinuxJAVA_RESULT="$RC $INST_JAVA_VERSION $JAVA_BIN_PATH"
+#    $RC Return code with the following values:
+#        0 if all prereqs met.
+#        21 if required version > installed version
+#        23 if comparison failed
+#    $INST_JAVA_VERSION installed Java version e.g. 1.7.1.0
+#    $JAVA_BIN_PATH path to java binary e.g. /usr/lib/jvm/jre-1.7.1/bin/java
+#
+checkLinuxJAVA () {
+   REQ_JAVA_VERSION=$1
+   JRE_DIR=$2
+   IS_ARCH_64=$3
+   
+   PIRC=$RC_PREREQ_UNABLE
+   checkLinuxJAVA_RESULT=""
+   
+   # If link to JRE already exists, check this JRE
+   if [ -L "/opt/IBM/tsamp/sam/java/jre" ] ; then
+      JAVA_BIN_PATH="/opt/IBM/tsamp/sam/java/jre/bin/java"
+   else
+      # Remove trailing /
+      JAVA_BIN_PATH=$(echo $JRE_DIR | sed "s/\/$//g")
+      
+      # Create Java bin path from JRE directory
+      if [ -e "${JAVA_BIN_PATH}/jre/bin/java" ] ; then
+         JAVA_BIN_PATH="${JAVA_BIN_PATH}/jre/bin/java"
+      elif [ -e "${JAVA_BIN_PATH}/bin/java" ] ; then
+         JAVA_BIN_PATH="${JAVA_BIN_PATH}/bin/java"
+      fi
+   fi
+   
+   # Check that Java has correct architecture
+   REQ_JRE_ARCH="32-bit"
+   if [ $IS_ARCH_64 -eq 1 ] ; then
+      REQ_JRE_ARCH="64-bit"
+   fi
+   
+   INST_JAVA_VERSION=""
+   if [ "${JAVA_BIN_PATH}" != "" ] && [ -e "${JAVA_BIN_PATH}" ] ; then
+      IS_JRE_ARCH=$(file ${JAVA_BIN_PATH} | grep -i "${REQ_JRE_ARCH}" 1>/dev/null 2>/dev/null && echo 1 || echo 0)
+      if [ "${IS_JRE_ARCH}" = "1" ] ; then
+         # Check if IBM JRE
+         IS_IBM_JRE=$(${JAVA_BIN_PATH} -version 2>&1 | grep "IBM" 1>/dev/null 2>/dev/null && echo 1 || echo 0)
+
+         if [ $? -eq 0 ] && [ "$IS_IBM_JRE" = "1"  ] ; then
+            # Determine Java version
+            JAVA_VERSION=$(${JAVA_BIN_PATH} -version 2>&1 | grep "java version" | awk -F '"' '{print $2}' | sed "s/_/./g")
+
+            if [ $? -eq 0 ] && [ "$JAVA_VERSION" != "" ] ; then
+               # Compare installed Java version with required Java version
+               COMP_JAVA_VERSION=$(compare_version "${JAVA_VERSION}" "${REQ_JAVA_VERSION}")
+
+               if [ $COMP_JAVA_VERSION -ge 0 ] ; then
+                  # Java has required version or higher
+                  INST_JAVA_VERSION=${JAVA_VERSION}
+                  PIRC=0
+                  
+                  # TODO create new message
+                  echo "prereqSAM: Using IBM Java at ${JRE_DIR} with version ${INST_JAVA_VERSION} and ${REQ_JRE_ARCH} architecture." >> $INST_LOG
+               fi
+            fi
+         else
+            # TODO create new message
+            echo "prereqSAM: Detected non-IBM Java at ${JRE_DIR}" >> $INST_LOG
+         fi
+      else
+         # TODO create new message
+         echo "prereqSAM: Incorrect architecture of specified Java at ${JRE_DIR}" >> $INST_LOG      
+      fi
+   fi
+   
+   if [ "${INST_JAVA_VERSION}" = "" ] ; then
+      # TODO create new message
+      PIRC=$RC_PREREQ_NOT_INST
+      echo "prereqSAM: Specified Java at ${JRE_DIR} is not valid. IBM Java with ${REQ_JRE_ARCH} architecture with version ${REQ_JAVA_VERSION} or higher is required." >> $INST_LOG
+   fi
+   
+   # Return result in variable to allow logging on stdout
+   checkLinuxJAVA_RESULT="$PIRC $INST_JAVA_VERSION $JAVA_BIN_PATH"
+}
+
+# Check Linux package prereqs and collect
+# missing packages.
+# 
+# $1 package name e.g. KSH
+# $2 package prereq
+checkLinuxPackagePrereq () {
+   PREREQ_RC=0
+   PKG_NAME=$1
+   PKG_PREREQ_EXPR=$2
+   # have a value for that package
+   case "$PKG_NAME" in
+      JAVA) # Result of function is stored in $checkLinuxJAVA_RESULT
+            checkLinuxJAVA "$PKG_PREREQ_EXPR" "$OPT_IBM_JRE_PATH" $ARCH_64
+            PREREQ_RC=`echo ${checkLinuxJAVA_RESULT} | cut -f1 -d ' '`
+            if [ $PREREQ_RC -ne 0 ] ; then
+               if [ -z "$MISSING_PKGS" ] ; then
+                  MISSING_PKGS="java"
+               else
+                  MISSING_PKGS="$MISSING_PKGS, java"
+               fi
+            fi
+      ;;
+      KSH) PREREQ_RC=`checkPartExists "$PKG_PREREQ_EXPR"`
+         if [ $PREREQ_RC -eq $RC_PREREQ_NOT_INST ] ; then
+            if [ -z "$MISSING_PKGS" ] ; then
+               MISSING_PKGS="ksh"
+            else
+               MISSING_PKGS="$MISSING_PKGS, ksh"
+            fi
+         fi
+      ;;
+      RSCTCORE)    
+         echo " " >> $INST_LOG
+         PKGN=`echo $2 | cut -d' ' -f1`
+         PKGVERSION=`echo $2 | cut -d' ' -f2`
+         # determine installed RSCT level (set to "1.1.0.0" in case RSCT is not installed)
+         if [ -f /usr/bin/ctversion ]
+         then
+            RSCTVERSION=`/usr/bin/ctversion | cut -d' ' -f2`
+         else
+            if [ "$DISTRO" = "Ubuntu" ]; then
+               dpkg -s rsct.core >/dev/null 2>&1
+            else
+               rpm -q rsct.core >/dev/null 2>&1
+            fi
+            lslppRC=$?
+            if [ $lslppRC -eq 0 ]
+            then
+               if [ "$DISTRO" = "Ubuntu" ]; then
+                  RSCTVERSION=`dpkg-query -W -f='${Version}\n' rsct.core 2> /dev/null | cut -d- -f1`
+               else
+                  RSCTVERSION=`rpm -q rsct.core | cut -d- -f2`
+               fi
+            else
+               RSCTVERSION="1.1.0.0"
+            fi
+         fi
+         RSCTcompRC=$(compare_version "$PKGVERSION" "$RSCTVERSION")
+         if [ $RSCTcompRC -eq 1 ] ; then       # PKGVERSION > RSCTVERSION
+            # msg: RSCT will be installed ...
+            if [ "$DISTRO" = "Ubuntu" ]; then
+               echo "$I129 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+               echo "$I109 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+            else
+               echo "$I76 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+               echo "$I78 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+               echo "$I109 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+            fi
+         elif [ $RSCTcompRC -eq 0 ] ; then     # PKGVERSION == RSCTVERSION
+            # msg: RSCT package is installed ...
+            if [ "$DISTRO" = "Ubuntu" ]; then
+               echo "$I129 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+            else
+               echo "$I76 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+               echo "$I78 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+            fi
+         else           # PKGVERSION < RSCTVERSION
+            # rsct.core installed at higher level than packaged!
+            # check/ensure that all required packages are also installed (assuming matching level):
+            # 1. rsct.basic
+            # 2. rsct.storagerm
+            # other packages assumed to be installed due to 'Depends' from rsct.core:
+            #  Provides: rsct.core
+            #  Depends: rsct.core.utils (>= <version>), src (>= <version>), perl (>= 5), libc6
+            #  Pre-Depends: ksh
+            if [ "$DISTRO" = "Ubuntu" ]; then
+               dpkg -s rsct.basic >/dev/null 2>&1
+               FoundRSCTBasic=$?
+               dpkg -s rsct.opt.storagerm >/dev/null 2>&1
+               FoundRSCTStorageRM=$?
+            else
+               rpm -q rsct.basic >/dev/null 2>&1
+               FoundRSCTBasic=$?
+               rpm -q rsct.opt.storagerm >/dev/null 2>&1
+               FoundRSCTStorageRM=$?
+            fi
+            if [ $FoundRSCTBasic -eq 1 ] || [ $FoundRSCTStorageRM -eq 1 ] ; then
+               PREREQ_RC=$RC_PREREQ_NOT_INST
+               if [ $FoundRSCTBasic -eq 1 ] ; then
+                  if [ "$DISTRO" = "Ubuntu" ]; then
+                     echo "$I130 'rsct.basic' '$RSCTVERSION'" >> $INST_LOG
+                  else
+                     echo "$I82 'rsct.basic' '$RSCTVERSION'" >> $INST_LOG
+                  fi
+                  if [ -z "$MISSING_PKGS" ] ; then
+                     MISSING_PKG="$PKGN"
+                  else
+                     MISSING_PKG="$MISSING_PKGS, $PKGN"
+                  fi
+               fi
+               if [ $FoundRSCTStorageRM -eq 1 ] ; then
+                  if [ "$DISTRO" = "Ubuntu" ]; then
+                     echo "$I130 'rsct.opt.storagerm' '$RSCTVERSION'" >> $INST_LOG
+                  else
+                     echo "$I82 'rsct.opt.storagerm' '$RSCTVERSION'" >> $INST_LOG
+                  fi
+                  if [ -z "$MISSING_PKGS" ] ; then
+                     MISSING_PKG="$PKGN"
+                  else
+                     MISSING_PKG="$MISSING_PKGS, $PKGN"
+                  fi
+               fi
+            else     # [ $FoundRSCTBasic -eq 0 ] && [ $FoundRSCTStorageRM -eq 0 ] ; then
+               # msg: RSCT packages are completely installed at higher level ...
+               if [ "$DISTRO" = "Ubuntu" ]; then
+                  echo "$I129 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+               else
+                  echo "$I76 '$PKGN' '$PKGVERSION'" >> $INST_LOG
+                  echo "$I78 '$PKGN' '$RSCTVERSION'" >> $INST_LOG
+               fi
+            fi
+         fi
+      ;;
+      *)
+         if [ "$DISTRO" = "Ubuntu" ]; then
+            RETURN_VALUE=`checkUbuntuInstPkg "$PKG_PREREQ_EXPR"`
+         else
+            RETURN_VALUE=`checkLinuxInstPkg "$PKG_PREREQ_EXPR"`
+         fi
+         PREREQ_RC=`echo $RETURN_VALUE | cut -d';' -f1`
+         RETURNED_MISSING_PKGS=`echo $RETURN_VALUE | cut -d';' -f2`
+         if [ -z "$MISSING_PKGS" ] && [ -n "$RETURNED_MISSING_PKGS" ] ; then
+            MISSING_PKGS="$RETURNED_MISSING_PKGS"
+         elif [ -n "$RETURNED_MISSING_PKGS" ] ; then
+            MISSING_PKGS="$MISSING_PKGS, $RETURNED_MISSING_PKGS"
+         fi
+      ;;
+   esac
+   #echo "After checking package: $PKG RC: '$PREREQ_RC'" >> $INST_LOG
+   # set worst RC
+   if [ $RET_PREREQ_RC -lt $PREREQ_RC ] ; then
+      RET_PREREQ_RC=$PREREQ_RC
+   fi
+   #echo "Test: After checking package: $PKG new RC: '$RET_PREREQ_RC'" >> $INST_LOG
+}
+
+
+# Linux Check prereqs for several categories
+# $1 matching required version, e.g. "3_5"
+# return 0 if all prereqs met.
+checkLinuxPrereqs () {
+   RET_PREREQ_RC=0
+   if [ -z "$1" ] ; then
+      RET_PREREQ_RC=$RC_PREREQ_OSVERSION
+   else
+      MAJOR_VERSION=`echo $1 | cut -d\_ -f1`
+      PATCHLEVEL_VERSION=`echo $1 | cut -d\_ -f2 | $GREP -E "^[0-9]+$"`
+      
+      for PKG in $Linux_PKGS
+      do
+         # form name for package and check if a value if it exists
+         # check if exists in any architecture (pattern: 'aaa')
+         #                    any distro (pattern: 'ddd')
+         #                    any version (pattern: 'v_l')
+         #echo "Checking for package: ${OS}_aaa_ddd_v_l_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_aaa_ddd_v_l_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_aaa_ddd_v_l_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After aaa only check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in any architecture (pattern: 'aaa')
+         #                    any distro (pattern: 'ddd')
+         #                    specific version
+         #echo "Checking for package: ${OS}_aaa_ddd_$1_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_aaa_ddd_$1_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_aaa_ddd_$1_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After aaa only check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in specific architecture
+         #                    any distro (pattern: 'ddd')
+         #                    any version (pattern: 'v_l')
+         #echo "Checking for package: ${OS}_${ARCH}_ddd_v_l_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_ddd_v_l_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_ddd_v_l_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After v_l only check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in specific architecture
+         #                    any distro (pattern: 'ddd')
+         #                    specific version
+         #echo "Checking for package: ${OS}_${ARCH}_ddd_$1_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_ddd_$1_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_ddd_$1_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in any architecture (pattern: 'aaa')
+         #                    specific distro
+         #                    any version (pattern: 'v_l')
+         # check if any architecture (pattern: 'aaa') && version(pattern: 'vrmf') package exists
+         #echo "Checking for package: ${OS}_aaa_${DISTRO}_v_l_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_aaa_${DISTRO}_v_l_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_aaa_${DISTRO}_v_l_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in any architecture (pattern: 'aaa')
+         #                    specific distro
+         #                    specific version, any patch level
+         #echo "Checking for package: ${OS}_aaa_${DISTRO}_${MAJOR_VERSION}_l_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_aaa_${DISTRO}_${MAJOR_VERSION}_l_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_aaa_${DISTRO}_${MAJOR_VERSION}_l_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After aaa only check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in any architecture (pattern: 'aaa')
+         #                    specific distro
+         #                    specific version
+         #echo "Checking for package: ${OS}_aaa_${DISTRO}_$1_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_aaa_${DISTRO}_$1_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_aaa_${DISTRO}_$1_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After aaa only check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            continue # if specific version is found, don't check for plus version
+         fi
+
+         # check if exists in specific architecture
+         #                    specific distro
+         #                    specific version plus
+         if [ -n "$PATCHLEVEL_VERSION" ] ; then
+             for p in $(seq $PATCHLEVEL_VERSION -1 0)
+             do
+                #echo "Checking for package: ${OS}_aaa_${DISTRO}_${MAJOR_VERSION}_${p}plus_PKG_$PKG" >> $INST_LOG
+                #PKG_PREREQ=$(eval "echo \$${OS}_aaa_${DISTRO}_${MAJOR_VERSION}_${p}plus_PKG_$PKG")
+                PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_aaa_${DISTRO}_${MAJOR_VERSION}_${p}plus_PKG_$PKG\}"\``
+                #echo "After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+                if [ -n "$PKG_PREREQ" ] ; then
+                   checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+                   break # Stop when first p+ version is found
+                fi
+             done
+         fi
+
+         # check if exists in specific architecture
+         #                    specific distro
+         #                    any version (pattern: 'v_l')
+         #echo "Checking for package: ${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After v_l only check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in specific architecture
+         #                    specific distro
+         #                    specific version, any patch level
+         #echo "Checking for package: ${OS}_${ARCH}_${DISTRO}_${MAJOR_VERSION}_l_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_${MAJOR_VERSION}_l_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_${MAJOR_VERSION}_l_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            if [ "$DISTRO" != "SUSE" ] ; then
+               continue
+            fi
+         fi
+
+         # check if exists in specific architecture
+         #                    specific distro
+         #                    specific version
+         #echo "Checking for package: ${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG\}"\``
+         if [ -n "${PKG_PREREQ}" ] ; then
+            #echo "After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+            checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+            continue # if specific version is found, don't check for plus version
+         fi
+         #echo "After all checks found package: '$PKG_PREREQ'" >> $INST_LOG
+
+
+         # check if exists in specific architecture
+         #                    specific distro
+         #                    specific version plus
+         if [ -n "$PATCHLEVEL_VERSION" ] ; then
+             for p in $(seq $PATCHLEVEL_VERSION -1 0)
+             do
+                #echo "Checking for package: ${OS}_${ARCH}_${DISTRO}_${MAJOR_VERSION}_${p}plus_PKG_$PKG" >> $INST_LOG
+                #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_${MAJOR_VERSION}_${p}plus_PKG_$PKG")
+                PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_${MAJOR_VERSION}_${p}plus_PKG_$PKG\}"\``
+                #echo "After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+                if [ -n "$PKG_PREREQ" ] ; then
+                   checkLinuxPackagePrereq "$PKG" "$PKG_PREREQ"
+                   break # Stop when first p+ version is found
+                fi
+             done
+         fi
+      done
+   fi
+   echo " " >> $INST_LOG
+   if [ -n "$MISSING_PKGS" ] ; then
+     MISSING_PKGS_COUNT=`echo $MISSING_PKGS | sed 's/[^,]//g' | wc -m`
+     if [ $MISSING_PKGS_COUNT -ne 1 ] ; then
+       MISSING_PKGS_ENDING="s"
+     fi
+     echo "$MISSING_PKGS_COUNT missing package$MISSING_PKGS_ENDING: $MISSING_PKGS" >> $INST_LOG
+     echo " " >> $INST_LOG
+   fi
+   echo "$RET_PREREQ_RC $MISSING_PKGS"
+}
+
+# Linux check prereqs for several categories
+#
+# $1 Prereq rpm name and part to look for, e.g. "compat-libstdc++-33-3.2.3 ^/usr/lib/libstdc\+\+.so.5$"
+# The second part is a regular expression to make the filter to the part location as narrow as possible 
+# The optional third part is specifying the requested arch of the package (e.g. i386/i386x)
+# return 0 if all prereqs met.
+#        RC_PREREQ_VERSION if prereq version > installed version
+#        RC_PREREQ_NOT_INST if package is not installed
+#        RC_PREREQ_UNABLE if comparison failed
+checkLinuxInstPkg () {
+
+   PIRC=$RC_PREREQ_UNABLE
+   RPM=`echo $1 | cut -d' ' -f1`
+   CHKPART=`echo $1 | cut -d' ' -f2`
+   RPMBITS=`echo $1 | cut -d' ' -f3`
+
+   echo " " >> $INST_LOG
+   #echo "$I76 '$RPM'" >> $INST_LOG
+   if [ -n "$RPMBITS" ] ; then
+     echo "$I76 '$RPM' '$RPMBITS'" >> $INST_LOG
+   else
+     echo "$I76 '$RPM'" >> $INST_LOG
+   fi
+
+   # try to find out if required RPM has a version
+   RPM_WO_VSN=`echo $RPM | sed s/'\-[0-9].*'//`
+   IS_INST=0
+   IS_INST_ANY=0
+   if [ -n "$RPM_WO_VERSION" ] && [ "$RPM" != "$RPM_WO_VERSION" ] ; then
+      # rpm package has version, so can check if exists in any version
+      INSTPKG_ANY=`rpm -q $RPM_WO_VSN 2>/dev/null`
+      if [ $? -eq 0 ] && [ -n "$INSTPKG_ANY" ] ; then
+         IS_INST_ANY=1
+      fi
+   fi
+   INSTPKG=`rpm -q $RPM 2>/dev/null`
+   RC=$?
+   if [ $RC -ne 0 ] ; then
+      INSTPKG=`rpm -qa --qf '%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}\n' | grep -e $RPM 2>/dev/null`
+      RC=$?
+      if [ $RC -eq 0 ] ; then
+        RPM=`rpm -qa --qf '%{NAME}\n' | grep -e $RPM | head -1 2>/dev/null`
+      fi
+   fi
+   INSTPKGBITS=`echo $INSTPKG | awk -F. '{print $NF}'`
+   if [ $RC -eq 0 ] && [ -n "$INSTPKG" ] ; then
+      PARTS=`rpm -ql $RPM 2>/dev/null`
+      if [ $? -eq 0 ] && [ -n "$PARTS" ] ; then
+         #echo "test: find in '$RPM' '$CHKPART'" >> $INST_LOG
+         PART=`echo "$PARTS" | $GREP -E "$CHKPART"`
+         # strip reg ex to make it look better in the log
+         CHKPART=`echo $CHKPART | sed 's/^\^//' | sed 's/$\$//' | sed 's/\\\+/\+/g'`
+         if [ -n "$PART" ] ; then
+            # rpm package and version installed
+            PIRC=0
+            #echo "$I78 '$INSTPKG' '$CHKPART'" >> $INST_LOG
+            if [ -n "$RPMBITS" ] ; then
+              echo "$I78 '$RPM' '$RPMBITS'" >> $INST_LOG
+            else
+              echo "$I78 '$RPM'" >> $INST_LOG
+            fi
+         else
+            if [ -n "$RPMBITS" ] && [ "$RPMBITS" != "$INSTPKGBITS" ] ; then
+               # required arch (32/64 bit) not available
+               echo "$I82 '$RPM' '$RPMBITS'" >> $INST_LOG
+               PIRC=$RC_PREREQ_NOT_INST
+               MISSING_PKG="$RPM ($RPMBITS)"
+            else
+               # the part required for that version does not exist
+               echo "$I79 '$INSTPKG' '$CHKPART'" >> $INST_LOG
+               PIRC=$RC_PREREQ_VERSION
+               MISSING_PKG="$RPM"
+            fi
+         fi
+      else
+         # should not happen package installed but cannot list parts
+         if [ -n "$RPMBITS" ] ; then
+           echo "$I80 '$RPM' '$RPMBITS'" >> $INST_LOG
+           MISSING_PKG="$RPM ($RPMBITS)"
+         else
+           echo "$I80 '$RPM'" >> $INST_LOG
+           MISSING_PKG="$RPM"
+         fi
+      fi
+   else
+      if [ $IS_INST_ANY -eq 1 ] ; then
+         # exists at different level
+         PIRC=$RC_PREREQ_VERSION
+         echo "$I81 $INSTPKG_ANY" >> $INST_LOG
+      else
+         # rpm is not installed at any level
+         PIRC=$RC_PREREQ_NOT_INST
+         if [ -n "$RPMBITS" ] ; then
+           echo "$I82 '$RPM' '$RPMBITS'" >> $INST_LOG
+           MISSING_PKG="$RPM ($RPMBITS)"
+         else
+           echo "$I82 '$RPM'" >> $INST_LOG
+           MISSING_PKG="$RPM"
+         fi
+      fi
+   fi
+   echo "$PIRC;$MISSING_PKG"
+}
+
+# SUN Check prereqs for several categories
+# $1 matching required version, e.g. "10"
+# return 0 if all prereqs met.
+checkSUNPrereqs () {
+   RET_PREREQ_RC=0
+   if [ -z "$1" ] ; then
+      RET_PREREQ_RC=$RC_PREREQ_OSVERSION
+   else
+      for PKG in $SUN_PKGS
+      do
+         # form name for package and check if a value for it exists
+         #echo "test Checking for package: ${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG" >> $INST_LOG
+         #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG")
+         PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG\}"\``
+         #echo "test After 1. check found package: '$PKG_PREREQ'" >> $INST_LOG
+         if [ -z "$PKG_PREREQ" ] ; then
+            # check if any version(pattern: 'v_l') package exists
+            #echo "test Checking for package: ${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG" >> $INST_LOG
+            #PKG_PREREQ=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG")
+            PKG_PREREQ=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_v_l_PKG_$PKG\}"\``
+         fi
+         #echo "test After all checks found package: '$PKG_PREREQ'" >> $INST_LOG
+         if [ -z "$PKG_PREREQ" ] ; then
+            # no value to check for with this package
+            #echo "test No values specified for package? : ' '${OS}_${ARCH}_${DISTRO}_$1_PKG_$PKG'" >> $INST_LOG
+            continue
+         else
+            PREREQ_RC=0
+            # have a value for that package
+            case "$PKG" in
+               SUNWPERL)
+                  PREREQ_RC=`checkSUNInstPkgRegEx "$PKG_PREREQ"`
+               ;;
+               *) PREREQ_RC=`checkSUNInstPkg "$PKG_PREREQ"`
+               ;;
+            esac
+            #echo "test: After checking package: PREREQ_RC: '$PREREQ_RC'" >> $INST_LOG
+            # set worst RC
+            if [ $RET_PREREQ_RC -lt $PREREQ_RC ] ; then
+               RET_PREREQ_RC=$PREREQ_RC
+            fi
+            #echo "test: After checking package: $PKG new RC: '$RET_PREREQ_RC'" >> $INST_LOG
+         fi
+      done
+   fi
+   echo $RET_PREREQ_RC
+}
+
+# SUN check prereqs for several categories
+#
+# $1 Prereq pkg name and part to look for, e.g. "SUNWcsu"
+# return 0 if all prereqs met.
+#        RC_PREREQ_VERSION if prereq version > installed version
+#        RC_PREREQ_NOT_INST if package is not installed
+#        RC_PREREQ_UNABLE if comparison failed
+checkSUNInstPkg () {
+   PIRC=$RC_PREREQ_UNABLE
+   pkginfo -q "$1"
+   
+   if [ $? -eq 0 ] ; then
+      PIRC=0
+      echo "$I124 '$1'" >> $INST_LOG
+   else
+      PIRC=$RC_PREREQ_NOT_INST
+      echo "$I123 '$1'" >> $INST_LOG
+   fi
+   echo $PIRC
+}
+
+# SUN check prereqs for several categories with regular expressions
+#
+# $1 Prereq pkg name and part to look for, e.g. "SUNWperl.*core"
+# return 0 if all prereqs met.
+#        RC_PREREQ_VERSION if prereq version > installed version
+#        RC_PREREQ_NOT_INST if package is not installed
+#        RC_PREREQ_UNABLE if comparison failed
+
+checkSUNInstPkgRegEx () {
+   PIRC=$RC_PREREQ_UNABLE
+   pkginfo -q "$1"
+
+   pkginfo -x | /usr/xpg4/bin/grep -E "$1 " > /dev/null 2>&1
+   
+   if [ $? -eq 0 ] ; then
+      PIRC=0
+      echo "$I124 '$1'" >> $INST_LOG
+   else
+      PIRC=$RC_PREREQ_NOT_INST
+      echo "$I123 '$1'" >> $INST_LOG
+   fi
+   echo $PIRC
+}
+
+# Ubuntu check prereqs for several categories
+#
+# $1 Prereq pkg name and part to look for, e.g. "perl"
+# return 0 if all prereqs met.
+#        RC_PREREQ_VERSION if prereq version > installed version
+#        RC_PREREQ_NOT_INST if package is not installed
+#        RC_PREREQ_UNABLE if comparison failed
+checkUbuntuInstPkg () {
+   PIRC=$RC_PREREQ_UNABLE
+   DEB=`echo $1 | cut -d' ' -f1`
+   #CHKPART=`echo $1 | cut -d' ' -f2`
+   #DEBBITS=`echo $1 | cut -d' ' -f3`
+   PKG_INSTALLED=`dpkg-query -W -f='${Status};${binary:Package};${Version};${Architecture}\n' $DEB|$GREP " installed;$DEB;"`
+   
+   if [ $? -eq 0 ] ; then
+      PIRC=0
+      echo "$I129 '$1'" >> $INST_LOG
+   else
+      PIRC=$RC_PREREQ_NOT_INST
+      MISSING_PKG="$DEB"
+      echo "$I130 '$1'" >> $INST_LOG
+   fi
+   echo "$PIRC;$MISSING_PKG"
+}
+
+# Check if a part exists
+#
+# $1 part name to look for, e.g. "ksh"
+# return 0 if exists, based on checking with 'which'.
+#        RC_PREREQ_NOT_INST if part does not exist
+checkPartExists () {
+
+   PIRC=$RC_PREREQ_NOT_INST
+   echo " " >> $INST_LOG
+   which "$1" >/dev/null 2>&1
+   if [ $? -eq 0 ] ; then
+      PIRC=0
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         echo "$I129 '$1'" >> $INST_LOG
+      else
+         echo "$I78 '$1'" >> $INST_LOG
+      fi
+   else
+      PIRC=$RC_PREREQ_NOT_INST
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+         echo "$I130 '$1'" >> $INST_LOG
+      else
+         echo "$I82 '$1'" >> $INST_LOG
+      fi
+   fi
+   echo $PIRC
+}
+
+# c004
+# Check SAM package installed version is >= $1
+# $1 prereq-version, e.g. "2.2.0.0"
+# Returns RC:
+# Rules:
+# - If sam package is not installed, ignore check and  return RC=0
+# - If sam package installed version >= $1-prereq-version, then return RC=0
+# - If sam package installed version <  $1-prereq-version,
+#   AND no full license is supplied, then return RC_PREREQ_VERSION.
+#
+checkSAMPkg () {
+   PIRC=$RC_PREREQ_UNABLE
+   SAMNAME=""
+   case "$OS" in
+       AIX)
+           SAMNAME=sam.core.rte
+           ;;
+       Linux|SunOS)
+           SAMNAME=sam
+           ;;
+   esac
+   # get installed version                 
+   INSTVERSION=`extractInstVersion $SAMNAME`
+   if [ $? -eq 0 ] && [ -n "$INSTVERSION" ] ; then
+      # compare min-prereq-version with installed version
+      # return RC_PREREQ_VERSION if version of $1(min-prereq-version) > $INSTVERSION
+      # and no full license is supplied (Error).
+      # return 0 if version of $1(min-prereq-version) <= $INSTVERSION (OK)
+      # return RC_PREREQ_UNABLE if versions could not be compared  (Error).
+      PIRC=`compVersion $1 $INSTVERSION`
+      if [ $PIRC -eq 0 ] ; then
+         # OK
+         echo "$I103 $INSTVERSION" >> $INST_LOG
+      elif [ $PIRC -eq $RC_PREREQ_VERSION ] ; then
+         # if a license is supplied in PKG then it does
+         # not matter if installed version is too low.
+         # Check LUM license supplied in package:
+         LUM_FILE=`ls ${DIR}/license/*.lic 2>/dev/null`
+         if [ -r "$LUM_FILE" ] ; then
+            # LUM file supplied. See if try&bye license
+            TB_LIC_PKG=`cat $LUM_FILE | $GREP -Ec "TryAndBuy\=Yes"`
+            if [ $TB_LIC_PKG -eq 0 ] ; then
+               # not a try&buy license - but full license
+               # therefore allow lower installed version
+               PIRC=0
+               echo "$I103 $INSTVERSION" >> $INST_LOG
+            else
+               # Cannot overwrite permanent with try&buy license 
+               echo "$I110 $INSTVERSION" >> $INST_LOG    
+            fi
+         else
+            # Current version is too low for upgrade with service package
+            echo "$I111" >> $INST_LOG
+            # Show Minimum installed version for upgrade with service package:
+            echo "$I107 $1" >> $INST_LOG
+            # Show Currently installed version:
+            echo "$I108 $INSTVERSION" >> $INST_LOG
+         fi
+      else
+         echo "$I67 $INSTVERSION ? $1" >> $INST_LOG
+      fi
+   else
+      # sam is not installed yet
+      PIRC=0
+   fi
+   echo $PIRC
+}
+
+# Check if any help option is in options
+# $1 options
+#
+# Rules:
+# - If any help like option is detected, display usage and exit.
+#
+checkHelp () {
+   IS_HELP=`echo $1 | $GREP -Ec "\-h|\-help|\-\-help|\-\?|\?"`
+   if [ $IS_HELP -ne 0 ] ; then
+      echo "$USAGE1"
+      echo "$USAGE2"
+      exit 1
+   fi   
+}
+
+# Module Name:  mapMachineArch
+#
+# Description:
+#     Map the machine architecture to package architecture directory. e.g. i686 -> i386
+#     Finds the correct installation directory path for a given machine architecture
+#
+
+mapMachineArch () {
+
+PKG_ARCH_DIR=''
+LOG_ARCH=''
+OS_ARCH_DIR=''
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^i[3-6]86$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=i386
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=i386
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^x86_64$"`
+if [ $COUNT -eq 1 ] ; then
+   if [ $IS_ARCH_64 -eq 1 ] ; then 
+     ARCH=x86_64
+     LOG_ARCH=$ARCH
+     PKG_ARCH_DIR=x86_64
+   else
+     ARCH=i386x
+     LOG_ARCH=x86_64
+     PKG_ARCH_DIR=i386
+   fi
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^ia64"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=x86_64
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=x86_64
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^s390$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=s390
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=s390
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^s390x$"`
+if [ $COUNT -eq 1 ] ; then
+   if [ $IS_ARCH_64 -eq 1 ] ; then 
+     ARCH=s390x
+     LOG_ARCH=$ARCH
+     PKG_ARCH_DIR=s390x
+   else
+     ARCH=s390l
+     LOG_ARCH=s390x
+     PKG_ARCH_DIR=s390
+   fi
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^ppc$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=ppc
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=ppc
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^ppc64$"`
+if [ $COUNT -eq 1 ] ; then
+   if [ $IS_ARCH_64 -eq 1 ] ; then 
+     ARCH=ppc64
+     LOG_ARCH=$ARCH
+     PKG_ARCH_DIR=ppc64
+   else
+     ARCH=ppcx
+     LOG_ARCH=ppc64
+     PKG_ARCH_DIR=ppc
+   fi
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^ppc64le$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=ppc64le
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=ppc64le
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^AIX"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=ppc
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=AIX
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^sparc"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=sparc
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=sparc
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^amd64"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=amd64
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=x86_64
+fi
+
+COUNT=`echo $PLATFORM | $GREP -Ec "^ppc64el$"`
+if [ $COUNT -eq 1 ] ; then
+   ARCH=ppc64el
+   LOG_ARCH=$ARCH
+   PKG_ARCH_DIR=ppc64le
+fi
+
+# Check Architecture
+if [ -z "$ARCH" ] ; then
+   logit "$ENMSG_NOARCH"
+   instexit $RC_PREREQ_UNABLE "NONLS"
+fi
+
+if [ -n "$OPT_DIR" ] ; then
+   if [ -d "${OPT_DIR}/$PKG_ARCH_DIR" ] ; then
+      DIR=$OPT_DIR
+   else
+      logit "$ENMSG_NO_PKGDIR $OPT_DIR"
+      instexit $RC_PREREQ_UNABLE  "NONLS"
+   fi
+fi
+
+if [ "$OS" = AIX ] ; then
+   OS_ARCH_DIR=$OS
+else
+   if [ "$DISTRO" = "Ubuntu" ] ; then
+      OS_ARCH_DIR=$DISTRO/$PKG_ARCH_DIR
+   else
+      OS_ARCH_DIR=$OS/$PKG_ARCH_DIR
+   fi
+fi
+
+PKGDIR=${DIR}/$OS_ARCH_DIR
+}
+
+
+
+# Module Name:  checkInstallPackage 
+#
+# Description:                                                              
+#     Checks whether the package used to install SAMP is correct or not for a given platform.   
+#     If package is not correct, then log and exit      
+#
+checkInstallPackage () {
+
+   OS_ARCH_CHECK=""
+   IS_VERS=""
+   DISTRO_PACK=""
+   DISTRO_VERSION_PACK=0
+   IS_ARCH_64=0
+   LINUX_32="Linux 32-bit"
+   LINUX_64="Linux 64-bit"
+
+   #Check for AIX
+   if [ "$OS" = AIX ] ; then
+      #Mapping the machine architecture to package architecture directory.
+      mapMachineArch
+      OS_ARCH_CHECK=${DIR}/${OS}
+      if [ ! -d "${OS_ARCH_CHECK}" ] ; then
+         logit "$ENMSG_PACKINCORRECT $OS"
+         logit "$ENMSG_NOT_PERFORMED"
+         instexit $RC_PREREQ_UNABLE "NONLS"
+      fi
+   else # for linux
+      IS_VERS=`cat /etc/redhat-release 2>/dev/null`
+      if [ -n "$IS_VERS" ] ; then
+         COUNT=`echo $IS_VERS | $GREP -Ec "Red Hat Enterprise.*S|CentOS.*"`
+         if [ $COUNT -eq 1 ] ; then
+            DISTRO_PACK=RH
+            DISTRO_VERSION_PACK=`echo $IS_VERS | $GREP release | sed s/".*release "// | cut -d. -f1`
+            if [ $DISTRO_VERSION_PACK -ge 7 ] ; then
+               IS_ARCH_64=1
+            fi
+         else
+            logit "$ENMSG_NOARCH"
+            instexit $RC_PREREQ_UNABLE "NONLS"
+         fi
+      else
+         IS_VERS=`cat /etc/SuSE-release 2>/dev/null | $GREP -v -e "^#"`
+         if [ -n "$IS_VERS" ] ; then
+            COUNT=`echo $IS_VERS | $GREP -Ec "SLES|SuSE.*Enterprise Server|SUSE.*Enterprise Server"`
+            if [ $COUNT -eq 1 ] ; then
+               DISTRO_PACK_PACK=SUSE
+               DISTRO_VERSION_PACK=`echo $IS_VERS | $GREP VERSION | sed s/".*VERSION = "// | cut -d" " -f1`
+               if [ $DISTRO_VERSION_PACK -ge 12 ] ; then
+                  IS_ARCH_64=1
+               fi
+            else
+               logit "$ENMSG_NOARCH"
+               instexit $RC_PREREQ_UNABLE "NONLS"
+            fi
+         else
+            IS_VERS=`cat /etc/os-release 2>/dev/null`
+            if [ -n "$IS_VERS" ] ; then
+               LINUX_DISTRO=`$GREP "^NAME=" /etc/os-release | cut -d\" -f2`
+               DISTRO_VERSION_PACK=`$GREP "^VERSION_ID=" /etc/os-release | cut -d\" -f2 | cut -d. -f1`
+               if [ -n "$LINUX_DISTRO" ] ; then
+                     # Map distribution name
+                     case "$LINUX_DISTRO" in
+                         "Red Hat Enterprise Linux Server"|"CentOS Linux")
+                            DISTRO_PACK=RH
+                            # RHEL version 7 and higher should install 64-bit packages
+                            if [ $DISTRO_VERSION_PACK -ge 7 ] ; then
+                               IS_ARCH_64=1
+                            fi
+                        ;;
+                        SLES*)
+                           DISTRO_PACK_PACK=SUSE
+                           #SLES version 12 and higher should install 64-bit packages
+                           if [ $DISTRO_VERSION_PACK -ge 12 ] ; then
+                               IS_ARCH_64=1
+                           fi
+                        ;;
+                        Ubuntu)
+                            DISTRO_PACK=Ubuntu
+                            IS_ARCH_64=1
+                        ;;
+                       *)
+                         logit "$ENMSG_NOARCH"
+                         instexit $RC_PREREQ_UNABLE "NONLS"
+                       ;;
+                    esac
+               else
+                  logit "$ENMSG_NOARCH"
+                  instexit $RC_PREREQ_UNABLE "NONLS"
+               fi
+            else
+               logit "$ENMSG_NOARCH"
+               instexit $RC_PREREQ_UNABLE "NONLS"
+            fi
+         fi
+     fi
+
+
+     #Mapping the machine architecture to package architecture directory. 
+     mapMachineArch 
+
+     if [ "$IS_ARCH_64" -eq 1 ] ; then
+        if [ ! -d "${PKGDIR}" ] ; then
+           # 64-bit deliverable on system where only 32-bit deliverable supported
+           logit "$ENMSG_PACKINCORRECT $LINUX_64"
+           logit "$ENMSG_NOT_PERFORMED"
+           instexit $RC_PREREQ_UNABLE "NONLS"
+        fi
+     else
+        if [ ! -d "${PKGDIR}" ] ; then
+           # 32-bit deliverable on 64-bit system
+           logit "$ENMSG_PACKINCORRECT $LINUX_32"
+           logit "$ENMSG_NOT_PERFORMED"
+           instexit $RC_PREREQ_UNABLE "NONLS"
+        fi
+     fi
+
+   fi
+}
+
+
+############################## Begin installation processing (Main) ###################################
+INST_LOG=''
+GREP=grep
+
+# filter options
+if [ -n "$OPTIONS" ] ; then
+   checkHelp "$OPTIONS"
+   # -l <log-file> option
+   #OPT_LOG_FILE=`echo $OPTIONS | $GREP "\-l" | sed s/".*\-l "// | sed s/" --.*"//`  Fix false -d detection
+   OPT_LOG_FILE=`echo " $OPTIONS" | $GREP " \-l " | sed s/".* \-l "// | sed s/" -.*"//`
+   # --silent
+   OPT_SILENT=`echo $OPTIONS | $GREP -c "\-\-silent"`
+   # --noliccheck
+   OPT_NOLICCHECK=`echo $OPTIONS | $GREP -c "\-\-noliccheck"`
+   # internal --noaixrsct
+   OPT_NOAIXRSCT=`echo $OPTIONS | grep -c "\-\-noaixrsct"`
+fi
+
+# create new prereq log unless a logfile is passed
+if [ -n "$OPT_LOG_FILE" ] ; then
+   INST_LOG=$OPT_LOG_FILE
+else
+   INST_LOG=`makeLog $PN`
+   echo "$ENMSG_LOG_STARTED $DATE"             > $INST_LOG
+fi
+touch $INST_LOG >/dev/null
+if [ $? -ne 0 ] ; then
+   if [ $OPT_SILENT -eq 0 ] ; then
+      echo "$ENMSG_NO_LOGDIR $INST_LOG"
+   fi
+   instexit $RC_PREREQ_UNABLE "NONE"
+fi
+
+if [ -z "$OPT_LOG_FILE" ] ; then
+   echo "$ENMSG_LOG_STARTED $DATE"  > $INST_LOG
+fi
+
+# set other options
+if [ -n "$OPTIONS" ] ; then
+   # -d <package-directory> option
+   OPT_DIR=`echo " $OPTIONS" | $GREP " \-d " | sed s/".* \-d "// | sed s/" -.*"//`
+   if [ -n "$OPT_DIR" ] ; then
+      if [ ! -d "$OPT_DIR" ] ; then
+         logit "$ENMSG_NO_DIR $OPT_DIR"
+         instexit $RC_PREREQ_UNABLE "NONLS"
+      fi
+   fi
+   
+   # --useibmjre <path_to_ibm_jre>
+   OPT_USE_IBM_JRE=`echo $OPTIONS | $GREP -c "\-\-useibmjre"`
+   if [ "$OPT_USE_IBM_JRE" = "1" ] ; then
+      OPT_IBM_JRE_PATH=`echo " $OPTIONS" | $GREP " \-\-useibmjre " | sed s/".* \-\-useibmjre "// | sed s/" -.*"//`
+   fi
+fi
+
+echo "$SCRIPT OPTIONS         = '$OPTIONS'"         >> $INST_LOG
+echo "$SCRIPT OPT_SILENT      = $OPT_SILENT"        >> $INST_LOG
+echo "$SCRIPT OPT_NOLICCHECK  = $OPT_NOLICCHECK"    >> $INST_LOG
+
+case "$OS" in
+    AIX)   PLATFORM=$OS
+    ;;
+    Linux) 
+      PLATFORM=`arch` # platform of target Linux machine
+      if [ "$DISTRO" = "Ubuntu" ] ; then
+          if [ "$PLATFORM" = "x86_64" ] ; then
+             PLATFORM=amd64
+          fi
+          if [ "$PLATFORM" = "ppc64le" ] ; then
+             PLATFORM=ppc64el
+          fi
+      fi
+      # Add JAVA to package prereqs
+      if [ "$OPT_USE_IBM_JRE" = "1" ] ; then
+         Linux_PKGS="JAVA ${Linux_PKGS}"
+      fi
+    ;;
+    SunOS) PLATFORM=`mach` # platform of target SunOS machine
+    GREP=/usr/xpg4/bin/grep
+    echo "Solaris is not supported by System Automation for Multiplatforms 4.1 and higher."
+    exit 1
+    ;;
+    *)     logit "$ENMSG_NOARCH"
+           instexit $RC_PREREQ_UNABLE "NONLS"
+    ;;
+esac
+
+#checking if package is correct or not
+checkInstallPackage
+
+#====================================================
+# determine National Language
+# extract <value> from LANG, LC_ALL, or LC_CTYPE
+NLS_LANG=`locale | $GREP "LANG=" | sed s/LANG=// | sed 's/\"//g'` 2>/dev/null
+if [ -z "$NLS_LANG" ] ; then
+   NLS_LANG=`locale | $GREP "LC_ALL=" | sed s/LC_ALL=// | sed 's/\"//g'` 2>/dev/null
+   if [ -z "$NLS_LANG" ] ; then
+      NLS_LANG=`locale | $GREP "LC_CTYPE=" | sed s/LC_CTYPE=// | sed 's/\"//g'` 2>/dev/null
+      if [ -z "$NLS_LANG" ] ; then
+         logit "$ENMSG_NOLANG"
+         NLS_LANG=en_US
+      fi
+   fi
+fi
+
+if [ "$NLS_LANG" = "POSIX" ] || [ "$NLS_LANG" = "C" ] ; then
+   NLS_LANG=en_US
+fi
+
+MSG_DIR=
+case "$OS" in
+   AIX|SunOS) MSG_DIR="${DIR}/${OS}/msg"
+   ;;
+   Linux)
+       if [ "$DISTRO" = "Ubuntu" ] ; then
+           MSG_DIR="${DIR}/${DISTRO}/msg"
+       else 
+           MSG_DIR="${DIR}/${OS}/msg"
+       fi
+   ;;
+esac
+
+NLS_FILE="$MSG_DIR/$MSG_NAME.$NLS_LANG.msg"
+
+#echo "try to find: "$NLS_FILE
+
+if [ ! -r "$NLS_FILE" ] ; then 
+   # try to map to similar language
+   mapLanguage $NLS_LANG
+   NLS_FILE="$MSG_DIR/$MSG_NAME.$NLS_LANG.msg"
+   if [ ! -r "$NLS_FILE" ] ; then
+      # fall back to English
+      logit "$ENMSG_NONLS $NLS_LANG"
+      logit ""
+      logit "$ENMSG_LANGINST"
+      logit ""
+      if [ $OPT_SILENT -eq 0 ] ; then
+         read RES
+         if [ "$RES" = "y" ] || [ "$RES" = "Y" ] ; then
+            logit "$ENMSG_NOT_PERFORMED"
+            instexit $RC_PREREQ_UNABLE "NONLS"
+         fi
+      fi
+      logit "$ENMSG_CONTEN"
+      NLS_FILE="$MSG_DIR/$MSG_NAME.en_US.msg"
+      if [ ! -r "$NLS_FILE" ] ; then
+         logit "$ENMSG_NOT_PERFORMED"
+         logit "$ENMSG_NODEFLANG"
+         instexit $RC_PREREQ_UNABLE "NONLS"
+      fi
+   fi
+fi
+
+# test
+#cat $NLS_FILE
+# test
+
+# list of messages (from installSAM.*.msg)
+# I34=Warning: Module 'softdog' could not be loaded...     (added 04/06/23)
+
+# Get all NLS texts acc. to $NLS_FILE
+# get ASCII texts from keys
+
+#I36=Found 32-bit Java at version:
+#I37=To run the end-to-end automation management adapter, you must install 32-bit Java at this or higher version:
+
+#I60=All prerequisites for the ITSAMP installation are met on operating system:
+#I61=Error: Prerequisite checking for the ITSAMP installation failed:
+#I62=Most severe error code returned:
+#I63=Explanation of all error codes:
+#I64=One or more prerequisite packages have an incorrect version.
+#I65=One or more prerequisite packages were not found installed.
+#I66=The operating system has a version that is not supported.
+#I67=Unable to perform prerequisite checking.
+#I68=For details, refer to the 'Error:' entries in the log file:
+#I69=Using default prerequisite checking on the following AIX package:
+#I70=AIX package and version required:
+#I71=AIX package and version installed:
+#I72=Error: The following AIX package is installed at a too low version:
+#I73=The following AIX package is installed at required version or higher version:
+#I74=Error: Unable to check the version of the following AIX package:
+#I75=Error: The following AIX package is not installed:
+#I76=Using default prerequisite checking on the following rpm package:
+#I77=rpm package required:
+#I78=rpm package and version installed:
+#I79=Error: The rpm package is installed, but the following part was not found:
+#I80=Error: Could not list parts for the following rpm package:
+#I81=Error: The following rpm package is installed at a different level than required:
+#I82=Error: The following rpm package is not installed:
+#I83=Detected operating system:
+#I84=Detected architecture:
+#I85=Error: Unable to detect which Linux distribution is installed.
+#I86=Error: Prerequisite checking is not supported for operating system:
+#I87=Detected distribution:
+#I88=Supported operating system versions:
+#I89=Error: Failed to locate the list of supported operating system versions on the following operating system:
+#I90=Detected operating system version:
+#I91=Error: Could not detect the operating system version for the following operating system:
+#I92=Required minimum operating system version:
+#I93=Error: None of the supported operating system versions matched the version detected for the operating system:
+#I94=Warning: Module 'softdog' could not be found. It is required to automate critical resources, like IP or file systems.
+#I95=Error: Distribution is not supported:
+# new with 2202:
+#I102=Error: Installed package sam has a too low version for upgrade:    obsolete 3.1
+#I103=Installed package sam has the correct version for upgrade:
+# new sam2203
+#I105=Error: Unable to install package 'sam' because the following directories have no write access.
+#I106=Error: Unable to install package 'sam' because the following directories in an AIX WPAR have no write access.
+# new sam3100
+#I107=Error: Currently installed license is not valid for upgrade with service package, minimum required installed version is
+#I108=Currently installed version:
+#I109=Version of package to be installed:
+#I110=Error: Cannot overwrite permanent license with try-and-buy license.
+#I111=Error: Installed version is too low for upgrade with service package.
+#I112=Error: Unable to detect which Solaris distribution is installed.
+#I117=The new RSCT version for AIX to be upgraded is:
+#I123=Error: The following SUN package is not installed:
+#I124=SUN package is installed: 
+#I125=Detected supported zone on SunOS. Zone name:
+#I126=Error: On SunOS only global zone is supported. Detected zone:
+#I127=Error: Cannot find Java 32-bit."
+#I128=Error: Cannot use java5 because service release is less than SR5.
+#I129=deb package and version installed:
+#I130=Error: The following deb package is not installed:
+#I131=Error: Invalid installation package for this architecture and OS. Please use 64-bit installation package instead.
+#I132=Error: Invalid installation package for this architecture and OS. Please use 32-bit installation package instead.
+
+I36=`getASCII "I36" 1`' '
+I37=`getASCII "I37" 1`' '
+I60=`getASCII "I60" 1`' '
+I61=`getASCII "I61" 1`' '
+I62=`getASCII "I62" 1`' '
+I63=`getASCII "I63" 1`' '
+I64=`getASCII "I64" 1`' '
+I65=`getASCII "I65" 1`' '
+I66=`getASCII "I66" 1`' '
+I67=`getASCII "I67" 1`' '
+I68=`getASCII "I68" 1`' '
+I69=`getASCII "I69" 1`' '
+I70=`getASCII "I70" 1`' '
+I71=`getASCII "I71" 1`' '
+I72=`getASCII "I72" 1`' '
+I73=`getASCII "I73" 1`' '
+I74=`getASCII "I74" 1`' '
+I75=`getASCII "I75" 1`' '
+I76=`getASCII "I76" 1`' '
+I77=`getASCII "I77" 1`' '
+I78=`getASCII "I78" 1`' '
+I79=`getASCII "I79" 1`' '
+I80=`getASCII "I80" 1`' '
+I81=`getASCII "I81" 1`' '
+I82=`getASCII "I82" 1`' '
+I83=`getASCII "I83" 1`' '
+I84=`getASCII "I84" 1`' '
+I85=`getASCII "I85" 1`' '
+I86=`getASCII "I86" 1`' '
+I87=`getASCII "I87" 1`' '
+I88=`getASCII "I88" 1`' '
+I89=`getASCII "I89" 1`' '
+I90=`getASCII "I90" 1`' '
+I91=`getASCII "I91" 1`' '
+I92=`getASCII "I92" 1`' '
+I93=`getASCII "I93" 1`' '
+I94=`getASCII "I94" 1`' '
+I95=`getASCII "I95" 1`' '
+#I102=`getASCII "I102" 1`' '  obsolete 3.1
+I103=`getASCII "I103" 1`' '
+I105=`getASCII "I105" 1`' '
+I106=`getASCII "I106" 1`' '
+I107=`getASCII "I107" 1`' '   # 3.1
+I108=`getASCII "I108" 1`' '
+I109=`getASCII "I109" 1`' '
+I110=`getASCII "I110" 1`' '
+I111=`getASCII "I111" 1`' '
+I112=`getASCII "I112" 1`' '   # 3.1 Solaris
+I117=`getASCII "I117" 1`' '   # 3.1 rsct for AIX
+I123=`getASCII "I123" 1`' '   # 3.1 Solaris
+I124=`getASCII "I124" 1`' '   # 3.1 Solaris
+I125=`getASCII "I125" 1`' '   # 3.1 Solaris zone detection
+I126=`getASCII "I126" 1`' '   # 3.1 Solaris zone detection
+I129=`getASCII "I129" 1`' ' 
+I130=`getASCII "I130" 1`' ' 
+I131=`getASCII "I131" 1`' ' 
+I132=`getASCII "I132" 1`' ' 
+RC=0
+#======================================================
+echo "$I83 $OS" >> $INST_LOG
+
+# Determine distro and version
+DISTRO=
+IS_VERSION=
+DISTRO_VERSION=
+
+case "$OS" in
+    AIX) DISTRO=IBM
+         IS_VERSION=`oslevel -r`
+         getRSCTVersionFromOSVersion $IS_VERSION
+    ;;
+    Linux)
+        IS_VERSION=`cat /etc/redhat-release 2>/dev/null`
+        if [ -n "$IS_VERSION" ] ; then
+           COUNT=`echo $IS_VERSION | $GREP -Ec "Red Hat Enterprise.*S|CentOS.*"`
+           if [ $COUNT -eq 1 ] ; then
+              DISTRO=RH
+              DISTRO_VERSION=`echo $IS_VERSION | $GREP release | sed s/".*release "// | cut -d. -f1`
+              if [ $DISTRO_VERSION -ge 7 ] ; then
+                 ARCH_64=1
+              fi
+           else
+              logit "$I95"
+              instexit $RC_PREREQ_UNABLE
+           fi
+        else
+	   #Deprecated in latest releases of SLES 12 and above
+           #IS_VERSION=`cat /etc/SuSE-release 2>/dev/null | $GREP -v -e "^#"`
+           #if [ -n "$IS_VERSION" ] ; then
+           #   COUNT=`echo $IS_VERSION | $GREP -Ec "SLES|SuSE.*Enterprise Server|SUSE.*Enterprise Server"`
+           #   if [ $COUNT -eq 1 ] ; then
+           #      DISTRO=SUSE
+           #      DISTRO_VERSION=`echo $IS_VERSION | $GREP VERSION | sed s/".*VERSION = "// | cut -d" " -f1`
+           #      if [ $DISTRO_VERSION -ge 12 ] ; then
+           #         ARCH_64=1
+           #      fi
+           #   else
+           #      logit "$I95"
+           #      instexit $RC_PREREQ_UNABLE
+           #   fi
+           #else
+              IS_VERSION=`cat /etc/os-release 2>/dev/null`
+              if [ -n "$IS_VERSION" ] ; then
+                #LINUX_DISTRO=`echo $IS_VERSION | $GREP -w "NAME=" | cut -d\" -f2`               
+                #DISTRO_VERSION=`echo $IS_VERSION | $GREP VERSION_ID | cut -d\" -f2 | cut -d. -f1`
+                LINUX_DISTRO=`$GREP "^NAME=" /etc/os-release | cut -d\" -f2`
+                DISTRO_VERSION=`$GREP "^VERSION_ID=" /etc/os-release | cut -d\" -f2 | cut -d. -f1`
+                if [ -n "$LINUX_DISTRO" ] ; then
+                    # Map distribution name
+                    case "$LINUX_DISTRO" in
+                        "Red Hat Enterprise Linux Server")
+                            DISTRO=RH
+                            # RHEL version 7 and higher should install 64-bit packages
+                            if [ $DISTRO_VERSION -ge 7 ] ; then
+                               ARCH_64=1
+                            fi
+                        ;;
+                        SLES*)
+                            DISTRO=SUSE
+                            # SLES version 12 and higher should install 64-bit packages
+                            if [ $DISTRO_VERSION -ge 12 ] ; then
+                               ARCH_64=1
+                            fi
+                        ;;
+                        Ubuntu)
+                            DISTRO=Ubuntu
+                            ARCH_64=1
+                        ;;
+                        *)
+                            logit "$I95"
+                            instexit $RC_PREREQ_UNABLE
+                        ;;
+                    esac
+                else
+                    logit "$I95"
+                    instexit $RC_PREREQ_UNABLE
+                fi
+              else
+                 logit "$I85"
+                 instexit $RC_PREREQ_UNABLE
+              fi
+           #fi
+        fi
+    ;;
+    SunOS) 
+        IS_VERSION=`cat /etc/release 2>/dev/null`
+        if [ -n "$IS_VERSION" ] ; then
+           COUNT=`echo $IS_VERSION | $GREP -Ec "Solaris"`
+           if [ $COUNT -eq 1 ] ; then
+              DISTRO=SUN
+           else
+              logit "$I95"
+              instexit $RC_PREREQ_UNABLE
+           fi
+        else
+           logit "$I112"
+           instexit $RC_PREREQ_UNABLE
+        fi 
+    ;;    
+    *)  logit "$I86 $OS"
+        instexit $RC_PREREQ_UNABLE
+    ;;
+esac
+
+echo "$I87 $DISTRO" >> $INST_LOG
+echo "$I84 $LOG_ARCH" >> $INST_LOG
+
+# Check if correct installation package is used
+validateInstallPackage "$PKGDIR" $ARCH_64
+
+#=======================================================
+# Assemble required ${OS}_${ARCH}_${DISTRO}_VERSIONS keyword
+# and assign its value list to REQ_VERSIONS
+#REQ_VERSIONS=$(eval "echo \$${OS}_${ARCH}_${DISTRO}_VERSIONS")
+REQ_VERSIONS=`eval echo \`eval "echo \$\{${OS}_${ARCH}_${DISTRO}_VERSIONS\}"\``
+
+if [ -z "$REQ_VERSIONS" ] ; then
+   logit "$I93 ${DISTRO} ${OS} ${LOG_ARCH}"
+   instexit $RC_PREREQ_UNABLE
+else
+   echo "$I88 ${DISTRO} ${OS} ${LOG_ARCH} - $REQ_VERSIONS" >> $INST_LOG
+fi
+
+if [ -z "$IS_VERSION" ] ; then
+   logit "$I91 ${DISTRO} ${OS} ${LOG_ARCH}"
+   instexit $RC_PREREQ_UNABLE
+else
+   case "$OS" in
+      AIX) echo "$I90 $IS_VERSION" >> $INST_LOG
+      ;;
+      Linux|SunOS) 
+             echo "$I90" >> $INST_LOG
+             echo "$IS_VERSION" >> $INST_LOG
+      ;;
+   esac
+fi
+
+# Do additional OS checks
+case "$OS" in
+    AIX)
+	    # Check if rsct.basic.rte package is installed
+		RSCT_BASIC_VSN=`lslpp -l rsct.basic.rte 2>/dev/null | $GREP -E rsct.basic.rte | head -1`
+		# if [ -n "$RSCT_BASIC_VSN" ] ; then
+		#     RSCT_BASIC_VSN=`echo $RSCT_BASIC_VSN  | sed 's/[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}/#&#/g' | cut -s -d "#" -f2`
+		if [ -z "$RSCT_BASIC_VSN" ] ; then
+			# rsct.basic.rte package is not intalled
+			# Check for installed RSCT version, if it is higher than our packaged version: exit ...(set to "1.1.0.0" in case RSCT is not installed)
+			if [ -f /usr/bin/ctversion ]
+			then
+			   RSCT_CTVERSION=`/usr/bin/ctversion | cut -d' ' -f2`
+			else
+			   lslpp -l rsct.core.utils >/dev/null 2>&1
+			   lslppRC=$?
+			   if [ $lslppRC -eq 0 ]
+			   then
+			      RSCT_CTVERSION=`lslpp -lc rsct.core.utils | grep -v Id | awk '{split($0,a,":"); print a[3]}' | sort -u`
+			   else
+			      RSCT_CTVERSION="1.1.0.0"
+			   fi
+			fi
+
+			RSCT_CTVERSIONa=`echo $RSCT_CTVERSION | tr -d .`
+			RSCT_VSNa=`echo $RSCT_VSN | tr -d .`
+			if [ $RSCT_CTVERSIONa -gt $RSCT_VSNa ] ; then
+				logit "Error: Package rsct.basic cannot be installed on AIX because the installed version of other RSCT packages is higher: $RSCT_CTVERSION"
+				instexit $RC_PREREQ_UNABLE;
+			fi	
+		fi
+	;;
+    SunOS)
+        # Check for globalzone in SunOS
+        ZONENAME=`/sbin/zonename`
+        if [ "$ZONENAME" != "global" ] ; then
+            # stop install, because installSAM is not allowed in a local zone
+            logit "$I126 $ZONENAME"
+            instexit $RC_PREREQ_UNABLE;
+        else
+            logit "$I125 $ZONENAME"
+        fi
+    ;;
+esac
+    
+
+VERSION_OK=0
+
+case "$OS" in
+    AIX)
+        case "$ARCH" in
+           ppc)
+               case "$DISTRO" in
+                  IBM) VERSION_OK=`checkVersionAIX "$REQ_VERSIONS" "$IS_VERSION"`
+                       RESULT=`checkAIXPrereqs $VERSION_OK`
+                       RC=`echo $RESULT | cut -f1 -d ' '`
+                       MISSING_PKGS=`echo "$RESULT" | cut -f2- -d ' '`
+                  ;;
+               esac
+           ;;
+        esac
+    ;;
+    Linux)
+        case "$ARCH" in
+           i386|i386x|x86_64|ppc|ppcx|ppc64|ppc64le|s390|s390l|s390x)
+               case "$DISTRO" in
+                  RH) VERSION_OK=`checkVersionaaaRH "$REQ_VERSIONS" "$IS_VERSION"`
+                  ;;
+                  SUSE) VERSION_OK=`checkVersionaaaSUSE "$REQ_VERSIONS" "$IS_VERSION"`
+                  ;;
+               esac
+           ;;
+           ppc64el|amd64)
+               case "$DISTRO" in
+                  Ubuntu) VERSION_OK=`checkVersionaaaUbuntu "$REQ_VERSIONS" "$IS_VERSION"`
+                  ;;
+               esac
+           ;;
+        esac
+        RESULT=`checkLinuxPrereqs $VERSION_OK`
+        RC=`echo $RESULT | cut -f1 -d ' '`
+        MISSING_PKGS=`echo "$RESULT" | cut -f2- -d ' '`
+    ;;
+    SunOS)
+        case "$ARCH" in
+           sparc)
+               case "$DISTRO" in
+                  SUN) VERSION_OK=`checkVersionSUN "$REQ_VERSIONS" "$IS_VERSION"`
+                       RC=`checkSUNPrereqs $VERSION_OK`
+                  ;;
+               esac
+           ;;
+        esac
+    ;;
+esac
+
+if [ -z "$VERSION_OK" ] ; then
+   # OS version is not OK - show required vs installed version
+   logit "$I93 ${DISTRO} ${OS} ${LOG_ARCH}"
+   logit "$I88 ${DISTRO} ${OS} ${LOG_ARCH} - $REQ_VERSIONS"
+   case "$OS" in
+      AIX) logit "$I90 $IS_VERSION"
+      ;;
+      Linux|SunOS) 
+             logit "$I90"
+             logit "$IS_VERSION"
+      ;;       
+   esac
+fi
+
+
+if [ $OPT_NOLICCHECK -eq 0 ] ; then
+   # Check sam package version in case of upgrade
+   SRC=`checkSAMPkg $REQ_SAM_UPGRADE_VERSION`
+   # pick worst rc
+   if [ $RC -lt $SRC ] ; then
+      RC=$SRC
+   fi
+fi
+
+# if Linux check if softdog module is installed
+if [ "$OS" = "Linux" ] ; then
+   modprobe --show softdog 2>/dev/null
+   MRC=$?
+   # logit "modprobe RC=$RC"
+   if [ $MRC -ne 0 ] ; then
+      # softdog module cannot be found
+      logit "$I94"
+   fi
+fi
+
+# Check if hacmp/powerha cluster is online
+if [ $RC -eq 0 ] && [ "$OS" = "AIX" ] && [ -f /usr/es/sbin/cluster/utilities/cldump ] ; then
+   HACMP_CLUSTER_UP=`/usr/es/sbin/cluster/utilities/cldump | grep "Cluster State" | grep -i "up"`
+   if [ -n "$HACMP_CLUSTER_UP" ] ; then
+      # TODO: add message to catalog
+	  logit "Error: HACMP/PowerHA cluster is online. Please stop cluster before continuing."
+      instexit $RC_PREREQ_UNABLE
+   fi
+fi
+
+#
+#	Commented out because of problems with message ID detection. On some systems, lppchk does not print out
+#	a message ID. We can not detect the error case correctly in this case.
+#	TODO: Check if a special ENV variable is responsible for this behaviour.
+#
+# Do additional consistency checks
+#case "$OS" in
+#    AIX)
+#		# Do consistency check of installed AIX packages
+#		lppchk_rsct_out=`lppchk -v "rsct*" 2>&1`
+#		RC1_lppchk=$?
+#		lppchk_sam_out=`lppchk -v "sam*" 2>&1`
+#		
+#		# Filter out the following case: lppchk: 0504-226  No fileset entries were found that match the name - sam*.
+#		# This can occur when SAMP is being initially installed, not upgraded.
+#		# Returning an error in this case would be wrong.
+#		if echo "$lppchk_sam_out" | grep "0504-226" > /dev/null; then
+#			RC2_lppchk=0
+#		else
+#			RC2_lppchk=$?
+#		fi
+#		
+#		if [ $RC1_lppchk -ne 0 ] || [ $RC2_lppchk -ne 0 ] ; then
+#			logit "Error: SAMP has detected that this system is in an inconsistent state. Please resolve the issues before continuing with the installation. You can check the state of the system with the AIX command lppchk -v.\n"
+#			logit "$lppchk_rsct_out"
+#			logit "$lppchk_sam_out"
+#			instexit $RC_PREREQ_UNABLE;
+#		fi
+#	;;
+#esac
+
+instexit $RC

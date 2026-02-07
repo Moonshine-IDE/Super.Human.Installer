@@ -1,0 +1,134 @@
+---
+# tasks file for sbaerlocher.snmp
+
+-
+  name: 'linux : install snmp'
+  become: true
+  package:
+    name: '{{ item }}'
+  with_items:
+    - '{{ snmp_packages }}'
+    - '{{ snmp_additional_packages }}'
+  tags:
+    - packages
+
+-
+  name: 'linux : create snmp extension directory'
+  become: true
+  ansible.builtin.file:
+    path: '{{ snmp_extension_scripts }}'
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+    seuser: system_u
+    serole: object_r
+    setype: lib_t
+    selevel: s0
+  tags:
+    - configuration
+
+-
+  name: 'linux : install snmp extension'
+  become: true
+  get_url:
+    url: '{{ item.url }}'
+    dest: '{{ snmp_extension_scripts + "/" }}'
+    owner: root
+    group: root
+    mode: 0755
+    seuser: system_u
+    serole: object_r
+    setype: lib_t
+    selevel: s0
+  with_items:
+    - "{{ snmp_extension_list }}"
+  tags:
+    - configuration
+
+-
+  name: 'linux : install snmp extension proxmox'
+  become: true
+  get_url:
+    url: 'https://raw.githubusercontent.com/librenms/librenms-agent/master/agent-local/proxmox'
+    dest: '{{ snmp_extension_scripts + "/" }}'
+    owner: root
+    group: root
+    mode: 0755
+    seuser: system_u
+    serole: object_r
+    setype: lib_t
+    selevel: s0
+  when: '"pve" in ansible_kernel'
+  tags:
+    - configuration
+
+-
+  name: 'linux : configure snmpd daemon'
+  become: true
+  ansible.builtin.template:
+    src: 'default/snmpd.{{ ansible_os_family }}.j2'
+    dest: '{{ snmp_daemon_config }}'
+    owner: root
+    group: root
+    mode: 0644
+    seuser: system_u
+    serole: object_r
+    setype: etc_t
+    selevel: s0
+  notify:
+    - restart snmp
+
+-
+  name: 'linux : check create snmp config'
+  become: true
+  ansible.builtin.template:
+    src: 'snmp/snmpd.conf.j2'
+    dest: '{{ snmp_config }}'
+    owner: root
+    group: root
+    mode: 0600
+    seuser: system_u
+    serole: object_r
+    setype: etc_t
+    selevel: s0
+  register: check_snmp
+  check_mode: true
+  tags:
+    - configuration
+
+-
+ name: "Configuring SNMP"
+ block:
+
+    - name: 'linux : stopped snmp'
+      become: true
+      service:
+        name: '{{ snmp_service_name }}'
+        state: stopped
+
+    - name: 'linux : create snmp config'
+      become: true
+      ansible.builtin.template:
+        src: 'snmp/snmpd.conf.j2'
+        dest: '{{ snmp_config }}'
+        owner: root
+        group: root
+        mode: 0600
+        seuser: system_u
+        serole: object_r
+        setype: etc_t
+        selevel: s0
+      notify:
+        - restart snmp
+        - enabled snmp
+
+    - name: 'linux : started snmp'
+      become: true
+      service:
+        name: '{{ snmp_service_name }}'
+        state: started
+
+  when: check_snmp.changed
+  tags:
+    - configuration

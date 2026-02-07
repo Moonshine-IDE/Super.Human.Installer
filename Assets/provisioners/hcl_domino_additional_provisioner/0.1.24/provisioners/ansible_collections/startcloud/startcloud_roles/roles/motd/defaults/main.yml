@@ -1,0 +1,67 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring MOTD"
+
+motd_extra_vars: startcloud
+motd_remove_default_config: false
+motd_restore_default_config: false
+motd_add_footer: false
+motd_add_update: false
+motd_org: STARTcloud
+motd_sysadmins_signature: Random system administrators
+motd_sysadmins_email: "{{ email }} | default('support@startcloud.com')"
+motd_update_content: |
+  #!/bin/sh
+  echo "Uptime:       $(uptime -p)"
+  echo "Load:         $(uptime | awk '{print $8, $9, $10, $11, $12, $13}')"
+  echo "Date:         $(date)"
+  echo "Hostname:     $(hostname)"
+  echo "Distribution: $(hostnamectl | grep 'Operating System' | sed 's/Operating System: //' | sed 's/^ *//')"
+  echo "CPUs:         $(nproc)"
+  ram_total=$(free -h | awk '/^Mem:/{print $2}')
+  ram_used=$(free -h | awk '/^Mem:/{print $3}')
+  ram_free=$(free -h | awk '/^Mem:/{print $4}')
+  echo "RAM:          Total: $ram_total, Used: $ram_used, Free: $ram_free"
+  echo "IP Addresses:"
+  ip -o -4 addr show scope global | awk '{gsub(/\/.*/, "", $4); print "              - " $2 ": " $4}'
+  dns_servers=$(resolvectl status 2>/dev/null | grep -A 1 'DNS Servers' | grep -v 'DNS Domain' | tail -n 1 | sed 's/^ *//;s/^DNS Servers: //')
+  if [ -z "$dns_servers" ]; then
+    dns_servers="Unavailable (systemd-resolved not running)"
+  fi
+  echo "DNS Servers:  $dns_servers"
+  echo "Gateways:"
+  ip route | awk '/default/ {print "              - " $3}'
+  echo "Open Ports:"
+  netstat -talpnu 2>/dev/null | grep LISTEN | awk '{print $4}' | \
+  awk -F: '{if ($1 == "" || $1 == "*") $1="::"; addr[$1]=addr[$1]","$NF} END {for (a in addr) print a":"substr(addr[a],2)}' | \
+  sort | sed 's/^/              - /'
+  echo "Disk Usage:"
+  lsblk -o MOUNTPOINT | grep -vE '^$|/boot|/boot/efi|\[SWAP\]' | while read mount; do
+    if [ -n "$mount" ] && [ -d "$mount" ]; then
+      df -h "$mount" | awk 'NR==2 {printf "              - %s: %s used, %s free\n", $6, $3, $4}'
+    fi
+  done
+  swap_total=$(free -h | awk '/Swap:/ {print $2}')
+  swap_used=$(free -h | awk '/Swap:/ {print $3}')
+  echo "Swap Usage:   Total: $swap_total, Used: $swap_used"
+  echo "Last Login:   $(last -i $USER | grep -v 'still logged in' | head -1)"
+
+motd_content: |
+  -------------------------------------------------------------------------------------
+                         This system is managed by {{ motd_org }}
+  -------------------------------------------------------------------------------------
+  --              ______________    ____  ______     __                __            --
+  --             / ___/_  __/   |  / __ \/_  __/____/ /___  __  ______/ /            --
+  --             \__ \ / / / /| | / /_/ / / / / ___/ / __ \/ / / / __  /             --
+  --            ___/ // / / ___ |/ _, _/ / / / /__/ / /_/ / /_/ / /_/ /              --
+  --           /____//_/ /_/  |_/_/ |_| /_/  \___/_/\____/\__,_/\__,_/               --
+  --                                                                                 --
+  -------------------------------------------------------------------------------------
+  Support: {{ motd_sysadmins_signature }}
+  Email: {{ motd_sysadmins_email }}
+  Template Creation Date: {{ ansible_date_time.iso8601 }}
+  Template Info: https://vagrant-zones.startcloud.com/changes
+  Template Source: https://boxvault.startcloud.com/STARTcloud/{{ distro }}{{ distro_version }}-{{ vm_type }}
+  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

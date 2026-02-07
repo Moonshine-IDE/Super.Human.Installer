@@ -1,0 +1,110 @@
+---
+-
+  name: "Installing MSYS2 development environment"
+  chocolatey.chocolatey.win_chocolatey:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - msys2
+    - mingw
+    - git
+
+-
+  name: "Adding MSYS2 and MinGW to system PATH"
+  ansible.windows.win_path:
+    elements:
+      - "C:\\tools\\msys64\\usr\\bin"
+      - "C:\\ProgramData\\mingw64\\mingw64\\bin"
+      - "C:\\ProgramData\\mingw64\\mingw32\\bin"
+    scope: machine
+    state: present
+
+-
+  name: "Setting SDKMAN user variables"
+  ansible.builtin.set_fact:
+    sdk_service_user: "{{ service_user }}"
+    sdk_service_group: "{{ service_group }}"
+
+-
+  name: "Setting SDKMAN directory"
+  ansible.builtin.set_fact:
+    sdkman_dir: "{{ service_home_dir }}\\.sdkman"
+
+-
+  name: "Checking for SDKMAN installation"
+  ansible.windows.win_stat:
+    path: "{{ sdkman_dir }}\\bin\\sdkman-init.sh"
+  register: sdkman_init
+
+-
+  name: "Installing SDKMAN"
+  when: not sdkman_init.stat.exists
+  block:
+    -
+      name: "Creating SDKMAN directory"
+      ansible.windows.win_file:
+        path: "{{ sdkman_dir }}"
+        state: directory
+
+    -
+      name: "Downloading SDKMAN installation script"
+      ansible.windows.win_get_url:
+        url: "https://get.sdkman.io"
+        dest: "{{ service_home_dir }}\\sdkman_install.sh"
+
+    -
+      name: "Installing SDKMAN via MSYS2 bash"
+      ansible.windows.win_shell: |
+        $env:SDKMAN_DIR = "{{ sdkman_dir }}"
+        C:\tools\msys64\usr\bin\bash.exe -c "export SDKMAN_DIR='{{ sdkman_dir }}' && curl -s 'https://get.sdkman.io' | bash"
+      args:
+        creates: "{{ sdkman_dir }}\\bin\\sdkman-init.sh"
+
+    -
+      name: "Setting permissions on SDKMAN directory"
+      ansible.windows.win_acl:
+        path: "{{ sdkman_dir }}"
+        user: "{{ service_user }}"
+        rights: FullControl
+        type: allow
+        state: present
+        inherit: ContainerInherit,ObjectInherit
+        propagation: None
+
+-
+  name: "Configuring SDKMAN"
+  block:
+    -
+      name: "Creating SDKMAN configuration"
+      ansible.windows.win_template:
+        src: sdkman_config.j2
+        dest: "{{ sdkman_dir }}\\etc\\config"
+
+    -
+      name: "Updating SDKMAN"
+      ansible.windows.win_shell: |
+        C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk selfupdate"
+      register: sdk_selfupdate
+      changed_when: "'No update available at this time.' not in sdk_selfupdate.stdout"
+      when: sdkman_update
+
+    -
+      name: "Installing SDK candidates"
+      ansible.windows.win_shell: |
+        C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install {{ item.candidate }} {{ item.version | default('') }} {{ item.localpath | default('') }}"
+      loop: "{{ sdkman_install_packages }}"
+      register: sdk_install
+      changed_when: "'is already installed.' not in sdk_install.stdout"
+      failed_when: >-
+        sdk_install.rc != 0 and
+        'is already installed.' not in sdk_install.stdout
+
+    -
+      name: "Uninstalling SDK candidates"
+      ansible.windows.win_shell: |
+        C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk uninstall {{ item.candidate }} {{ item.version }}"
+      loop: "{{ sdkman_uninstall_packages }}"
+      register: sdk_uninstall
+      changed_when: >-
+        not item.candidate + ' ' + item.version + ' is not installed.'
+        in sdk_uninstall.stdout

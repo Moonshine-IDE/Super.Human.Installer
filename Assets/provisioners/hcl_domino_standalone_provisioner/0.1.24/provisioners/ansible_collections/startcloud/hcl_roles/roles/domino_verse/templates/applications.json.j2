@@ -1,0 +1,156 @@
+[
+  {
+    "translations" : {},
+    "extensions" : [
+{% if domino_nomadweb_proxy_url is defined and 'Nomad' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.Nomad",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99501",
+        "name" : "Nomad",
+        "description" : "HCL Nomad Web",
+        "payload" : {
+          "link" : "https://{{ domino_nomadweb_proxy_url }}/",
+          "title" : "Nomad"
+        },
+        "title" : "Nomad"
+      },
+{% endif %}
+{% if domino_leap_proxy_url is defined and 'Leap' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.Leap",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99502",
+        "name" : "Leap",
+        "description" : "HCL Leap",
+        "payload" : {
+          "link" : "https://{{ domino_leap_proxy_url }}",
+          "title" : "Leap"
+        },
+        "title" : "Leap"
+      },
+{% endif %}
+{% if domino_traveler_proxy_url is defined and 'Traveler' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.Traveler",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99503",
+        "name" : "Traveler",
+        "description" : "HCL Traveler",
+        "payload" : {
+          "link" : "https://{{ domino_traveler_proxy_url }}",
+          "title" : "Traveler"
+        },
+        "title" : "Traveler"
+      },
+{% endif %}
+{% if domino_sametime_proxy_url is defined and 'Sametime' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.Sametime",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99504",
+        "name" : "Sametime",
+        "description" : "HCL Sametime",
+        "payload" : {
+          "link" : "https://{{ domino_sametime_proxy_url }}/meeting/",
+          "title" : "Sametime"
+        },
+        "title" : "Sametime"
+      },
+{% endif %}
+{% if domino_vagrant_rest_api_proxy_url is defined and 'RestAPI' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.RestAPI",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99505",
+        "name" : "Rest API",
+        "description" : "Domino REST API",
+        "payload" : {
+          "link" : "https://{{ domino_vagrant_rest_api_proxy_url }}/",
+          "title" : "Rest API"
+        },
+        "title" : "Rest API"
+      },
+{% endif %}
+{% if startcloud_guacamole_proxy_url is defined and 'Guacamole' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.Guacamole",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99506",
+        "name" : "Guacamole",
+        "description" : "Apache Guacamole",
+        "payload" : {
+          "link" : "https://{{ startcloud_guacamole_proxy_url }}/",
+          "title" : "Guacamole"
+        },
+        "title" : "Guacamole"
+      },
+{% endif %}
+{% if 'ServerConsole' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.ServerConsole",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99508",
+        "name" : "Server Console",
+        "description" : "Server Console",
+        "payload" : {
+          "link" : "https://console.{{ settings.hostname }}.{{ settings.domain }}/",
+          "title" : "Server Console"
+        },
+        "title" : "Server Console"
+      },
+{% endif %}
+{% if 'WelcomePage' in verse_app_switcher_enabled_services %}
+      {
+        "ext_id" : "{{ domino_organization }}.WelcomePage",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99509",
+        "name" : "Welcome Page",
+        "description" : "Welcome Page",
+        "payload" : {
+          "link" : "https://downloads.{{ settings.hostname }}.{{ settings.domain }}/welcome.html",
+          "title" : "Welcome Page"
+        },
+        "title" : "Welcome Page"
+      },
+{% endif %}
+{% if super_human_portal_enabled %}
+      {
+        "ext_id" : "{{ domino_organization }}.Super.Human.Portal",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99507",
+        "name" : "Super.Human.Portal",
+        "description" : "Super.Human.Portal",
+        "payload" : {
+          "link" : "https://{{ settings.hostname }}.{{ settings.domain }}",
+          "title" : "Super.Human.Portal"
+        },
+        "title" : "Super.Human.Portal"
+      }
+{% else %}
+      {
+        "ext_id" : "{{ domino_organization }}.DominoWeb",
+        "type" : "com.ibm.action.link",
+        "path" : "com.ibm.navbar.order.99507",
+        "name" : "Domino Main Web Site",
+        "description" : "Domino Main Web Site",
+        "payload" : {
+          "link" : "https://{{ settings.hostname }}.{{ settings.domain }}",
+          "title" : "Domino Main Web Site"
+        },
+        "title" : "Domino Main Web Site"
+      }
+{% endif %}
+    ],
+    "title" : "{{ domino_organization }} Links",
+    "icon" : "{{ verse_organization_icon }}",
+    "app_id" : "ibm.navbar.application.{{ domino_organization | lower }}links",
+    "name" : "{{ domino_organization }} Links",
+    "description" : "{{ domino_organization }} Links",
+    "payload" : {},
+    "services" : [
+      "TopNavigationBar"
+    ],
+    "url" : ""
+  }
+]

@@ -1,0 +1,82 @@
+---
+# Prominic-specific dependencies and packages
+# This file contains vendor-specific Chocolatey packages for Prominic internal templates
+
+# Chocolatey repository configuration
+chocolatey_repos:
+  - name: "prominic"
+    url: "https://choco.prominic.net/phpnuget/api/v2/"
+    priority: 0
+  - name: "chocolatey"
+    url: "https://community.chocolatey.org/api/v2/"
+    priority: 1
+
+chocolatey_packages:
+  - 7zip
+  - bginfo
+  - chromium
+  - firefox
+#  - librewolf #Works
+#  - libreoffice
+  - clamwin
+#  - drawio
+#  - filezilla #Works
+#  - winscp #Works
+#  - git  #Works
+#  - windirstat  #Works
+#  - winfsp  #Works
+  - winget
+  - winget-cli
+  - notepadplusplus
+  - NugetPackageExplorer
+#  - putty #Works
+#  - superputty #Works
+#  - royalts
+#  - tightvnc
+#  - cmder #Works
+#  - crystaldiskmark
+  - curl
+  - cyg-get
+#  - inkscape
+  - microsoft-ui-xaml-2-7
+  - vcredist140
+  - vcredist2010
+#  - vim #Works
+#  - vmware-converter
+#  - vscode #Works
+#  - bluej
+#  - intellijidea-community
+#  - vagrant
+#  - superhumaninstaller
+#  - hostsfileupdate
+#  - kubernetes-cli
+#  - docker
+#  - docker-cli
+#  - docker-compose
+#  - ca-cert #Works
+#  - jre7 #Works
+#  - raritan #Works
+  - softperfect-ramdisk
+#  - nmap
+#  - kyrtest -- Installs Notes11
+#  - prominicnative -- tries to install vmrc 
+#  - vmrc -- Fails due to VMWare/Broadcom monopoly
+#  - sysinternals -- Failes due to invalid hashes
+#  - vmware-tools -- Fails due to VMWare/Broadcom monopoly
+
+# Additional Prominic-specific configuration
+vendor_specific_config:
+  enable_developer_tools: true
+  install_vmware_tools: true
+  configure_development_environment: true
+
+# Windows Update configuration - Prominic uses WSUS servers
+use_microsoft_update: false
+
+# WSUS server configuration (site-specific)
+# Default to s2 (Rantoul), can be overridden with prominic_site variable
+wsus_servers:
+  s1: "https://updates-n1.s1.prominic.work"
+  s2: "https://updates-n1.s2.prominic.work"
+wsus_server: "{{ wsus_servers[prominic_site | default('s2')] }}"
+wsus_target_group: "Prominic-Templates"

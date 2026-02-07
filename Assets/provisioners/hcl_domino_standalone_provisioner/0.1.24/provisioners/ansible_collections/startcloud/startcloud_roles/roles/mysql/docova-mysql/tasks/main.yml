@@ -1,0 +1,21 @@
+--- 
+- 
+  become: true
+  mysql_user: 
+    name: "{{ database_user }}"
+    password: "{{ database_password }}"
+    priv: "*.*:ALL"
+  name: "Create mysql user"
+  no_log: true
+- 
+  become: true
+  mysql_db: 
+    name: "{{ database_name }}"
+    state: absent
+  name: "Create mysql database"
+- 
+  become: true
+  mysql_db: 
+    name: "{{ database_name }}"
+    state: present
+  name: "Create mysql database"

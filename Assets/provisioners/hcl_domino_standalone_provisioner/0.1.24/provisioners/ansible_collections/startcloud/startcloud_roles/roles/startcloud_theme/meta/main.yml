@@ -1,0 +1,22 @@
+galaxy_info:
+  role_name: startcloud_theme
+  author: MarkProminic
+  description: STARTcloud System Theme
+  company: STARTCloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Debian
+      versions:
+        - 'bookworm'
+
+  galaxy_tags: []
+
+dependencies:
+  - role: startcloud.startcloud_roles.serial
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

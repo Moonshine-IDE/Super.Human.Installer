@@ -1,0 +1,44 @@
+#!/usr/bin/perl -w
+#
+# kill wrapper for vserver. 
+# Philip Snyder <psnyder@vizional.com>
+# 2002/02/06 19:00 PST
+#
+
+
+$SIGNAL = $ARGV[0];
+$PROC = $ARGV[1];
+# Grab the output from a context query against this process id
+open(PH, "/usr/sbin/chcontext --silent --ctx 1 cat /proc/$PROC/status 2>&1 |");
+
+# Loop through the output
+while (<PH>) {
+
+  # Searching for a line that looks like this:
+  # s_context: #
+  if (/^s_context: ([0-9]+)/) {
+
+    print "Process id $PROC was found in security context $1.\n";
+
+    # Make sure the process is in a vserver context
+    if ($1 > 0) {
+
+      # Since we have the context and the process id, we can kill it
+      print " + Killing... ";
+      `/usr/sbin/chcontext --ctx $1 kill $SIGNAL $PROC`;
+      print "[done]\n";
+
+    } else {
+
+      # Not in vserver context, so its a process on the actual server
+      print " + Killing... ";
+      `kill $SIGNAL $PROC`;
+      print "[done]\n";
+
+    }
+    exit;
+  }
+}
+
+print "Process id $PROC not found.\n";
+exit

@@ -1,0 +1,35 @@
+---
+# STARTcloud-specific dependencies and packages
+# This file contains vendor-specific packages for STARTcloud public templates
+
+# Chocolatey repository configuration
+chocolatey_repos:
+#  - name: "startcloud"
+#    url: "https://choco.startcloud.com/phpnuget/api/v2/"
+#    priority: 0
+  - name: "chocolatey"
+    url: "https://community.chocolatey.org/api/v2/"
+    priority: 0
+
+chocolatey_packages:
+  - 7zip
+  - chromium
+  - notepadplusplus
+  - vcredist140
+  - librewolf
+  - git
+  - bginfo
+  - cyg-get
+  - clamwin
+  - winfsp
+  - curl
+  - cyg-get
+  
+# Additional STARTcloud-specific configuration
+vendor_specific_config:
+  enable_developer_tools: false
+  install_vmware_tools: false
+  configure_development_environment: false
+
+# Windows Update configuration - STARTcloud uses Microsoft Update directly (no WSUS)
+use_microsoft_update: true

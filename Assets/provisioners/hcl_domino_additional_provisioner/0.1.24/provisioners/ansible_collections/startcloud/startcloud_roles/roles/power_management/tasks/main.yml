@@ -1,0 +1,73 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Disabling Hibernate"
+      when: disable_hibernate
+      block:
+        -
+          name: "Setting Hibernate file size"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Control\Power\
+            name: HiberFileSizePercent
+            data: "{{ hibernate_file_size_percent }}"
+            type: dword
+
+        -
+          name: "Disabling Hibernate"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Control\Power\
+            name: HibernateEnabled
+            data: 0
+            type: dword
+
+    -
+      name: "Adjusting Power Settings"
+      block:
+        -
+          name: "Disabling Screen Saver"
+          when: disable_screensaver
+          ansible.windows.win_regedit:
+            path: HKCU:\Control Panel\Desktop
+            name: ScreenSaveActive
+            data: 0
+            type: dword
+
+        -
+          name: "Disabling Monitor Timeout on AC"
+          ansible.windows.win_shell: |
+            powercfg -x -monitor-timeout-ac {{ monitor_timeout_ac }}
+
+        -
+          name: "Disabling Monitor Timeout on DC"
+          ansible.windows.win_shell: |
+            powercfg -x -monitor-timeout-dc {{ monitor_timeout_dc }}
+
+        -
+          name: "Setting Power Plan to High Performance"
+          when: set_high_performance
+          ansible.windows.win_shell: |
+            $HighPerf = powercfg -l | ForEach-Object { if ($_.contains("High performance")) { $_.split()[3] } }
+            $CurrPlan = $(powercfg -getactivescheme).split()[3]
+            if ($CurrPlan -ne $HighPerf) { powercfg -setactive $HighPerf }

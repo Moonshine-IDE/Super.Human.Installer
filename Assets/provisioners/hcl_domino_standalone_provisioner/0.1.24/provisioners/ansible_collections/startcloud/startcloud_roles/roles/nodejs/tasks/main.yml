@@ -1,0 +1,75 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 1 of 1)"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name + ' - Step 1') }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Including setup-RedHat.yml"
+      ansible.builtin.import_tasks: setup-RedHat.yml
+      when: ansible_os_family == 'RedHat'   
+
+    -
+      name: "Including setup-Debian.yml"
+      ansible.builtin.import_tasks: setup-Debian.yml
+      when: ansible_os_family == 'Debian'   
+
+    -
+      name: "Defining nodejs_install_npm_user"
+      ansible.builtin.set_fact:
+        nodejs_install_npm_user: "{{ ansible_user | default(lookup('env', 'USER')) }}"
+      when: nodejs_install_npm_user is not defined    
+
+    -
+      name: "Creating npm global directory"
+      ansible.builtin.file:
+        path: "{{ npm_config_prefix }}"
+        owner: "{{ nodejs_install_npm_user }}"
+        group: "{{ nodejs_install_npm_user }}"
+        state: directory
+        mode: "0755"    
+
+    -
+      name: "Adding npm_config_prefix bin directory to global $PATH"
+      ansible.builtin.template:
+        src: npm.sh.j2
+        dest: /etc/profile.d/npm.sh
+        mode: "0644"
+      when: nodejs_generate_etc_profile   
+
+    -
+      name: "Ensuring npm global packages are installed"
+      community.general.npm:
+        name: "{{ item.name | default(item) }}"
+        version: "{{ item.version | default(omit) }}"
+        global: true
+        state: "{{ item.state | default('present') }}"
+      environment:
+        NPM_CONFIG_PREFIX: "{{ npm_config_prefix }}"
+        NODE_PATH: "{{ npm_config_prefix }}/lib/node_modules"
+        NPM_CONFIG_UNSAFE_PERM: "{{ npm_config_unsafe_perm }}"
+      with_items: "{{ nodejs_npm_global_packages }}"    
+
+    -
+      name: "Installing packages defined in a given package.json"
+      community.general.npm:
+        path: "{{ nodejs_package_json_path }}"
+      when: nodejs_package_json_path is defined and nodejs_package_json_path

@@ -1,0 +1,121 @@
+---
+-
+  name: "Gathering container related facts"
+  community.docker.current_container_facts:
+
+-
+  name: "Network Cleanup"
+  when:
+    - not ansible_module_running_in_container
+  become: true
+  tags: once
+  block:
+    -
+      name: "Disabling NetworkManager"
+      when: not ansible_module_running_in_container
+      ansible.builtin.systemd_service:
+        state: stopped
+        enabled: false
+        name: NetworkManager
+
+    -
+      name: "Enabling systemd-networkd"
+      when: not ansible_module_running_in_container
+      ansible.builtin.systemd_service:
+        state: restarted
+        enabled: true
+        name: systemd-networkd
+
+    -
+      name: "Deleting /etc/netplan/50-cloud-init.yaml"
+      ansible.builtin.file:
+        path: /etc/netplan/50-cloud-init.yaml
+        state: absent
+
+-
+  name: "Gathering Networking Configurations"
+  when:
+    - not ansible_module_running_in_container
+  become: true
+  tags: once
+  block:
+    -
+      name: "Gather Networking Details"
+      ansible.builtin.include_tasks: "gather.yml"
+
+-
+  name: "Loading Virtualbox Tasks"
+  when:
+    - ansible_virtualization_type == "virtualbox"
+    - not ansible_module_running_in_container
+  become: true
+  tags: once
+  block:
+    -
+      name: "Including OS-specific tasks"
+      ansible.builtin.include_tasks: "virtualbox/{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Loading UTM/KVM Tasks"
+  when:
+    - ansible_virtualization_type == "kvm"
+    - ansible_bios_vendor != "BHYVE"
+    - not ansible_module_running_in_container
+  become: true
+  tags: once
+  block:
+    -
+      name: "Including OS-specific tasks"
+      ansible.builtin.include_tasks: "utm/{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Loading Bhyve Tasks"
+  when:
+    - ansible_bios_vendor == "BHYVE"
+    - not ansible_module_running_in_container
+  become: true
+  tags: once
+  block:
+    -
+      name: "Including OS-specific tasks"
+      ansible.builtin.include_tasks: "bhyve/{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Setting Host Records"
+  become: true
+  when: not ansible_module_running_in_container
+  tags: always
+  block:
+    -
+      name: "Creating DNS aliases list"
+      ansible.builtin.set_fact:
+        dns_aliases: "{{ [settings.hostname] + (dns_entries_list | map('regex_replace', '^(.*)$', '\\1.' + settings.hostname + '.' + settings.domain)) | list }}"
+
+    -
+      name: "Creating new host entry"
+      ansible.builtin.set_fact:
+        new_entry:
+          ip: "{{ second_adapter_details.ip }}"
+          hostname: "{{ settings.hostname + '.' + settings.domain }}"
+          aliases: "{{ dns_aliases }}"
+
+    -
+      name: "Adding managed entries to etc_hosts_entries"
+      ansible.builtin.set_fact:
+        etc_hosts_entries: "{{ [new_entry] if not etc_hosts_entries else (etc_hosts_entries + [new_entry]) }}"
+
+    -
+      name: "Creating hosts entries block"
+      ansible.builtin.set_fact:
+        hosts_block: |
+          {% for entry in etc_hosts_entries %}
+          {{ entry.ip }} {{ entry.hostname }} {{ entry.aliases | join(' ') }}
+          {% endfor %}
+
+    -
+      name: "Ensuring /etc/hosts entries are present"
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} SHI ANSIBLE MANAGED HOST ENTRIES"
+        block: "{{ hosts_block }}"
+        create: yes

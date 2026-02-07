@@ -1,0 +1,19 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring WinRM for Windows"
+
+# defaults file for winrm
+
+# WinRM configuration script URL
+winrm_config_script_url: "https://raw.githubusercontent.com/ansible/ansible-documentation/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
+
+# Whether to allow basic authentication
+winrm_allow_basic_auth: true
+
+# Whether to allow unencrypted connections
+winrm_allow_unencrypted: true
+
+# Temporary directory for downloads
+winrm_temp_dir: "C:\\temp"

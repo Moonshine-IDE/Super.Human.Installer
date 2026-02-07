@@ -1,0 +1,23 @@
+---
+-
+  name: "Ensuring PostgreSQL Python libraries are installed"
+  ansible.builtin.apt:
+    name: "{{ postgresql_python_library }}"
+    state: present
+    update_cache: true
+
+-
+  name: "Ensuring PostgreSQL packages are installed"
+  ansible.builtin.apt:
+    name: "{{ postgresql_packages }}"
+    state: present
+    update_cache: true
+
+-
+  name: "Ensuring all configured locales are present"
+  community.general.locale_gen:
+    name: "{{ item }}"
+    state: "present"
+  with_items: "{{ postgresql_locales }}"
+  register: locale_gen_result
+  notify: Restart postgresql

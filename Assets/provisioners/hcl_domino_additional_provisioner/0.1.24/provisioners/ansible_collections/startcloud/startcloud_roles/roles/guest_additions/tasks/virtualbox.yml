@@ -1,0 +1,28 @@
+---
+- changed_when: false
+  command: "cat /home/{{ user }}/.vbox_version"
+  name: "Get VirtualBox version."
+  register: virtualbox_version
+- mount:
+    fstype: iso9660
+    name: /tmp/vbox
+    opts: loop
+    src: "/home/{{ user }}/VBoxGuestAdditions_{{ virtualbox_version.stdout }}.iso"
+    state: mounted
+  name: "Mount VirtualBox guest additions ISO."
+- changed_when: true
+  failed_when: false
+  name: "Run VirtualBox guest additions installation."
+  ansible.builtin.shell: "sh /tmp/vbox/VBoxLinuxAdditions.run"
+  tags:
+    - skip_ansible_lint
+- mount:
+    fstype: iso9660
+    name: /tmp/vbox
+    src: "/home/{{ user }}/VBoxGuestAdditions_{{ virtualbox_version.stdout }}.iso"
+    state: absent
+  name: "Unmount VirtualBox guest additions ISO."
+- ansible.builtin.file:
+    path: "/home/{{ user }}/VBoxGuestAdditions_{{ virtualbox_version.stdout }}.iso"
+    state: absent
+  name: "Delete VirtualBox guest additions ISO."

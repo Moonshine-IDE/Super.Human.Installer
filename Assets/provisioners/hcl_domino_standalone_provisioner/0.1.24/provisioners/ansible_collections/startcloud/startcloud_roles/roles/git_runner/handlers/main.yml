@@ -1,0 +1,12 @@
+---
+-
+  name: Start runner service
+  ansible.builtin.systemd:
+    name: "actions.runner.{{ git_runner_org if git_runner_org != '' else git_runner_repo.split('/')[0] }}.{{ git_runner_name }}.service"
+    state: started
+    daemon_reload: true
+
+-
+  name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true

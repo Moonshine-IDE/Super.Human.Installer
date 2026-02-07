@@ -1,0 +1,80 @@
+---
+run_tasks: true
+
+# Progress reporting
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing HCL Notes"
+
+# Notes Client Version Settings
+notes_major_version: "14"
+notes_minor_version: "5"
+notes_patch_version: "0"
+notes_fixpack_version: "FP3"
+notes_hotfix_version: "SHF20"
+
+# Installation Type (client_only or admin_designer)
+notes_installation_type: "client_only"
+
+# Installer File Names
+client_only_notes_installer_exe: "Notes_14.5_Win64_English.exe"
+admin_designer_notes_installer_exe: "Notes_Designer_Admin_14.5_Win64_English.exe"
+
+# Conditional installer selection based on installation type
+notes_installer_exe: "{{ client_only_notes_installer_exe if notes_installation_type == 'client_only' else admin_designer_notes_installer_exe }}"
+
+#Notes_Designer_Admin_14.0_Win64_English.exe
+notes_fixpack_exe: "Notes_1400FP3_Win64.exe"
+notes_hotfix_exe: "1400FP3SHF20_W64_standard.exe"
+
+# Installation Control
+notes_installer_fixpack_install: false
+notes_installer_hotfix_install: false
+
+# Installation Directories
+notes_install_dir: "C:\\Program Files\\HCL\\Notes"
+notes_temp_dir: "C:\\temp\\notes_install"
+notes_unpack_dir: "C:\\temp\\notes_unpack"
+
+# Ram Disk
+notes_use_ramdisk: false
+notes_ramdisk_path: "R"
+notes_ramdisk_size: "700m"
+notes_ramdisk_label: "Marvel"
+notes_ramdisk_filesystem: "NTFS"
+
+# Multi-user Installation Settings
+notes_multiuser_enabled: true
+notes_multiuser_base_dir: "R"
+notes_multiuser_common_dir: "C:\\ProgramData"
+notes_citrix_mode: true
+notes_include_transform: false
+
+# Download Settings
+installer_url_app_path: "SHI"
+
+# Cleanup Settings
+notes_cleanup_temp_files: true
+notes_keep_installers: false
+
+# Installation Verification
+notes_exe_path: "{{ notes_install_dir }}\\notes.exe"
+
+# MST Transform File
+notes_mst_file: "HCL Notes 14.5 x64.mst"
+
+marvel_client_dll_artifact: mc64-14.5.7.11267.dll
+marvel_client_dll: mc64.dll
+
+# Marvel Client Configuration
+notes_enable_marvel_client: false
+notes_marvel_client_network_directory: "P:\\MarvelClient"
+notes_marvel_client_db: "%notes_homeserver%!!panagenda\\panagenda.nsf"
+notes_marvel_client_db_notresolvable: "CN=domino-42.prominic.net/O=PNI!!panagenda\\panagenda.nsf"
+notes_marvel_client_db_unavailable: "CN=domino-42.prominic.net/O=PNI!!panagenda\\panagenda.nsf"
+notes_marvel_client_support_idvault: "1"
+notes_marvel_client_allow_sync_during_setup: "2"
+notes_marvel_client_allow_sync_during_setup_fixprompt: "1"
+
+notes_14_admin_hack_for_multiuser_single_client: true
+notes_14_admin_hack_for_multiuser_single_client_url_app_path: "SHI/Notes/14-admin-hack"

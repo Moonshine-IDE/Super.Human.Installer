@@ -1,0 +1,51 @@
+---
+# tasks file for snmp - Windows
+
+- name: "Installing and configuring SNMP Service"
+  block:
+    -
+      name: "Installing SNMP Service"
+      ansible.windows.win_powershell:
+        script: Install-WindowsFeature SNMP-Service -IncludeAllSubFeature -IncludeManagementTools
+
+    -
+      name: "Configuring SNMP"
+      block:
+        -
+          name: "Setting sysContact"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
+            name: sysContact
+            data: "{{ email | default('admin@example.com') }}"
+            type: string
+
+        -
+          name: "Setting sysLocation"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\services\SNMP\Parameters\RFC1156Agent
+            name: sysLocation
+            data: "{{ syslocation | default('Server Room') }}"
+            type: string
+
+        -
+          name: "Setting ValidCommunities"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\ValidCommunities
+            name: "{{ validcommunities | default('public') }}"
+            data: 4
+            type: dword
+
+        -
+          name: "Setting PermittedManagers"
+          ansible.windows.win_regedit:
+            path: HKLM:\SYSTEM\CurrentControlSet\Services\SNMP\Parameters\PermittedManagers
+            name: "2"
+            data: "0.0.0.0"
+            type: string
+
+    -
+      name: "Starting and enabling SNMP service"
+      ansible.windows.win_service:
+        name: SNMP
+        state: started
+        start_mode: auto

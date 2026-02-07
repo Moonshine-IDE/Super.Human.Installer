@@ -1,0 +1,577 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 1 of 1)"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name + ' - Step 1') }}"
+
+-
+  name: "Auto-detect VoltMX installation directories"
+  when: run_tasks
+  block:
+    -
+      name: "Ensure VoltMX base directory exists"
+      ansible.builtin.file:
+        path: "{{ service_home_dir }}/voltmx-foundry"
+        state: directory
+        mode: "0755"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+
+    -
+      name: "Adding Additional packages"
+      ansible.builtin.apt:
+        name: "{{ voltmx_dependencies }}"
+        state: present
+
+    -
+      name: "Find existing VoltMX installation directories"
+      ansible.builtin.find:
+        paths: "{{ service_home_dir }}/voltmx-foundry"
+        file_type: directory
+        patterns: "*"
+      register: voltmx_dirs_found
+
+    -
+      name: "Check if any directories were found"
+      ansible.builtin.set_fact:
+        voltmx_has_dirs: "{{ voltmx_dirs_found.files | length > 0 }}"
+
+    -
+      name: "Extract numeric directory names"
+      ansible.builtin.set_fact:
+        numeric_dirs: >-
+          {{ voltmx_dirs_found.files 
+             | map(attribute='path') 
+             | map('basename') 
+             | select('match', '^\\d+$') 
+             | list }}
+      when: voltmx_has_dirs
+    
+    -
+      name: "Check if any numeric directories were found"
+      ansible.builtin.set_fact:
+        has_numeric_dirs: "{{ numeric_dirs is defined and numeric_dirs | length > 0 }}"
+      when: voltmx_has_dirs
+    
+    -
+      name: "Calculate highest numeric directory (when found)"
+      ansible.builtin.set_fact:
+        voltmx_highest_num: "{{ numeric_dirs | map('int') | sort | last }}"
+      when: voltmx_has_dirs and has_numeric_dirs
+      
+    -
+      name: "Set fallback highest number"
+      ansible.builtin.set_fact:
+        voltmx_highest_num: -1
+      when: not voltmx_has_dirs or not has_numeric_dirs | default(false)
+      
+    -
+      name: "Set installation iteration based on upgrade flag"
+      ansible.builtin.set_fact:
+        voltmx_local_iteration: "{% if voltmx_upgrade | default(false) and voltmx_highest_num >= 0 %}{{ voltmx_highest_num + 1 }}{% elif voltmx_highest_num >= 0 %}{{ voltmx_highest_num }}{% else %}0{% endif %}"
+    
+    -
+      name: "Set database reuse option for upgrades"
+      ansible.builtin.set_fact:
+        voltmx_db_exist_choice: 1
+      when: voltmx_upgrade | default(false) and voltmx_highest_num >= 0
+
+    -
+      name: "Set previous installation directory"
+      ansible.builtin.set_fact:
+        voltmx_previous_install_dir: "{{ (voltmx_highest_num >= 0) | ternary(service_home_dir + '/voltmx-foundry/' + (voltmx_highest_num | string), '') }}"
+
+    -
+      name: "Display VoltMX installation directories and settings"
+      ansible.builtin.debug:
+        msg: 
+          - "Current installation directory: {{ voltmx_installation_dir }}"
+          - "Previous installation directory: {{ voltmx_previous_install_dir }}"
+          - "Database exist choice: {{ voltmx_db_exist_choice }} ({{ '0=Create new databases' if voltmx_db_exist_choice == 0 else '1=Use existing databases' }})"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Creating VoltMX installation directories"
+      ansible.builtin.file:
+        mode: u=rwX,g=rX,o=rX
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+      with_items:
+        - "{{ installer_dir }}"
+        - "{{ installer_dir }}/voltmx"
+        - "{{ installer_dir }}/voltmx/archives"
+        - "{{ installer_dir }}/voltmx/core"
+
+    -
+      name: "Checking if the VoltMX Installer archive is at /voltmx/archives/{{ voltmx_installer_archive }}"
+      register: voltmx_server_installer_check
+      ansible.builtin.stat:
+        path: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+        checksum_algorithm: sha256
+
+    -
+      name: "Checking if VoltMX has been installed"
+      register: voltmx_server_installed
+      ansible.builtin.stat:
+        path: "{{ completed_dir }}/voltmxsetup"
+        checksum_algorithm: sha256
+
+    -
+      name: "Checking if the VoltMX extracted installer is already in voltmx/core at {{ installer_dir }}"
+      register: voltmx_extracted
+      ansible.builtin.stat:
+        path: "{{ installer_dir }}/voltmx/core/VoltFoundry_Installer_Linux"
+        checksum_algorithm: sha256
+
+    -
+      name: "Downloading VoltMX from {{ installer_base_url }} using Bearer token"
+      register: voltlsresult_bearer
+      ansible.builtin.get_url:
+        validate_certs: false
+        mode: "0755"
+        url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ voltmx_installer_archive }}"
+        dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+        headers:
+          Authorization: "Bearer {{ secrets.installer_url_bearer }}"
+      when: 
+        - not voltmx_server_installer_check.stat.exists 
+        - not voltmx_server_installed.stat.exists 
+        - not voltmx_extracted.stat.exists
+        - secrets.installer_url_bearer is defined
+        - secrets.installer_url_bearer != ''
+      failed_when: false
+
+    -
+      name: "Downloading VoltMX from {{ installer_base_url }} using basic auth"
+      register: voltlsresult
+      until: "voltlsresult is not failed"
+      retries: 3
+      ansible.builtin.get_url:
+        validate_certs: false
+        mode: "0755"
+        url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ voltmx_installer_archive }}"
+        dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+        username: "{{ installer_url_user }}"
+        password: "{{ secrets.installer_url_pass }}"
+      when: 
+        - not voltmx_server_installer_check.stat.exists 
+        - not voltmx_server_installed.stat.exists 
+        - not voltmx_extracted.stat.exists
+        - (secrets.installer_url_bearer is not defined or secrets.installer_url_bearer == '' or voltlsresult_bearer is failed)
+
+    -
+      name: "Extracting voltmx from {{ voltmx_installer_archive }}"
+      when: not voltmx_server_installed.stat.exists or not voltmx_extracted.stat.exists
+      ansible.builtin.unarchive:
+        src: "{{ installer_dir }}/voltmx/archives/{{ voltmx_installer_archive }}"
+        dest: "{{ installer_dir }}/voltmx/core"
+        remote_src: true
+        creates: "{{ installer_dir }}/voltmx/core/VoltFoundry_Installer_Linux"
+
+    -
+      name: "Adding VoltMX silent install response file"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.template:
+        dest: "{{ installer_dir }}/voltmx/installer.properties"
+        mode: a+x
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        src: "installer.properties.j2"
+
+    -
+      name: "Setting VoltMX Installer to be Executable"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.file:
+        mode: a+x
+        path: "{{ item }}"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+      with_items:
+        - "{{ installer_dir }}/voltmx/core/VoltFoundry_Installer_Linux/{{ voltmx_installer_bin }}"
+
+    -
+      name: "Creating VoltMX App Directory"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+      loop:
+        - "{{ voltmx_installation_dir }}"
+        - "{{ voltmx_war_builder_dir }}"
+
+    -
+      name: "Copying Original installer.properties to /tmp/installer.properties.orig"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.copy:
+        remote_src: true
+        mode: "0644"
+        src: "{{ installer_dir }}/voltmx/core/VoltFoundry_Installer_Linux/installer.properties"
+        dest: /tmp/installer.properties.orig
+
+    -
+      name: "Removing Original installer.properties"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.file:
+        path: "{{ installer_dir }}/voltmx/core/VoltFoundry_Installer_Linux/installer.properties"
+        state: absent
+
+    -
+      name: "Removing Original installer.properties"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.file:
+        path: "/etc/authbind/byport/{{ voltmx_port_forwards[1].guest }}"
+        mode: "500"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        state: touch
+
+    -
+      name: "Installing VoltMX Via Silent Installer"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.shell: "/usr/bin/authbind --deep ./{{ voltmx_installer_bin }} -f {{ installer_dir }}/voltmx/installer.properties -i silent && touch {{ completed_dir }}/voltmx_installer_completed"
+      become: true
+      become_user: "{{ service_user }}"
+      args:
+        chdir: "{{ installer_dir }}/voltmx/core/VoltFoundry_Installer_Linux"
+        executable: /bin/bash
+        creates: "{{ completed_dir }}/voltmx_installer_completed"
+
+    -
+      name: "Getting updated process IDs of java"
+      when: not voltmx_server_installed.stat.exists
+      community.general.pids:
+        name: java
+      register: updated_pids_of_java
+
+    -
+      name: "Printing the updated process IDs"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.debug:
+        msg: "Updated PIDS of java:{{ updated_pids_of_java.pids | join(',') }}"
+
+    -
+      name: "Killing any lingering java processes if they exist"
+      when: not voltmx_server_installed.stat.exists and updated_pids_of_java.pids | length > 0
+      ansible.builtin.shell: "kill -9 {{ updated_pids_of_java.pids | join(' ') }}"
+      ignore_errors: true
+
+    -
+      name: "Import SSL certificate into cacerts"
+      when: not voltmx_server_installed.stat.exists
+      become_user: "{{ service_user }}"
+      community.general.java_cert:
+        executable: "{{ voltmx_installation_dir}}/jre/bin/keytool"
+        cert_path: "{{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt"
+        keystore_path: "{{ voltmx_installation_dir}}/jre/lib/security/cacerts"
+        keystore_pass: changeit ## Do not change this is the default password for the keystore
+        state: present
+        cert_alias: "{{ settings.hostname }}.{{ settings.domain }}"
+        trust_cacert: true
+
+    -
+      name: "Placing VoltMX Service scripts"
+      become: true
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.template:
+        owner: "{{ item.owner }}"
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "a+x"
+      loop:
+        - { src: 'voltmx.service.j2', dest: '/etc/systemd/system/voltmx.service', owner: '{{ service_user }}' }
+
+    -
+      name: "Setting up VoltMX for Reverse Proxy"
+      when: not voltmx_server_installed.stat.exists and voltmx_port_forwards[1].guest is defined
+      become: true
+      become_user: "{{ service_user }}"
+      block:
+        -
+          name: "Formatting tomcat server.xml file with xmlstarlet"
+          ansible.builtin.shell:
+            cmd: "xmlstarlet ed -d '//comment()' {{ voltmx_installation_dir }}/tomcat/conf/server.xml > /tmp/server.xml.formatted && cp /tmp/server.xml.formatted {{ voltmx_installation_dir }}/tomcat/conf/server.xml"
+          args:
+            executable: /bin/bash
+          register: xmlformat_result
+          changed_when: xmlformat_result.rc == 0
+
+        -
+          name: "Removing existing HTTP connector"
+          ansible.builtin.xml:
+            path: "{{ voltmx_installation_dir }}/tomcat/conf/server.xml"
+            xpath: "/Server/Service/Connector[@server='HCL' and not(@SSLEnabled='true')]"
+            state: absent
+            namespaces: {}
+
+        -
+          name: "Removing existing HTTPS connector"
+          ansible.builtin.xml:
+            path: "{{ voltmx_installation_dir }}/tomcat/conf/server.xml" 
+            xpath: "/Server/Service/Connector[@SSLEnabled='true' or @port='8443' or @port='{{ voltmx_port_forwards[1].guest }}']"
+            state: absent
+            namespaces: {}
+
+        -
+          name: "Adding new HTTP connector"
+          ansible.builtin.xml:
+            path: "{{ voltmx_installation_dir }}/tomcat/conf/server.xml"
+            xpath: "/Server/Service"
+            add_children:
+              - Connector:
+                  server: "HCL"
+                  port: "{{ voltmx_port_forwards[0].guest }}"
+                  protocol: "HTTP/1.1"
+                  maxHttpHeaderSize: "8192"
+                  maxThreads: "150"
+                  enableLookups: "false"
+                  acceptCount: "25"
+                  disableUploadTimeout: "true"
+                  tcpNoDelay: "true"
+                  compression: "on"
+                  compressableMimeType: "text/css,text/javascript,text/html"
+                  connectionTimeout: "20000"
+            namespaces: {}
+
+        -
+          name: "Adding new HTTPS connector"
+          ansible.builtin.xml:
+            path: "{{ voltmx_installation_dir }}/tomcat/conf/server.xml"
+            xpath: "/Server/Service"
+            add_children:
+              - Connector:
+                  server: "HCL"
+                  port: "{{ voltmx_port_forwards[1].guest | string }}"
+                  protocol: "HTTP/1.1"
+                  SSLEnabled: "true"
+                  sslProtocol: "TLS"
+                  scheme: "https"
+                  secure: "true"
+                  keystoreFile: "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}.jks"
+                  keystorePass: "{{ cert_pass }}"
+                  keystoreType: "JKS"
+                  maxThreads: "150"
+                  minSpareThreads: "25"
+                  maxSpareThreads: "150"
+                  maxHttpHeaderSize: "8192"
+                  connectionTimeout: "20000"
+                  clientAuth: "false"
+                  enableLookups: "false"
+                  acceptCount: "25"
+                  disableUploadTimeout: "true"
+                  tcpNoDelay: "true"
+                  compression: "on"
+                  compressionMinSize: "512000"
+                  compressableMimeType: "text/html,text/xml,text/css,text/plain,text/javascript,application/x-javascript,application/javascript,application/json,application/xml"
+                  proxyName: "{{ settings.hostname }}.{{ settings.domain }}"
+                  proxyPort: "{{ voltmx_port_forwards[1].guest | string }}"
+            namespaces: {}
+
+        -
+          name: "Create scripts directory"
+          ansible.builtin.file:
+            path: "{{ voltmx_installation_dir }}/scripts"
+            state: directory
+            mode: "0755"
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+
+        -
+          name: "Rendering stored procedure to a temporary file"
+          ansible.builtin.template:
+            src: "voltmx_change_host_and_port.sql.j2"
+            dest: "/tmp/voltmx_change_host_and_port.sql"
+            mode: "0644"
+
+        -
+          name: "Rebuilding VoltMX war files"
+          when: voltmx_rebuild_war_files
+          block:
+            -
+              name: "Tasks to prepare and build WARs in builder directory"
+              become_user: "{{ service_user }}"
+              block:
+                -
+                  name: "Ensuring war-builder parent directory exists"
+                  ansible.builtin.file:
+                    path: "{{ voltmx_war_builder_dir }}"
+                    state: directory
+                    mode: "0755"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+
+                -
+                  name: "Copying original war files to war-builder directory"
+                  ansible.builtin.copy:
+                    remote_src: true
+                    mode: "0644"
+                    src: "{{ voltmx_installation_dir }}/tomcat/webapps/{{ item }}.war"
+                    dest: "{{ voltmx_war_builder_dir }}/{{ item }}.war"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Clearing existing war builder extraction directories"
+                  ansible.builtin.file:
+                    path: "{{ voltmx_war_builder_dir }}/{{ item }}"
+                    state: absent
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Recreating war builder extraction directories"
+                  ansible.builtin.file:
+                    path: "{{ voltmx_war_builder_dir }}/{{ item }}"
+                    state: directory
+                    mode: "0755"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Expanding war files using unarchive module"
+                  ansible.builtin.unarchive:
+                    src: "{{ voltmx_war_builder_dir }}/{{ item }}.war"
+                    dest: "{{ voltmx_war_builder_dir }}/{{ item }}/"
+                    remote_src: yes
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Ensure properties directories exist after extraction"
+                  ansible.builtin.file:
+                    path: "{{ voltmx_war_builder_dir }}/{{ item }}/WEB-INF/classes"
+                    state: directory
+                    mode: "0755"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Updating property files"
+                  ansible.builtin.lineinfile:
+                    path: "{{ item.path }}"
+                    regexp: "{{ item.regexp }}"
+                    line: "{{ item.line }}"
+                    create: yes
+                    mode: "0644"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                    insertafter: EOF
+                  loop:
+                    - path: "{{ voltmx_war_builder_dir }}/accounts/WEB-INF/classes/accounts.properties"
+                      regexp: '^WAAS_BASE_URL='
+                      line: "WAAS_BASE_URL=https://{{ settings.hostname }}.{{ settings.domain }}/workspace"
+                    - path: "{{ voltmx_war_builder_dir }}/mfconsole/WEB-INF/classes/config.properties"
+                      regexp: '^KONY_ACCOUNT_API_BASE_URL='
+                      line: "KONY_ACCOUNT_API_BASE_URL=https://{{ settings.hostname }}.{{ settings.domain }}/accounts/api/v1_0/"
+
+                -
+                  name: "Creating new war files with archive module"
+                  community.general.archive:
+                    path: "{{ voltmx_war_builder_dir }}/{{ item }}/"
+                    dest: "{{ voltmx_war_builder_dir }}/{{ item }}.war-new"
+                    format: "zip"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                    mode: "0644"
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+            -
+              name: "Deploying new WARs to Tomcat"
+              become: true
+              block:
+                - name: "Removing original war files from Tomcat webapps"
+                  ansible.builtin.file:
+                    path: "{{ voltmx_installation_dir }}/tomcat/webapps/{{ item }}.war"
+                    state: absent
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Removing original extracted war directories from Tomcat webapps"
+                  ansible.builtin.file:
+                    path: "{{ voltmx_installation_dir }}/tomcat/webapps/{{ item }}"
+                    state: absent
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+                -
+                  name: "Copying new war files to Tomcat webapps directory"
+                  ansible.builtin.copy:
+                    remote_src: true
+                    src: "{{ voltmx_war_builder_dir }}/{{ item }}.war-new"
+                    dest: "{{ voltmx_installation_dir }}/tomcat/webapps/{{ item }}.war"
+                    owner: "{{ service_user }}"
+                    group: "{{ service_group }}"
+                    mode: "0644"
+                  loop:
+                    - "accounts"
+                    - "mfconsole"
+
+    -
+      name: "Starting VoltMX via systemd Service"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.service:
+        name: voltmx
+        state: started
+        enabled: true
+
+    #-
+    #  name: "Adding installer.properties to cleanup list"
+    #  ansible.builtin.set_fact:
+    #    lockdown_file_cleanups_list: "{{ lockdown_file_cleanups_list | default([]) + [installer_dir + '/voltmx/installer.properties'] }}"
+
+    -
+      name: "Checking VoltMX is listening on port {{ voltmx_port_forwards[1].guest }}"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.wait_for:
+        port: "{{ voltmx_port_forwards[1].guest }}"
+        delay: 5
+        timeout: 300
+        msg: "Timeout waiting for {{ voltmx_port_forwards[1].guest }} to respond"
+      register: port_check
+
+    -
+      name: "Marking VoltMX as Installed"
+      when: not voltmx_server_installed.stat.exists
+      ansible.builtin.file:
+        path: "{{ completed_dir }}/voltmxsetup"
+        mode: "0644"
+        state: touch

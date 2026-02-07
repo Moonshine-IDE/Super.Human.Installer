@@ -1,0 +1,42 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Setting Registry to show Hidden files"
+      block:
+        -
+          name: "Setting Hidden to 1 to show hidden files"
+          ansible.windows.win_regedit:
+            path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+            name: Hidden
+            data: "{{ 1 if show_hidden_files else 2 }}"
+            type: dword
+
+        -
+          name: "Setting ShowSuperHidden to show system/super-hidden items"
+          ansible.windows.win_regedit:
+            path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+            name: ShowSuperHidden
+            data: "{{ 1 if show_super_hidden_files else 0 }}"
+            type: dword

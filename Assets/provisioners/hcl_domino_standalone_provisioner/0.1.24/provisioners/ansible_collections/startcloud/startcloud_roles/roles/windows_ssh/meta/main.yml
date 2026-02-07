@@ -1,0 +1,28 @@
+galaxy_info:
+  role_name: windows_ssh
+  author: MarkProminic
+  description: Configure SSH settings, keys, and Cygwin integration
+  company: STARTCloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Windows
+      versions:
+        - '10'
+        - '11'
+        - '2019'
+        - '2022'
+
+  galaxy_tags: 
+    - windows
+    - ssh
+    - cygwin
+    - keys
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

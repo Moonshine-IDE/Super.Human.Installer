@@ -1,0 +1,43 @@
+{ 
+    "title": "Update the ACL to give all users in this organization sufficient access for the agents:", 
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Import Documents ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "SuperHumanPortal.nsf", 
+                    "ACL":{
+                      "ACLEntries": [
+                        {
+                          "name": "*/{{ domino_organization }}",
+                          "level": "depositor",
+                          "type": "personGroup",
+                          "isPublicReader": true,
+                          "isPublicWriter": false,
+                          "canCreateDocuments": true,
+                          "canDeleteDocuments": false
+                        },
+                        {
+                          "name": "AutomaticallyCrossCertifiedUsers",
+                          "level": "manager",
+                          "type": "personGroup",
+                          "isPublicReader": true,
+                          "isPublicWriter": true,
+                          "canCreateDocuments": true,
+                          "canDeleteDocuments": true
+                        },
+                        {
+                          "name": "{{ domino_admin_user_first_name }} {{ domino_admin_user_last_name }}/{{ domino_organization }}",
+                          "level": "manager",
+                          "canReplicateOrCopyDocuments": true,
+                          "canDeleteDocuments": true
+                        }
+                      ]
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,68 @@
+--- 
+- 
+  name: "Installing epel-release and Perl-Sys-Syslog for TSAMP"
+  yum: 
+    name: 
+      - epel-release
+      - perl-Sys-Syslog
+- 
+  mode: a+x
+  name: "Preparing TSAMP configuration Scripts: installSAM.centos"
+  template: "src=installSAM.centos dest=/local/server_t/db2/linuxamd64/tsamp/installSAM.centos"
+- 
+  mode: a+x
+  name: "Preparing TSAMP configuration Scripts: prereqSAM.centos"
+  template: "src=prereqSAM.centos dest=/local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos"
+- 
+  command: "sh /local/server_t/db2/linuxamd64/tsamp/installSAM.centos"
+  name: "Running Pre-Requisite Check"
+- 
+  command: "sh /local/server_t/db2/linuxamd64/tsamp/prereqSAM.centos --silent"
+  name: "Running Installation Script"
+- 
+  file: 
+    mode: "0777"
+    path: /var/opt/sam/lic/nodelock
+  name: "Ensuring License is Writable"
+- 
+  name: "Preparing TSAMP Licensing"
+  template: "sam41.lic dest=/local/server_t/db2/linuxamd64/tsamp/sam41.lic"
+- 
+  command: "/usr/bin/samlicm -i /local/server_t/db2/linuxamd64/tsamp/sam41.lic"
+  name: "Licensing TSAMP"
+- 
+  command: /opt/ibm/db2/V11.1/install/tsamp/db2cptsa
+  name: "Preparing TSAMP"
+- 
+  command: "export CT_MANAGEMENT_SCOPE=2 && preprpnode db2 db2z"
+  name: "Setting Environmental Variable and preparing the for Node Clustering"
+- 
+  name: "Preparing TSAMP Licensing"
+  template: "db2haicu_setup.xml dest=/home/db2inst1/db2haicu_setup.xml"
+- 
+  command: "db2haicu -f /home/db2inst1/db2haicu_setup.xml"
+  name: "Importing Domain configuration into TSAMP and Preparing Nodes"
+- 
+  name: "Running db2haicu"
+  shell: |
+      db2haicu <<EOF
+      1
+      1    
+      EOF	
+- 
+  name: "Running db2haicu"
+  shell: |-
+      db2haicu <<EOF
+      3
+      1
+      1
+      4
+      1
+      "{{ db2dbname }}"
+      "{{ tsamp_vip }}"
+      255.255.0.0
+      1
+      1
+      2
+      2
+      EOF

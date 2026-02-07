@@ -1,0 +1,31 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Setting up GitHub JIT Runner"
+
+# Runner configuration
+git_runner_user: "{{ service_user | default('startcloud') }}"
+git_runner_home: "{{ service_home_dir | default('/home/' + git_runner_user) }}"
+git_runner_dir: "{{ git_runner_home }}/actions-runner"
+git_runner_work_folder: "_work"
+
+# GitHub configuration (from secrets.yml or vars)
+git_runner_github_token: "{{ secrets.github_token | default('') }}"
+git_runner_org: ""  # User must specify: org name OR owner/repo
+git_runner_repo: ""  # Optional: if set, registers to repo instead of org
+git_runner_name: "runner-{{ ansible_hostname }}"
+# Used to determine which roles can run.  "super.human.installer" is required for the GitHub Action template
+git_runner_labels: ["self-hosted", "Linux", "X64", "domino", "super.human.installer"]
+git_runner_group_id: 1  # Default runner group
+
+# Runner behavior
+git_runner_ephemeral: false  # Set to true for JIT (one-job) runners, false for persistent runners
+git_runner_version: "latest"  # Or specific version like "2.311.0"
+
+# Systemd service
+git_runner_service_name: "github-actions-runner"
+
+# Environment configuration
+git_runner_use_environment_file: true  # Set to false to skip environment file creation
+git_runner_environment_file_path: "{{ git_runner_dir }}/environment"

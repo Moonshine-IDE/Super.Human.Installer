@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  role_name: vagrant_box_template_creator
+  author: STARTcloud
+  description: Ansible role to orchestrate the building, packaging, and publishing of Packer-based VM templates
+  company: STARTcloud
+  license: Proprietary
+  min_ansible_version: 2.9
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: EL
+      versions:
+        - 8
+        - 9
+
+  galaxy_tags:
+    - packer
+    - vagrant
+    - virtualization
+    - cloud
+    - automation
+
+dependencies: []

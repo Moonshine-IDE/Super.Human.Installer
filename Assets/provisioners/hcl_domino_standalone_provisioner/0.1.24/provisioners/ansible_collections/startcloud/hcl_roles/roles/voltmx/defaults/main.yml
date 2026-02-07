@@ -1,0 +1,61 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing VoltMX Foundry"
+
+voltmx_dependencies:
+  - xmlstarlet
+  - python3-lxml
+
+voltmx_installation_type: Development
+voltmx_local_iteration: 0 #0 for local, add one for each update
+voltmx_installation_dir: "{{ service_home_dir }}/voltmx-foundry/{{ voltmx_local_iteration }}"
+voltmx_intaller_version: 9.5.18.1 # Name changed from VoltMXFoundrySetup to VoltFoundrySetup before: 9.5.15.2, 9.5.1.1
+#voltmx_installer_archive: "VoltMXFoundrySetup-{{ voltmx_intaller_version }}_GA.tar.gz"
+voltmx_installer_archive: "VoltFoundrySetup-{{ voltmx_intaller_version }}_GA.tar.gz"
+voltmx_installer_bin: "VoltFoundryInstaller-{{ voltmx_intaller_version }}_GA.bin"
+installer_url_app_path: "SHI/VoltMX"
+voltmx_war_builder_dir: "/tmp/war-builder"
+voltmx_admin_first_name: VoltMX
+voltmx_admin_last_name: Admin
+voltmx_admin_email: "{{ email }} | default('support@startcloud.com')"
+voltmx_admin_pass: "SomeRandomPasswordSecureMe@!"
+voltmx_port_forwards:
+  -
+    guest: 8080
+    url: "voltmx"
+  -
+    guest: 443
+    url: "voltmx"
+
+# Database configuration
+voltmx_db_prefix: "voltmx"
+voltmx_db_suffix: "1"
+
+voltmx_rebuild_war_files: true
+
+# Auto-registration configuration
+voltmx_auto_register: false
+voltmx_auto_reg_url: "https://{{ settings.hostname }}.{{ settings.domain }}"
+
+# Set to true when upgrading to a new version
+voltmx_upgrade: false
+
+voltmx_db_exist_choice: 0
+
+# Set to 1 to automatically update encryption keys during upgrade,
+# or 0 to manually update encryption keys after installation
+voltmx_auto_update_encryption_keys: 1
+
+# Path to previous VoltMX installation - used for upgrading encryption keys
+# This is auto-populated when using the directory auto-detection
+voltmx_previous_install_dir: ""
+
+voltmx_selfsigned_cert_ou: STARTcloud
+voltmx_selfsigned_cert_company_name: STARTcloud
+voltmx_selfsigned_cert_city: Rantoul
+voltmx_selfsigned_cert_state: IL
+voltmx_selfsigned_cert_country: US
+
+voltmx_use_self_signed: true

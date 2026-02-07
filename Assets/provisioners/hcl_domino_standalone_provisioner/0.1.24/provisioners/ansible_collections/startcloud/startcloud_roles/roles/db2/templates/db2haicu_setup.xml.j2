@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DB2Cluster xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="db2ha.xsd" version="1.0" clusterManagerName="TSA">
+   <ClusterDomain domainName="hadr_domain">
+      <Quorum quorumDeviceProtocol="network" quorumDeviceName="{{  gateway  }}" />
+      <PhysicalNetwork physicalNetworkName="db2_private_network_0" physicalNetworkProtocol="ip">
+         <Interface interfaceName="{{keepalive.nic}}" clusterNodeName="{{  db2_a_hadr_host  }}">
+            <IPAddress baseAddress="{{  db2_a_hadr_ip  }}" subnetMask="255.255.0.0" networkName="db2_private_network_0" />
+         </Interface>
+         <Interface interfaceName="{{keepalive.nic}}" clusterNodeName="{{  db2_a_hadr_host  }}">
+            <IPAddress baseAddress="{{  db2_b_hadr_ip  }}" subnetMask="{{  subnet }}" networkName="db2_private_network_0" />
+         </Interface>
+      </PhysicalNetwork>
+      <ClusterNode clusterNodeName="{{  db2_a_hadr_host  }}" />
+      <ClusterNode clusterNodeName="{{  db2_b_hadr_host  }}" />
+   </ClusterDomain>
+   <FailoverPolicy>
+      <HADRFailover />
+   </FailoverPolicy>
+   <DB2PartitionSet>
+      <DB2Partition dbpartitionnum="0" instanceName="{{  db2usr  }}" />
+   </DB2PartitionSet>
+   <HADRDBSet>
+      <HADRDB databaseName="{{  db2dbname  }}" localInstance="{{  db2usr  }}" remoteInstance="{{  db2usr  }}" localHost="{{  db2_a_hadr_host  }}" remoteHost="{{  db2_b_hadr_host  }}" monitorDataMounts="false" />
+      <VirtualIPAddress baseAddress="{{  tsamp_vip  }}" subnetMask="{{  subnet  }}" networkName="db2_private_network_0" />
+   </HADRDBSet>
+</DB2Cluster>

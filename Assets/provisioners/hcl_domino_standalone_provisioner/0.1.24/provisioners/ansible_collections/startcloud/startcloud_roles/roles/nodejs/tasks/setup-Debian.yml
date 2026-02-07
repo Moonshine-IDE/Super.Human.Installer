@@ -1,0 +1,111 @@
+---
+-
+  name: "Ensuring dependencies are present"
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+
+-
+  name: "Gathering DEB architecture"
+  ansible.builtin.command: dpkg --print-architecture
+  register: deb_architecture
+  changed_when: false
+
+-
+  name: "Validating architecture is supported"
+  ansible.builtin.assert:
+    that:
+      - deb_architecture.stdout in ['amd64', 'arm64', 'armhf']
+    fail_msg: "Unsupported architecture: {{ deb_architecture.stdout }}. Only amd64, arm64, and armhf are supported."
+    success_msg: "Architecture {{ deb_architecture.stdout }} is supported."
+
+-
+  name: "Creating keyrings directory for repository GPG keys"
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+-
+  name: "Removing old NodeSource GPG key (if present)"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /usr/share/keyrings/nodesource.gpg
+    - /etc/apt/signing-key-nodesource-repo.asc
+
+-
+  name: "Removing old NodeSource repository list (if present)"
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/nodesource.list
+    state: absent
+
+-
+  name: "Downloading armored NodeSource GPG key"
+  ansible.builtin.get_url:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    dest: /tmp/nodesource-key.asc
+    mode: '0644'
+
+-
+  name: "Dearmoring NodeSource GPG key"
+  ansible.builtin.command:
+    cmd: "gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg /tmp/nodesource-key.asc"
+    creates: /etc/apt/keyrings/nodesource.gpg
+
+-
+  name: "Setting permissions on dearmored NodeSource GPG key"
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/nodesource.gpg
+    mode: '0644'
+
+-
+  name: "Cleaning up temporary armored key file"
+  ansible.builtin.file:
+    path: /tmp/nodesource-key.asc
+    state: absent
+
+-
+  name: "Adding NodeSource repository for Node.js"
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ deb_architecture.stdout }} signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_{{ nodejs_version }} nodistro main"
+    state: present
+    filename: nodesource
+    update_cache: false
+
+-
+  name: "Creating APT preferences for N|solid package"
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/nsolid
+    content: |
+      Package: nsolid
+      Pin: origin deb.nodesource.com
+      Pin-Priority: 600
+    mode: '0644'
+
+-
+  name: "Creating APT preferences for nodejs package"
+  ansible.builtin.copy:
+    dest: /etc/apt/preferences.d/nodejs
+    content: |
+      Package: nodejs
+      Pin: origin deb.nodesource.com
+      Pin-Priority: 600
+    mode: '0644'
+
+-
+  name: "Updating apt cache after repository configuration"
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 600
+
+-
+  name: "Ensuring Node.js and npm are installed"
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
