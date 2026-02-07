@@ -48,7 +48,7 @@ jobs:
           echo "Haxe Env Flag: ${{ env.haxe_flag }}"
 
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
@@ -118,7 +118,7 @@ jobs:
         run: tree ${{ env.bin_path }}
 
       - name: Upload bin
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: ${{ env.app_name }}-linux-bin
@@ -144,7 +144,7 @@ jobs:
           output-path: Build/${{ env.app_name }}-x86_64.AppImage
 
       - name: Upload AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: ${{ env.app_name }}-linux-installer

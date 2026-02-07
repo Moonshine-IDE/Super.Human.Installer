@@ -55,7 +55,7 @@ jobs:
           ls -la ./
 
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Override project.xml version
         uses: Moonshine-IDE/xml-replace-action@v2.0
@@ -142,7 +142,7 @@ jobs:
         run: ls -r ${{ env.bin_path }}
 
       - name: Upload bin
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: ${{ env.app_name }}-macos-bin
@@ -279,7 +279,7 @@ jobs:
           mac-notarization-pass: ${{ secrets.MAC_NOTARIZATION_PASS }}
 
       - name: Upload Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: ${{ env.app_name }}-macos-installer

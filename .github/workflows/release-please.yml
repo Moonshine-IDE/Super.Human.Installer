@@ -1,0 +1,296 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: write
+
+jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      major: ${{ steps.release.outputs.major }}
+      minor: ${{ steps.release.outputs.minor }}
+      patch: ${{ steps.release.outputs.patch }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Release Please
+        uses: googleapis/release-please-action@v4
+        id: release
+
+  check-build-keyword:
+    name: Check Build Keyword
+    needs: release-please
+    if: ${{ !needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+    steps:
+      - id: check
+        run: |
+          if [[ "${{ github.event.head_commit.message }}" == *"build-please"* ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+
+  calculate-dev-version:
+    name: Calculate Development Version
+    needs: [release-please, check-build-keyword]
+    if: ${{ !needs.release-please.outputs.release_created && needs.check-build-keyword.outputs.should_build == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Read and increment version
+        id: version
+        run: |
+          # Extract version from project.xml
+          CURRENT_VERSION=$(grep -oP '(?<=<meta version=")[^"]+' project.xml)
+          echo "Current version: $CURRENT_VERSION"
+
+          # Split version into parts
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]}
+          PATCH=${VERSION_PARTS[2]}
+
+          # Increment patch version
+          NEW_PATCH=$((PATCH + 1))
+          DEV_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          DEV_TAG="v${DEV_VERSION}-dev"
+
+          echo "Development version: $DEV_VERSION"
+          echo "Development tag: $DEV_TAG"
+
+          echo "version=$DEV_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$DEV_TAG" >> $GITHUB_OUTPUT
+
+  # Production Builds (when release created)
+  build-linux-prod:
+    name: Build Linux (Production)
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-linux.yml@master
+    secrets: inherit
+    with:
+      env: "Production"
+      version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
+
+  build-macos-prod:
+    name: Build macOS (Production)
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-macos.yml@master
+    secrets: inherit
+    with:
+      env: "Production"
+      version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
+
+  build-windows-prod:
+    name: Build Windows (Production)
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@master
+    secrets: inherit
+    with:
+      env: "Production"
+      version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
+
+  create-production-release:
+    name: Create Production Release
+    needs: [release-please, build-linux-prod, build-macos-prod, build-windows-prod]
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    env:
+      app_name: SuperHumanInstaller
+      version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Download linux installer
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-linux-installer
+
+      - name: Download windows installer
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-windows-installer
+
+      - name: Download windows chocolatey package
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-Choco
+
+      - name: Download macos installer
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-macos-installer
+
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.1.1
+
+      - name: Generate buildinfo
+        uses: devops-actions/json-to-file@v1.0.3
+        with:
+          json: |
+            {
+              "workflow": "production",
+              "version": "${{ env.version }}",
+              "branch": "${{ github.ref_name }}",
+              "commit_sha": "${{ github.sha }}",
+              "build_date": "${{ steps.current-time.outputs.readableTime }}"
+            }
+          filename: buildinfo.json
+
+      - name: Update release with artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.tag }}
+          files: |
+            ${{ env.app_name }}-x86_64.AppImage
+            ${{ env.app_name }}-Setup.pkg
+            ${{ env.app_name }}-Setup.exe
+            ${{ env.app_name }}-Choco.nupkg
+            buildinfo.json
+          fail_on_unmatched_files: true
+
+  # Development Builds (when "build-please" in commit)
+  build-linux-dev:
+    name: Build Linux (Development)
+    needs: [release-please, check-build-keyword, calculate-dev-version]
+    if: ${{ !needs.release-please.outputs.release_created && needs.check-build-keyword.outputs.should_build == 'true' }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-linux.yml@master
+    secrets: inherit
+    with:
+      env: "Development"
+      version: ${{ needs.calculate-dev-version.outputs.version }}
+
+  build-macos-dev:
+    name: Build macOS (Development)
+    needs: [release-please, check-build-keyword, calculate-dev-version]
+    if: ${{ !needs.release-please.outputs.release_created && needs.check-build-keyword.outputs.should_build == 'true' }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-macos.yml@master
+    secrets: inherit
+    with:
+      env: "Development"
+      version: ${{ needs.calculate-dev-version.outputs.version }}
+
+  build-windows-dev:
+    name: Build Windows (Development)
+    needs: [release-please, check-build-keyword, calculate-dev-version]
+    if: ${{ !needs.release-please.outputs.release_created && needs.check-build-keyword.outputs.should_build == 'true' }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@master
+    secrets: inherit
+    with:
+      env: "Development"
+      version: ${{ needs.calculate-dev-version.outputs.version }}
+
+  create-development-release:
+    name: Create Development Release
+    needs: [calculate-dev-version, build-linux-dev, build-macos-dev, build-windows-dev]
+    runs-on: ubuntu-latest
+    env:
+      app_name: SuperHumanInstallerDev
+      version: ${{ needs.calculate-dev-version.outputs.version }}
+      tag: ${{ needs.calculate-dev-version.outputs.tag }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+
+      - name: Download linux installer
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-linux-installer
+
+      - name: Download windows installer
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-windows-installer
+
+      - name: Download windows chocolatey package
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-Choco
+
+      - name: Download macos installer
+        uses: actions/download-artifact@v6
+        with:
+          name: ${{ env.app_name }}-macos-installer
+
+      - name: Get Current Time
+        id: current-time
+        uses: josStorer/get-current-time@v2.1.1
+
+      - name: Generate buildinfo
+        uses: devops-actions/json-to-file@v1.0.3
+        with:
+          json: |
+            {
+              "workflow": "development",
+              "version": "${{ env.version }}",
+              "branch": "${{ github.ref_name }}",
+              "commit_sha": "${{ github.sha }}",
+              "build_date": "${{ steps.current-time.outputs.readableTime }}"
+            }
+          filename: buildinfo.json
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Super.Human.Installer ${{ env.version }} Development
+          tag_name: ${{ env.tag }}
+          target_commitish: ${{ github.sha }}
+          body: |
+            🚧 **Development Release** 🚧
+
+            This is an automated development build from the master branch.
+
+            **Version**: ${{ env.version }}
+            **Build Date**: ${{ steps.current-time.outputs.readableTime }}
+            **Commit**: ${{ github.sha }}
+
+            ⚠️ **Warning**: This is a development release for testing purposes only. Use production releases for stable deployments.
+
+            ## Packages
+            - `SuperHumanInstallerDev-x86_64.AppImage` - Linux AppImage
+            - `SuperHumanInstallerDev-Setup.pkg` - macOS Installer
+            - `SuperHumanInstallerDev-Setup.exe` - Windows Installer
+            - `SuperHumanInstallerDev-Choco.nupkg` - Windows Chocolatey Package
+          draft: true
+          prerelease: true
+          files: |
+            ${{ env.app_name }}-x86_64.AppImage
+            ${{ env.app_name }}-Setup.pkg
+            ${{ env.app_name }}-Setup.exe
+            ${{ env.app_name }}-Choco.nupkg
+            buildinfo.json
+          fail_on_unmatched_files: true
+
+  # Documentation
+  deploy-documentation:
+    name: Deploy Documentation
+    needs: create-production-release
+    if: ${{ needs.release-please.outputs.release_created }}
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/update-documentation.yml@master
+    with:
+      tag_name: ${{ needs.release-please.outputs.tag_name }}

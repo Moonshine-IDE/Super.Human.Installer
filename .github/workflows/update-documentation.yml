@@ -1,12 +1,26 @@
 name: Update Documentation
 
 on:
+  workflow_call:
+    inputs:
+      tag_name:
+        description: 'Release tag name'
+        required: true
+        type: string
+      release_url:
+        description: 'URL to GitHub release'
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name'
+        required: false
+        default: 'v0.0.0-dev'
+        type: string
   push:
     branches:
       - 'master'
-  release:
-    types: [published]
 
 permissions:
   contents: read
@@ -27,7 +41,7 @@ jobs:
       RUBY_VERSION: '3.4.3' # Define Ruby version as an environment variable
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install build dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends autoconf bison build-essential g++ make libssl-dev libyaml-dev libreadline-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm-dev

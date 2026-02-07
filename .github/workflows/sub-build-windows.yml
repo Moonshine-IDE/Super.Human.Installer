@@ -57,7 +57,7 @@ jobs:
           git config --system core.longpaths true
 
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       #  with:
       #    lfs: true
       #
@@ -175,7 +175,7 @@ jobs:
           Copy-Item "Assets\installer\provisioners.7z" -Destination "$destDir\"
 
       - name: Upload bin
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: ${{ env.app_name }}-windows-bin
@@ -248,7 +248,7 @@ jobs:
           sm-keypair-alias: ${{ secrets.SM_KEYPAIR_ALIAS }}
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         with:
           name: ${{ env.app_name }}-windows-installer
@@ -283,7 +283,7 @@ jobs:
             .\Templates\${{ env.choco_dir }}\${{ env.app_name }}-Choco.nupkg
 
       - name: Upload choco package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         continue-on-error: true
         env:
           choco_dir: ${{ inputs.env == 'Production' && 'chocolatey' || 'chocolatey-dev' }}

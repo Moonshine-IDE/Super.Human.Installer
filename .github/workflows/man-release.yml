@@ -62,25 +62,25 @@ jobs:
           echo "Tag: ${{ env.tag }}"
 
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download linux installer
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ env.app_name }}-linux-installer
 
       - name: Download windows installer
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ env.app_name }}-windows-installer
 
       - name: Download windows chocolatey package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ env.app_name }}-Choco
 
       - name: Download macos installer
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ${{ env.app_name }}-macos-installer
 
@@ -102,7 +102,7 @@ jobs:
           filename: buildinfo.json
 
       - name: Create release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           name: Super.Human.Installer v${{ inputs.version }} ${{ inputs.env }}
           tag_name: ${{ env.tag }}
