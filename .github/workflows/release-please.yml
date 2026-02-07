@@ -23,10 +23,22 @@ jobs:
       major: ${{ steps.release.outputs.major }}
       minor: ${{ steps.release.outputs.minor }}
       patch: ${{ steps.release.outputs.patch }}
+      is_patch: ${{ steps.check.outputs.is_patch }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: googleapis/release-please-action@v4
         id: release
+      - id: check
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          PREV=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 2 | tail -n 1 | sed 's/v//')
+          if [[ "$PREV" =~ ^([0-9]+)\.([0-9]+)\. ]] && [ "${BASH_REMATCH[1]}" = "${{ steps.release.outputs.major }}" ] && [ "${BASH_REMATCH[2]}" = "${{ steps.release.outputs.minor }}" ]; then
+            echo "is_patch=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_patch=false" >> $GITHUB_OUTPUT
+          fi
 
   build-linux:
     name: Build Linux
@@ -35,7 +47,7 @@ jobs:
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-linux.yml@master
     secrets: inherit
     with:
-      env: "Production"
+      env: ${{ needs.release-please.outputs.is_patch == 'true' && 'Development' || 'Production' }}
       version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
 
   build-macos:
@@ -45,7 +57,7 @@ jobs:
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-macos.yml@master
     secrets: inherit
     with:
-      env: "Production"
+      env: ${{ needs.release-please.outputs.is_patch == 'true' && 'Development' || 'Production' }}
       version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
 
   build-windows:
@@ -55,7 +67,7 @@ jobs:
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@master
     secrets: inherit
     with:
-      env: "Production"
+      env: ${{ needs.release-please.outputs.is_patch == 'true' && 'Development' || 'Production' }}
       version: ${{ needs.release-please.outputs.major }}.${{ needs.release-please.outputs.minor }}.${{ needs.release-please.outputs.patch }}
 
   release:
@@ -110,6 +122,7 @@ jobs:
   documentation:
     name: Deploy Documentation
     needs: [release-please, release]
+    if: ${{ needs.release-please.outputs.is_patch == 'false' }}
     permissions:
       contents: read
       pages: write
