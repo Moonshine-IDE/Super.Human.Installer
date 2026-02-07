@@ -6,6 +6,8 @@ import superhuman.server.provisioners.AbstractProvisioner;
 import haxe.Template;
 import haxe.io.Path;
 
+using StringTools;
+
 class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator {
     static public function generateContent( sourceTemplate:String, provisioner:AbstractProvisioner ):String {
 
@@ -227,6 +229,37 @@ class StandaloneProvisionerHostsFileGenerator extends AbstractHostsFileGenerator
         replace.ROLE_STARTCLOUD_HAPROXY = RolesUtil.getOtherRole(internalProvisioner.data.version, "haproxy");
         //"- name: startcloud_vagrant_readme";
         replace.ROLE_STARTCLOUD_VAGRANT_README = RolesUtil.getOtherRole(internalProvisioner.data.version, "vagrant_readme");
+
+        // For versions > 0.1.22, scan template for undefined ROLE placeholders
+        // and set them to "false # undefined" to prevent Haxe Template from outputting "null"
+        if (versionGreaterThan22) {
+            var rolePattern = ~/::ROLE_([A-Z_]+)::/g;
+            var templateCopy = sourceTemplate;
+            
+            while (rolePattern.match(templateCopy)) {
+                var placeholderName = "ROLE_" + rolePattern.matched(1);
+                var roleName = rolePattern.matched(1).toLowerCase().replace("_", "-");
+                
+                // Check if this role exists in server.roles
+                var roleExists = false;
+                for (r in internalProvisioner.server.roles.value) {
+                    var serverRoleName = r.value.toLowerCase().replace("-", "_");
+                    var templateRoleName = roleName.replace("-", "_");
+                    
+                    if (serverRoleName == templateRoleName) {
+                        roleExists = true;
+                        break;
+                    }
+                }
+                
+                // If role doesn't exist in server.roles AND isn't already in replace object
+                if (!roleExists && !Reflect.hasField(replace, placeholderName)) {
+                    Reflect.setField(replace, placeholderName, "false # undefined");
+                }
+                
+                templateCopy = rolePattern.matchedRight();
+            }
+        }
 
         var template = new Template( sourceTemplate );
 		output = template.execute( replace );

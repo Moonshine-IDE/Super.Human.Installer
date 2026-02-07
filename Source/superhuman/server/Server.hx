@@ -733,7 +733,7 @@ class Server {
         _provisional = false;
     }
 
-    public function isValid():Bool {
+    public function isValid(ignoreProvisional:Bool = false):Bool {
         if (this.provisioner == null) {
             return false;
         }
@@ -778,7 +778,7 @@ class Server {
             
         // Provisional servers should never be considered valid until explicitly saved
         // This prevents premature file creation during configuration
-        return isValid && !this.provisional;
+        return isValid && (!this.provisional || ignoreProvisional);
     }
 
     public function locateNotesSafeId( ?callback:()->Void ) {
@@ -908,6 +908,11 @@ class Server {
                 var hasAdvancedProps = Reflect.hasField(this._customProperties, "dynamicAdvancedCustomProperties");
             }
             
+            // Ensure the server directory exists before trying to save the file
+            if (!FileSystem.exists(this._serverDir)) {
+                FileSystem.createDirectory(this._serverDir);
+            }
+
             var s = Json.stringify(data);
             File.saveContent(Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE, s);
 

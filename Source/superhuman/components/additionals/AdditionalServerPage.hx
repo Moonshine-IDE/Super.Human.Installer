@@ -237,7 +237,7 @@ class AdditionalServerPage extends Page
             _server.serverProvisionerId.value = currentServerProvisionerId;
         }
 	
-		if (_server.isValid()) {	
+		if (_server.isValid(true)) {	
             // EXPLICIT: Force the provisioner to copy files regardless of exists check
             _server.provisioner.copyFiles();
             
@@ -259,11 +259,8 @@ class AdditionalServerPage extends Page
 	}
 	
 	function _buttonCloseTriggered( e:TriggerEvent ) {
-        // Only remove the server if the server directory doesn't exist
-        // This ensures we only remove truly new servers that have never been saved
-        if (_server != null && !sys.FileSystem.exists(_server.serverDir)) {
-            superhuman.managers.ServerManager.getInstance().removeProvisionalServer(_server);
-        }
-        this.dispatchEvent( new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE ) );
+        var evt = new SuperHumanApplicationEvent( SuperHumanApplicationEvent.CANCEL_PAGE );
+        evt.server = _server;
+        this.dispatchEvent( evt );
     }
 }

@@ -59,7 +59,10 @@ class AdditionalServer extends Server {
     static public function create( data:ServerData, rootDir:String ):AdditionalServer {
          var sc = new AdditionalServer();
 
-        sc._id = data.server_id;
+        if (data.server_id > 0) {
+            sc._id = data.server_id;
+        }
+
         sc._serverDir = Path.normalize( rootDir + "/hcl_domino_additional_provisioner/" + sc._id );
 
         sc._path.value = sc._serverDir;
@@ -118,7 +121,7 @@ class AdditionalServer extends Server {
         return sc;
     }
 
-    override public function isValid():Bool {
+    override public function isValid(ignoreProvisional:Bool = false):Bool {
 
         var hasVagrant:Bool = Vagrant.getInstance().exists;
         var hasVirtualBox:Bool = VirtualBox.getInstance().exists;
@@ -148,7 +151,7 @@ class AdditionalServer extends Server {
 
         // Provisional servers should never be considered valid until explicitly saved
         // This prevents premature file creation during configuration
-        return isValid && !this.provisional;
+        return isValid && (!this.provisional || ignoreProvisional);
 
     }
 
@@ -229,15 +232,17 @@ class AdditionalServer extends Server {
 
     // Override updateProvisioner to ensure we don't mess with the serverProvisionerId
     override public function updateProvisioner(data:ProvisionerData):Bool {
+        // Capture the current value before super updates it
+        var currentPath = _serverProvisionerId.value;
+
         // Call super implementation
         var result = super.updateProvisioner(data);
         
         // CRITICAL FIX: Make sure we never set serverProvisionerId to the version
         // The super.updateProvisioner might have set _serverProvisionerId.value to version
-        if (_serverProvisionerId != null && _serverProvisionerId.value == this._provisioner.version) {
-            Logger.error('${this}: updateProvisioner set serverProvisionerId to version - restoring previous value');
-            // We don't have a previous value to restore, but we can at least clear it to force user selection
-            _serverProvisionerId.value = null;
+        if (_serverProvisionerId != null && _serverProvisionerId.value == data.version.toString()) {
+            // Restore the previous value if it looked like a file path (or null if it was empty)
+            _serverProvisionerId.value = (currentPath != null && currentPath != data.version.toString()) ? currentPath : null;
         }
         
         return result;
