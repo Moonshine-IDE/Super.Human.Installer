@@ -122,7 +122,6 @@ jobs:
   documentation:
     name: Deploy Documentation
     needs: [release-please, release]
-    if: ${{ needs.release-please.outputs.is_patch == 'false' }}
     permissions:
       contents: read
       pages: write
