@@ -50,6 +50,8 @@ jobs:
     name: Draft Release
     needs: [build-linux, build-windows, build-macos]
     runs-on: [self-hosted, linux]
+    outputs:
+      tag_name: ${{ steps.set-tag.outputs.tag_name }}
     steps:
       - name: Print info
         run: |
@@ -101,6 +103,7 @@ jobs:
           filename: buildinfo.json
 
       - name: Create release
+        id: create-release
         uses: softprops/action-gh-release@v2
         with:
           name: Super.Human.Installer v${{ inputs.version }} ${{ inputs.env }}
@@ -117,3 +120,18 @@ jobs:
             ${{ env.app_name }}-Choco.nupkg
             buildinfo.json
           fail_on_unmatched_files: true
+
+      - name: Set tag output
+        id: set-tag
+        run: echo "tag_name=${{ env.tag }}" >> $GITHUB_OUTPUT
+
+  documentation:
+    name: Deploy Documentation
+    needs: release
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/update-documentation.yml@master
+    with:
+      tag_name: ${{ needs.release.outputs.tag_name }}
