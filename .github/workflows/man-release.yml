@@ -47,7 +47,7 @@ jobs:
       version: ${{ inputs.version }}
 
   release:
-    name: Draft Release
+    name: Create Release
     needs: [build-linux, build-windows, build-macos]
     runs-on: [self-hosted, linux]
     outputs:
@@ -111,7 +111,7 @@ jobs:
           target_commitish: ${{ github.sha }}
           body: |
             This is a ${{ inputs.env }} release of Super.Human.Installer.
-          draft: true
+          draft: false
           prerelease: ${{ inputs.env == 'Development' }}
           files: |
             ${{ env.app_name }}-x86_64.AppImage
