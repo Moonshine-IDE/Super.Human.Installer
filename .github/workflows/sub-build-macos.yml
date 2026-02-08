@@ -130,12 +130,14 @@ jobs:
         run: haxelib list
 
       - name: Build
+        env:
+          HXCPP_COMPILE_FLAGS: "-std=c++11"
         run: >
-          haxelib run openfl build project.xml mac 
-          ${{ env.haxe_flag }} 
-          -Dlogverbose 
-          -Dlogcolor 
-          -Dgitsha=${{ github.sha }} 
+          haxelib run openfl build project.xml mac
+          ${{ env.haxe_flag }}
+          -Dlogverbose
+          -Dlogcolor
+          -Dgitsha=${{ github.sha }}
           -Dgitbranch=${{ github.ref_name }}
 
       - name: Show Build
