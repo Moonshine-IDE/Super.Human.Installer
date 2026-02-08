@@ -94,10 +94,6 @@ jobs:
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.118 --always
-          pushd .
-          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
-          HXCPP_COMPILE_FLAGS="-std=c++11" haxe compile.hxml
-          popd
 
       - name: Installing dependencies
         working-directory: Build
@@ -130,8 +126,6 @@ jobs:
         run: haxelib list
 
       - name: Build
-        env:
-          HXCPP_COMPILE_FLAGS: "-std=c++11"
         run: >
           haxelib run openfl build project.xml mac
           ${{ env.haxe_flag }}
