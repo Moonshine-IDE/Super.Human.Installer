@@ -64,7 +64,7 @@ import prominic.sys.io.Executor;
 import openfl.events.IEventDispatcher;
 import superhuman.events.SuperHumanApplicationEvent;
 import sys.io.Process;
-import sys.thread.Thread; // Added for background task
+import lime.system.BackgroundWorker;
 import yaml.Yaml;
 import yaml.util.ObjectMap;
 import genesis.application.managers.ToastManager;
@@ -1751,10 +1751,33 @@ class ProvisionerManager {
         var eventDispatcher:IEventDispatcher = context.eventDispatcher; // Get dispatcher early
 
         if (executor.exitCode == 0) {
-            // Git clone successful, launch post-clone steps in background thread
-            Logger.info('Git clone successful. Launching post-clone steps in background thread.');
-            // Pass the context object to the background thread function
-            Thread.runWithEventLoop(_executePostCloneSteps.bind(context)); 
+            // Git clone successful, launch post-clone steps in background worker
+            Logger.info('Git clone successful. Launching post-clone steps in background worker.');
+            var worker = new BackgroundWorker();
+            worker.doWork.add( function( msg:Dynamic ) {
+                var result = _executePostCloneStepsWorker( msg );
+                worker.sendComplete( result );
+            } );
+            worker.onComplete.add( function( result:Dynamic ) {
+                if ( eventDispatcher != null ) {
+                    var completeEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+                    completeEvent.importSuccess = result.success;
+                    completeEvent.importMessage = result.message;
+                    eventDispatcher.dispatchEvent(completeEvent);
+                    Logger.info('Dispatched PROVISIONER_IMPORT_COMPLETE event on main thread. Success: ${result.success}, Message: ${result.message}');
+                } else {
+                    Logger.error('Cannot dispatch completion event: eventDispatcher is null.');
+                }
+            } );
+            worker.onError.add( function( error:Dynamic ) {
+                if ( eventDispatcher != null ) {
+                    var failEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
+                    failEvent.importSuccess = false;
+                    failEvent.importMessage = 'Error during provisioner import: ${error}';
+                    eventDispatcher.dispatchEvent(failEvent);
+                }
+            } );
+            worker.run( context );
         } else {
             // Git clone failed, dispatch failure event immediately
             var message = 'Failed to clone GitHub repository ${context.organization}/${context.repository}. Exit code: ${executor.exitCode}. Check logs for details.';
@@ -1778,17 +1801,17 @@ class ProvisionerManager {
     }
 
     /**
-     * Executes the synchronous post-clone steps (find root, import, cleanup) in a background thread.
-     * Dispatches the final completion event.
+     * Executes the synchronous post-clone steps (find root, import, cleanup) in a background worker.
+     * Returns a result object with success status and message.
+     * The caller (BackgroundWorker onComplete handler) dispatches the completion event on the main thread.
      */
-    static private function _executePostCloneSteps(context:Dynamic):Void {
-        Logger.info('Executing post-clone steps in background thread...');
+    static private function _executePostCloneStepsWorker(context:Dynamic):Dynamic {
+        Logger.info('Executing post-clone steps in background worker...');
 
         var tempDir:String = context.tempDir;
         var repoDir:String = context.repoDir; // Where the repo content actually is
         var organization:String = context.organization;
         var repository:String = context.repository;
-        var eventDispatcher:IEventDispatcher = context.eventDispatcher;
 
         var overallSuccess = false;
         var message = "";
@@ -1827,20 +1850,20 @@ class ProvisionerManager {
                         'Provisioner version imported successfully from ${organization}/${repository}.' :
                         'Failed to import provisioner version from ${organization}/${repository}. Check logs for details.';
                 }
-                
+
                 // Store GitHub source metadata if import was successful
                 if (importSuccess) {
                     _storeGitHubSourceMetadata(provisionerPath, organization, repository, context.branch, context.tokenName, context.importMethod);
                 }
-                
+
                 overallSuccess = importSuccess;
             }
         } catch (e) {
             message = 'Error during provisioner import process: ${e.message}. Check logs for details.';
             Logger.error(message);
             overallSuccess = false;
-        } 
-        
+        }
+
         // --- Cleanup (Moved outside try...catch, as Haxe has no finally) ---
         Logger.info('Cleaning up temporary directory after import attempt: ${tempDir}');
         if (tempDir != null) {
@@ -1860,26 +1883,17 @@ class ProvisionerManager {
                 }
             }
 
-            // --- Dispatch Completion Event ---
-            if (eventDispatcher != null) {
-                var finalMessage = message;
-                // Append cleanup error message if one occurred and the main message isn't already an error
-                if (cleanupError != null) {
-                     if (message == "" || overallSuccess) { // Append if main process succeeded or had no message
-                         finalMessage += " " + cleanupError;
-                     } else { // Prepend if main process failed, so cleanup warning isn't lost
-                         finalMessage = cleanupError + " " + finalMessage;
-                     }
-                }
-
-                var completeEvent = new SuperHumanApplicationEvent(SuperHumanApplicationEvent.PROVISIONER_IMPORT_COMPLETE);
-                completeEvent.importSuccess = overallSuccess; // Reflects the success of the core import logic
-                completeEvent.importMessage = StringTools.trim(finalMessage); // Use combined message
-                eventDispatcher.dispatchEvent(completeEvent);
-                Logger.info('Dispatched PROVISIONER_IMPORT_COMPLETE event from background thread. Success: ${overallSuccess}, Message: ${completeEvent.importMessage}');
-            } else {
-                 Logger.error('Cannot dispatch completion event from background thread: eventDispatcher is null.');
+            // --- Build final message ---
+            var finalMessage = message;
+            if (cleanupError != null) {
+                 if (message == "" || overallSuccess) {
+                     finalMessage += " " + cleanupError;
+                 } else {
+                     finalMessage = cleanupError + " " + finalMessage;
+                 }
             }
+
+            return { success: overallSuccess, message: StringTools.trim(finalMessage) };
     }
 
 

@@ -36,8 +36,8 @@ import champaign.core.logging.Logger;
 import prominic.sys.applications.bin.Shell;
 import sys.FileSystem;
 import sys.io.File;
+import lime.system.BackgroundWorker;
 import sys.thread.Mutex;
-import sys.thread.Thread;
 
 /**
  * Library of file system operations
@@ -76,7 +76,18 @@ class FileTools {
 
         if ( _copyDirectoryThreaded ) {
 
-            Thread.runWithEventLoop( _copyDirectory );
+            var worker = new BackgroundWorker();
+            worker.doWork.add( function( _:Dynamic ) {
+                _mutex = new Mutex();
+                _mutex.acquire();
+                _copyDirectoryContents( _sourcePath, _destinationPath );
+                _mutex.release();
+                worker.sendComplete( null );
+            } );
+            worker.onComplete.add( function( _:Dynamic ) {
+                if ( _copyDirectoryCallback != null ) _copyDirectoryCallback();
+            } );
+            worker.run( null );
 
         } else {
 
@@ -89,16 +100,7 @@ class FileTools {
     @:noDoc @:noCompletion
     static function _copyDirectory() {
 
-        if ( _copyDirectoryThreaded ) {
-
-            _mutex = new Mutex();
-            _mutex.acquire();
-
-        }
-
         _copyDirectoryContents( _sourcePath, _destinationPath );
-
-        if ( _copyDirectoryThreaded ) _mutex.release();
 
         if ( _copyDirectoryCallback != null ) _copyDirectoryCallback();
 
@@ -194,11 +196,21 @@ class FileTools {
         _batchCopyCallback = callback;
         _batchCopyPerFileCallback = perFileCallback;
 
-        Thread.createWithEventLoop( _batchCopy );
+        var worker = new BackgroundWorker();
+        worker.doWork.add( function( _:Dynamic ) {
+            _batchCopyWorker( worker );
+        } );
+        worker.onProgress.add( function( msg:Dynamic ) {
+            if ( _batchCopyPerFileCallback != null ) _batchCopyPerFileCallback( msg.pathPair, msg.canCopy );
+        } );
+        worker.onComplete.add( function( _:Dynamic ) {
+            if ( _batchCopyCallback != null ) _batchCopyCallback();
+        } );
+        worker.run( null );
 
     }
 
-    static function _batchCopy() {
+    static function _batchCopyWorker( worker:BackgroundWorker ) {
 
         _mutex.acquire();
 
@@ -228,10 +240,10 @@ class FileTools {
                         canCopy = true;
 
                 }
-    
+
             }
 
-            if ( _batchCopyPerFileCallback != null ) _batchCopyPerFileCallback( p, canCopy );
+            worker.sendProgress( { pathPair: p, canCopy: canCopy } );
 
             if ( canCopy ) {
 
@@ -244,7 +256,7 @@ class FileTools {
 
         _mutex.release();
 
-        if ( _batchCopyCallback != null ) _batchCopyCallback();
+        worker.sendComplete( null );
 
     }
 
