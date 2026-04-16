@@ -95,10 +95,12 @@ jobs:
         shell: bash
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
-          HXCPP_PATH="$(haxelib libpath hxcpp | tr -d '[:space:]')"
-          echo "hxcpp path: ${HXCPP_PATH}"
+          HXCPP_PATH="$(haxelib path hxcpp 2>/dev/null | head -1 | tr -d '[:space:]')"
+          echo "hxcpp path: [${HXCPP_PATH}]"
+          ls "${HXCPP_PATH}tools/hxcpp/compile.hxml"
           cd "${HXCPP_PATH}tools/hxcpp"
           haxe compile.hxml
+          echo "hxcpp compilation succeeded"
 
       - name: Installing dependencies
         working-directory: Build

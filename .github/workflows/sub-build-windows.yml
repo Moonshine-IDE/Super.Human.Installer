@@ -106,13 +106,17 @@ jobs:
 
       - name: Installing hxcpp
         working-directory: Build
-        shell: bash
+        shell: pwsh
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
-          HXCPP_PATH="$(haxelib libpath hxcpp | tr -d '[:space:]')"
-          echo "hxcpp path: ${HXCPP_PATH}"
-          cd "${HXCPP_PATH}tools/hxcpp"
+          $hxcppPath = (haxelib path hxcpp 2>$null | Select-Object -First 1).Trim()
+          Write-Host "hxcpp path: [$hxcppPath]"
+          Test-Path "${hxcppPath}tools/hxcpp/compile.hxml"
+          Push-Location "${hxcppPath}tools\hxcpp"
           haxe compile.hxml
+          if ($LASTEXITCODE -ne 0) { throw "hxcpp compilation failed" }
+          Pop-Location
+          Write-Host "hxcpp compilation succeeded"
 
       - name: Install dependencies
         # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
