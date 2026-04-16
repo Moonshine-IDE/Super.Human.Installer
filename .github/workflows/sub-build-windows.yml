@@ -110,7 +110,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
           pushd .
-          cd D:\GA\SHI\_work\_tool\haxe\${{env.haxe_version}}\x64\lib\hxcpp\git\tools\hxcpp
+          cd "$(haxelib libpath hxcpp)tools/hxcpp"
           haxe compile.hxml
           popd
           haxelib install lime 8.3.1 --always

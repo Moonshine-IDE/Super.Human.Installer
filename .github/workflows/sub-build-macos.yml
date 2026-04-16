@@ -95,7 +95,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
           pushd .
-          cd ~/Desktop/Projects/actions-runner/Super.Human.Installer/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
+          cd "$(haxelib libpath hxcpp)tools/hxcpp"
           haxe compile.hxml
           popd
 
