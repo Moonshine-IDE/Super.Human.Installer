@@ -104,15 +104,20 @@ jobs:
       #     path: ${{ env.bin_path }}
       #     key: ${{ env.app_name }}-windows-bin
 
+      - name: Installing hxcpp
+        working-directory: Build
+        shell: bash
+        run: |
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
+          HXCPP_PATH="$(haxelib libpath hxcpp | tr -d '[:space:]')"
+          echo "hxcpp path: ${HXCPP_PATH}"
+          cd "${HXCPP_PATH}tools/hxcpp"
+          haxe compile.hxml
+
       - name: Install dependencies
         # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
-          pushd .
-          cd "$(haxelib libpath hxcpp)tools/hxcpp"
-          haxe compile.hxml
-          popd
           haxelib install lime 8.3.1 --always
           haxelib install format --always
           haxelib install hxp --always
