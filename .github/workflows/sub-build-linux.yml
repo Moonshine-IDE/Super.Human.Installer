@@ -83,19 +83,19 @@ jobs:
       - name: Install dependencies
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.118 --always
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
           pushd .
           cd /home/startcloud/SuperHumanInstaller-runner/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
           haxe compile.hxml
           cd ../build/
           haxe compile.hxml
           popd
-          haxelib install lime 8.3.0 --always
+          haxelib install lime 8.3.1 --always
           haxelib install format --always
           haxelib install hxp --always
           haxelib git yaml https://github.com/Sword352/hx-yaml master --always
           haxelib git lime-samples https://github.com/openfl/lime-samples --always
-          haxelib install openfl 9.5.0 --always
+          haxelib install openfl 9.5.1 --always
           haxelib run openfl setup
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git --always
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git --always
