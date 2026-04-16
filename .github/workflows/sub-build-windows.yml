@@ -104,24 +104,11 @@ jobs:
       #     path: ${{ env.bin_path }}
       #     key: ${{ env.app_name }}-windows-bin
 
-      - name: Installing hxcpp
-        working-directory: Build
-        shell: pwsh
-        run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
-          $hxcppPath = (haxelib path hxcpp 2>$null | Select-Object -First 1).Trim()
-          Write-Host "hxcpp path: [$hxcppPath]"
-          Test-Path "${hxcppPath}tools/hxcpp/compile.hxml"
-          Push-Location "${hxcppPath}tools\hxcpp"
-          haxe compile.hxml
-          if ($LASTEXITCODE -ne 0) { throw "hxcpp compilation failed" }
-          Pop-Location
-          Write-Host "hxcpp compilation succeeded"
-
       - name: Install dependencies
         # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
           haxelib install lime 8.3.1 --always
           haxelib install format --always
           haxelib install hxp --always
@@ -135,6 +122,19 @@ jobs:
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git --always
           haxelib install flixel --always
           haxelib install hxWindowColorMode --always
+
+      - name: Compile hxcpp
+        working-directory: Build
+        shell: pwsh
+        run: |
+          haxelib set hxcpp git
+          $hxcppPath = (haxelib path hxcpp 2>$null | Select-Object -First 1).Trim()
+          Write-Host "hxcpp path: [$hxcppPath]"
+          Push-Location "${hxcppPath}tools\hxcpp"
+          haxe compile.hxml
+          if ($LASTEXITCODE -ne 0) { throw "hxcpp compilation failed" }
+          Pop-Location
+          Write-Host "hxcpp compilation succeeded"
 
       - name: List dependencies
         run: haxelib list

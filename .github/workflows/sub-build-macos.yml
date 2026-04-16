@@ -90,21 +90,10 @@ jobs:
       - name: Update haxelib
         run: haxelib --global update haxelib
 
-      - name: Installing hxcpp
-        working-directory: Build
-        shell: bash
-        run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
-          HXCPP_PATH="$(haxelib path hxcpp 2>/dev/null | head -1 | tr -d '[:space:]')"
-          echo "hxcpp path: [${HXCPP_PATH}]"
-          ls "${HXCPP_PATH}tools/hxcpp/compile.hxml"
-          cd "${HXCPP_PATH}tools/hxcpp"
-          haxe compile.hxml
-          echo "hxcpp compilation succeeded"
-
       - name: Installing dependencies
         working-directory: Build
         run: |
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
           haxelib install lime 8.3.1 --always
           haxelib install format --always
           haxelib install hxp --always
@@ -128,6 +117,17 @@ jobs:
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git --always
           haxelib git mxhx-component https://github.com/mxhx-dev/mxhx-component.git --always
           haxelib git mxhx-feathersui https://github.com/mxhx-dev/mxhx-feathersui.git --always
+
+      - name: Compile hxcpp
+        working-directory: Build
+        shell: bash
+        run: |
+          haxelib set hxcpp git
+          HXCPP_PATH="$(haxelib path hxcpp 2>/dev/null | head -1 | tr -d '[:space:]')"
+          echo "hxcpp path: [${HXCPP_PATH}]"
+          cd "${HXCPP_PATH}tools/hxcpp"
+          haxe compile.hxml
+          echo "hxcpp compilation succeeded"
 
       - name: List dependencies
         run: haxelib list
