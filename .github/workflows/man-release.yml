@@ -66,31 +66,31 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download linux installer
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.app_name }}-linux-installer
 
       - name: Download windows installer
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.app_name }}-windows-installer
 
       - name: Download windows chocolatey package
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.app_name }}-Choco
 
       - name: Download macos installer
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: ${{ env.app_name }}-macos-installer
 
       - name: Get Current Time
         id: current-time
-        uses: josStorer/get-current-time@v2.1.1
+        run: echo "readableTime=$(date -u "+%a %b %d %Y %H:%M:%S GMT+0000")" >> "$GITHUB_OUTPUT"
 
       - name: Generate buildinfo
-        uses: devops-actions/json-to-file@v1.0.3
+        uses: devops-actions/json-to-file@v1.0.5
         with:
           json: |
             {
@@ -104,7 +104,7 @@ jobs:
 
       - name: Create release
         id: create-release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name: Super.Human.Installer v${{ inputs.version }} ${{ inputs.env }}
           tag_name: ${{ env.tag }}
