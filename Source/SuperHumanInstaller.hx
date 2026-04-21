@@ -100,6 +100,7 @@ import superhuman.browser.BrowserData;
 import superhuman.server.data.ServerData;
 import superhuman.server.roles.ServerRoleImpl;
 import superhuman.theme.SuperHumanInstallerTheme;
+import superhuman.utils.SafeFileSaver;
 import sys.FileSystem;
 import sys.io.File;
 import superhuman.application.ApplicationData;
@@ -251,11 +252,14 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		];
 
-		if ( FileSystem.exists( '${System.applicationStorageDirectory}${_CONFIG_FILE}' ) ) {
+		var _configPath = '${System.applicationStorageDirectory}${_CONFIG_FILE}';
+		SafeFileSaver.restoreFromBackupIfNeeded( _configPath );
+
+		if ( FileSystem.exists( _configPath ) ) {
 
 			try {
 
-				var content = File.getContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+				var content = File.getContent( _configPath );
 				_config = Json.parse( content );
 
 			} catch ( e ) {
@@ -289,7 +293,7 @@ class SuperHumanInstaller extends GenesisApplication {
 		} else {
 
 			_config = _defaultConfig;
-			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config ) );
+			SafeFileSaver.save( _configPath, Json.stringify( _config ) );
 
 		}
 
@@ -1340,50 +1344,75 @@ class SuperHumanInstaller extends GenesisApplication {
 
 		Server.keepFailedServersRunning = _config.preferences.keepfailedserversrunning;
 		System.allowScreenTimeout = _config.preferences.preventsystemfromsleep;
-		
-		_config.servers = [];
 
-		// Only save non-provisional servers to config
+		// Build the new server list WITHOUT mutating _config.servers yet.
+		// If something goes wrong, the in-memory state stays intact.
+		var newServers:Array<ServerData> = [];
 		for ( server in ServerManager.getInstance().servers ) {
-			// Skip servers that are still provisional (user hasn't saved them yet)
-			if (server.provisional) {
-				Logger.info('${this}: Skipping provisional server ${server.id} when saving config');
+			if ( server.provisional ) {
+				Logger.info( '${this}: Skipping provisional server ${server.id} when saving config' );
 				continue;
 			}
-
-			_config.servers.push( server.getData() );
-			server.saveData();
+			newServers.push( server.getData() );
 		}
 
-		if (_config.browsers == null) 
-		{
-			_config.browsers = _defaultConfig.browsers;	
-		} 
-		else if (_browsersCollection != null) 
-		{
+		// Guard: refuse to save an empty server list if the on-disk config or
+		// the previous in-memory state had servers. This catches the data-loss
+		// scenario where _saveConfig runs while ServerManager is transiently
+		// empty (e.g. during init, or a race with a teardown path).
+		var prevInMemoryCount = ( _config.servers != null ) ? _config.servers.length : 0;
+		var onDiskCount = _readServerCountFromDisk();
+		if ( newServers.length == 0 && ( prevInMemoryCount > 0 || onDiskCount > 0 ) ) {
+			Logger.error( '${this}: Aborting config save to prevent data loss — ServerManager reports 0 non-provisional servers but previous state had ${prevInMemoryCount} (in-memory) / ${onDiskCount} (on-disk).' );
+			return;
+		}
+
+		_config.servers = newServers;
+		for ( server in ServerManager.getInstance().servers ) {
+			if ( !server.provisional ) server.saveData();
+		}
+
+		if ( _config.browsers == null ) {
+			_config.browsers = _defaultConfig.browsers;
+		} else if ( _browsersCollection != null ) {
 			_config.browsers = _browsersCollection;
 		}
-		
-		if (_config.applications == null) 
-		{
-			_config.applications = _defaultConfig.applications;	
-		} 
-		else if (_applicationsCollection != null) 
-		{
+
+		if ( _config.applications == null ) {
+			_config.applications = _defaultConfig.applications;
+		} else if ( _applicationsCollection != null ) {
 			_config.applications = _applicationsCollection;
 		}
-		
+
 		_applicationsCollection = null;
 		_browsersCollection = null;
-		
+
+		var path = '${System.applicationStorageDirectory}${_CONFIG_FILE}';
 		try {
-			var conf = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
-			File.saveContent( '${System.applicationStorageDirectory}${_CONFIG_FILE}', Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null ) );
-			Logger.info( '${this}: Configuration saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+			var json = Json.stringify( _config, ( SuperHumanGlobals.PRETTY_PRINT ) ? "\t" : null );
+			if ( SafeFileSaver.save( path, json ) ) {
+				Logger.info( '${this}: Configuration saved to: ${path}' );
+			} else {
+				Logger.error( '${this}: Configuration cannot be saved to: ${path}' );
+			}
 		} catch ( e ) {
-			Logger.error( '${this}: Configuration cannot be saved to: ${System.applicationStorageDirectory}${_CONFIG_FILE}' );
+			Logger.error( '${this}: Configuration cannot be saved to: ${path}: ${e}' );
 		}
 
+	}
+
+	function _readServerCountFromDisk():Int {
+		try {
+			var path = '${System.applicationStorageDirectory}${_CONFIG_FILE}';
+			if ( !FileSystem.exists( path ) ) return 0;
+			if ( FileSystem.stat( path ).size == 0 ) return 0;
+			var raw = File.getContent( path );
+			var parsed:Dynamic = Json.parse( raw );
+			if ( parsed == null || parsed.servers == null ) return 0;
+			return ( cast parsed.servers:Array<Dynamic> ).length;
+		} catch ( _ ) {
+			return 0;
+		}
 	}
 
     function _saveServerConfiguration( e:SuperHumanApplicationEvent ) {

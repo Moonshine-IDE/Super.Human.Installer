@@ -62,6 +62,7 @@ import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.provisioners.StandaloneProvisioner;
 import superhuman.server.provisioners.CustomProvisioner;
+import superhuman.utils.SafeFileSaver;
 import sys.FileSystem;
 import sys.io.File;
 import yaml.util.ObjectMap;
@@ -914,7 +915,10 @@ class Server {
             }
 
             var s = Json.stringify(data);
-            File.saveContent(Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE, s);
+            var path = Path.addTrailingSlash(this._serverDir) + _CONFIG_FILE;
+            if (!SafeFileSaver.save(path, s)) {
+                Logger.error('${this}: Error saving server data to ${path}');
+            }
 
         } catch (e) {
             Logger.error('${this}: Error saving server data: ${e}');

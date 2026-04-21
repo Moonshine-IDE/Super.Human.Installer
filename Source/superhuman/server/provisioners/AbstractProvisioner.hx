@@ -46,6 +46,7 @@ import prominic.sys.io.FileTools;
 import superhuman.interfaces.IConsole;
 import superhuman.server.data.ProvisionerData;
 import superhuman.server.provisioners.ProvisionerType;
+import superhuman.utils.SafeFileSaver;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -430,8 +431,7 @@ class AbstractProvisioner {
 
         try {
             var fullPath = Path.addTrailingSlash( _targetPath ) + path;
-            File.saveContent( _getPlatformPath(fullPath), content );
-            return true;
+            return SafeFileSaver.save( _getPlatformPath(fullPath), content );
         } catch( e ) {}
 
         return false;

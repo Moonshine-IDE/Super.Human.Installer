@@ -44,6 +44,7 @@ import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.hostsFileGenerator.StandaloneProvisionerHostsFileGenerator;
 import superhuman.server.provisioners.ProvisionerType;
+import superhuman.utils.SafeFileSaver;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -548,16 +549,17 @@ class StandaloneProvisioner extends AbstractProvisioner {
 
         if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.hostsfilecontent', content ) );
 
+        var hostsPath = Path.addTrailingSlash( _targetPath ) + HOSTS_FILE;
         try {
 
-            File.saveContent( Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, content );
-            Logger.info( '${this}: Server configuration file created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE ) );
+            if ( !SafeFileSaver.save( hostsPath, content ) ) throw new Exception( "SafeFileSaver.save returned false" );
+            Logger.info( '${this}: Server configuration file created at ${hostsPath}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfile', hostsPath ) );
 
         } catch ( e:Exception ) {
 
-            Logger.error( '${this}: Server configuration file cannot be created at ${Path.addTrailingSlash( _targetPath ) + HOSTS_FILE}. Details: ${e.details()} Message: ${e.message}' );
-            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', Path.addTrailingSlash( _targetPath ) + HOSTS_FILE, '${e.details()} Message: ${e.message}' ), true );
+            Logger.error( '${this}: Server configuration file cannot be created at ${hostsPath}. Details: ${e.details()} Message: ${e.message}' );
+            if ( console != null ) console.appendText( LanguageManager.getInstance().getString( 'serverpage.server.console.savehostsfileerror', hostsPath, '${e.details()} Message: ${e.message}' ), true );
             return;
 
         }

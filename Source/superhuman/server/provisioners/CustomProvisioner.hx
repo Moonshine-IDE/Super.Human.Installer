@@ -44,6 +44,7 @@ import superhuman.server.data.ProvisionerData;
 import superhuman.server.data.RoleData;
 import superhuman.server.data.ServerData;
 import superhuman.server.definitions.ProvisionerDefinition;
+import superhuman.utils.SafeFileSaver;
 import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
@@ -1085,8 +1086,10 @@ override public function saveHostsFile() {
     try {
         // Save the content to the file
         var hostsFilePath = Path.addTrailingSlash(_targetPath) + StandaloneProvisioner.HOSTS_FILE;
-        File.saveContent(hostsFilePath, content);
-        
+        if (!SafeFileSaver.save(hostsFilePath, content)) {
+            throw new Exception("SafeFileSaver.save returned false for " + hostsFilePath);
+        }
+
         if (console != null) console.appendText(LanguageManager.getInstance().getString('serverpage.server.console.savehostsfile', hostsFilePath));
         
         // Update server status after saving hosts file
