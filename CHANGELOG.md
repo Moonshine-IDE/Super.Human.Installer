@@ -9,6 +9,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
+## Super Human Installer [1.7.0]
+
+The 1.7.0 release of Super.Human.Installer introduces new installer versions to the registry, and includes critical stability fixes that prevent configuration data loss and resolve background-thread crashes.
+
+### Added
+
+- Added HCL Domino Server 14.5.1 EA1 to the initial registry
+- Added HCL Verse 3.2.6 to the initial registry
+- Added HCL Domino REST API 1.1.6 for Domino 12, 14, and 14.5 to the initial registry
+
+### Changed
+
+- Updated OpenFL, Lime, and hxcpp to their newest versions ([#179](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/179))
+- Updated GitHub Actions to current major versions to remove Node 20 deprecation warnings ([#179](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/179))
+
+### Fixed
+
+- Fixed configuration data loss by introducing safe atomic writes with backup recovery for `.shi-config` and other persisted files ([#95](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/95))
+- Fixed random background-thread crashes by switching to Lime's `BackgroundWorker` for off-main-thread work ([#95](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/95))
+- Fixed additional-server save losing the user-selected provisioner path ([#180](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/180))
+- Fixed undefined role placeholders rendering as `null` in generated Hosts files ([#180](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/180))
+- Fixed macOS and Windows build workflows, and re-enabled documentation deployment for patch releases ([#179](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/179))
+
 ## Super Human Installer [1.6.0]
 
 The 1.6.0 release of Super.Human.Installer enhances server management with major UI improvements, adds provisioner customization capabilities, improves application stability, and removes deprecated components.
@@ -50,8 +73,6 @@ The 1.6.0 release of Super.Human.Installer enhances server management with major
 - Fixed high CPU load issue in development version ([#168](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/168))
 - Fixed warning when saving provisional servers before folder structure is created ([#13](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/13))
 - Fixed VirtualBox machine count detection ([#63](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/63))
-
-
 
 ## Super Human Installer [1.5.0]
 
