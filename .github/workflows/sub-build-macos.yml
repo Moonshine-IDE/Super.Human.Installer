@@ -94,7 +94,7 @@ jobs:
         working-directory: Build
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
-          haxelib install lime 8.3.1 --always
+          haxelib install lime 8.3.2 --always
           haxelib install format --always
           haxelib install hxp --always
           haxelib git yaml https://github.com/Sword352/hx-yaml master --always
@@ -103,7 +103,7 @@ jobs:
       - name: Installing OpenFL
         working-directory: Build
         run: |
-          haxelib install openfl 9.5.1 --always
+          haxelib install openfl 9.5.2 --always
 
       - name: Configuring OpenFL
         working-directory: Build

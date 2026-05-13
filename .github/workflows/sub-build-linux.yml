@@ -90,12 +90,12 @@ jobs:
           cd ../build/
           haxe compile.hxml
           popd
-          haxelib install lime 8.3.1 --always
+          haxelib install lime 8.3.2 --always
           haxelib install format --always
           haxelib install hxp --always
           haxelib git yaml https://github.com/Sword352/hx-yaml master --always
           haxelib git lime-samples https://github.com/openfl/lime-samples --always
-          haxelib install openfl 9.5.1 --always
+          haxelib install openfl 9.5.2 --always
           haxelib run openfl setup
           haxelib git feathersui https://github.com/feathersui/feathersui-openfl.git --always
           haxelib git champaign https://github.com/Moonshine-IDE/Champaign.git --always
