@@ -161,7 +161,8 @@
                 "prompt": "Jupiter"
             },
             "existingserveripaddress": {
-                "text": "Existing server IP address*"
+                "text": "Existing server IP address or hostname*",
+                "prompt": "e.g. 192.168.2.227 or domino-1.example.com"
             },
             "newserveridfile": {
                 "text": "New server ID file*"

@@ -11,7 +11,6 @@ import genesis.application.theme.GenesisApplicationTheme;
 import feathers.events.TriggerEvent;
 import superhuman.events.SuperHumanApplicationEvent;
 import superhuman.server.AdditionalServer;
-import superhuman.server.Server;
 
 @:build(mxhx.macros.MXHXComponent.build())
 class AdditionalServerPage extends Page
@@ -52,8 +51,8 @@ class AdditionalServerPage extends Page
 		inputExistingDominoServer.validationKey = AdditionalServer._HOSTNAME_WITH_PATH;
 
 		rowExistingServerIp.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.text' );
-		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'serveradvancedconfigpage.form.networkip.prompt' );
-		inputExistingServerIp.validationKey = Server._VK_IP;
+		inputExistingServerIp.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.existingserveripaddress.prompt' );
+		inputExistingServerIp.validationKey = AdditionalServer._HOSTNAME_WITH_PATH;
 
 		rowOrganizationDominoServer.text = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.organizationdominoservername.text' );
 		inputOrganizationDominoServer.prompt = LanguageManager.getInstance().getString( 'additionalserverconfigpage.form.organizationdominoservername.prompt' );

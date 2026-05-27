@@ -52,7 +52,7 @@ class AdditionalServer extends Server {
         _organization = new ValidatingProperty( "", _SERVER_ORGANIZATION, 1 );
         _organization.onChange.add( _propertyChanged );
 
-        _existingServerIpAddress = new ValidatingProperty( "", Server._VK_IP, true );
+        _existingServerIpAddress = new ValidatingProperty( "", _HOSTNAME_WITH_PATH, true );
         _existingServerIpAddress.onChange.add( _propertyChanged );
     }
 
