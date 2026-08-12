@@ -85,9 +85,7 @@ jobs:
         run: |
           haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.152 --always
           pushd .
-          cd /home/startcloud/SuperHumanInstaller-runner/_work/_tool/haxe/${{env.haxe_version}}/x64/lib/hxcpp/git/tools/hxcpp
-          haxe compile.hxml
-          cd ../build/
+          cd $(haxelib libpath hxcpp)/tools/hxcpp
           haxe compile.hxml
           popd
           haxelib install lime 8.3.2 --always
