@@ -108,7 +108,7 @@ jobs:
         # if: ${{ !inputs.caching || !steps.cache-bin.outputs.cache-hit }}
         working-directory: Build
         run: |
-          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.140 --always
+          haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git v4.3.152 --always
           haxelib install lime 8.3.2 --always
           haxelib install format --always
           haxelib install hxp --always
