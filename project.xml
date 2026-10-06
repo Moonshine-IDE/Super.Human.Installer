@@ -10,7 +10,7 @@
 		<haxelib name="hxWindowColorMode"/>
 	</section>
 
-	<meta version="1.7.0"/>
+	<meta version="1.7.1"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
 	<meta title="Super.Human.Installer Development" if="debug"/>
 
