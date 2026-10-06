@@ -6,11 +6,11 @@
 	<!-- Override properties, add new ones below -->
 
 	<section if="windows">
-		<haxelib name="flixel" />
-		<haxelib name="hxWindowColorMode" />
+		<haxelib name="flixel"/>
+		<haxelib name="hxWindowColorMode"/>
 	</section>
 
-	<meta version="0.1.95"/>
+	<meta version="1.7.0"/>
 	<meta unless="debug" title="Super.Human.Installer"/>
 	<meta title="Super.Human.Installer Development" if="debug"/>
 
@@ -32,7 +32,7 @@
 
 	<source path="Source"/>
 	<source path="Scripts"/>
-	<source path="Macros" />
+	<source path="Macros"/>
 
 	<assets rename="assets/images" path="Assets/images" include="*"/>
 	<assets rename="assets/text" path="Assets/text" include="*"/>
@@ -67,7 +67,7 @@
 	<haxeflag value="include('genesis.application')" name="--macro"/>
 	<haxeflag value="include('superhuman')" name="--macro"/>
 
-	<haxedef name="HXCPP_STACK_LINE" />
+	<haxedef name="HXCPP_STACK_LINE"/>
 	<haxedef name="HXCPP_STACK_TRACE"/>
 	<haxedef name="HXCPP_CHECK_POINTER"/>
 
