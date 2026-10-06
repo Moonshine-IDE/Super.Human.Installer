@@ -1,0 +1,7 @@
+<include>
+  <gateway name="{{ item.value.gateway | default(item.key) }}">
+{% for param in item.value | dict2items %}
+    <param name="{{ param.key }}" value="{{ param.value }}"/>
+{% endfor %}
+  </gateway>
+</include>

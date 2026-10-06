@@ -1,0 +1,5 @@
+---
+# vars file for gse_build_source
+db_name: gvmd
+gvmuser: gvm
+gvmuserpass: "gvmP455w0rd!"

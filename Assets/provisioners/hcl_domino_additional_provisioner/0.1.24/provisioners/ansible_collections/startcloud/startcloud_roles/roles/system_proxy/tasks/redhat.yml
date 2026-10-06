@@ -1,0 +1,19 @@
+---
+-
+  name: "Setting proxy for yum"
+  ansible.builtin.lineinfile:
+    path: /etc/yum.conf
+    regexp: '^proxy='
+    line: "proxy=socks5h://{{ proxy[0].user }}:{{ proxy[0].pass }}@{{ proxy[0].host }}:{{ proxy[0].port }}"
+
+-
+  name: "Setting system-wide Squid proxy environment variables"
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    line: "{{ item }}"
+  loop:
+    - "http_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.port }}"
+    - "https_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.port }}"
+    - "ftp_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).proxy_systemwide_proxy.port }}"
+    - "no_proxy=localhost,127.0.0.1,localaddress,.localdomain.com"
+  when: proxy_systemwide | bool

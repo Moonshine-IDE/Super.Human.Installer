@@ -1,0 +1,143 @@
+---
+-
+  name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Create APT proxy configuration: 10proxy.conf"
+  ansible.builtin.template:
+    src: 10proxy.conf.j2
+    dest: /etc/apt/apt.conf.d/10proxy.conf
+    mode: '0644'
+  when: use_proxy | bool
+
+-
+  name: "Gathering DEB architecture"
+  ansible.builtin.command: dpkg --print-architecture
+  register: deb_architecture
+  changed_when: false
+
+-
+  name: "Printing DEB architecture"
+  ansible.builtin.debug:
+    msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+
+-
+  name: "Creating keyrings directory for repository GPG keys"
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  when: extra_repos | default([]) | length > 0
+
+-
+  name: "Downloading armored GPG keys for extra repositories"
+  ansible.builtin.get_url:
+    url: "{{ item.gpg_key_url }}"
+    dest: "/tmp/{{ item.name }}-key.asc"
+    mode: '0644'
+  loop: "{{ extra_repos | default([]) }}"
+  when:
+    - extra_repos | default([]) | length > 0
+    - item.needs_dearmor | default(false)
+
+-
+  name: "Dearmoring GPG keys for extra repositories"
+  ansible.builtin.command:
+    cmd: "gpg --dearmor -o {{ item.gpg_keyring_path }} /tmp/{{ item.name }}-key.asc"
+    creates: "{{ item.gpg_keyring_path }}"
+  loop: "{{ extra_repos | default([]) }}"
+  when:
+    - extra_repos | default([]) | length > 0
+    - item.needs_dearmor | default(false)
+
+-
+  name: "Setting permissions on dearmored GPG keys"
+  ansible.builtin.file:
+    path: "{{ item.gpg_keyring_path }}"
+    mode: '0644'
+  loop: "{{ extra_repos | default([]) }}"
+  when:
+    - extra_repos | default([]) | length > 0
+    - item.needs_dearmor | default(false)
+
+-
+  name: "Cleaning up temporary armored key files"
+  ansible.builtin.file:
+    path: "/tmp/{{ item.name }}-key.asc"
+    state: absent
+  loop: "{{ extra_repos | default([]) }}"
+  when:
+    - extra_repos | default([]) | length > 0
+    - item.needs_dearmor | default(false)
+
+-
+  name: "Downloading GPG keys for extra repositories (non-armored)"
+  ansible.builtin.get_url:
+    url: "{{ item.gpg_key_url }}"
+    dest: "{{ item.gpg_keyring_path }}"
+    mode: '0644'
+  loop: "{{ extra_repos | default([]) }}"
+  when:
+    - extra_repos | default([]) | length > 0
+    - not (item.needs_dearmor | default(false))
+
+-
+  name: "Adding extra APT repositories"
+  ansible.builtin.apt_repository:
+    repo: "{{ item.repo }}"
+    state: present
+    update_cache: false
+  loop: "{{ extra_repos | default([]) }}"
+  when: extra_repos | default([]) | length > 0
+
+-
+  name: "Ensuring apt cache is updated"
+  ansible.builtin.apt:
+    cache_valid_time: 3600
+    update_cache: true
+
+-
+  name: "Upgrading all apt packages"
+  ansible.builtin.apt:
+    upgrade: dist
+    update_cache: true
+
+-
+  name: "Adding Additional packages"
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+
+-
+  name: "Adding Additional Dependencies"
+  ansible.builtin.apt:
+    name: "{{ extra_packages }}"
+    state: present
+
+-
+  name: "Loading Xen PV drivers in kernel"
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - xen-blkfront
+    - xen-netfront
+  ignore_errors: true
+
+-
+  name: "Adding Xen drivers to initramfs modules"
+  ansible.builtin.lineinfile:
+    path: /etc/initramfs-tools/modules
+    line: "{{ item }}"
+    create: true
+    mode: '0644'
+  loop:
+    - xen-blkfront
+    - xen-netfront
+
+-
+  name: "Updating initramfs with Xen drivers"
+  ansible.builtin.command: update-initramfs -u
+  changed_when: true
+  when: ansible_os_family == "Debian"

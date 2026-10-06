@@ -1,0 +1,109 @@
+global
+        default-path config
+        zero-warning
+        daemon
+        hard-stop-after 5m
+        stats timeout 1h
+        log stderr local0 info
+
+        # intermediate security for SSL, from https://ssl-config.mozilla.org/
+        ssl-default-bind-ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+        ssl-default-bind-ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256
+        ssl-default-bind-options prefer-client-ciphers no-sslv3 no-tlsv10 no-tlsv11 no-tls-tickets
+
+defaults http
+        mode http
+        option httplog
+        log global
+        timeout client 1m
+        timeout server 1m
+        timeout connect 10s
+        timeout http-keep-alive 2m
+        timeout queue 15s
+        timeout tunnel 4h
+
+
+#---------------------------------------------------------------------
+##### FRONTENDS
+#---------------------------------------------------------------------
+frontend stats
+    mode http
+    bind :444  ssl crt certs/{{ ssl_combined_pem }}
+    stats enable
+    stats realm Haproxy\ Statistics
+    stats refresh 10s
+    stats admin if TRUE
+    stats uri /
+    stats show-modules
+
+frontend EXT-WEB:80
+    bind :80  name clear
+    mode http
+    log global
+
+    # Redirections to Let's Encrypt local agent
+    acl ispath_letsencrypt                     path_beg /.well-known/acme-challenge/
+
+    # Redirect HTTP -> HTTPS (except let's encrypt)
+    redirect code 301 scheme https if !{ ssl_fc }  !ispath_letsencrypt
+    use_backend letsencrypt_80     if ispath_letsencrypt
+
+
+
+frontend EXT-WEB:443
+    mode http
+    bind :443 name secure ssl crt certs/{{ ssl_combined_pem }}
+    option socket-stats
+    option forwardfor except 127.0.0.1
+    option http-ignore-probes
+
+    http-after-response set-header Strict-Transport-Security "max-age=31536000"
+    http-request capture req.hdr(Host) len 30
+    http-request redirect scheme https code 301 if !{ ssl_fc }
+    http-request del-header x-forwarded-for
+    http-request  cache-use cache
+    http-response cache-store cache
+
+    redirect code 301 scheme https if !{ ssl_fc }
+
+    compression algo deflate gzip
+    compression type text/html text/plain text/css application/octet-stream application/amf application/x-amf application/javascript application/xhtml+xml image/x-icon
+
+    timeout client 25s
+
+    ## Host ACL Definitions
+    {% if domino_vagrant_rest_api_proxy_url is defined %}
+    acl host_restapi              hdr(host)          -i {{ domino_vagrant_rest_api_proxy_url }}
+    {% endif %}
+
+    ## Application backends
+    {% if voltmx_port_forwards[0].url is defined %}
+    use_backend                     voltmx                if host_voltmx
+    {% endif %}
+
+
+cache cache
+    total-max-size 200        # RAM cache size in megabytes
+    max-object-size 10485760  # max cacheable object size in bytes
+    max-age 3600              # max cache duration in seconds
+    process-vary on           # handle the Vary header (otherwise don't cache)
+
+#---------------------------------------------------------------------
+##### BACKENDS ####
+#---------------------------------------------------------------------
+
+## Let's Encrypt Cert-bot Tool
+backend letsencrypt_80
+        mode http
+        log global
+        http-response set-header Server haproxy
+        server  letsencrypt             127.0.0.1:8080
+
+
+{% if domino_vagrant_rest_api_port_forwards[0].guest is defined %}
+# Rest API
+backend restapi
+        mode    http
+        balance leastconn
+        server  restapi                 127.0.0.1:{{ domino_vagrant_rest_api_port_forwards[0].guest }}                         check cookie app1 init-addr last,libc,none
+{% endif %}

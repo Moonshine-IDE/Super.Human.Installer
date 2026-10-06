@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Load environment variables
+source /etc/pythonserv
+
+# Start Python Simple HTTP Server
+/home/{{ service_user }}/.local/bin/uploadserver \
+  --port $port \
+  --directory {{ python_simple_web_server_path }} \
+  $theme \
+  $thememode \
+  $servercert \
+  $servercertfile
+  
+

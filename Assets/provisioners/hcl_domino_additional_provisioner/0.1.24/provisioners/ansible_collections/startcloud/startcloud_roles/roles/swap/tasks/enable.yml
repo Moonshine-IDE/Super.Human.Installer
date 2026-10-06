@@ -1,0 +1,24 @@
+---
+-
+  name: Ensure swap file exists.
+  ansible.builtin.command: >
+    {{ swap_file_create_command }}
+    creates='{{ swap_file_path }}'
+  register: swap_file_create
+  notify:
+    - Make swap file if necessary
+
+-
+  name: Set permissions on swap file.
+  ansible.builtin.file:
+    path: "{{ swap_file_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+-
+  name: Set swappiness.
+  ansible.posix.sysctl:
+    name: vm.swappiness
+    value: "{{ swap_swappiness }}"
+    state: present

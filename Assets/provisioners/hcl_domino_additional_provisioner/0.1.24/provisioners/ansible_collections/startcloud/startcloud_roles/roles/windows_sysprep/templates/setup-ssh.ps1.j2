@@ -1,0 +1,30 @@
+rm C:\Windows\Temp\packer\Autounattend.xml
+
+Write-Host "`nConfigure PowerShell"
+Set-ExecutionPolicy RemoteSigned -Force
+$ProgressPreference = 'SilentlyContinue'
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+Write-Output "`nEnabling RDP"
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server" -Name fDenyTSConnections -Value 0 -Type DWord
+
+Write-Host "`nEnable Serial Console"
+bcdedit /ems ON
+bcdedit /bootems ON
+bcdedit /emssettings EMSPORT:1 EMSBAUDRATE:115200
+
+Write-Host "`nDisable Hibernate"
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\Power\ -name HiberFileSizePercent -value 0
+Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Control\Power\ -name HibernateEnabled -value 0
+
+Write-Host "`nDisable Screensaver"
+Set-ItemProperty "HKCU:\Control Panel\Desktop" -Name ScreenSaveActive -Value 0 -Type DWord
+& powercfg -x -monitor-timeout-ac 0
+& powercfg -x -monitor-timeout-dc 0
+
+Set-Service -Name 'WinRM' -StartupType Automatic
+Start-Service -Name 'WinRM'
+
+# Log the completion for SSH
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+"[$timestamp] SSH setup completed" | Out-File -Append -FilePath "C:\Windows\Temp\ssh-setup.log"

@@ -1,0 +1,160 @@
+server:
+  config_version: 0.1.11
+  domain: "{{ startcloud_web_terminal_proxy_url }}"
+  port: {{ startcloud_web_terminal_port_forwards[0].guest }}
+  show_root_index: false
+  enable_api_docs: true
+  sse_max_connections: 1000  # Maximum concurrent SSE connections before warning
+  login_title: "Web-Terminal"
+  login_subtitle: "Web-Terminal Console Access"
+  login_icon_class: "bi bi-cloud-download"
+  login_icon_url: 
+  login_primary_color: "#198754"
+  oidc_button_style: "btn-outline-success"
+  
+  # Landing page customization (all optional)
+  landing_title: "STARTcloud Web-Terminal"
+  landing_subtitle: "Web-Terminal Console Access"
+  landing_description: "Secure web-based terminal access"
+  landing_icon_class: "bi bi-terminal"
+  landing_icon_url:
+  landing_primary_color: "#198754"
+  support_email: "support@startcloud.com"
+
+  # CORS configuration
+  cors:
+    whitelist:
+      - "https://{{ startcloud_web_terminal_proxy_url }}"
+    allow_origin: true  # true=allow whitelist, false=deny all, "specific"=exact matching
+    preflight_continue: true
+    credentials: true
+
+swagger:
+  allow_full_key_retrieval: false
+  allow_temp_key_generation: true
+  temp_key_expiration_hours: 1
+
+ssl:
+  cert: {{ cert_dir }}/crt/{{ settings.hostname }}.{{ settings.domain }}.crt
+  key: {{ cert_dir }}/key/{{ settings.hostname }}.{{ settings.domain }}.key
+
+database:
+  dialect: "sqlite"
+  storage: "/var/lib/web-terminal/users.db"
+  logging: false
+
+logging:
+  log_directory: "/var/log/web-terminal"
+  log_level: "info"
+  max_file_size_mb: 10
+  max_files: 5
+  enable_rotation: true
+  enable_compression: true
+  compression_age_days: 7
+
+authentication:
+  jwt_secret: "{{ web_terminal_jwt_secret }}"
+  jwt_expiration: "24h"
+  oidc_global_hidden: false  # Set to true to hide all OIDC providers by default
+  basic_auth_hidden: false   # Set to true to hide basic authentication by default
+  
+  # Backchannel logout configuration
+  backchannel_logout:
+    enabled: true  # Enable/disable backchannel logout endpoint
+    revocation_scope: "both"  # Options: sid (session-specific), sub (all user sessions), both
+  
+  local:
+    users:
+{% for username, password in web_terminal_users.items() %}
+      - username: {{ username }}
+        password: {{ password }}
+        role: admin
+        id: {{ loop.index }}
+{% endfor %}
+
+  oidc_providers:
+    # Example OIDC provider configuration with hiding support
+    # google:
+    #   enabled: true
+    #   hidden: false  # Set to true to hide this specific provider
+    #   client_id: "your-google-client-id"
+    #   client_secret: "your-google-client-secret"
+    #   display_name: "Sign in with Google"
+    #   issuer: "https://accounts.google.com"
+    #   scope: "openid email profile"
+
+  permission_strategy: "domain_based"
+  domain_mappings:
+    terminal_access: ["*@{{ settings.domain }}"]  # Applies to OIDC users; basic auth users use local roles
+    terminal_admin: ["admin@{{ settings.domain }}"]  # Applies to OIDC users only; basic auth users use local roles
+  
+  claims_mappings:
+    terminal_access:
+      - claim: "groups"
+        values: ["terminal-users", "all-users"]
+    terminal_admin:
+      - claim: "groups"
+        values: ["terminal-admins"]
+      - claim: "role"
+        values: ["admin"]
+
+rate_limiting:
+  window_minutes: 15                                                        # Time window in minutes
+  max_requests: 500                                                         # Maximum requests per window (increased for SSE)
+  message: "Too many requests from this IP, please try again later."       # Error message shown to users
+  skip_successful_requests: false                                           # Whether to skip counting successful requests
+  skip_failed_requests: false                                               # Whether to skip counting failed requests
+
+internationalization:
+  default_language: "en"                                                    # Default language for backend API responses
+  supported_languages: []                                                   # Auto-detected from translation files (leave empty for auto-detection)
+  fallback_language: "en"                                                   # Fallback language if requested language not available
+  auto_detect: true                                                         # Auto-detect user language from Accept-Language header
+  force_language: null                                                      # Force specific language for all responses (overrides auto-detection)
+
+security:
+  # Content Security Policy (CSP) configuration
+  content_security_policy:
+    enabled: true                                                           # Enable/disable CSP entirely
+    default_src: ["'self'"]                                                # Default source restrictions
+    script_src:                                                             # Script source restrictions
+      - "'self'"
+      - "'unsafe-inline'"                                                   # Required for React and Vite
+      - "'unsafe-eval'"                                                     # Required for development mode
+      - "https://cdn.jsdelivr.net"                                          # Bootstrap CDN (actually used)
+    style_src:                                                              # Style source restrictions  
+      - "'self'"
+      - "'unsafe-inline'"                                                   # Required for Bootstrap and dynamic styles
+    font_src:                                                               # Font source restrictions
+      - "'self'"
+      - "data:"                                                             # Base64 fonts (Bootstrap Icons)
+    img_src:                                                                # Image source restrictions
+      - "'self'"
+      - "data:"                                                             # Base64 images
+      - "blob:"                                                             # Generated images
+      - "https://startcloud.com"                                            # STARTcloud logo (fallback - prefer local assets)
+      - "https://raw.githubusercontent.com"                                 # GitHub raw assets (fallback)
+    connect_src:                                                            # Connection restrictions (AJAX, WebSocket)
+      - "'self'"
+      - "wss:"                                                              # WebSocket for SSE
+    object_src: ["'none'"]                                                  # Block object/embed elements
+    media_src: ["'self'"]                                                   # Media source restrictions
+    frame_src: ["'self'"]                                                   # Frame source restrictions
+    child_src: ["'self'"]                                                   # Child frame restrictions
+    worker_src: ["'self'", "blob:"]                                         # Service worker restrictions
+    manifest_src: ["'self'"]                                                # Web app manifest restrictions
+
+  # HTTP Strict Transport Security (HSTS)
+  hsts:
+    enabled: true                                                           # Enable HSTS
+    max_age: 31536000                                                       # 1 year in seconds
+    include_subdomains: true                                                # Apply to all subdomains
+    preload: true                                                           # Submit to HSTS preload list
+
+  # Additional security headers
+  headers:
+    x_content_type_nosniff: true                                            # Prevent MIME type sniffing
+    x_frame_options: "SAMEORIGIN"                                           # Clickjacking protection
+    x_xss_protection: true                                                  # XSS filter (legacy browsers)
+    referrer_policy: "strict-origin-when-cross-origin"                     # Referrer information control
+    cross_origin_embedder_policy: false                                     # COEP (disable for iframe compatibility)

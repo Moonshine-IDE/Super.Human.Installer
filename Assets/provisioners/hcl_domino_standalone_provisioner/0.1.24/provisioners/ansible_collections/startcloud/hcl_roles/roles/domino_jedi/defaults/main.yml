@@ -1,0 +1,57 @@
+---
+run_tasks: true
+packages:
+
+# If true, then Jedi will manage Domino, if false, Nashed script will manage domino, but during provisioning this switches to Ansible.
+jedi_enabled: true
+
+jedi_service:  jedi
+prominic_install_dir: /opt/prominic
+jedi_install_dir: "{{ prominic_install_dir }}/jedi"
+jedi_install_lib_dir: "{{ jedi_install_dir }}/lib"
+jedi_install_jar: "{{ jedi_install_lib_dir }}/jedi.jar"
+# path to local jedi artifact.  TODO:  if not found, download instead
+jedi_artifact_jar: ./jedi.jar
+jedi_cfg_dir: "{{ prominic_install_dir }}/jedi/etc"
+# JeDI needs to run as root for now, but this may be revisited later
+# Ownership is not important as a result, but these properties are intended to make it easy to change later
+jedi_user: root
+jedi_group: root
+
+# Feel good Variables for Mark to know its in the works :) not implemented yet.
+jedi_username: "startcloud"
+jedi_password: "STARTcloud24@!"
+
+jedi_alias:
+  enabled: false
+  alias: "domino console"
+  command: "telnet 0 1910"
+
+# Clear text port
+jedi_server_text_port: 1910
+# Secure text port
+jedi_server_ssltext_port: 1911
+# Data port
+jedi_server_joes_port: 1710
+# Secure data port
+jedi_server_ssljoes_port: 1711
+# why this
+jedi_noteslog: /local/notesdata/noteslog
+# online zip 
+jedi_online_zip: https://public-artifacts.prominic.net/jedi/jedi.zip
+jedi_local_zip: installers/jedi/archives/jedi.zip
+jedi_local_unpack_dir: "{{ role_path }}/files/jedi"
+# jar file
+jedi_online_jar: https://public-artifacts.prominic.net/jedi/jedi.jar
+jedi_local_jar: installers/jedi/archives/jedi.jar
+
+# Control whether JeDI automatically attempts to start Domino
+jedi_domino_autostart: true
+
+# true if the jedi SSL configuration should be updated based on the other jedi_ssl properties.  Otherwise, it will use the configuration provided by the JeDI template
+jedi_ssl_update: true
+# By default, use the JKS certificate generated for this instance
+jedi_ssl_cert:  "{{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}.jks"
+jedi_ssl_cert_password:  "{{ cert_pass }}"
+
+

@@ -1,0 +1,15 @@
+[Unit]
+Description=NFC daemon
+After=network.target auditd.service
+
+[Service]
+User={{ service_user }}
+ExecStart=/usr/bin/sudo /usr/local/bin/nfc-daemon
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+RestartPreventExitStatus=255
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,58 @@
+drop procedure if exists dyn_update3;
+delimiter $
+CREATE PROCEDURE dyn_update3(
+    KONY_ID_CONFIG_DB varchar(90),
+    KONY_MF_ACCOUNTS_DB varchar(90),
+    KONY_MF_CONSOLE_DB varchar(90),
+    KONY_ADMIN_DB varchar(90),
+    KONY_KPNS_DB varchar(90),
+    OLD_HOST varchar(90),
+    NEW_HOST varchar(90),
+    OLD_PORT varchar(6),
+    NEW_PORT varchar(6)
+)
+BEGIN
+  DECLARE var_done INT DEFAULT FALSE;
+  DECLARE conn_cnt INT DEFAULT 0;
+  DECLARE v_id INT;
+  DECLARE v_table_schema varchar(90);
+  DECLARE v_TABLE_NAME varchar(30);
+  DECLARE v_COLUMN_NAME varchar(30);
+  DECLARE cur1 CURSOR FOR SELECT table_schema, TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS where table_schema collate utf8_unicode_ci in (KONY_ID_CONFIG_DB,KONY_MF_ACCOUNTS_DB,KONY_MF_CONSOLE_DB,KONY_ADMIN_DB,KONY_KPNS_DB) and UPPER(TABLE_NAME) collate utf8_unicode_ci in ('SERVER_CONFIGURATION','SERVER_ENVIRONMENT','APP_SERVICES','AUTH_PROVIDER','OAUTH_TOKENS','NS_METADATA','CLUSTERINFO','KONY_ACC_ENV_DETAILS','KONY_ACC_ENV_DETAILS_HST','ACCOUNTS','ACCOUNTS_CONFIGURATIONS','FEATURES','TENANT_METADATA') and (upper(COLUMN_NAME) collate utf8_unicode_ci like '%URL' or upper(COLUMN_NAME) collate utf8_unicode_ci in ('PROP_VALUE','ENV_PARAMS','HOSTIP','VALUE'));
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET var_done = TRUE;
+
+  SELECT count(1) INTO conn_cnt FROM information_schema.COLUMNS where table_schema collate utf8_unicode_ci in (KONY_ID_CONFIG_DB,KONY_MF_ACCOUNTS_DB,KONY_MF_CONSOLE_DB,KONY_ADMIN_DB,KONY_KPNS_DB) and UPPER(TABLE_NAME) collate utf8_unicode_ci in ('SERVER_CONFIGURATION','SERVER_ENVIRONMENT','APP_SERVICES','AUTH_PROVIDER','OAUTH_TOKENS','NS_METADATA','CLUSTERINFO','KONY_ACC_ENV_DETAILS','KONY_ACC_ENV_DETAILS_HST','ACCOUNTS','ACCOUNTS_CONFIGURATIONS','FEATURES','TENANT_METADATA') and (upper(COLUMN_NAME) collate utf8_unicode_ci like '%URL' or upper(COLUMN_NAME) collate utf8_unicode_ci in ('PROP_VALUE','ENV_PARAMS','HOSTIP','VALUE'));
+
+  if ( conn_cnt > 1 ) then
+
+OPEN cur1;
+
+    loop_cur1: LOOP
+    FETCH cur1 INTO v_table_schema, v_TABLE_NAME, v_COLUMN_NAME;
+   IF var_done = TRUE THEN
+      LEAVE loop_cur1;
+      END IF;
+
+    select concat('changing value of : ',v_table_schema,':',v_TABLE_NAME,':',v_COLUMN_NAME);
+          -- select concat('changing value of : '||v_table_schema||':'||v_TABLE_NAME||':'||v_COLUMN_NAME);
+          SET @sqlText =concat('update ',v_table_schema,'.',v_TABLE_NAME,' set ',v_COLUMN_NAME,'=replace(',v_COLUMN_NAME,',''',OLD_HOST,''',''',NEW_HOST,''')');
+          PREPARE stmt FROM @sqlText;
+    -- select @sqlText;
+          EXECUTE stmt;
+          DEALLOCATE PREPARE stmt;
+
+          SET @sqlText =concat('update ',v_table_schema,'.',v_TABLE_NAME,' set ',v_COLUMN_NAME,'=replace(',v_COLUMN_NAME,',''',OLD_PORT,''',''',NEW_PORT,''')');
+          PREPARE stmt FROM @sqlText;
+    -- select @sqlText;
+          EXECUTE stmt;
+          DEALLOCATE PREPARE stmt;
+
+        END LOOP loop_cur1;
+CLOSE cur1;
+
+   end if;
+ commit;
+END $
+delimiter ;
+
+call DYN_UPDATE3 ('{{ voltmx_db_prefix }}idconfigdb{{ voltmx_db_suffix }}, '{{ voltmx_db_prefix }}mfaccountsdb{{ voltmx_db_suffix }}, '{{ voltmx_db_prefix }}mfconsoledb{{ voltmx_db_suffix }}, '{{ voltmx_db_prefix }}admindb{{ voltmx_db_suffix }}, '{{ voltmx_db_prefix }}kpnsdb{{ voltmx_db_suffix }}, 'vmx.pmagold.com', 'vmx.pmagold.com', '8443', '443');

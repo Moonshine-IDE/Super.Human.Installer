@@ -1,0 +1,16 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing and Configuring SSH for Windows"
+
+# SSH configuration
+ssh_default_shell: "C:\\tools\\cygwin\\bin\\bash.exe"
+ssh_default_shell_option: "-c"
+
+# Uptime utility files
+uptime_files:
+  - "C:\\Windows\\system32\\uptime.exe"
+  - "C:\\Windows\\system32\\uptime"
+  - "C:\\tools\\cygwin\\bin\\uptime.exe"
+  - "C:\\tools\\cygwin\\bin\\uptime"

@@ -1,0 +1,38 @@
+---
+-
+  name: "Setting up WinRM"
+  block:
+    -
+      name: "Creating Temp Directory"
+      ansible.builtin.win_file:
+        path: "{{ item }}"
+        state: directory
+      with_items:
+        - "{{ winrm_temp_dir }}"
+
+    -
+      name: "Downloading WinRM Configuration Script"
+      ansible.windows.win_get_url:
+        url: "{{ winrm_config_script_url }}"
+        dest: "{{ winrm_temp_dir }}\\ConfigureRemotingForAnsible.ps1"
+      register: winrm_setup
+
+    -
+      name: "Executing WinRM Configuration Script"
+      ansible.windows.win_powershell:
+        script: iex "{{ winrm_temp_dir }}\\ConfigureRemotingForAnsible.ps1"
+      register: winrm_execution
+
+    -
+      name: "Allowing Basic WinRM Authentication"
+      ansible.windows.win_powershell:
+        script: Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+      register: winrm_allow_basic_auth_result
+      when: winrm_allow_basic_auth
+
+    -
+      name: "Allowing Unencrypted Connections"
+      ansible.windows.win_powershell:
+        script: winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+      register: winrm_allow_unencrypted_result
+      when: winrm_allow_unencrypted

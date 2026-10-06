@@ -1,0 +1,26 @@
+{
+	"title": "Updating the OIDC Trusted Provider",
+	"versionjson": "1.0.0",
+	"steps": [
+		{
+			"title": "--- Step 1. Export original data ---",
+			"databases": [
+				{
+					"action": "export",
+					"filePath": "idpcat.nsf",
+					"documents": [
+						{
+							"action": "export",
+							"filePath": "JavaAddin/Genesis/jsonresponse/oidc_provider_for_additional.txt",
+							"search": {
+							   "formula":"Form=\"DominoOIDCProvider\" & OIDCP_InternetSite=\"{{ domino_oidc_install_proxy_url }}\"",
+                               "number":0
+							},
+							"evaluate": "\"OIDCP_InternetSite=\"+@Implode(OIDCP_InternetSite)"
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,74 @@
+---
+-
+  name: "Loading vendor-specific variables"
+  ansible.builtin.include_vars: "{{ vendor }}.yml"
+  when: vendor is defined
+  ignore_errors: true
+
+-
+  name: "Windows Activation"
+  when: activate_os | default(false) | bool and windows_license_key is defined and windows_license_key != ""
+  block:
+    -
+      name: "Activating Windows with license key"
+      ansible.windows.win_powershell:
+        script: |
+          slmgr.vbs /ipk "{{ windows_license_key }}"
+      register: activation_result
+
+    -
+      name: "Activating Windows with license key"
+      ansible.windows.win_powershell:
+        script: |
+          slmgr.vbs /ato
+
+    -
+      name: "Displaying activation result"
+      ansible.builtin.debug:
+        var: activation_result
+
+-
+  name: "Configuring Powershell"
+  block:
+    -
+      name: "Setting Execution Policy to Unrestricted"
+      ansible.windows.win_shell: Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force
+      register: execution_policy_unrestricted
+
+    -
+      name: "Setting Execution Policy to Bypass for Process Scope and Enable TLS 1.2"
+      ansible.windows.win_shell: '[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072'
+      register: execution_policy_bypass
+
+-
+  name: "Setting timezone to {{ win_timezone }}"
+  when: ansible_os_family == 'Windows'
+  community.windows.win_timezone:
+    timezone: "{{ win_timezone }}"
+
+-
+  name: "Writing current variables to support bundle"
+  block:
+    -
+      name: "Creating support bundle directory"
+      ansible.windows.win_file:
+        path: C:\vagrant\support-bundle
+        state: directory
+
+    -
+      name: "Writing current variables to C:\\vagrant\\support-bundle\\ansible-system-variables.json"
+      ansible.windows.win_copy:
+        content: "{{ vars | to_nice_json }}"
+        dest: "C:\\vagrant\\support-bundle\\ansible-system-variables.json"
+
+    -
+      name: "Writing provisioner version to json"
+      ansible.windows.win_copy:
+        content: "{{ provisioner_version | default('unknown') }}"
+        dest: "C:\\vagrant\\support-bundle\\{{ provisioner_name | default('provisioner') }}-version.json"
+
+    -
+      name: "Writing core_provisioner version"
+      ansible.windows.win_copy:
+        content: "{{ core_provisioner_version | default('unknown') }}"
+        dest: "C:\\vagrant\\support-bundle\\core_provisioner-version.json"

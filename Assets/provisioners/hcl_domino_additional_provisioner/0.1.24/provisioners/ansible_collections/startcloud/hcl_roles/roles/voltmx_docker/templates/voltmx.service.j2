@@ -1,0 +1,20 @@
+[Unit]
+Description=VoltMX
+After=syslog.target network.target
+
+[Service]
+Type=forking
+
+User={{ service_user }}
+Group={{ service_group }}
+
+WorkingDirectory=/local/voltmx-foundry/tomcat/
+
+ExecStart=/local/voltmx-foundry/tomcat/bin/startup.sh
+ExecStop=/local/voltmx-foundry/tomcat/bin/shutdown.sh
+
+RestartSec=20
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

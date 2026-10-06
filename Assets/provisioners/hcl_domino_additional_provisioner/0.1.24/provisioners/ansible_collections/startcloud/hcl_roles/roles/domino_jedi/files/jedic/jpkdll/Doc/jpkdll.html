@@ -1,0 +1,501 @@
+<html>
+<head>
+<title>jpkdll API</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+</head>
+
+<body bgcolor="#FFFFFF" text="#000000">
+<h1>jpkdll</h1>
+<p>The <b>jpkdll</b> name come from Java Process Killer DLL (where Java Process 
+  Killer is the Java interface implemented by the DLL at the beginning). Now, 
+  <b>jpkdll</b> is implementing mainly 3 interfaces, corresponding to three main 
+  directions of use:</p>
+<ol>
+  <li><b>Task Manager API</b> called <b><a href="#tmapi">TM API</a> </b>from now 
+    on;</li>
+  <li><b>Service Control Manager API</b> - called <b>SCM API</b> from now on;</li>
+  <li><b>Access Control Manager API</b> called <b>ACM API </b>from now on;</li>
+</ol>
+<p>The <b>SCM API</b> is the programmatic implementation of services offered by 
+  the Services applet in Windows NT/2000, the <b>TM API</b> is the programmatic 
+  implementation of services offered by the Task Manager applet in Windows NT/2000, 
+  and the <b>ACM API</b> is the programmatic implementation of consulting, enabling 
+  and disabling the debug programs privilege in the Local Security Settings (previously 
+  assigned to the current user via Security Settings/Local Policies/User Rights 
+  Assignment.</p>
+<h2>Version warning</h2>
+<p>The programmatic implementation is generally working correctly and therefore 
+  applicable on both NT and 2000 versions of Windows (as stated in MSDN for specific 
+  Win32 API used). BUT, due to large version of Windows NT available (if we include 
+  various patches and services packs), the current version warning apply: &quot;<i><b>The 
+  DLL was developed on Windows 2000 Professional SP0 (i.e. no services pack), 
+  reported version by ver command &quot;Microsoft Windows 2000 [Version 5.00.2195]&quot;, 
+  using Visual C++ v6.0, and Microsoft Platform SDK August 2001 for Windows 2000&quot;</b></i>. 
+  Currently the developer is aware of the following limitations:</p>
+<ul>
+  <li>finding the process id for a service related API is not available on Windows 
+    versions previous to 2000, therefore the API work correctly and the dll load 
+    without problems for Windows 2000 only;</li>
+</ul>
+<h2>Error reporting</h2>
+<p>Each of the three API report the error the same way, as stated in the java 
+  interface bellow. Generally each API throw an <b>java.io.IOException</b> carrying 
+  a string in the following format &quot;&lt;code&gt;|&lt;code&gt;|&lt;code&gt;&quot; 
+  with the following meaning:</p>
+<ul>
+  <li>1st code is the API specific error code (each of the three APIs define a 
+    specific set of errors);</li>
+  <li>2nd code is the Win32 reported code for the offending Win32 API call (reported 
+    by the <i>GetLastError() </i>Win32 API);</li>
+  <li>3rd code is the Dll source line where the error occured.</li>
+</ul>
+<p>The string carried inside the thrown exception is for informative purposes 
+  only (logging it, reporting to user, etc), no specific action beeing implied 
+  by particular values (retry is possible for specific APIs). </p>
+<p>A detailed explanation of each API specific error code (1st code) is give for 
+  each of the three APIs. Also errors are cross references against each API call 
+  bellow. The code is specific for each of the three APIs (i.e. the value of n 
+  have different meaning for API1 and API2). It;s true that all the three APIs 
+  share the value of 0 = no_error code.</p>
+<p>Particular values for the 2nd code are shown in the <a href="win32errorcodes.pdf">error 
+  table</a> extracted from MSDN (MSDN January 2000 Release).</p>
+<p>The 3rd code is for internal use only.</p>
+<p>API return value is used generally to report the correct execution results. 
+  In some special cases the return value is used to report errors too, as stated 
+  for that particular API (the common one is that each API test jni environment, 
+  and return 0 cast to the return value (0 for int, false for boolean, null for 
+  []) when jni related parameters are invalid).</p>
+<h2>jpkdll interface</h2>
+<pre>	/* task manager */<br>	<a href="#tmapplications">public native String[] applications() throws java.io.IOException</a>;<br>	<a href="#tmprocesses">public native String[] processes() throws java.io.IOException</a>;<br>	<a href="#tmapp2pid">public native int app2pid(String app) throws java.io.IOException</a>;<br>	<a href="#tmpid2exename">public native String pid2exename(int pid) throws java.io.IOException</a>; <br>	<a href="#tmexist_pid">public native boolean exist_pid(int pid) throws java.io.IOException</a>;<br>	<a href="#tmkill">public native boolean kill(int pid) throws java.io.IOException</a>;<br>	<a href="#tmkill_tree">public native int[] kill_tree(int pid) throws java.io.IOException</a>;<br>	<a href="#tmget_tree">public native int[] get_tree(int pid) throws java.io.IOException</a>;
+	
+	/* service manager */<br>	public native boolean startService(String servicename) throws java.io.IOException;
+	public native boolean stopService(String servicename) throws java.io.IOException;
+	public native boolean isRunningService(String servicename) throws java.io.IOException;
+	public native boolean isConfiguredService(String servicename) throws java.io.IOException;
+	public native String[] listServices() throws java.io.IOException;
+	public native int service2pid(String servicename) throws java.io.IOException;
+	public native int getServiceState(String servicename) throws java.io.IOException;
+	public native int getServiceControls(String servicename) throws java.io.IOException;
+	public native boolean isServiceDBLocked() throws java.io.IOException;
+	public native String serviceName2DisplayName(String servicename) throws java.io.IOException;
+	public native String displayName2ServiceName(String servicename) throws java.io.IOException;
+	
+	/* access control manager */
+	public native boolean isDebugPrivilegeEnabled() throws java.io.IOException;
+	public native void enableDebugPrivilege(boolean bEnable) throws java.io.IOException;</pre>
+<h2>TM API<a name="tmapi"></a></h2>
+<h3>TM API Errors</h3>
+<p>The following specific error codes (1st code) are generally reported by TM 
+  API:</p>
+<table width="220" border="1">
+  <tr> 
+    <td width="177">ok</td>
+    <td width="27"> 
+      <div align="right">0</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">internal_error</td>
+    <td width="27"> 
+      <div align="right">1</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">param_errors</td>
+    <td width="27"> 
+      <div align="right">2</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_enumerate_windows</td>
+    <td width="27"> 
+      <div align="right">3</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_enumerate_processes</td>
+    <td width="27"> 
+      <div align="right">4</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">no_window_for_app_name</td>
+    <td width="27"> 
+      <div align="right">5</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_open_process_for_pid</td>
+    <td width="27"> 
+      <div align="right">6</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_kill</td>
+    <td width="27"> 
+      <div align="right">7</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_start_snapshot</td>
+    <td width="27"> 
+      <div align="right">8</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_iterate_snapshot</td>
+    <td width="27"> 
+      <div align="right">9</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">not_enough_memory</td>
+    <td width="27"> 
+      <div align="right">10</div>
+    </td>
+  </tr>
+  <tr> 
+    <td width="177">can_not_create_array </td>
+    <td width="27"> 
+      <div align="right">11</div>
+    </td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native String[] applications() throws java.io.IOException;<a name="tmapplications"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">Return the title (window text) of all top-level 
+      windows</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">No particular order (like the lexicographic order) is guaranteed. 
+      Top-level windows are windows that have desktop as parent or no parent at 
+      all. Generally these windows appear in the taskbar. The same result in show 
+      in the &quot;Applications&quot; tab in Task Manager applet.</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">none</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">String []</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">non-null string[] with each top-level window title. </td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14"> 
+      <p><i>can_not_enumerate_windows</i></p>
+      </td>
+    <td width="44%" height="14">window enumation process failed.</td>
+  </tr>
+  <tr> 
+    <td width="36%"><i>internal_error</i></td>
+    <td width="44%">severe internal error conditions occured</td>
+  </tr>
+  <tr> 
+    <td width="36%"><i>can_not_create_array</i></td>
+    <td width="44%">jni create string[] failed</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native String[] processes() throws java.io.IOException;<a name="tmprocesses"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<h2>&nbsp;</h2>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native int app2pid(String app) throws java.io.IOException;<a name="tmapp2pid"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native String pid2exename(int pid) throws java.io.IOException; 
+        <a name="tmpid2exename"></a> </h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native boolean exist_pid(int pid) throws java.io.IOException;<a name="tmexist_pid"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native boolean kill(int pid) throws java.io.IOException;<a name="tmkill"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native int[] kill_tree(int pid) throws java.io.IOException;<a name="tmkill_tree"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+<table width="100%" border="1">
+  <tr> 
+    <td colspan="3"> 
+      <h3>public native int[] get_tree(int pid) throws java.io.IOException;<a name="tmget_tree"></a></h3>
+    </td>
+  </tr>
+  <tr> 
+    <td width="20%" height="5">Goal</td>
+    <td height="5" colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Remarks</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Parameters</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">Return value</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="20%">No throw returns</td>
+    <td colspan="2">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td rowspan="3" width="20%">Specific thrown code</td>
+    <td width="36%" height="14">&nbsp;</td>
+    <td width="44%" height="14">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+  <tr> 
+    <td width="36%">&nbsp;</td>
+    <td width="44%">&nbsp;</td>
+  </tr>
+</table>
+<p>&nbsp;</p>
+</body>
+</html>

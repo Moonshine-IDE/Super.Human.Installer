@@ -1,0 +1,15 @@
+---
+# Determine if we should use systemd-timesyncd (Debian 13+) or traditional ntp
+__use_systemd_timesyncd: "{{ ansible_distribution_major_version | int >= 13 }}"
+
+# Traditional NTP configuration (for older Debian versions)
+__ntp_daemon: "{{ 'systemd-timesyncd' if __use_systemd_timesyncd else 'ntp' }}"
+ntp_tzdata_package: tzdata
+__ntp_package: "{{ 'systemd' if __use_systemd_timesyncd else 'ntp' }}"
+__ntp_config_file: "{{ '/etc/systemd/timesyncd.conf' if __use_systemd_timesyncd else '/etc/ntp.conf' }}"
+__ntp_driftfile: /var/lib/ntp/drift
+ntp_cron_daemon: cron
+
+# systemd-timesyncd specific variables
+__ntp_timesyncd_config_file: /etc/systemd/timesyncd.conf
+__ntp_timesyncd_service: systemd-timesyncd

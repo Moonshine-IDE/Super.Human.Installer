@@ -1,0 +1,14 @@
+---
+run_tasks: true
+web_terminal_path: "/opt/web-terminal"
+web_terminal_build_from_source: false
+web_terminal_jwt_secret: "{{ lookup('password', '/dev/null length=64 chars=ascii_letters,digits') }}"
+web_terminal_config_path: "/etc/web-terminal/config.yaml"
+web_terminal_users:
+  admin: "y3I@kGkn4%pi74zqi8"
+
+startcloud_web_terminal_port_forwards:
+  -
+    guest: 8090
+    url: "web-terminal"
+startcloud_web_terminal_proxy_url: "{{ startcloud_web_terminal_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

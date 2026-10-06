@@ -1,0 +1,78 @@
+---
+# Note: AppX package removal is now handled by the windows_privacy role
+# for comprehensive debloating with proper sysprep-safe methods
+
+-
+  name: "Reducing Template and Cleaning up System"
+  block:
+    -
+      name: "Cleaning Temp Files"
+      ansible.windows.win_shell: |
+        Takeown /d Y /R /f "C:\Windows\Temp\*"
+        Icacls "C:\Windows\Temp\*" /GRANT:r administrators:F /T /c /q 2>&1
+
+    -
+      name: "Reducing Page File"
+      ansible.windows.win_shell: |
+        $System = GWMI Win32_ComputerSystem -EnableAllPrivileges
+        $System.AutomaticManagedPagefile = $False
+        $System.Put()
+        $CurrentPageFile = gwmi -query "select * from Win32_PageFileSetting where name='c:\\pagefile.sys'"
+        $CurrentPageFile.InitialSize = {{ windows_page_file_size_initial }}
+        $CurrentPageFile.MaximumSize = {{ windows_page_file_size_max }}
+        $CurrentPageFile.Put()
+
+-
+  name: "Verifying Health of Windows Installation"
+  when: verify
+  block:
+    -
+      name: "Scanning health of the image"
+      ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /ScanHealth'
+
+    -
+      name: "Rebooting to ensure all dism commands complete"
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+    -
+      name: "Starting component cleanup"
+      ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /StartComponentCleanup /ResetBase'
+
+    -
+      name: "Rebooting to ensure all dism commands complete"
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+    -
+      name: "Removing superseded components"
+      ansible.windows.win_shell: 'DISM /Online /Cleanup-Image /SPSuperseded'
+      ignore_errors: true
+
+    -
+      name: "Rebooting to ensure all dism commands complete"
+      ansible.windows.win_reboot:
+        reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+-
+  name: "Cleanup System Wide Proxy (End of Provisioning)"
+  when: cleanup_proxy
+  block:
+    -
+      name: "Removing System Wide HTTP Proxy"
+      ansible.windows.win_environment:
+        name: HTTP_PROXY
+        state: absent
+        level: machine
+
+    -
+      name: "Removing System Wide HTTPS Proxy"
+      ansible.windows.win_environment:
+        name: HTTPS_PROXY
+        state: absent
+        level: machine
+
+    -
+      name: "Resetting WinHTTP Proxy Settings"
+      ansible.windows.win_shell: |
+        netsh winhttp reset proxy

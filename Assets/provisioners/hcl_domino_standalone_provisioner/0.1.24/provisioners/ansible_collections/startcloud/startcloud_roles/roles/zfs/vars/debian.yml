@@ -1,0 +1,5 @@
+---
+packages:
+  - zfs-auto-snapshot
+  - zfs-zed
+  - zfsutils-linux

@@ -1,0 +1,48 @@
+---
+count_progress: true
+progress_units: 2
+progress_role_description: "Initial SSL certificate setup"
+progress_role_description_step1: "Processing self-signed/CA certificates"
+progress_role_description_step2: "Processing Let's Encrypt certificates"
+
+run_tasks: true
+
+# Certificate directory paths
+win_cert_dir: "C:\\secure"
+cert_dir: "/secure"
+
+# Certificate generation settings
+selfsigned_enabled: false
+generate_self_signed_certificate_authority: false
+letsencrypt_enabled: false
+letsencrypt_staging_enabled: false
+
+# Certificate passwords
+cert_pass: ThisNeedstoBeSecure!
+ca_cert_pass: STARTSecure25@!
+
+# Certificate properties
+countrycode: US
+organization: "{{ domino_organization | default('DEMO') }}"
+
+# Java and keystore settings (Windows)
+java_version: "latest"
+java_home: "C:\\Program Files\\OpenJDK\\jdk-22.0.2"
+java_keytool: "C:\\Program Files\\OpenJDK\\jdk-22.0.2\\bin\\keytool.exe"
+
+# Private key settings
+private_key_type: RSA
+private_key_size: 4096
+
+# Windows Certificate Store settings
+cert_store_name: TrustedPublisher
+cert_store_location: LocalMachine
+cert_key_storage: machine
+cert_key_exportable: true
+
+# Variables for Role Certbot certs.
+certbot_create_if_missing: false
+certbot_create_method: standalone
+certbot_admin_email: "support@startcloud.com"
+certbot_create_standalone_stop_services:
+  - nginx

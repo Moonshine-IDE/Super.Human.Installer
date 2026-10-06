@@ -1,0 +1,32 @@
+#!/usr/bin/python3
+import struct
+import smbus
+import sys
+import time
+import RPi.GPIO as GPIO
+
+# Global settings
+# GPIO26 is for x728 V2.1/V2.2/V2.3, GPIO13 is for X728 v2.0/v1.2/v1.3
+GPIO_PORT   = 26
+I2C_ADDR    = 0x36
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(GPIO_PORT, GPIO.OUT)
+GPIO.setwarnings(False)
+
+def readVoltage(bus):
+    address = I2C_ADDR
+    read = bus.read_word_data(address, 2)
+    swapped = struct.unpack("<H", struct.pack(">H", read))[0]
+    voltage = swapped * 1.25 /1000/16
+    return voltage
+
+def readCapacity(bus):
+    address = I2C_ADDR
+    read = bus.read_word_data(address, 4)
+    swapped = struct.unpack("<H", struct.pack(">H", read))[0]
+    capacity = swapped/256
+    return capacity
+
+
+GPIO.cleanup() # this ensures a clean exit

@@ -1,0 +1,42 @@
+---
+-
+  name: "Creating Windows service user and group"
+  block:
+    -
+      name: "Lowering password complexity requirements"
+      community.windows.win_security_policy:
+        section: System Access
+        key: PasswordComplexity
+        value: 0
+
+    -
+      name: "Creating service user account"
+      ansible.windows.win_user:
+        name: "{{ service_user }}"
+        password: "{{ service_user_password }}"
+        state: present
+        password_never_expires: true
+        user_cannot_change_password: false
+        account_disabled: false
+
+    -
+      name: "Restoring original password complexity requirements"
+      community.windows.win_security_policy:
+        section: System Access
+        key: PasswordComplexity
+        value: 1
+
+-
+  name: "Configuring user password policies"
+  block:
+    -
+      name: "Setting administrator password never expires"
+      ansible.windows.win_user:
+        name: administrator
+        password_never_expires: true
+
+    -
+      name: "Setting service user password never expires"
+      ansible.windows.win_user:
+        name: "{{ service_user }}"
+        password_never_expires: true

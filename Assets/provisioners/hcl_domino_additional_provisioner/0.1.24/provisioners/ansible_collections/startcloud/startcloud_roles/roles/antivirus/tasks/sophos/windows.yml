@@ -1,0 +1,56 @@
+---
+-
+  name: "Installing Sophos Antivirus on Windows"
+  when: install_sophos | default(false) | bool
+  block:
+    -
+      name: "Setting TLS 1.2 for PowerShell downloads"
+      ansible.windows.win_powershell:
+        script: |
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+    -
+      name: "Downloading Sophos Setup from primary URL"
+      ansible.windows.win_powershell:
+        script: |
+          try {
+            $url = "{{ sophos_windows_url | default('https://blog.m4kr.net/uploads/SophosSetup.exe') }}"
+            $outpath = "$env:TEMP\SophosSetup.exe"
+            Invoke-WebRequest -Uri $url -OutFile $outpath
+            Write-Output "Downloaded Sophos installer to $outpath"
+          } catch {
+            Write-Error "Failed to download Sophos installer: $_"
+            throw $_
+          }
+      register: sophos_download_result
+
+    -
+      name: "Installing Sophos Antivirus"
+      ansible.windows.win_powershell:
+        script: |
+          try {
+            $setupPath = "$env:TEMP\SophosSetup.exe"
+            if (Test-Path $setupPath) {
+              Write-Output "Starting Sophos installation..."
+              Start-Process -FilePath $setupPath -Wait
+              Write-Output "Sophos installation completed"
+            } else {
+              throw "Sophos installer not found at $setupPath"
+            }
+          } catch {
+            Write-Error "Failed to install Sophos: $_"
+            throw $_
+          }
+      register: sophos_install_result
+
+    -
+      name: "Cleaning up Sophos installer"
+      ansible.windows.win_file:
+        path: "{{ ansible_env.TEMP }}\\SophosSetup.exe"
+        state: absent
+      ignore_errors: true
+
+    -
+      name: "Displaying Sophos installation result"
+      ansible.builtin.debug:
+        var: sophos_install_result

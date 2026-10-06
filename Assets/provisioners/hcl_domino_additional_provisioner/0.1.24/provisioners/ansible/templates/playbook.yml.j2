@@ -1,0 +1,113 @@
+#jinja2:lstrip_blocks: True
+---
+-
+  name: "Default Ansible Provisioning Playbook"
+  become: true
+  gather_facts: true
+  hosts: all
+{% if role_vars is defined and role_vars and role_vars != "" %}
+{% if role_vars.proxy_server is defined and role_vars.use_proxy and role_vars.proxy_port is defined and role_vars.proxy_port != "" %}
+  environment:
+    http_proxy: http://{{ role_vars.proxy_server }}:{{ role_vars.proxy_port }}
+    https_proxy: http://{{ role_vars.proxy_server }}:{{ role_vars.proxy_port }}
+{% endif %}
+  vars:
+    core_provisioner_version: {{ core_provisioner_version }}
+    provisioner_name: {{ provisioner_name }}
+    provisioner_version: {{ provisioner_version }}
+    {% for key, value in role_vars.items() %}
+    {{ key }}: {{ value }}
+    {% endfor %}
+    all_roles:
+    {% for role in provision_roles %}
+      - {{ role.name }}
+    {% endfor %}
+    enabled_roles: # This list can be used by the progress role if needed
+    {% for role in provision_roles %}
+      {% set vars_for_role = role.vars | default({}) %}
+      {% set run_tasks = vars_for_role.run_tasks if 'run_tasks' in vars_for_role else true %}
+      {% if run_tasks %}
+      - name: {{ role.name }} # Keep as a list of names or dicts as per your preference
+        # Storing progress related info directly here if useful for other purposes or direct use by progress role
+        # count_progress: {{ vars_for_role.count_progress | default(false) }}
+        # progress_units: {{ vars_for_role.progress_units | default(1) | int }}
+      {% endif %}
+    {% endfor %}
+
+    # Initialize global_current_progress_step here
+    global_current_progress_step: 0
+
+    # _progress_setup_role_definitions is now expected to be passed in by generate-playbook.yml
+    # when it renders this template. It will be used below when calling the progress role.
+  {% endif %}
+  {% if playbook_collections is defined and playbook_collections and playbook_collections != "" %}
+  collections:
+    {% for key, value in playbook_collections.items() %}
+    {{ key }}: {{ value }}
+    {% endfor %}
+  {% endif %}
+  {% if provision_pre_tasks is defined and provision_pre_tasks and provision_pre_tasks != "" %}
+  pre_tasks:
+    {# Append user-defined pre_tasks from Hosts.template.yml's 'pre_tasks' key #}
+    {% for user_pre_task_content_block in provision_pre_tasks %}
+    - # This creates the list item for the user-defined pre-task
+      {{ user_pre_task_content_block | indent(2) }} # Indents the YAML string content of the task
+    {% endfor %}
+  {% endif %}
+
+  roles:
+    # Explicitly include the progress role first for setup
+    - role: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: true
+        _progress_role_definitions_to_calculate: {{ _progress_setup_role_definitions }}
+
+    # Original roles loop
+    {% for role in provision_roles %}
+    -
+      role: {{ role.name }}
+      {% set tag_list = role.tags | default([]) %}
+      {% if role.when is defined %}
+      when: {{ role.when }}
+      {% endif %}
+      {% if tag_list is iterable and tag_list is not string and tag_list | length > 0 %}
+      tags:
+        {% for tag in tag_list %}
+          - {{ tag }}
+        {% endfor %}
+      {% elif tag_list is string and tag_list != "" %}
+      tags:
+        - {{ tag_list }}
+      {% endif %}
+      {% if role.vars is defined or role.port_forwards is defined %}
+      vars:
+        {% if role.vars is defined %}
+        {% for key, value in role.vars.items() %}
+        {{ key }}: {{ value }}
+        {% endfor %}
+        {% endif %}
+        {% if role.port_forwards is defined %}
+        {{ role.name }}_port_forwards:
+          {% for ports in role.port_forwards %}
+            - 
+              guest: {{ ports.guest }}
+              host: {{ ports.host }}
+              ip: {{ ports.ip }}
+              {% if ports.url is defined %}
+              url: {{ ports.url }}
+              {% endif %}
+              {% if ports.proxied is defined %}
+              proxied: {{ ports.proxied }}
+              {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+  {% if provision_post_tasks is defined and provision_post_tasks and provision_post_tasks != "" %}
+  post_tasks:
+    {% for post_task in provision_post_tasks %}
+    -
+      {{ post_task }}
+    {% endfor %}
+  {% endif %}

@@ -1,0 +1,55 @@
+---
+-
+  name: "Setting SDKMAN user variables"
+  ansible.builtin.set_fact:
+    sdk_service_user: "{{ service_user }}"
+    sdk_service_group: "{{ service_group }}"
+
+-
+  name: "Setting SDKMAN directory"
+  ansible.builtin.set_fact:
+    sdkman_dir: "{{ service_home_dir }}\\.sdkman"
+
+-
+  name: "Extracting Java SDK version from SDKMAN"
+  ansible.windows.win_shell: |
+    C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk list java | grep ' 8.0.*-zulu' | grep -v 'fx-' | sed 's/^.*\(8.0.[0-9]\+-zulu\)[ ]*$/\1/' | head -n 1"
+  register: computed_java_version
+  changed_when: false
+  when: java_version == "LATEST"
+
+-
+  name: "Setting Java SDK version"
+  ansible.builtin.set_fact:
+    selected_java_version: "{{ java_version }}"
+  when: java_version != "LATEST"
+
+-
+  name: "Setting unified Java version variable"
+  ansible.builtin.set_fact:
+    java_version_to_install: "{{ computed_java_version.stdout if (java_version == 'LATEST') else selected_java_version }}"
+
+-
+  name: "Installing Java via SDKMAN"
+  ansible.windows.win_shell: |
+    C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk install java {{ java_version_to_install }}"
+  register: sdk_install
+  changed_when: "'is already installed.' not in sdk_install.stdout"
+  failed_when: >-
+    sdk_install.rc != 0 and
+    'is already installed.' not in sdk_install.stdout
+
+-
+  name: "Setting Java environment variable"
+  ansible.windows.win_environment:
+    name: JAVA_HOME
+    value: "{{ sdkman_dir }}\\candidates\\java\\current"
+    level: machine
+
+-
+  name: "Adding Java to system PATH"
+  ansible.windows.win_path:
+    elements:
+      - "{{ sdkman_dir }}\\candidates\\java\\current\\bin"
+    scope: machine
+    state: present

@@ -1,0 +1,21 @@
+galaxy_info:
+  role_name: progress
+  author: MarkProminic
+  description: Track progress of playbook execution.
+  company: STARTCloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Debian
+      versions:
+        - 'bookworm'
+
+  galaxy_tags: []
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

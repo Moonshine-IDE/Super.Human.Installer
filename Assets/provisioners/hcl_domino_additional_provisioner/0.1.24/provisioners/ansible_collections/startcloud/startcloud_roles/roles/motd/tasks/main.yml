@@ -1,0 +1,163 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    - name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    - name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Including extra vars"
+      ansible.builtin.include_vars: "prominic.yml"
+      when: "motd_extra_vars == 'prominic'"
+
+    -
+      name: "Removeing default motd configuration"
+      when: motd_remove_default_config
+      block:
+        -
+          name: "Creating backup folder"
+          ansible.builtin.file:
+            path: /etc/update-motd.d/backups
+            state: directory
+            mode: "0755"
+
+        - name: "Checking if we need to move files"
+          ansible.builtin.command: "ls /etc/update-motd.d/ --ignore=99-footer --ignore=20-update --ignore=backups"
+          register: move_output
+          changed_when: false
+
+        -
+          name: "Moving files to backup folder"
+          ansible.builtin.shell: "mv $(ls --ignore=99-footer --ignore=20-update --ignore=backups) /etc/update-motd.d/backups/"
+          args:
+            chdir: /etc/update-motd.d/
+          when: 'move_output.stdout != ""'
+          changed_when: 'move_output.stdout != ""'
+
+    -
+      name: "Restore default motd configuration from backups folder"
+      ansible.builtin.shell: "mv /etc/update-motd.d/backups/* /etc/update-motd.d/"
+      when: "motd_restore_default_config and not motd_remove_default_config"
+      changed_when: true
+
+    -
+      name: "Adding 99-footer file"
+      ansible.builtin.copy:
+        dest: /etc/update-motd.d/99-footer
+        group: root
+        mode: 493
+        owner: root
+        src: 99-footer
+      tags:
+        - motd
+        - common
+      when: "motd_add_footer | bool"
+
+    -
+      name: "Deleting 99-footer file"
+      ansible.builtin.file:
+        path: /etc/update-motd.d/99-footer
+        state: absent
+      tags:
+        - motd
+        - common
+      when: "not motd_add_footer | bool"
+
+    -
+      name: "Adding dynamic message before motd"
+      ansible.builtin.template:
+        dest: /etc/update-motd.d/20-update
+        mode: a+x
+        src: etc/update-motd.d/20-update.j2
+      tags:
+        - motd
+        - common
+      when: "motd_add_update | bool"
+    -
+      name: "Removing dynamic message before motd"
+      ansible.builtin.file:
+        path: /etc/update-motd.d/20-update
+        state: absent
+      tags:
+        - motd
+        - common
+      when: "not motd_add_update | bool"
+
+    -
+      name: "Deleting /etc/motd file"
+      ansible.builtin.file:
+        path: /etc/motd
+        state: absent
+      tags:
+        - motd
+        - common
+      when: "motd_add_footer | bool"
+
+    -
+      name: "Checking motd tail supported"
+      register: tail_supported
+      ansible.builtin.stat:
+        path: /etc/update-motd.d/99-footer
+      tags:
+        - motd
+        - common
+
+    -
+      name: "Adding motd tail"
+      ansible.builtin.template:
+        dest: /etc/motd.tail
+        src: etc/motd.j2
+        mode: "0644"
+      tags:
+        - motd
+        - common
+      when: "tail_supported.stat.exists | bool"
+
+    - name: "Adding motd"
+      ansible.builtin.template:
+        dest: /etc/motd
+        src: etc/motd.j2
+        mode: "0644"
+      tags:
+        - motd
+        - common
+      when: "not tail_supported.stat.exists | bool"
+
+    -
+      name: "Prepending string to first line in /etc/issue"
+      ansible.builtin.lineinfile:
+        path: /etc/issue
+        regexp: '^(.*)'
+        line: 'Booted - STARTcloud - \1'
+        backrefs: true
+        firstmatch: true
+      tags:
+        - motd
+        - common
+
+    -
+      name: "Prepending string to first line in /etc/issue.net"
+      ansible.builtin.lineinfile:
+        path: /etc/issue.net
+        regexp: '^(.*)'
+        line: 'Booted - STARTcloud - \1'
+        backrefs: true
+        firstmatch: true
+      tags:
+        - motd
+        - common

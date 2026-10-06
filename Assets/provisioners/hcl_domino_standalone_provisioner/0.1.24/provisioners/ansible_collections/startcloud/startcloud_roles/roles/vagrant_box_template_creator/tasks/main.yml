@@ -1,0 +1,27 @@
+---
+# Main orchestration task
+
+- name: Include template definitions
+  include_vars:
+    file: "{{ role_path }}/vars/template_definitions.yml"
+    name: templates_list
+
+- name: Set filtered template list
+  set_fact:
+    filtered_templates: "{{ templates_list.templates | selectattr('name', 'equalto', template_filter) | list }}"
+  when: template_filter != ""
+
+- name: Use all templates when no filter is specified
+  set_fact:
+    filtered_templates: "{{ templates_list.templates }}"
+  when: template_filter == ""
+
+- name: Display selected templates
+  debug:
+    msg: "Processing {{ filtered_templates | length }} template(s){% if template_filter != '' %} [Filter: {{ template_filter }}]{% endif %}"
+
+- name: Process each template
+  include_tasks: process_template.yml
+  loop: "{{ filtered_templates }}"
+  loop_control:
+    loop_var: template_def

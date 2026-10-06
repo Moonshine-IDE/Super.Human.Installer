@@ -1,0 +1,155 @@
+-
+  name: "Setting up Vagrant NAT Provisioning Network"
+  when: not convert_nat_dhcp_to_static
+  block:
+    -
+      name: "Placing Netplan into Working directory for Vagrant NAT Adapter"
+      ansible.builtin.template:
+        src: nat_interface.yaml.j2
+        dest: /etc/netplan/nat_adapter.yaml
+        mode: '0600'
+      vars:
+        macaddress: "{{ first_adapter_details.mac }}"
+        network_name: "nat_adapter"
+      register: nat_adapter_config
+
+    #-
+    #  name: "Enabling systemd-networkd"
+    #  when: nat_adapter_config.changed
+    #  ansible.builtin.systemd_service:
+    #    state: restarted
+    #    enabled: true
+    #    name: systemd-networkd
+
+    -
+      name: "Waiting for 5 seconds for IP to set for Vagrant NAT Adapter"
+      when: "nat_adapter_config.changed"
+      ansible.builtin.pause:
+        seconds: 5
+
+    -
+      name: "Setting Networking for Vagrant NAT Adapter"
+      when: "nat_adapter_config.changed"
+      changed_when: false
+      ansible.builtin.command: netplan apply
+
+    -
+      name: "Waiting for 5 seconds for IP to set for Vagrant NAT Adapter"
+      when: "nat_adapter_config.changed"
+      ansible.builtin.pause:
+        seconds: 5
+
+-
+  name: "Converting DHCP to Static IP"
+  when: convert_nat_dhcp_to_static
+  block:
+    -
+       name: "Grabbing local address for scripts"
+       changed_when: false
+       ansible.builtin.shell: "ip -h route list  dev {{ first_adapter }} default | awk '{ print $3}'"
+       args:
+         executable: /bin/bash
+       register: first_adapter_gateway
+       
+    -
+      name: "Placing Netplan into Working directory"
+      ansible.builtin.template:
+        src: nat_interface.yaml.j2
+        dest: /etc/netplan/nat_adapter.yaml
+        mode: '0600'
+      register: static_nat_adapter_config
+      vars:
+        prefix: "{{ hostvars[inventory_hostname]['ansible_' + first_adapter]['ipv4']['prefix'] }}"
+        macaddress: "{{ first_adapter_details.mac }}"
+        network_name: "nat_adapter"
+        address: "{{ first_adapter_details.ip }}"
+        gateway: "{{ first_adapter_gateway.stdout }}"
+
+    -
+      name: "Setting Networking"
+      when: static_nat_adapter_config.changed
+      changed_when: false
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - "netplan apply"
+
+    -
+      name: "Waiting for 2 seconds for IP to set"
+      when: static_nat_adapter_config.changed
+      ansible.builtin.pause:
+        seconds: 2
+
+-
+  name: "Gathering Networking Configurations"
+  become: true
+  tags: once
+  block:
+    -
+      name: "Gather Networking Details"
+      ansible.builtin.include_tasks: "gather.yml"
+
+-
+  name: "Setting up Public Bridged Network"
+  when: networks[0] is defined and networks[0].type == "external"
+  block:
+    -
+      name: "Setting Netmask as a fact"
+      ansible.builtin.set_fact:
+        net_mask: "{{ networks[0].address }}/{{ networks[0].netmask }}"
+
+    -
+      name: "Placing Netplan into Working directory"
+      ansible.builtin.template:
+        src: interface.yaml.j2
+        dest: /etc/netplan/public_adapter.yaml
+        mode: '0600'
+      register: public_adapter_config
+      vars:
+        macaddress: "{{ second_adapter_details.mac }}"
+        network_name: "public_adapter"
+
+    -
+      name: "Setting Networking"
+      changed_when: false
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - "netplan apply"
+
+    -
+      name: "Waiting for 2 seconds for IP to set"
+      ansible.builtin.pause:
+        seconds: 2
+
+-
+  name: "When No Bridged Adapter included, Setting configurations to use 127.0.0.1 in case of VBox Port Forwards"
+  when: networks[0] is not defined
+  block:
+    -
+      name: "Placing 127.0.0.1 in file ipaddress.yml as no IP was configured in Hosts.yml into {{ completed_dir }}"
+      ansible.builtin.copy:
+        content: "127.0.0.1"
+        dest: "{{ completed_dir }}/ipaddress.yml"
+        mode: '0644'
+
+    -
+      name: "Grabbing local address for scripts"
+      changed_when: false
+      ansible.builtin.shell: "cat {{ completed_dir }}/ipaddress.yml"
+      args:
+        executable: /bin/bash
+      register: netoutput
+
+    -
+      name: "Adding Extra Host Records"
+      ansible.builtin.lineinfile:
+        path: "/etc/hosts"
+        line: "{{ netoutput.stdout }} {{ settings.hostname }} {{ settings.hostname }}.{{ settings.domain }} console.{{ settings.hostname }}.{{ settings.domain }} auth.{{ settings.hostname }}.{{ settings.domain }}"
+        insertbefore: EOF
+
+-
+  name: "Gathering Networking Configurations"
+  become: true
+  block:
+    -
+      name: "Gather Networking Details"
+      ansible.builtin.include_tasks: "gather.yml"

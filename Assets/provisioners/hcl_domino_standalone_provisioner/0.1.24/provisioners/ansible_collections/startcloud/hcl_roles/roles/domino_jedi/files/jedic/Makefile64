@@ -1,0 +1,33 @@
+# Compiler settings for 64-bit
+CC = gcc -g -m64
+
+# set java home or use system environment variable
+JAVA_HOME = /opt/prominic/jedi/jdk1.8.0_241
+JAVA_HOME = /local/notesjava/.sdkman/candidates/java/current
+
+LINUXJNIPATH = $(JAVA_HOME)/include
+LINUXJNIMD = $(JAVA_HOME)/include/linux
+
+# Default target
+all: clean class h lib-linux
+
+# Compile the shared library (64-bit)
+lib-linux: UnixRuntimeImp.c UnixProcess.h
+	$(CC) -DDEBUG -DLINUX -shared \
+	-I $(LINUXJNIPATH) \
+	-I $(LINUXJNIMD) \
+	UnixRuntimeImp.c \
+	-o libunixruntime.so \
+	-Wall
+
+# Generate JNI header
+h:
+	$(JAVA_HOME)/bin/javah -o UnixProcess.h com.Prominic.runtime.UnixProcess
+
+# Compile Java class
+class:
+	$(JAVA_HOME)/bin/javac -source 1.8 -target 1.8 com/Prominic/runtime/UnixProcess.java
+
+# Clean build artifacts
+clean:
+	-rm -f *.so *.class ./com/Prominic/runtime/*.class UnixProcess.h core

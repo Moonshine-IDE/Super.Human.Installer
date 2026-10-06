@@ -1,0 +1,50 @@
+---
+-
+  name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Installing packages"
+  ansible.builtin.yum:
+    name: "{{ packages }}"
+    state: present
+
+-
+  name: "Removing zfs-auto-snapshot file from under /etc/cron.d"
+  ansible.builtin.file:
+    path: "{{ item.path }}{{ item.file }}"
+    state: absent
+  with_items:
+    - file: zfs-auto-snapshot
+      path: /etc/cron.d/
+    - file: zfs-auto-snapshot
+      path: /etc/cron.daily/
+    - file: zfs-auto-snapshot
+      path: /etc/cron.weekly/
+    - file: zfs-auto-snapshot
+      path: /etc/cron.hourly/
+    - file: zfs-auto-snapshot
+      path: /etc/cron.monthly/
+
+-
+  name: "Adding zfs-auto-snapshot Configurations"
+  ansible.builtin.template:
+    dest: "{{ item.dest }}{{ item.path }}{{ item.file }}"
+    src: "{{ item.path }}{{ item.file }}.j2"
+    mode: "0644"
+  with_items:
+    - dest: /etc/
+      file: zfs-auto-snapshot
+      path: cron.monthly/
+    - dest: /etc/
+      file: zfs-auto-snapshot
+      path: cron.daily/
+    - dest: /etc/
+      file: zfs-auto-snapshot
+      path: cron.hourly/
+    - dest: /etc/
+      file: zfs-auto-snapshot
+      path: cron.daily/
+    - dest: /etc/
+      file: zfs-auto-snapshot
+      path: cron.d/

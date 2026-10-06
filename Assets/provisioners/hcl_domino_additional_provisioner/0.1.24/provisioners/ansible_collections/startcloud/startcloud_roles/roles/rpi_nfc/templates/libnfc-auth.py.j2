@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+import socket
+import os.path
+import sys
+import struct
+import fcntl
+import os
+import sched
+import time
+import subprocess
+import smbus
+import yaml
+import io
+import RPi.GPIO as GPIO
+
+BUZZER_PIN = 20
+GPIO.setwarnings(False)
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BUZZER_PIN, GPIO.OUT)
+
+badgeID = sys.argv[1].replace('  ', ' ').rstrip().replace(' ', '-')
+userSource = "/data/users.yml"
+
+try:
+    cmd = "last -w | grep 'logged in' | grep ':1' | awk '{print $1}'"
+    current_user = os.popen(cmd).read().strip()
+    display2pstr = "USR: " + current_user
+    print("NFC: " + badgeID)
+    print(display2pstr)
+    try:
+        print("Loading Source File: " + userSource)
+        with open(userSource, 'r') as file:
+            data_loaded = yaml.safe_load(file)
+    except:
+        print("Script Failure")
+    finally:
+        for entry in range(0, len(data_loaded['users'])):
+            if badgeID == data_loaded['users'][entry]['badge']:
+                current_user_entry=entry
+        try:
+            if current_user == data_loaded['users'][current_user_entry]['name']:
+                print("User: " + current_user + " authenticated")
+                GPIO.output(BUZZER_PIN, 1)
+                time.sleep(0.1)
+                GPIO.output(BUZZER_PIN, 0)
+                time.sleep(0.1)
+                session = "echo $(loginctl | grep $(" + cmd + ") | awk '{print $1}')"
+                current_user_session = os.popen(session).read().strip()
+                os.popen("loginctl unlock-session " + current_user_session).read().strip()
+            else:
+                os.popen("loginctl unlock-session " + current_user).read().strip()
+        except:
+            print("Badge not recognized")
+except:
+    print("No User to Authenticate or Script Failure")

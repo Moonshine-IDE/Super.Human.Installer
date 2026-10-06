@@ -1,0 +1,50 @@
+# This file is inspired by https://github.com/bigbluebutton/greenlight/blob/master/docker-compose.yml
+version: '3'
+
+services:
+  app:
+    entrypoint: [bin/start]
+    image: {{ bbb_greenlight_image }}
+    container_name: greenlight-v3
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:5000:3000
+    environment:
+{% set bbb_greenlight_environment_combined = bbb_greenlight_environment_defaults | combine(bbb_greenlight_environment) -%}
+{% for envvar in bbb_greenlight_environment_combined %}
+      {{ envvar }}: "{{ bbb_greenlight_environment_combined[envvar] }}"
+{% endfor %}
+    volumes:
+      - {{ bbb_greenlight_logdir }}:/usr/src/app/log
+      - {{ bbb_greenlight_storagedir }}:/usr/src/app/storage
+{% if bbb_greenlight_db_adapter == 'sqlite3' %}
+      - {{ bbb_greenlight_dbdir }}:/usr/src/app/db/production
+{% endif %}
+    logging:
+      driver: journald
+{% if bbb_greenlight_db_adapter == 'postgresql' and bbb_greenlight_db_host == 'db' %}
+    links:
+      - db
+      - redis
+    depends_on:
+      - db
+      - redis
+
+  redis:
+    image: redis:6.2-alpine3.17
+    restart: unless-stopped
+    volumes:
+      - ./data/redis/database_data:/data
+
+  db:
+    image: postgres:14.6-alpine3.17
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:5432:{{ bbb_greenlight_db_port }}
+    volumes:
+      - {{ bbb_greenlight_dbdir }}:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "{{ bbb_greenlight_db_name }}"
+      POSTGRES_USER: "{{ bbb_greenlight_db_username }}"
+      POSTGRES_PASSWORD: "{{ bbb_greenlight_db_password }}"
+{% endif %}

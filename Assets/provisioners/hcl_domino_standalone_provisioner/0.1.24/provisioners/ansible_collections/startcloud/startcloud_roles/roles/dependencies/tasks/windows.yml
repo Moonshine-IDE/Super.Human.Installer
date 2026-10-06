@@ -1,0 +1,357 @@
+---
+-
+  name: "Loading vendor-specific variables"
+  ansible.builtin.include_vars: "{{ vendor }}.yml"
+  when: vendor is defined
+  ignore_errors: true
+
+-
+  name: "Rebooting to Apply Windows Updates"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
+
+-
+  name: "Installing Powershell 7"
+  block:
+    -
+      name: Check if PowerShell 7 is already installed
+      ansible.windows.win_shell: |
+        $psVersion = (Get-Command pwsh -ErrorAction SilentlyContinue).Version.Major
+        if ($psVersion -eq 7) {
+          $psVersion
+        }
+      register: ps7_check
+      changed_when: false
+
+    -
+      name: "Debugging PS7 Check Result"
+      ansible.builtin.debug:
+        var: ps7_check
+
+    -
+      name: "Downloading Powershell 7 Installation Script"
+      when: ps7_check != "7"
+      ansible.windows.win_get_url:
+        url: "https://aka.ms/install-powershell.ps1"
+        dest: C:\temp\install-powershell.ps1
+      
+    -
+      name: "Executing Powershell 7 Installation Script"
+      when: ps7_check != "7"
+      ansible.windows.win_powershell:
+        script: iex "C:\temp\install-powershell.ps1"
+      ignore_errors: true
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
+
+-
+  name: "Manually Installing Updates"
+  when: false
+  block:
+    -
+      name: "Waiting for All Updates to be completed"
+      ansible.windows.win_wait_for:
+        path: C:\temp\updates_installed
+        timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+      ignore_errors: true
+
+-
+  name: "Rebooting to Apply Windows Updates"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  ignore_errors: true
+
+-
+  name: "Installing Chocolatey"
+  block:
+    -
+      name: "Downloading Chocolatey Installation Script"
+      ansible.windows.win_get_url:
+        url: "https://community.chocolatey.org/install.ps1"
+        dest: C:\temp\choco_install.ps1
+
+    -
+      name: "Executing Chocolatey Installation Script"
+      ansible.windows.win_powershell:
+        script: iex "C:\temp\choco_install.ps1"
+
+-
+  name: "Configuring Vendor-Specific Chocolatey Repositories"
+  when: chocolatey_repos is defined and vendor is defined
+  block:
+    -
+      name: "Removing default chocolatey source to reconfigure with priority"
+      ansible.windows.win_powershell:
+        script: choco source remove -n="chocolatey"
+      ignore_errors: true
+
+    -
+      name: "Adding vendor-specific Chocolatey repositories with priority"
+      ansible.windows.win_powershell:
+        script: choco source add -n="{{ item.name }}" -s="{{ item.url }}" --priority="{{ item.priority }}"
+      loop: "{{ chocolatey_repos }}"
+      loop_control:
+        label: "{{ item.name }} (Priority: {{ item.priority }})"
+
+-
+  name: "Installing Base Chocolatey Packages"
+  when: chocolatey_base_packages is defined
+  block:
+    -
+      name: "Installing base Chocolatey packages"
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ chocolatey_base_packages | default([]) }}"
+
+-
+  name: "Installing Internal Chocolatey Packages"
+  when: template_type | default('customer') == 'internal'
+  block:
+    -
+      name: "Installing internal Chocolatey packages"
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ chocolatey_internal_packages | default([]) }}"
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+-
+  name: "Installing Customer Chocolatey Packages"
+  when: template_type | default('customer') == 'customer'
+  block:
+    -
+      name: "Installing customer Chocolatey packages"
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ chocolatey_customer_packages | default([]) }}"
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+
+-
+  name: "Installing Vendor-Specific Chocolatey Packages"
+  when: chocolatey_packages is defined and vendor is defined
+  block:
+    -
+      name: "Installing vendor-specific Chocolatey packages for {{ vendor }}"
+      chocolatey.chocolatey.win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ chocolatey_packages | default([]) }}"
+
+-
+  name: "Installing all updates and rebooting as many times as needed"
+  ansible.windows.win_updates:
+    category_names: '*'
+    reboot: true
+    skip_optional: false
+    reboot_timeout: 3600
+
+-
+  name: "Installing Cygwin with cyg-get"
+  block:
+    -
+      name: "Adding Cygwin to System PATH"
+      ansible.windows.win_path:
+        elements:
+          - C:\tools\cygwin\bin
+        scope: machine
+        state: present
+
+    -
+      name: "Installing Cygwin packages"
+      ansible.windows.win_powershell:
+        script: cyg-get cygrunsrv nano diffutils lynx make openssh perl psmisc rsync vim wget curl
+
+-
+  name: "Configuring Vendor-Specific WSUS Server"
+  when: wsus_server is defined and vendor is defined and not (use_microsoft_update | default(false))
+  block:
+    -
+      name: "Configuring WSUS server for {{ vendor }}"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: WUServer
+        data: "{{ wsus_server }}"
+        type: string
+
+    -
+      name: "Configuring WSUS status server for {{ vendor }}"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: WUStatusServer
+        data: "{{ wsus_server }}"
+        type: string
+
+    -
+      name: "Enabling use of WSUS server"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+        name: UseWUServer
+        data: 1
+        type: dword
+
+    -
+      name: "Configuring WSUS target group"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: TargetGroup
+        data: "{{ wsus_target_group | default('Default') }}"
+        type: string
+      when: wsus_target_group is defined
+
+    -
+      name: "Enabling WSUS target group assignment"
+      ansible.windows.win_regedit:
+        path: HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
+        name: TargetGroupEnabled
+        data: 1
+        type: dword
+      when: wsus_target_group is defined
+
+-
+  name: "Windows Updates"
+  when: install_windows_updates | default(true)
+  block:
+    -
+      name: "Installing PS Updates"
+      block:
+        -
+          name: "Setting NuGet Package Provider"
+          ansible.windows.win_shell: Install-PackageProvider -Name NuGet -Force
+
+        -
+          name: "Setting PSGallery Repository to Trusted"
+          ansible.windows.win_shell: Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
+
+        -
+          name: "Installing PSWindowsUpdate Module"
+          ansible.windows.win_shell: Install-Module -Name PSWindowsUpdate -Force
+
+        - name: "Adding WUServiceManager"
+          ansible.windows.win_shell: Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d"  -AddServiceFlag 7 -Confirm:$false
+
+        -
+          name: "Running Updates"
+          ansible.windows.win_powershell:
+            script: Install-WindowsUpdate -AcceptAll -MicrosoftUpdate -IgnoreReboot
+
+        -
+          name: "Rebooting to Apply Windows Updates"
+          ansible.windows.win_reboot:
+            reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+    -
+      name: "Ensuring Packer Installations Directory exists"
+      ansible.windows.win_file:
+        path: C:\Windows\Temp\packer
+        state: directory
+
+    -
+      name: "Creating Windows Update Installation Script"
+      ansible.windows.win_copy:
+        dest: C:\Windows\Temp\packer\InstallUpdates.ps1
+        content: |
+          Import-Module PSWindowsUpdate
+          Get-WindowsUpdate -MicrosoftUpdate
+          Install-WindowsUpdate -AcceptAll -MicrosoftUpdate -IgnoreReboot
+
+    -
+      name: "Creating scheduled task to install Windows Updates"
+      community.windows.win_scheduled_task:
+        name: InstallWindowsUpdatesTask
+        description: Install Windows Updates
+        actions:
+          - path: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+            arguments: -ExecutionPolicy Bypass -File C:\Windows\Temp\packer\InstallUpdates.ps1
+        triggers:
+          - type: registration
+        username: SYSTEM
+        state: present
+        enabled: true
+
+    -
+      name: "Running Windows Updates (Pass {{ item }})"
+      include_tasks: update_pass.yml
+      loop: "{{ range(1, windows_update_passes | default(4) + 1) | list }}"
+      loop_control:
+        loop_var: pass_number
+
+    -
+      name: "Deleting the scheduled task"
+      community.windows.win_scheduled_task:
+        name: InstallWindowsUpdatesTask
+        state: absent
+
+    -
+      name: "Installing all updates and rebooting as many times as needed"
+      ansible.windows.win_updates:
+        category_names: '*'
+        reboot: true
+        skip_optional: false
+        reboot_timeout: 3600
+
+    -
+      name: "Installing all updates and rebooting as many times as needed"
+      ansible.windows.win_updates:
+        category_names: '*'
+        reboot: true
+        skip_optional: false
+        reboot_timeout: 3600
+
+-
+  name: "Package Maintenance"
+  block:
+    -
+      name: "Upgrading all Chocolatey packages"
+      chocolatey.chocolatey.win_chocolatey:
+        name: all
+        state: latest
+      when: upgrade_packages | default(true)
+
+    -
+      name: "Removing Firefox Desktop Icon for All Users"
+      ansible.windows.win_file:
+        path: C:\Users\Public\Desktop\Firefox.lnk
+        state: absent

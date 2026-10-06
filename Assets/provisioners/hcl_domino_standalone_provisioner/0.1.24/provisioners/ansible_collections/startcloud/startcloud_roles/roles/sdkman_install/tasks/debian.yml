@@ -1,0 +1,188 @@
+---
+-
+  name: "Set SDKMAN user/group vars"
+  ansible.builtin.set_fact:
+    sdk_service_user: '{{ service_user }}'
+    sdk_service_group: '{{ service_group }}'
+
+-
+  name: "Setting SDKMAN_DIR environment variable"
+  ansible.builtin.set_fact:
+    sdkman_dir: '{{ service_home_dir }}/.sdkman'
+
+-
+  name: "Preparing System for SDKMAN"
+  become: true
+  block:
+    -
+      name: "Including system vars"
+      ansible.builtin.include_vars: "{{ lookup('first_found', params) }}"
+      vars:
+        params:
+          files:
+            - '{{ ansible_distribution }}.yml'
+            - '{{ ansible_os_family }}.yml'
+          paths:
+            - vars
+
+    -
+      name: "Installing system packages"
+      ansible.builtin.package:
+        name: '{{ system_packages }}'
+        use: '{{ ansible_pkg_mgr }}'
+        state: present
+      become: true
+      tags:
+        - sdkman_privilege
+
+    -
+      name: "Creating Ansible Temp Directory"
+      become: true
+      ansible.builtin.file:
+        mode: '0777'
+        path: "{{ item }}"
+        state: directory
+        owner: '{{ sdk_service_user }}'
+        group: '{{ sdk_service_group }}'
+      with_items:
+        - "{{ service_home_dir }}/.ansible/tmp"
+
+    -
+      name: "Checking for SDKMAN installation"
+      ansible.builtin.stat:
+        path: '{{ sdkman_dir }}/bin/sdkman-init.sh'
+      register: sdkman_init
+
+-
+  name: "Installing SDKMAN"
+  when: not sdkman_init.stat.exists
+  become_user: '{{ sdk_service_user }}'
+  block:
+    -
+      name: "Check service user and group"
+      ansible.builtin.command: id {{ sdk_service_user }}
+      register: sdk_service_user_info
+
+    -
+      name: "Debugging User"
+      debug:
+        var: sdk_service_user_info
+
+    -
+      name: "Downloading SDKMAN"
+      become: true
+      ansible.builtin.get_url:
+        mode: '0755'
+        url: https://get.sdkman.io
+        dest: '{{ sdkman_tmp_dir }}/sdkman_script'
+        owner: '{{ sdk_service_user }}'
+        group: '{{ sdk_service_group }}'
+        validate_certs: '{{ sdkman_validate_ssl }}'
+
+    -
+      name: "Running SDKMAN Install script"
+      environment:
+        SDKMAN_DIR: '{{ sdkman_dir }}'
+        SDKMAN_OFFLINE_MODE: 'false'
+      ansible.builtin.command: /bin/bash {{ sdkman_tmp_dir }}/sdkman_script
+      args:
+        creates: '{{ sdkman_dir }}/bin/sdkman-init.sh'
+      notify: Cleanup SDKMAN script
+
+    -
+      name: "Fixing permissions on SDKMAN_DIR"
+      ansible.builtin.file:
+        path: '{{ sdkman_dir }}'
+        state: directory
+        owner: '{{ sdk_service_user }}'
+        group: '{{ sdk_service_group }}'
+        recurse: true
+      become: true
+      tags:
+        - sdkman_privilege
+
+-
+  name: "Configuring SDKMAN"
+  block:
+    -
+      name: Configure SDKMAN
+      ansible.builtin.template:
+        src: templates/sdkman_config.j2
+        dest: '{{ sdkman_dir }}/etc/config'
+        owner: '{{ sdk_service_user }}'
+        group: '{{ sdk_service_group }}'
+        mode: '0755'
+
+    -
+      name: Flush SDK caches (before)
+      become_user: '{{ sdk_service_user }}'
+      ansible.builtin.shell: >-
+        . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk flush {{ item }}
+      args:
+        executable: /bin/bash
+      loop: '{{ sdkman_flush_caches_before }}'
+      changed_when: false
+
+    -
+      name: Update SDKMAN
+      become_user: '{{ sdk_service_user }}'
+      ansible.builtin.shell: >-
+       . {{ sdkman_dir }}/bin/sdkman-init.sh && sdk selfupdate
+      args:
+        executable: /bin/bash
+      register: sdk_selfupdate
+      changed_when: sdk_selfupdate.stdout != 'No update available at this time.'
+      when: sdkman_update
+
+    -
+      name: Install SDK candidates/versions
+      become_user: '{{ sdk_service_user }}'
+      ansible.builtin.shell: >-
+        . {{ sdkman_dir }}/bin/sdkman-init.sh &&
+        sdk install {{ item.candidate }} {{ item.version | default('') }} {{ item.localpath | default('') }}
+      args:
+        executable: /bin/bash
+      loop: '{{ sdkman_install_packages }}'
+      register: sdk_install
+      changed_when: >-
+        'is already installed.' not in sdk_install.stdout
+      failed_when: >-
+        sdk_install.rc != 0 and
+        'is already installed.' not in sdk_install.stdout
+
+    -
+      name: Uninstall SDK candidates/versions
+      become_user: '{{ sdk_service_user }}'
+      ansible.builtin.shell: >-
+        . {{ sdkman_dir }}/bin/sdkman-init.sh &&
+        sdk uninstall {{ item.candidate }} {{ item.version }}
+      args:
+        executable: /bin/bash
+      loop: '{{ sdkman_uninstall_packages }}'
+      register: sdk_uninstall
+      changed_when: >-
+        not item.candidate + ' ' + item.version + ' is not installed.'
+        in sdk_uninstall.stdout
+
+    -
+      name: "Persisting additional SDKMAN environment variables"
+      ansible.builtin.include_tasks: persist_env.yml
+      loop:
+        - .bash_profile
+        - .profile
+        - .bashrc
+        - .zshrc
+      loop_control:
+        loop_var: sdkman_profile
+
+-
+  name: "Updating alternatives"
+  community.general.alternatives:
+    name: "{{ item.name }}"
+    path: "{{ sdkman_dir }}/candidates/{{ item.candidate }}/current/bin/{{ item.name }}"
+    link: "{{ item.link }}"
+  loop: "{{ sdkman_update_alternatives }}"
+  become: true
+  when: ansible_os_family != 'Darwin'
+  tags:
+    - sdkman_privilege

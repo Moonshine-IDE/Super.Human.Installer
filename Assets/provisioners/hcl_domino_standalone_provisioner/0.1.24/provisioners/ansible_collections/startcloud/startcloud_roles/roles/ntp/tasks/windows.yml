@@ -1,0 +1,14 @@
+- name: "Setting NTP"
+  ansible.windows.win_shell: |
+    Write-Output "Setting NTP"
+    net start w32time
+    w32tm /config /manualpeerlist:"{{ [ntp1server, ntp2server] | select | join(' ') }}" /syncfromflags:manual /update
+    w32tm /resync /force
+
+- name: "Setting RealTimeIsUniversal for Bhyve zones"
+  ansible.windows.win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation
+    name: RealTimeIsUniversal
+    data: 1
+    type: dword
+  when: is_bhyve_zone | default(false)

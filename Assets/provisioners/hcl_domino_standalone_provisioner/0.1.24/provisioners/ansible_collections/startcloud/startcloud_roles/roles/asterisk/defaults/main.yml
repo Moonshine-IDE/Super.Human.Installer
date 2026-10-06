@@ -1,0 +1,51 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 4 # Explicitly define based on descriptions
+progress_role_description: "Configuring Asterisk Core (Step 1 of 4)" # This will be used for step 1
+progress_description_step2: "Asterisk Core: Installing Build Dependencies"
+progress_description_step3: "Asterisk Core: Pre-build Setup & Configuration"
+progress_description_step4: "Asterisk Core: Compiling & Installing Asterisk"
+
+# Ports for Asterisk's built-in HTTP/HTTPS server
+# These are often used for serving static content, ARI (Asterisk REST Interface), etc.
+asterisk_static_http_port: 8088
+asterisk_static_https_port: 8089
+
+## Configuration Directories
+asterisk_config_dir: /etc/asterisk
+asterisk_lib_dir: /var/lib/asterisk
+asterisk_run_dir: /var/run/asterisk
+asterisk_spool_dir: /var/spool/asterisk
+asterisk_monitor_dir: "{{ asterisk_spool_dir }}/monitor"
+asterisk_voicemail_dir: "{{ asterisk_spool_dir }}/voicemail"
+asterisk_lib64_dir: /usr/lib64/asterisk
+asterisk_user_lib_dir: /usr/lib/asterisk
+asterisk_custom_sounds_path: "{{ asterisk_lib_dir }}/sounds/en/custom"
+asterisk_log_dir: /var/log/asterisk
+asterisk_bin_dir: "/usr/sbin"
+
+# Asterisk Build
+asterisk_source_dir: /usr/src/asterisk
+asterisk_version: asterisk-20.11.1.tar.gz
+asterisk_package: "https://downloads.asterisk.org/pub/telephony/asterisk/old-releases/{{ asterisk_version }}"
+
+asterisk_group: asterisk
+asterisk_user: asterisk
+asterisk_assets_user: asterisk_assets
+asterisk_user_pass: asterisk
+
+# Default PJSIP and Manager ports
+startcloud_asterisk_pjsip_udp_port: 5060
+startcloud_asterisk_pjsip_tcp_port: 5062
+startcloud_asterisk_pjsip_tls_port: 5061
+startcloud_asterisk_manager_port: 5038
+
+# Default RTP port range
+startcloud_asterisk_rtp_start: 10000
+startcloud_asterisk_rtp_end: 20000
+
+fail2ban_asterisk_ports: "{{ startcloud_asterisk_pjsip_udp_port }},{{ startcloud_asterisk_pjsip_tcp_port }},{{ startcloud_asterisk_pjsip_tls_port }},{{ startcloud_asterisk_manager_port }},{{ asterisk_static_http_port }},{{ asterisk_static_https_port }},5080"
+fail2ban_asterisk_log_dir: "{{ asterisk_log_dir }}/security"
+fail2ban_asterisk_max_retries: 10
+fail2ban_asterisk_BAN_TIME: 8h

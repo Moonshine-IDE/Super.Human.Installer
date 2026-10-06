@@ -1,0 +1,100 @@
+---
+- ansible.builtin.apt:
+    force_apt_get: true
+    upgrade: dist
+  name: "Upgrade all apt packages"
+
+- ansible.builtin.apt:
+    name:
+      - ubuntu-desktop
+    state: present
+    update_cache: true
+    
+  delay: 3
+  name: "Install some helpful utilities."
+  register: apt_res
+  retries: 5
+  until: apt_res is success
+
+- ansible.builtin.apt:
+    name:
+      - thunderbird
+      - rhythmbox
+      - libreoffice*
+      - libreoffice-core
+      - libreoffice-common
+      - libreoffice-draw
+      - gnome-2048
+      - aisleriot
+      - atomix
+      - gnome-chess
+      - five-or-more
+      - hitori
+      - iagno
+      - gnome-klotski
+      - lightsoff
+      - gnome-mines
+      - gnome-nibbles
+      - quadrapassel
+      - four-in-a-row
+      - gnome-robots
+      - gnome-sudoku
+      - swell-foop
+      - tali
+      - gnome-taquin
+      - gnome-tetravex
+      - gbrainy
+      - transmission-gtk
+      - byobu
+      - cheese
+      - totem
+      - totem-plugins
+      - gnome-power-manager
+      - shotwell
+    state: absent
+  name: "Removing bloat."
+
+- ansible.builtin.apt: "update_cache=yes cache_valid_time=3600"
+  name: "Ensure apt cache is updated."
+
+- name: "Ensure correct kernel headers are installed."
+  ansible.builtin.shell: "apt-get -y install linux-headers-$(uname -r)"
+  tags:
+    - skip_ansible_lint
+
+- changed_when: false
+  command: "{{ item }}"
+  name: "Clean up apt."
+
+  with_items:
+    - "apt-get -y autoremove"
+    - "apt-get -y clean"
+    - "systemctl set-default multi-user.target"
+- ansible.builtin.lineinfile:
+    line: "{{ item.line }}"
+    path: /etc/default/grub
+    regexp: "{{ item.regexp }}"
+  name: "Ensure that a Serial Terminal is enabled in Grub"
+
+  with_items:
+    - line: 'GRUB_CMDLINE_LINUX_DEFAULT="splash quiet"'
+      regexp: ^GRUB_CMDLINE_LINUX_DEFAULT=
+    - line: 'GRUB_CMDLINE_LINUX="console=ttyS0,115200n8 tsc=reliable earlyprintk"'
+      regexp: ^GRUB_CMDLINE_LINUX=
+- name: "Updating Grub."
+  ansible.builtin.shell: update-grub
+
+- name: "Updating Grub."
+  ansible.builtin.shell: update-grub
+
+- ansible.builtin.file:
+    mode: "0755"
+    owner: "{{ user }}"
+    path: "/home/{{ user }}/{{ item }}"
+    state: directory
+  name: "Create a directory if it does not exist"
+
+  with_items:
+    - Downloads
+    - Documents
+    - Desktop

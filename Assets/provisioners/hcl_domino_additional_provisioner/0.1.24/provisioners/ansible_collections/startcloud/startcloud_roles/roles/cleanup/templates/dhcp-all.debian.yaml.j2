@@ -1,0 +1,15 @@
+network:
+  ethernets:
+    id0:
+      match:
+        name: enp*s*
+      dhcp-identifier: mac
+      dhcp4: true
+      dhcp6: false
+      nameservers:
+        addresses:
+        - 8.8.8.8
+        - 1.1.1.1
+        - 8.8.4.4
+        - 1.0.0.1
+  version: 2

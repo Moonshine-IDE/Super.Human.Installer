@@ -1,0 +1,10 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing Chocolatley"
+
+chocolatey_installer: https://chocolatey.org/install.ps1
+chocolatey_path: c:/ProgramData/chocolatey
+chocolatey_version: latest
+chocolatey_windows_compression: "false"

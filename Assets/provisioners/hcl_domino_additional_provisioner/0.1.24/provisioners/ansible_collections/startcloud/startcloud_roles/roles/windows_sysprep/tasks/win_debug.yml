@@ -1,0 +1,130 @@
+---
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+
+    - name: "Adjusting Theme Settings"
+      block:
+        - name: "Adjusting Theme Settings AppsUseLightTheme"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
+            name: AppsUseLightTheme
+            data: 0
+            type: dword
+
+        - name: "Adjust Theme Settings SystemUsesLightTheme"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize
+            name: SystemUsesLightTheme
+            data: 0
+            type: dword
+
+        - name: "Adjusting Theme Settings TaskbarMn"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+            name: TaskbarMn
+            data: 0
+            type: dword
+
+        - name: "Adjusting Theme Settings ShowTaskViewButton"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+            name: ShowTaskViewButton
+            data: 0
+            type: dword
+
+        - name: "Adjusting Theme Settings TaskbarAl"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+            name: TaskbarAl
+            data: 0
+            type: dword
+
+        - name: "Adjusting Theme Settings SearchboxTaskbarMode"
+          ansible.windows.win_regedit:
+            path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search
+            name: SearchboxTaskbarMode
+            data: 0
+            type: dword
+
+    - name: "Adjusting Default User Settings"
+      ansible.windows.win_shell: |
+        REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
+        Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type Dword
+        Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type Dword
+        Set-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarMn -Value 0 -Type Dword
+        New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
+        New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
+        New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
+        REG UNLOAD HKLM\Default
+
+# -
+#   name: Get App instance version
+#   win_file_version:
+#     path: 'C:\Program Files (x86)\MyProgram\program.exe'
+#   register: exe_file_version
+
+# -
+#   name: Debugging App Version
+#   ansible.builtin.debug:
+#     msg: '{{ exe_file_version.file_version }}'
+
+-
+  name: Get product id and product key
+  ansible.windows.win_product_facts:
+
+-
+  name: Install all security, critical, and rollup updates without a scheduled task
+  ansible.windows.win_updates:
+    category_names:
+      - SecurityUpdates
+      - CriticalUpdates
+      - UpdateRollups
+
+-
+  name: Ensure that Google Chrome Update is Set to manual
+  ansible.windows.win_service:
+    name: gupdate
+    start_mode: manual
+
+-
+  name: Ensure that Telegraf is Set to Automatic and Started
+  ansible.windows.win_service:
+    name: telegraf
+    start_mode: delayed
+    state: started
+
+- name: Remove Cisco Static Route
+  community.windows.win_route:
+    destination: 10.242.2.0/23
+    state: absent
+
+-
+  name: Get disk facts
+  ansible.windows.win_disk_facts:
+
+-
+  name: Output first disk size
+  ansible.builtin.debug:
+    var: ansible_facts.disks[0].size
+
+-
+  name: Convert first system disk into various formats
+  ansible.builtin.debug:
+    msg: '{{ disksize_gib }} vs {{ disksize_gib_human }}'
+  vars:
+    # Get first system disk
+    disk: '{{ ansible_facts.disks | selectattr("system_disk") | first }}'
+    # Show disk size in Gibibytes
+    disksize_gib_human: '{{ disk.size | filesizeformat(true) }}'
+    disksize_gib: '{{ (disk.size / 1024 | pow(3)) | round | int }} GiB'
+
+- name: Get disk facts
+  ansible.windows.win_command: wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+  register: usage
+
+-
+  name: Debug
+  ansible.builtin.debug:
+    msg: "{{ usage.stdout }}"

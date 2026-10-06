@@ -1,0 +1,32 @@
+Write-Host "`nSet User Configurations"
+Set-LocalUser -Name STARTcloud -PasswordNeverExpires $true
+
+Write-Host "`nSet Dark Mode"
+Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type Dword
+Set-ItemProperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type Dword
+Set-itemproperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarMn -Value 0 -Type Dword
+New-itemproperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
+New-itemproperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
+New-itemproperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
+New-itemproperty -Path HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Search -Name SearchboxTaskbarMode -Value 0 -PropertyType Dword
+
+Write-Host "`nModify Task Bar"
+REG LOAD HKLM\Default C:\Users\Default\NTUSER.DAT
+Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name AppsUseLightTheme -Value 0 -Type Dword
+Set-ItemProperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize -Name SystemUsesLightTheme -Value 0 -Type Dword
+Set-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarMn -Value 0 -Type Dword
+New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name ShowTaskViewButton -Value 0 -PropertyType Dword
+New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarDa -Value 0 -PropertyType Dword
+New-itemproperty -Path HKLM:\Default\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced -Name TaskbarAl -Value 0 -PropertyType Dword
+REG UNLOAD HKLM\Default
+
+Write-Host "Configure OpenSSH"
+$ACL = Get-ACL C:\Windows\Temp\packer\
+$Group = New-Object System.Security.Principal.NTAccount("Builtin", "Administrators")
+$ACL.SetOwner($Group)
+Set-Acl -Path C:\Windows\Temp\packer\ -AclObject $ACL -Recurse
+New-Item C:\Users\STARTcloud\.ssh -ItemType Directory -Force
+Copy-Item C:\Windows\Temp\packer\startcloud.pub -Destination C:\Users\STARTcloud\.ssh\authorized_keys
+
+Set-Service -Name 'sshd' -StartupType Automatic
+Start-Service -Name 'sshd'

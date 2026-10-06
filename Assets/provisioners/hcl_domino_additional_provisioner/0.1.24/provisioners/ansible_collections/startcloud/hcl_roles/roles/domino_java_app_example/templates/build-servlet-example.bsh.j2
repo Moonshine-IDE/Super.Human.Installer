@@ -1,0 +1,6 @@
+#!/bin/bash
+echo "Building servlet: ExampleServlet.java "
+javac -verbose -source 1.8 -target 1.8 -classpath {{ domino_install_basedir }}/notes/latest/linux/jvm/lib/ext/:{{ domino_install_dir }}/ndext/jsdk.jar ExampleServlet.java
+sudo mkdir -p {{ domino_home_dir }}/domino/servlet
+sudo cp ExampleServlet.class {{ domino_home_dir }}/domino/servlet
+sudo chown -R {{ domino_user }}:{{ domino_group }} {{ domino_home_dir }}/domino/servlet

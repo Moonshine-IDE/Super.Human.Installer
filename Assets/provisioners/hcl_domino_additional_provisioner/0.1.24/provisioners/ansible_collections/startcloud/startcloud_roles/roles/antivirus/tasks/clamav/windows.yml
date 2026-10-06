@@ -1,0 +1,16 @@
+---
+-
+  name: "Installing ClamWin Antivirus on Windows"
+  when: install_clamav | default(false) | bool
+  block:
+    -
+      name: "Installing ClamWin via Chocolatey"
+      chocolatey.chocolatey.win_chocolatey:
+        name: clamwin
+        state: present
+      register: clamwin_install_result
+
+    -
+      name: "Displaying ClamWin installation result"
+      ansible.builtin.debug:
+        var: clamwin_install_result

@@ -1,0 +1,72 @@
+<?xml version="1.0"?>
+<!DOCTYPE host SYSTEM "machineschema.dtd">
+<host>
+  <hostname>{{ pxe_client_hostname }}</hostname>
+  <mac>{{ pxe_client_mac }}</mac>
+  <rpool>{{ pxe_disks }}</rpool>
+  <timezone>{{ pxe_time_zone }}</timezone>
+  <dns>
+    <search>{{ pxe_dns_search }}</search>
+    <server>{{ pxe_dns1 }}</server>
+    <server>{{ pxe_dns2 }}</server>
+  </dns>
+    <gateway>{{ pxe_gateway }}</gateway>
+    <addr name="{{ pxe_default_interface }}">
+    <ip>{{ pxe_ipaddress }}/{{ pxe_subnet_mask }}</ip>
+  </addr>
+  <publisher name="{{ pxe_private_repo_name }}">
+    <add>{{ pxe_private_repo }}</add>
+  </publisher>
+  <publisher name="omnios">
+    <replace>{{ pxe_core_repo }}</replace>
+  </publisher>
+  <publisher name="extra.omnios">
+    <add>{{ pxe_extra_repo }}</add>
+  </publisher>
+  <user name="root">
+    <password>{{ pxe_user_pass }}</password>
+  </user>
+  <user name="{{ pxe_user }}">
+    <password>{{ pxe_user_pass }}</password>
+    <profile>Primary Administrator</profile>
+  </user>
+  <path>/opt/ooce/bin</path>
+  <path>/opt/prominic/bin</path>
+  <pkg>
+    <install>OmniosScripts</install>
+    <install>Prominic.NET/STARTcloud-helper</install>
+    <install>STARTcloud</install>
+    <install>STARTcloud-cdp</install>
+    <install>arc_summary</install>
+    <install>omnios-performance-stats</install>
+    <install>system/bhyve</install>
+    <install>system/zones/brand/bhyve</install>
+    <install>system/library/bhyve</install>
+    <install>system/kvm</install>
+    <install>system/zones/brand/kvm</install>
+    <install>virtualization/kvm</install>
+    <install>system/zones/brand/lx</install>
+    <install>ooce/util/zadm</install>
+    <install>system/storage/sasinfo</install>
+    <install>ooce/system/top</install>
+    <install>ooce/file/lsof</install>
+    <install>ooce/application/mc</install>
+    <install>ooce/runtime/expect</install>
+    <install>ooce/system/sg3_utils</install>
+    <install>ooce/system/smartmontools</install>
+    <install>ooce/editor/nano</install>
+    <install>ooce/application/vagrant</install>
+    <install>ooce/system/htop</install>
+    <install>ooce/util/ncdu</install>
+    <install>ooce/network/mtr</install>
+    <install>ooce/network/fping</install>
+    <install>ooce/system/sysstat</install>
+    <install>ooce/file/tree</install>
+    <install>network/rsync</install>
+    <install>terminal/tmux</install>
+    <install>ooce/system/zrepl</install>
+    <install>developer/versioning/git</install>
+    <install>developer/dtrace</install>
+    <install>ooce/system/management/ansible</install>
+  </pkg>
+</host>

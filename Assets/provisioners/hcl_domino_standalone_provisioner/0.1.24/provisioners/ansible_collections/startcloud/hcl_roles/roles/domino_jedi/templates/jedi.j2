@@ -1,0 +1,78 @@
+#!/bin/bash
+ulimit -n 32768
+#echo $$ >/var/jedi.pid
+
+# Set environment variables
+export JDI_HOME={{ jedi_install_dir }}
+export JDK_HOME={{ jedi_install_dir }}/jdk1.8*
+
+# Default mode
+MODE="-d32"
+LIB_PATH="Linux"
+
+# Parse arguments
+for arg in "$@"; do
+  if [ "$arg" = "-d64" ]; then
+    MODE="-d64"
+    LIB_PATH="Linux64"
+    shift
+  elif [ "$arg" = "-d32" ]; then
+    MODE="-d32"
+    LIB_PATH="Linux"
+    shift
+  elif [[ "$arg" == --jdk=* ]]; then
+    JDK_HOME="${arg#--jdk=}"
+    shift
+  fi
+done
+
+# Verify JDI_HOME
+if [ -z "$JDI_HOME" ]; then
+  WD=$(pwd)
+  cd ../
+  export JDI_HOME=$(pwd)
+  echo "Guessed home directory: $JDI_HOME"
+  cd "$WD"
+  echo "JDI_HOME environment variable NOT defined. Using default value."
+fi
+
+cd "$JDI_HOME"
+
+# Check operating system
+SYSTEM=$(uname)
+if [ "$SYSTEM" = "Linux" ]; then
+  echo "Linux OS detected ..."
+  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$JDI_HOME/lib/$LIB_PATH"
+  ulimit -s 2048
+else
+  echo "Unsupported OS detected: $SYSTEM. Exiting."
+  exit 1
+fi
+
+# Set CLASSPATH
+CLASSPATH=$JDI_HOME/lib/jedi.jar:$JDI_HOME/lib/tools.jar:$JDI_HOME/lib/joes20.jar:$JDI_HOME/lib/mail.jar:$JDI_HOME/lib/mailapi.jar:$JDI_HOME/lib/smtp.jar:$JDI_HOME/lib/activation.jar:$CLASSPATH
+
+if [ "$JDISTARTALL" = "true" ]; 
+then
+  if /usr/bin/ps -ef | grep server | grep domino | grep -v jedi > /dev/null
+  then
+    echo "Domino processes already running.  Ignoring JDISTARTALL=$JDISTARTALL"
+    JDISTARTALL=false
+  else
+    echo "Starting Domino processes..."
+  fi
+else 
+  echo "Domino startup was not requested."
+fi
+
+# Restart logic
+RESTARTCODE=99
+while [ "$RESTARTCODE" = 99 ]; do
+  $JDK_HOME/bin/java $MODE -Djava.net.preferIPv4Stack=true -Djdi.domino.startall=$JDISTARTALL -classpath "$CLASSPATH" \
+    com.Prominic.jdi.server.Jedi -c "$JDI_HOME/etc/jdi.cfg" -l "$JDI_HOME/log/jdi.log" --verbose --debug "$@" >> "$JDI_HOME/log/stderr.log" 2>&1
+  RESTARTCODE=$?
+  export JDISTARTALL=false
+done
+
+echo
+

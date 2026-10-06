@@ -1,0 +1,39 @@
+{% if voltmx_installation_type == 'Development'  %}
+CONSOLE_INSTALLATION_TYPE_3=Development
+{% elif voltmx_installation_type == 'Production'   %}
+CONSOLE_INSTALLATION_TYPE_1=Production
+{% endif %}
+PROMPT_USER_CHOSEN_OPTION=0
+INSTALL_COMP_1=Console
+INSTALL_COMP_2=Identity Services
+INSTALL_COMP_3=Integration Services
+INSTALL_COMP_4=API Developer Portal
+INSTALL_COMP_5=Engagement Services
+SEND_USAGE_DATA_INPUT_2=No
+USER_INSTALL_DIR={{ voltmx_installation_dir }}
+USER_INPUT_SERVER_CHOICE_1=Tomcat 9.0.62
+{% if voltmx_port_forwards[1].guest is defined %}
+USER_INPUT_PROTOCOL_2=HTTPS
+CONSOLE_SSL_CERTS_2=Use existing certificate
+CONSOLE_HOST_DETAILS_1={{ voltmx_port_forwards[1].url }}.{{ settings.hostname }}.{{ settings.domain }}
+CONSOLE_HOST_DETAILS_2={{ voltmx_port_forwards[0].guest }}
+CONSOLE_HOST_DETAILS_3={{ voltmx_port_forwards[1].guest }}
+{% if selfsigned_enabled  %}
+CONSOLE_APPSERVER_SSL_1={{ cert_dir }}/jks/{{ settings.hostname }}.{{ settings.domain }}-self-signed.jks
+{% elif not selfsigned_enabled  %}
+CONSOLE_APPSERVER_SSL_1={{ cert_dir }}/jks/default-signed.jks
+{% endif %}
+APPSERVER_KEYSTORE_PASS={{ cert_pass }}
+INDEX_OF_MATCHING_PASSWORD=0
+{% else %}
+USER_INPUT_PROTOCOL_1=HTTP
+CONSOLE_HOST_DETAILS_1={{ voltmx_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}
+CONSOLE_HOST_DETAILS_2={{ voltmx_port_forwards[0].guest }}
+{% endif %}
+CONSOLE_DB_CHOICE_5=MariaDB 10.3.13
+CONSOLE_DB_DETAILS_1=127.0.0.1
+CONSOLE_DB_DETAILS_2=3306
+CONSOLE_DB_DETAILS_3={{ mariadb_admin_user }}
+CONSOLE_DB_PASS={{ mariadb_admin_pass }}
+INDEX_OF_MATCHING_PASSWORD=0
+START_SERVER=Yes

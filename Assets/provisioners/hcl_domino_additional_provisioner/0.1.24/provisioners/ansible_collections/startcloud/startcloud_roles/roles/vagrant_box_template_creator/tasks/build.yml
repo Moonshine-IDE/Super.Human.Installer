@@ -1,0 +1,30 @@
+---
+# Build VM tasks
+
+- name: Check if base VM already exists
+  stat:
+    path: "builds/base/{{ template_file | basename | splitext | first | regex_replace('-', '') }}"
+  register: base_vm_stat
+
+- name: Report build status
+  debug:
+    msg: "Building {{ template_def.name }} using {{ build_task }}"
+  when: not base_vm_stat.stat.exists
+
+- name: Build base VM
+  command: >
+    packer build
+    {% for var_file in default_var_files %}
+    -var-file='{{ var_file }}'
+    {% endfor %}
+    -var-file='{{ template_file }}'
+    {{ build_task }}
+  register: build_result
+  failed_when: build_result.rc != 0
+  changed_when: build_result.rc == 0
+  when: not base_vm_stat.stat.exists
+
+- name: Report build completed
+  debug:
+    msg: "Build for {{ template_def.name }} completed successfully"
+  when: not base_vm_stat.stat.exists and build_result.rc == 0

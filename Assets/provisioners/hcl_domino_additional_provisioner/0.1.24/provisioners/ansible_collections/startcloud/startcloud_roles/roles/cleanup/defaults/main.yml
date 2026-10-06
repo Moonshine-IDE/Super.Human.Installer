@@ -1,0 +1,11 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Cleaning Up Image"
+
+verify: true
+cleanup_proxy: true
+
+windows_page_file_size_initial: 512
+windows_page_file_size_max: 512

@@ -1,0 +1,23 @@
+---
+# Cleanup tasks
+
+- name: Report cleanup status
+  debug:
+    msg: "Running cleanup for {{ template_def.name }}"
+
+- name: Run cleanup
+  command: >
+    packer build
+    {% for var_file in default_var_files %}
+    -var-file='{{ var_file }}'
+    {% endfor %}
+    -var-file='{{ template_file }}'
+    provisioners/packer/cleanup.json
+  register: cleanup_result
+  failed_when: cleanup_result.rc != 0
+  changed_when: cleanup_result.rc == 0
+
+- name: Report cleanup completed
+  debug:
+    msg: "Cleanup for {{ template_def.name }} completed successfully"
+  when: cleanup_result.rc == 0

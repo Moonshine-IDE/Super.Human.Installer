@@ -1,0 +1,18 @@
+galaxy_info:
+  role_name: haxe
+  author: MarkProminic
+  description: Adds Haxe and its dependencies to a Debian server.
+  company: Moonshine-IDE
+  license: Apache License 2.0
+  min_ansible_version: '2.10'
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+  galaxy_tags:
+    - haxe
+    - installation
+    - mxhx
+dependencies: []
+collections:
+  - startcloud.startcloud_roles

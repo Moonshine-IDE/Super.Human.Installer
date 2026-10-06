@@ -1,0 +1,6 @@
+---
+-
+  name: "Installing ruby, rubygems, and development tools"
+  ansible.builtin.yum:
+    name: "{{ ruby_packages }}"
+    state: present

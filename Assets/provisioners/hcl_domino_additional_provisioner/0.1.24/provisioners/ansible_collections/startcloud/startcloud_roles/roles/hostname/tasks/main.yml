@@ -1,0 +1,60 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Setting hostname"
+      when: not ansible_os_family == 'Windows'
+      ansible.builtin.hostname:
+        name: "{{ settings.hostname }}.{{ settings.domain }}"
+
+    -
+      name: "Setting hostname"
+      when: ansible_os_family == 'Windows'
+      ansible.builtin.win_hostname:
+        name: "{{ settings.hostname }}"
+
+    -
+      name: "Block to Allow Loading of Variables without running task"
+      when: not ansible_os_family == 'Windows'
+      block:
+        -
+          name: "Gathering facts on current container"
+          community.docker.current_container_facts:
+    
+        -
+          name: "Printing information on current container when running in a container"
+          ansible.builtin.debug:
+            msg: "Container ID is {{ ansible_module_container_id }}"
+          when: ansible_module_running_in_container
+        
+        -
+          name: "Setting /etc/hosts"
+          when: not ansible_module_running_in_container
+          ansible.builtin.replace:
+            path: "/etc/hosts"
+            regexp: "{{ item.regex }}"
+            replace: "{{ item.replace }}"
+          with_items:
+            - { regex: "(^127.0.0.1)(.*)$", replace: '127.0.0.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}
+            - { regex: "(^127.0.1.1)(.*)$", replace: '127.0.1.1   localhost {{ settings.hostname }}.{{ settings.domain }} {{ settings.hostname }}'}

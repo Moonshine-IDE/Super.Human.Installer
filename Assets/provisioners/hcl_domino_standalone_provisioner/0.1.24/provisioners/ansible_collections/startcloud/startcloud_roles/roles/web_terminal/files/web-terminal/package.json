@@ -1,0 +1,19 @@
+{
+  "name": "web-shell",
+  "version": "1.0.0",
+  "description": "Web-based shell interface",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-basic-auth": "^1.2.1",
+    "ws": "^8.16.0",
+    "node-pty": "^1.0.0",
+    "js-yaml": "^4.1.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  }
+}

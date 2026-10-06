@@ -1,0 +1,37 @@
+{
+	"title": "Creating the Leap OIDC Registered Client Form",
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Creating OIDC Registered Client ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "idpcat.nsf", 
+                    "documents":[
+                        { 
+                            "action": "create", 
+                            "computeWithForm": true,
+                            "items": {
+              					"Form": "RegisteredOAuthClient",
+              					"RC_ProviderName": "{{ domino_oidc_install_proxy_url }}",
+              					"RC_Name": "Leap",
+              					"RC_client_id": "{{ domino_oidc_client_id }}_leap",
+              					"RC_auth_method": "2",
+              					"RC_client_secret": "{{ domino_oidc_client_secret }}",
+              					"RC_redirect_uris": ["https://{{ domino_leap_proxy_url }}/login/callback"],
+              					"RC_aud": "{{ domino_organization }}-O={{ id_vault_name }}",
+              					"RC_scope": "openid email Domino.vault.{{ domino_organization }}-O={{ id_vault_name }}",
+              					"RC_back_channel_logout_uri" : "",
+              					"RC_AllowedWebOrigins": "https://{{ domino_leap_proxy_url }}",
+              					"RC_post_logout_redirect_uris": "https://{{ domino_leap_proxy_url }}/logout/callback",
+              					"BearerAllowedClientIDs": "{{ domino_oidc_bearer_allowed_client_ids }}",
+              					"OIDCLogLevel": "{{ domino_oidc_log_level }}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,43 @@
+---
+-
+  name: "Checking if the UDS Actor Installer is at C:/temp/{{ uds_actor_installer }}"
+  register: uds_actor_installer_check
+  ansible.builtin.win_stat:
+    path: "C:\\temp\\{{ uds_actor_installer }}"
+    get_checksum: false
+
+-
+  name: "Checking if UDS has been installed and configured"
+  register: uds_actor_installed
+  ansible.builtin.win_stat:
+    path: C:\temp\actor_installed
+    get_checksum: false
+
+-
+  name: "Downloading UDS Actor from {{ uds_installer_url }}"
+  register: udsa_sresult
+  until: "udsa_sresult is not failed"
+  retries: 3
+  ansible.builtin.win_get_url:
+    validate_certs: false
+    url: "{{ uds_installer_url }}"
+    dest: "C:\\temp\\{{ uds_actor_installer }}"
+    url_username: "{{ installer_url_user }}"
+    url_password: "{{ installer_url_pass }}"
+  when: not uds_actor_installer_check.stat.exists and not uds_actor_installed.stat.exists
+
+#-
+#  name: "Installing UDS Actor"
+#  ansible.windows.win_powershell:
+#    script: iex "C:\\temp\\{{ uds_actor_installer }}"
+#  when: not uds_actor_installer_check.stat.exists
+
+-
+  name: "Waiting for configuration complete file to appear"
+  ansible.windows.win_wait_for:
+    path: C:\temp\actor_installed
+    state: present
+    timeout: 1500
+
+
+

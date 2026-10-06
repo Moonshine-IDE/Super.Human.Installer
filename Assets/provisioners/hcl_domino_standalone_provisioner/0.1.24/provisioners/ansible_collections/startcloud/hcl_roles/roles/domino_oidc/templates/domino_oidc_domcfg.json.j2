@@ -1,0 +1,32 @@
+{
+	"title": "Creating the Updating Domino to use Domcfg",
+    "versionjson": "1.0.0", 
+    "steps": [ 
+        { 
+            "title": "--- Updating Domino to use Domcfg ---", 
+            "databases": [ 
+                { 
+                    "action": "update", 
+                    "filePath": "domcfg.nsf", 
+                    "documents":[
+                        { 
+                            "action": "update", 
+                            "search": {
+                                        "formula":"Form=\"LoginMap\" & LF_LoginFormDB=\"iwaredir.nsf\"",
+                                        "number":0
+                            },
+                            "computeWithForm": true,
+                            "items": {
+                                "LF_LoginForm": "{{ domino_oidc_provider_login_form }}",
+                                "LF_LoginFormDB": "{{ domino_oidc_provider_login_form_db }}",
+                                "LF_ServerType": "0",
+                                "LF_IP": "",
+                                "$PublicAccess": "1"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

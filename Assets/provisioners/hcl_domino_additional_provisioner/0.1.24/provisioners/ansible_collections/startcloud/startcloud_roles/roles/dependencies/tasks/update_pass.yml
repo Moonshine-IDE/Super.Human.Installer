@@ -1,0 +1,35 @@
+---
+-
+  name: "Executing the scheduled task (Pass {{ pass_number }})"
+  ansible.windows.win_shell: schtasks /Run /TN "InstallWindowsUpdatesTask"
+
+-
+  name: "Waiting for the scheduled task to complete (Pass {{ pass_number }})"
+  ansible.windows.win_shell: |
+    $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+    while ($task.State -eq "Running") {
+      Start-Sleep -Seconds 5
+      $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+    }
+
+-
+  name: "Checking if task completed successfully (Pass {{ pass_number }})"
+  ansible.windows.win_shell: |
+    $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+    while ($task.State -eq "Running") {
+      Start-Sleep -Seconds 5
+      $task = Get-ScheduledTask -TaskName "InstallWindowsUpdatesTask"
+    }
+    if ($task.LastTaskResult -eq 0) {
+      $completedSuccessfully = $true
+    } else {
+      $completedSuccessfully = $false
+    }
+    $completedSuccessfully
+  register: task_result
+
+-
+  name: "Rebooting to Apply Windows Updates (Pass {{ pass_number }})"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+  when: task_result.stdout == "True"

@@ -1,0 +1,206 @@
+/*
+Example project to build and run a Notes application on your local machine.
+*/
+plugins {
+    id 'java'
+    id 'application'  // allows 'run' task.
+    id 'eclipse'      // allows dependencies to be exported to .classpath
+}
+mainClassName = 'CheckNotesUser'
+
+String notesInstallation = project.findProperty('notesInstallation') ?: '/Applications/HCL Notes.app/Contents/MacOS/'
+if (!notesInstallation) {
+	throw new GradleException("Missing configured path for Notes installation.  Set notesInstallation in gradle.properties.")
+}
+else if (!(new File(notesInstallation).exists())) {
+	throw new GradleException("Invalid configured path for Notes installation ($notesInstallation).  Check notesInstallation in gradle.properties.")
+}
+
+
+String notesJarBaseDir = "$notesInstallation"
+String envPath = System.getenv('PATH')
+if (!envPath) {
+	logger.warn "Missing PATH environment variable."
+	envPath = ''  // default to empty string to avoid null errors later
+}
+
+
+// change envPath as needed
+if (notesInstallation.toLowerCase().startsWith('/applications/')) { // treat as macOS
+        // directory for additional JARs is inconsistent across version, so just use `/Applications/HCL Notes.app/Contents`
+        notesJarBaseDir = "$notesInstallation/.."
+}
+else { // treat as Windows
+	// update PATH
+	envPath = "$envPath;$notesInstallation"
+	println "Updated PATH: $envPath"
+}
+
+/**
+ * Method to find a file under the given path
+ * @param baseDir  the base directory to search
+ * @param findName  the name of the file to find.  TODO:  support patterns
+ * @return the absolute path of the file, or null if the file was not found.
+ */
+String findFile(String baseDir, String findName) {
+    String foundFile = null;
+    // search for a file with the given pattern.  If multiple copies are found, use the last
+    new File(baseDir).eachFileRecurse {File curFile ->
+        if (curFile.getName() == findName) {
+            foundFile = curFile.getAbsolutePath()
+            println "Found file '$findName' at '${curFile.getAbsolutePath()}'"
+        }
+    }
+
+    if (!foundFile) {
+        println ("Could not find '$findName' in '$baseDir'")
+    }
+
+    return foundFile
+}
+
+// build a jar path to use for Notes.jar
+// Supports local and Linux server executions
+String notesJarPath = findFile(notesJarBaseDir, 'Notes.jar')
+String jarClassPath = "./Notes.jar {{ domino_install_dir }}/jvm/lib/ext/Notes.jar ${notesJarPath.replaceAll(' ', '%20').replaceAll('^\\w+:', '/$0')}"
+
+logger.debug "Environment"
+System.env.each {
+    logger.debug "${it.key}:${it.value}"
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://artifactory.openntf.org/openntf"
+    }
+    maven {
+        url "https://mvnrepository.com/artifact/com.mindoo.domino/domino-jna"
+    }
+}
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+
+            // The servlet requires additional dependencies that are not available with the Notes client
+            exclude '**/ExampleServlet*'
+        }
+    }
+}
+
+// Required for Java 8 Language server support
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    // Local JAR dependency
+    implementation files(notesJarPath)
+    // the paths to these files vary for the different Domino installations, so search for them instead
+    implementation files(findFile(notesJarBaseDir, 'lwpd.domino.napi.jar'))
+    implementation files(findFile(notesJarBaseDir, 'lwpd.commons.jar'))
+
+
+    implementation 'org.json:json:20160212'  // For parsing setup.json
+    implementation 'com.mindoo.domino:domino-jna:0.9.53'
+    implementation 'net.java.dev.jna:jna:5.13.0'
+}
+
+/*
+OPTIONAL: Configuration to let this build and run in Moonshine
+Use "clean runApp" for the Gradle command
+*/
+task runApp(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = mainClassName  // deprecated in later versions of Gradle - use mainClass
+    environment('DYLD_LIBRARY_PATH', notesInstallation)
+    environment('PATH', envPath)
+
+    // args 'appArg1'
+}
+
+/*
+ * Build a fat jar (excluding Notes.jar) for import into script library.
+ */
+jar {
+    from {
+        // runtimeClasspath includes implementation and runtimeOnly dependencies
+        // findResults allows using null to exclude results
+        configurations.runtimeClasspath.findResults { File dependency ->
+            if (dependency.getName().equalsIgnoreCase("Notes.jar")) {
+                return null  // skip this entry
+            }
+            else {
+                return dependency.isDirectory() ? dependency : zipTree(dependency)
+            }
+        }
+    }
+    // classpath needs to be specified in individual tasks
+    
+    // exclude signature files
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
+
+/**
+ * Example of custom JAR task
+ */
+task jarCheckNotesUser(type: Jar) {
+    String mainClass = 'CheckNotesUser'
+    archiveName = "${mainClass}.jar"
+    manifest {
+        attributes 'Main-Class': "net.prominic.domino/vagrant/$mainClass",
+                'Class-Path': jarClassPath
+    }
+    with jar
+}
+
+task jarIndividual() {
+    // placeholder for generated tasks
+}
+
+tasks.withType(Jar) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// generate tasks to create individual jars
+String jarIndividualDir = project.findProperty('jarIndividualDir') ?: 'src/main/java/net/prominic/domino/vagrant'
+new File(jarIndividualDir).eachFileRecurse(groovy.io.FileType.FILES, {File curFile ->
+    String fullName = curFile.getName()
+    int splitIndex = fullName.lastIndexOf('.')
+
+    if (splitIndex >= 0) {  // confirm this is a file with the expected format
+        String extension = fullName.substring(splitIndex+1)
+        String mainClass = fullName.substring(0, splitIndex)
+
+        if ( extension.equalsIgnoreCase('java') &&
+             curFile.text.contains("public static void main")) { // main class
+            String curTaskName = "jar$mainClass"
+            // don't override the existing task if it exists - allow this so that the user can define a custom override
+            if (!tasks.findByName(curTaskName)) {
+                println "Creating task: '$curTaskName'"
+                tasks.create(name: curTaskName, type: Jar) {
+                    archiveName = "${mainClass}.jar"
+                    manifest {
+                        attributes 'Main-Class': "net.prominic.domino/vagrant/$mainClass",
+                                'Class-Path': jarClassPath
+                    }
+                    with jar
+                }
+            }
+            else {
+                println "Using existing task: '$curTaskName'"
+            }
+            tasks.getByName('jarIndividual').dependsOn << curTaskName
+
+
+        }
+        else {
+            println "Skipping non-main class: ${curFile.getAbsolutePath()}"
+        }
+    }
+    else {
+        println "Ignoring invalid class file: ${curFile.getAbsolutePath()}"
+    }
+})

@@ -1,0 +1,127 @@
+---
+-
+  name: "Expanding Root Disk"
+  become: true
+  become_user: root
+  when:
+    - not vm_encrypted
+    - ansible_os_family == 'Debian'
+  block:
+    -
+      name: "Setting root partition fact"
+      ansible.builtin.set_fact:
+        root_partition: "{{ ansible_mounts | selectattr('mount', '==', '/') | map(attribute='device') | first | regex_replace('^/dev/', '') }}"
+
+    -
+      name: "Setting root partition fact"
+      ansible.builtin.set_fact:
+        root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
+        root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
+
+    -
+      name: "Extending the unecrypted Root Partition"
+      ansible.builtin.shell: "{{ item }}"
+      register: extend_root_partition
+      failed_when: 
+        - extend_root_partition.rc != 0
+        - "'NOCHANGE' not in extend_root_partition.stdout"
+        - "'Bad magic number' not in extend_root_partition.stderr"
+      changed_when: extend_root_partition.rc == 0
+      with_items:
+        - "growpart /dev/{{ root_disk }} {{ root_partition_number }}"
+        - "resize2fs /dev/{{ root_partition }}"
+
+-
+  name: "Expanding the Encrypted Root Disk"
+  become: true
+  become_user: root
+  when:
+    - vm_encrypted
+    - ansible_os_family == 'Debian'
+  block:
+    -
+      name: "Setting root partition fact"
+      ansible.builtin.set_fact:
+        root_partition: "{{ ansible_mounts | selectattr('mount', '==', '/') | map(attribute='device') | first | regex_replace('^/dev/', '') }}"
+
+    -
+      name: "Setting root partition fact"
+      ansible.builtin.set_fact:
+        root_disk: "{{ root_partition | regex_replace('[0-9]+$', '') }}"
+        root_partition_number: "{{ root_partition | regex_search('[0-9]+$') }}"
+
+    -
+      name: "Extending the Encrypted Root Partition"
+      ansible.builtin.shell: "{{ item }}"
+      ignore_errors: true
+      with_items:
+        - "growpart /dev/{{ root_disk }} {{ root_partition_number }}"
+        - "echo {{ root_unlock_key }} | sudo cryptsetup resize /dev/mapper/{{ root_partition }}_crypt"
+        - "pvresize /dev/mapper/{{ root_partition }}_crypt"
+        - "lvresize -l+100%FREE /dev/crypt/root"
+        - "resize2fs /dev/mapper/crypt-root"
+
+-
+  name: "Configuring Extra Disks"
+  become: true
+  become_user: root
+  when:
+    - disks.additional_disks is defined
+    - disks.additional_disks is not none
+    - disks.additional_disks | length > 0
+  block:
+    -
+      name: "Gathering disk information"
+      when:
+        - disks.additional_disks is not none
+        - disks.additional_disks | length > 0
+      block:
+        -
+          name: "Identifying available disks"
+          ansible.builtin.shell: "lsblk -no NAME -x NAME | grep -v {{ root_disk }}"
+          register: lsblk_output
+
+        - name: "Parsing available disks"
+          set_fact:
+            available_disks: "{{ lsblk_output.stdout_lines }}"
+
+        - name: "Debug: available_disks"
+          debug:
+            var: available_disks
+
+    -
+      name: "Creating Mount Points"
+      when:
+        - disks.additional_disks is not none
+        - disks.additional_disks is iterable
+      ansible.builtin.file:
+        path: "{{ item.mount }}"
+        state: directory
+      loop: "{{ disks.additional_disks | default([], true) }}"
+
+
+    -
+      name: "Creating filesystems on additional disks"
+      when:
+        - disks.additional_disks is not none
+        - disks.additional_disks is iterable
+      ansible.builtin.filesystem:
+        fstype: "{{ item.filesystem }}"
+        dev: "/dev/{{ available_disks[index] }}"
+      loop: "{{ disks.additional_disks | default([], true) }}"
+      loop_control:
+        index_var: index
+
+    -
+      name: "Mounting additional disks"
+      when:
+        - disks.additional_disks is not none
+        - disks.additional_disks is iterable
+      ansible.builtin.mount:
+        path: "{{ item.mount }}"
+        src: "/dev/{{ available_disks[index] }}"
+        fstype: "{{ item.filesystem }}"
+        state: mounted
+      loop: "{{ disks.additional_disks | default([], true) }}"
+      loop_control:
+        index_var: index

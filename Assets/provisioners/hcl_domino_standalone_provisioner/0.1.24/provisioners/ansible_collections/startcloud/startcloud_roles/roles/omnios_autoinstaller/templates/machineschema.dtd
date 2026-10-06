@@ -1,0 +1,25 @@
+<!ELEMENT host (hostname, mac, rpool, timezone, dns, gateway, addr+, publisher+, user+, path*, pkg?)>
+<!ELEMENT hostname (#PCDATA)>
+<!ELEMENT mac (#PCDATA)>
+<!ELEMENT rpool (#PCDATA)>
+<!ELEMENT timezone (#PCDATA)>
+<!ELEMENT dns (search, server+)>
+<!ELEMENT search (#PCDATA)>
+<!ELEMENT server (#PCDATA)>
+<!ELEMENT gateway (#PCDATA)>
+<!ELEMENT addr (ip)>
+<!-- NOTE: this must be unique, but it isn't an ID because IDs do not permit the slash-->
+<!ATTLIST addr name CDATA #REQUIRED>
+<!ELEMENT ip (#PCDATA)>
+<!ELEMENT publisher (add*, remove*)>
+<!ATTLIST publisher name ID #REQUIRED>
+<!ELEMENT add (#PCDATA)>
+<!ELEMENT remove (#PCDATA)>
+<!ELEMENT user (password, profile?)>
+<!ATTLIST user name ID #REQUIRED>
+<!ELEMENT password (#PCDATA)>
+<!ELEMENT profile (#PCDATA)>
+<!ELEMENT path (#PCDATA)>
+<!ELEMENT pkg (install*, uninstall*)>
+<!ELEMENT install (#PCDATA)>
+<!ELEMENT uninstall (#PCDATA)>

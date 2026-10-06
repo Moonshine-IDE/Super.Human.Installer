@@ -1,0 +1,9 @@
+# Configures JeDI to use the certificate generated for this VM
+ssl.keystore.cert.password={{ jedi_ssl_cert_password }}
+ssl.keystore.cert.alias=ssl
+ssl.keystore={{ jedi_ssl_cert }}
+ssl.keystore.storepass={{ jedi_ssl_cert_password }}
+ssl.truststore={{ jedi_ssl_cert }}
+ssl.truststore.storepass={{ jedi_ssl_cert_password }}
+passwords.save=true
+ssl.enable=true

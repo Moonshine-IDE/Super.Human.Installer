@@ -1,0 +1,28 @@
+galaxy_info:
+  role_name: asterisk
+  author: MarkProminic
+  description: Install Asterisk
+  company: STARTCloud
+  issue_tracker_url: https://github.com/STARTcloud/startcloud_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Debian
+      versions:
+        - 'bookworm'
+
+  galaxy_tags: []
+
+dependencies:
+  - role: startcloud.startcloud_roles.setup
+  - role: startcloud.startcloud_roles.hostname
+  - role: startcloud.startcloud_roles.dependencies
+  - role: startcloud.startcloud_roles.service_user
+  - role: startcloud.startcloud_roles.sdkman_install
+  - role: startcloud.startcloud_roles.sdkman_java
+  - role: startcloud.startcloud_roles.fail2ban
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

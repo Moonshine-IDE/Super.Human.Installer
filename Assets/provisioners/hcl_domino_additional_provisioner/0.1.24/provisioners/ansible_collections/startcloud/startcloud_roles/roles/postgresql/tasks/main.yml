@@ -1,0 +1,69 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }}"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }}"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }}"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name) }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Including  Variable configuration"
+      ansible.builtin.include_tasks: variables.yml
+    
+    -
+      name: "Including setup-Archlinux.yml"
+      ansible.builtin.include_tasks: setup-Archlinux.yml
+      when: ansible_os_family == 'ArchLinux'
+    
+    -
+      name: "Including setup-Debian.yml"
+      ansible.builtin.include_tasks: setup-Debian.yml
+      when: ansible_os_family == 'Debian'
+    
+    -
+      name: "Including setup-RedHat.yml"
+      ansible.builtin.include_tasks: setup-RedHat.yml
+      when: ansible_os_family == 'RedHat'
+    
+    -
+      name: "Including initialize.yml"
+      ansible.builtin.include_tasks: initialize.yml
+    
+    -
+      name: "Including configure.yml"
+      ansible.builtin.include_tasks: configure.yml
+    
+    -
+      name: Ensure PostgreSQL is started and enabled on boot.
+      ansible.builtin.service:
+        name: "{{ postgresql_daemon }}"
+        state: "{{ postgresql_service_state }}"
+        enabled: "{{ postgresql_service_enabled }}"
+    
+    -
+      name: "Configuring Postgres Users"
+      ansible.builtin.import_tasks: users.yml
+    
+    -
+      name: "Configuring Postgres Datbases"
+      ansible.builtin.import_tasks: databases.yml
+    
+    -
+      name: "Configuring Postgres User properties"
+      ansible.builtin.import_tasks: users_props.yml

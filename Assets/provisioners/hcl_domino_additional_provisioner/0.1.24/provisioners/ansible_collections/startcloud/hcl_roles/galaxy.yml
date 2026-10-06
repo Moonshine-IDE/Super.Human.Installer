@@ -1,0 +1,17 @@
+namespace: startcloud
+name: hcl_roles
+version: 1.0.3
+readme: "README.md"
+repository: https://github.com/STARTcloud/hcl_roles
+documentation: https://github.com/STARTcloud/hcl_roles
+homepage: https://github.com/STARTcloud/hcl_roles
+issues: https://github.com/STARTcloud/hcl_roles/issues
+description: "A collection of roles HCL products for the STARTcloud Environment"
+authors:
+  - "MarkProminic"
+license:
+  - GPL-2.0-or-later
+tags:
+  - hcl
+  - roles
+  - linux

@@ -1,0 +1,6 @@
+---
+collections:
+  - name: git+https://github.com/STARTcloud/hcl_roles.git
+    type: git
+  - name: git+https://github.com/STARTcloud/startcloud_roles.git
+    type: git

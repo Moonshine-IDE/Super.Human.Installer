@@ -1,0 +1,20 @@
+---
+-
+  name: Check if swap file exists
+  ansible.builtin.stat:
+    path: "{{ swap_file_path }}"
+    get_checksum: false
+  register: swap_file_check
+  changed_when: false
+
+-
+  name: Set variable for existing swap file size
+  ansible.builtin.set_fact:
+    swap_file_existing_size_mb: "{{ (swap_file_check.stat.size / 1024 / 1024) | int }}"
+  when: swap_file_check.stat.exists
+
+-
+  name: Set default value for existing swap file size when it doesn't exist
+  ansible.builtin.set_fact:
+    swap_file_existing_size_mb: "{{ swap_file_size_mb }}"
+  when: not swap_file_check.stat.exists

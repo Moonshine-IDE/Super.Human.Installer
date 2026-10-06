@@ -1,0 +1,6 @@
+---
+-
+  name: "Restarting apache"
+  ansible.builtin.service:
+    name: "{{ apache_service }}"
+    state: "{{ apache_restart_state }}"

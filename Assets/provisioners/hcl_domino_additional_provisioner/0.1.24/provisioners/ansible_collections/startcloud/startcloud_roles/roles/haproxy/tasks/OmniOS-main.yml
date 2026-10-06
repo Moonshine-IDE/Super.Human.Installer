@@ -1,0 +1,43 @@
+--- 
+- 
+  name: "Installing haproxy"
+  become: true
+  community.general.pkg5: 
+    name: 
+      - haproxy
+
+-
+  name: "Creating certifcate directories"
+  become: true
+  ansible.builtin.file:
+    mode: '0755'
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ ssl_dir }}"
+
+-
+  name: "Adding SSL keys"
+  become: true
+  ansible.builtin.copy:
+    mode: "a+x"
+    src: "/vagrant/secure/prominic-haproxy.pem"
+    dest: "{{ ssl_dir }}/{{ ssl_combined_pem }}"
+
+-
+  name: "Configuring haproxy"
+  become: true
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "644"
+  loop:
+    - { src: 'haproxy.cfg.j2', dest: '{{ config_dir }}/haproxy.cfg' }
+
+-
+  name: "Starting service haproxy"
+  become: true
+  ansible.builtin.service:
+    enabled: true
+    name: haproxy
+    state: restarted

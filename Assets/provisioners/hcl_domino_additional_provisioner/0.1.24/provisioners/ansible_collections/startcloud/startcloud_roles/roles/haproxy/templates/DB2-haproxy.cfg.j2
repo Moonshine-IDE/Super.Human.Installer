@@ -1,0 +1,83 @@
+global
+    log             /dev/log local0 info
+    pidfile         /var/run/haproxy.pid
+    maxconn         4000
+    user            haproxy
+    group           haproxy
+    daemon
+    stats           socket /var/lib/haproxy/stats
+    external-check
+    tune.ssl.default-dh-param 2048
+    ssl-default-bind-options no-sslv3 no-tlsv10 no-tlsv11  no-tls-tickets
+    ssl-default-server-options no-sslv3 no-tlsv10 no-tls-tickets
+    ssl-default-bind-ciphers ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS
+    ssl-default-server-ciphers ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS
+
+defaults
+    mode                    http
+    log                     global
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    timeout client-fin 30s
+    maxconn                 3000
+    option forwardfor
+    option http-server-close
+    option dontlognull
+    option httplog
+    option redispatch
+
+#### FRONTENDS ####
+frontend  STATS
+    mode http
+    bind *:444 #ssl crt {{ ssl_cert }}
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /
+
+frontend HTTP-IN
+    bind *:80
+    mode http
+    redirect scheme https code 301 if !{ ssl_fc }
+
+frontend  HTTPS-IN
+    bind *:443 #ssl crt {{ ssl_cert }}
+    mode http
+
+    ### ACL's  ####
+    {% for frontend_acl in haproxy.traveler_frontends_acl %}
+        ## Traveler
+    	acl {{frontend_acl.title}} ssl_fc_sni hdr(host) -i {{frontend_acl.url}}
+    	use_backend {{ db2dbname }} if {{frontend_acl.title}}
+    {% endfor %}
+    
+    {% for frontend_acl in haproxy.webmail_frontends_acl %}
+        ## Webmail
+        acl acl_{{frontend_acl.title}} path_beg -i {{frontend_acl.oldpath}}
+        acl acl_{{frontend_acl.title}} hdr(Cookie) {{frontend_acl.oldpath}}
+        http-request replace-header Host .* {{frontend_acl.url}} if acl_{{frontend_acl.title}}
+        http-request set-path {{frontend_acl.newpath}} if acl_{{frontend_acl.title}}
+        use_backend {{frontend_acl.title}} if acl_{{frontend_acl.title}}
+    {% endfor %}
+	
+#### BACKENDS ####
+{% for backend in haproxy.backends %}
+backend {{backend.title}}
+    mode http
+    http-response set-header Strict-Transport-Security "max-age=16000000; includeSubDomains; preload;"
+    reqadd X-Forwarded-Proto:\ https
+    option http-keep-alive
+    option forwardfor
+    option redispatch
+    option tcpka
+    balance leastconn
+  {%for server in backend.servers %}
+    server {{server.title}} {{server.address}}:{{server.port}} {{server.backup}} check  ssl verify none inter 4000 fall 1 rise 1 cookie {{server.title}}
+  {% endfor %}
+{% endfor %}

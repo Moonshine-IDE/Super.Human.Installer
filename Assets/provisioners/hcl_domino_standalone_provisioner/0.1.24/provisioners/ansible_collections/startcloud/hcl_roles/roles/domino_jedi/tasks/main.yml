@@ -1,0 +1,446 @@
+---
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+    -
+      name: "Checking if JEDI has been installed"
+      register: domino_jedi_installed
+      ansible.builtin.stat:
+        path: "{{ completed_dir }}/domino_jedi_installed"
+        checksum_algorithm: sha256
+      
+    -
+      name: "Disabling the nashed service to prevent conflict with JeDI"
+      ansible.builtin.service:
+        name: domino
+        enabled: false
+        state: stopped
+
+    -
+      name: "Enabling and start JeDI service"
+      when: domino_jedi_installed.stat.exists
+      ansible.builtin.systemd:
+        name: "{{ jedi_service }}"
+        enabled: true
+        state: started
+
+    -
+      name: "Setting up i386 Architecture Support"
+      when: not domino_jedi_installed.stat.exists
+      become: true
+      block:
+        -
+          name: "Gathering DEB architecture"
+          ansible.builtin.shell: dpkg --print-architecture
+          register: deb_architecture
+    
+        -
+          name: "Printing DEB architecture"
+          ansible.builtin.debug:
+            msg: "deb_architecture.stdout: {{ deb_architecture.stdout }}"
+    
+        -
+          name: "Printing i386 setup information"
+          ansible.builtin.debug:
+            msg: "Setting up i386 architecture support for 32-bit libraries"
+    
+        -
+          name: "Adding i386 architecture (if not already added)"
+          ansible.builtin.shell: |
+            dpkg --print-foreign-architectures | grep -w i386 || dpkg --add-architecture i386
+          register: add_arch_result
+          changed_when: add_arch_result.rc == 0
+    
+        -
+          name: "Getting foreign architectures after adding i386"
+          ansible.builtin.shell: dpkg --print-foreign-architectures
+          register: foreign_arch_post
+    
+        -
+          name: "Printing foreign architectures after adding i386"
+          ansible.builtin.debug:
+            msg: "foreign_arch_post.stdout_lines: {{ foreign_arch_post.stdout_lines }}"
+    
+        -
+          name: "Installing i386 packages"
+          ansible.builtin.apt:
+            name:
+              - libc6:i386
+              - libstdc++6:i386
+            state: present
+            update_cache: true
+            
+        -
+          name: "Verifying 32-bit libc by checking /lib/ld-linux.so.2"
+          ansible.builtin.shell: |
+            if [ -x /lib/ld-linux.so.2 ]; then
+              echo "32-bit libc loader works correctly"
+            else
+              echo "32-bit libc loader is missing or not functional" && exit 1
+            fi
+          register: verify_libc32
+          failed_when: verify_libc32.rc != 0
+          changed_when: false
+
+        -
+          name: "Debugging 32-bit libc verification result"
+          ansible.builtin.debug:
+            msg: "{{ verify_libc32.stdout }}"
+
+        -
+          name: "Installing C development tools"
+          ansible.builtin.apt:
+            name:
+              - build-essential
+              - cmake
+              - pkg-config
+              - libssl-dev
+              - git
+            state: present
+            update_cache: false
+
+        -
+          name: "Ensuring {{ prominic_install_dir }} parent directories exist"
+          ansible.builtin.file:
+            path: "{{ prominic_install_dir }}"
+            state: directory
+            mode: '0755'
+            owner: 'root'
+            group: 'root'
+
+        -
+          name: "Including the failover files logic to copy jedi to target"
+          import_tasks: failoverfiles.yaml
+          vars:
+              failover_url: "{{ jedi_online_zip }}"
+              failover_localzip: "{{ jedi_local_zip }}"
+              failover_localdir: "{{ jedi_local_unpack_dir }}"
+              failover_app_name: "jedi"
+              failover_destdir: "{{ prominic_install_dir }}"
+
+        -
+          name: "Setting ownership of {{ prominic_install_dir }}/jedi to domino"
+          ansible.builtin.file:
+            path: "{{ prominic_install_dir }}/jedi"
+            state: directory
+            mode: '0755'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+            recurse: true
+
+        # JAR file - install this separately
+        -
+          name: "Checking if JeDI JAR was provided"
+          stat:
+            path: "{{ jedi_local_jar }}"
+          register: test_jar_file
+          ignore_errors: true
+
+        -
+          name: "Downloading the JeDI JAR if it is not provided locally"
+          get_url:
+            url: "{{ jedi_online_jar }}"
+            dest: "{{ jedi_local_jar }}"
+          when: not test_jar_file.stat.exists
+          ignore_errors: false
+
+        -
+          name: "Copying JeDI JAR to {{ jedi_install_jar }}"
+          ansible.builtin.copy:
+            src: "{{ jedi_local_jar }}"
+            dest: "{{ jedi_install_jar }}"
+            
+        -
+          name: "Copying jedic directory to {{ prominic_install_dir }}"
+          ansible.builtin.copy:
+            src: "{{ role_path }}/files/jedic"
+            dest: "{{ prominic_install_dir }}/"
+            remote_src: false  # Ensures files are copied from local role directory
+            mode: preserve
+
+        -
+          name: "Setting ownership of {{ prominic_install_dir }}/jedi to domino"
+          ansible.builtin.file:
+            path: "{{ prominic_install_dir }}/jedi"
+            state: directory
+            mode: '0755'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+            recurse: true
+
+        -
+          name: Ensuring domino_user and domino_group are defined
+          set_fact:
+            domino_user: "{{ domino_user | default('domino') }}"
+            domino_group: "{{ domino_group | default('domino') }}"
+
+        -
+          name: "Setting ownership of {{ jedi_noteslog }} to domino_user"
+          ansible.builtin.file:
+            path: '{{ jedi_noteslog }}'
+            state: directory
+            mode: '0755'
+            owner: '{{ domino_user }}'
+            group: '{{ domino_group }}'
+            recurse: true
+
+        -
+          name: "Running make -f Makefile64 in jedic directory"
+          ansible.builtin.command:
+            cmd: make -f Makefile64
+            chdir: "{{ role_path }}/files/jedic"
+
+        -
+          name: "Ensuring {{ prominic_install_dir }}/jedi/lib/Linux64 exists"
+          ansible.builtin.file:
+            path: "{{ prominic_install_dir }}/jedi/lib/Linux64"
+            state: directory
+            mode: '0755'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Copying libunixruntime.so to {{ prominic_install_dir }}/jedi/lib/Linux64"
+          ansible.builtin.copy:
+            src: "{{ role_path }}/files/jedic/libunixruntime.so"
+            dest: "{{ prominic_install_dir }}/jedi/lib/Linux64/"
+            remote_src: false
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Updating partitions.xml using template"
+          ansible.builtin.template:
+            src: partitions.xml.j2
+            dest: "{{ jedi_cfg_dir }}/partitions.xml"
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Updating jdi.cfg using template"
+          ansible.builtin.template:
+            src: jdi.cfg.j2
+            dest: "{{ jedi_cfg_dir }}/jdi.cfg"
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Updating users.cfg using template - defines user credentials"
+          ansible.builtin.template:
+            src: users.cfg.j2
+            dest: "{{ jedi_cfg_dir }}/users.cfg"
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Updating acl.cfg using template - controls admin rights for users"
+          ansible.builtin.template:
+            src: acl.cfg.j2
+            dest: "{{ jedi_cfg_dir }}/acl.cfg"
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Generating ssl.cfg using the local certificates"
+          when: jedi_ssl_update
+          ansible.builtin.template:
+            src: ssl.cfg.j2
+            dest: "{{ jedi_cfg_dir }}/ssl.cfg"
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Updating start script"
+          ansible.builtin.template:
+            src: jedi.j2
+            dest: "{{ jedi_install_dir }}/bin/jedi"
+            mode: '0744'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+        -
+          name: "Adding Environment file for service"
+          ansible.builtin.template:
+            src: environment.j2
+            dest: "{{ jedi_cfg_dir }}/environment"
+            mode: '0644'
+            owner: '{{ jedi_user }}'
+            group: '{{ jedi_group }}'
+
+        -
+          name: "Creating systemd service for JeDI"
+          ansible.builtin.template:
+            src: jedi.service.j2
+            dest: "/etc/systemd/system/{{ jedi_service }}.service"
+            mode: '0744'
+            owner: 'root'
+            group: 'root'
+
+        -
+          name: "Reloading systemd to recognize new service"
+          ansible.builtin.command: systemctl daemon-reload
+
+        -
+          name: "Disabling the nashed service to prevent conflict with JeDI"
+          ansible.builtin.service:
+            name: domino
+            enabled: false
+            state: stopped
+
+        -
+          name: "Enabling and start JeDI service"
+          ansible.builtin.systemd:
+            name: "{{ jedi_service }}"
+            enabled: true
+            state: started
+
+        -
+          name: "Add console alias for service user"
+          when: jedi_alias.enabled
+          ansible.builtin.lineinfile:
+            path: "/home/{{ service_user }}/.bashrc"
+            line: "alias '{{ jedi_alias.alias }}'='{{ jedi_alias.command }}'"
+            regexp: '^alias {{ jedi_alias.alias }}='
+            state: present
+            create: true
+            owner: "{{ service_user }}"
+            group: "{{ service_group }}"
+
+        -
+          name: "Setting JEDI as installed"
+          when: not domino_jedi_installed.stat.exists
+          ansible.builtin.file:
+            mode: '0644'
+            path: "{{ item }}"
+            state: touch
+            owner: '{{ service_user }}'
+            group: '{{ service_group }}'
+          with_items:
+            - "{{ completed_dir }}/domino_jedi_installed"
+
+    -
+      name: "Jedi set to Disabled, Enabling Nashed Service"
+      when: not jedi_enabled
+      block:
+        -
+          name: "Checking if JEDI has been installed"
+          register: domino_jedi_installed_2
+          ansible.builtin.stat:
+            path: "{{ completed_dir }}/domino_jedi_installed"
+            checksum_algorithm: sha256
+
+        -
+          name: "Checking if Nash's Domino Service Scripts have been installed"
+          register: nash_service_installed
+          ansible.builtin.stat:
+            path: "{{ completed_dir }}/service_configured"
+            checksum_algorithm: sha256
+
+        -
+          name: "Jedi set to Disabled, Enabling Nashed Service"
+          when:
+              - nash_service_installed.stat.exists
+              - domino_jedi_installed_2.stat.exists
+          block:
+            -
+              name: "Disabling and Stopping JeDI service"
+              ansible.builtin.systemd:
+                name: "{{ jedi_service }}"
+                enabled: false
+                state: stopped
+
+            -
+              name: "Check for Domino server process"
+              community.general.pids:
+                pattern: "/opt/hcl/domino/notes/latest/linux/server"
+              register: process_check
+
+            -
+              name: "Debug process check"
+              ansible.builtin.debug:
+                msg: "Process check result: {{ process_check }}"
+
+            -
+              name: "Starting Initial Domino Stop Attempt"
+              become: true
+              when:
+                  - process_check.pids | length > 0
+              ansible.builtin.shell: 'echo "exit" >> {{ domino_home_dir }}/noteslog/notes.input'
+
+            -
+              name: "Waiting for Domino configuration"
+              when:
+                  - process_check.pids | length > 0
+              ansible.builtin.pause:
+                seconds: 90
+
+            -
+              name: "Setting initial shutdown status"
+              ansible.builtin.set_fact:
+                shutdown_complete: false
+
+            -
+              name: "Looping checking server status"
+              ansible.builtin.include_tasks: check_shutdown.yml
+              loop: "{{ range(1, 11)|list }}"
+              when:
+                  - not shutdown_complete
+
+            -
+              name: "Waiting for Domino configuration"
+              ansible.builtin.pause:
+                seconds: 90
+
+            -
+              name: "Check for Domino server process"
+              community.general.pids:
+                pattern: "/opt/hcl/domino/notes/latest/linux/server"
+              register: process_check_2
+
+            -
+              name: "Debug process check"
+              ansible.builtin.debug:
+                msg: "Process check result: {{ process_check_2 }}"
+
+            -
+              name: "Stopping Domino"
+              when:
+                  - process_check_2.pids | length > 0
+              block:
+                -
+                  name: "Starting Initial Domino Stop Attempt"
+                  become: true
+                  ansible.builtin.shell: 'echo "exit" >> {{ domino_home_dir }}/noteslog/notes.input'
+
+                -
+                  name: "Waiting for Domino configuration"
+                  ansible.builtin.pause:
+                    seconds: 90
+
+        -
+          name: "Check for Domino server process"
+          community.general.pids:
+            pattern: "/opt/hcl/domino/notes/latest/linux/server"
+          register: process_check_3
+          when: nash_service_installed.stat.exists and domino_jedi_installed_2.stat.exists
+
+        -
+          name: "Debug process check"
+          ansible.builtin.debug:
+            msg: "Process check result: {{ process_check_3 }}"
+          when: nash_service_installed.stat.exists and domino_jedi_installed_2.stat.exists
+          failed_when: process_check_3.pids | length > 0
+
+        -
+          name: "Enabling the nashed service to ensure provisioning works"
+          when: nash_service_installed.stat.exists and domino_jedi_installed_2.stat.exists
+          ansible.builtin.service:
+            name: domino
+            enabled: true
+            state: restarted

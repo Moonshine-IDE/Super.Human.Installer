@@ -1,0 +1,215 @@
+---
+-
+  name: "Including OS-specific vars"
+  ansible.builtin.include_vars: "{{ ansible_os_family | lower }}.yml"
+
+-
+  name: "Updating all packages"
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest # noqa package-latest
+
+-
+  name: "Removing unnecessary development packages and documentation"
+  ansible.builtin.dnf:
+    name:
+      - "*-devel"
+      - "*-doc"
+    state: absent
+
+# Skipping LXD Snap removal (not applicable to Red Hat)
+
+# Skipping core18 and core20 Snap removal (not applicable to Red Hat)
+
+# Skipping Snapd removal (not applicable to Red Hat)
+
+
+- name: "Removing unwanted packages"
+  ansible.builtin.dnf:
+    name: "{{ packages }}"
+    state: absent
+
+# Skipping Deborphan cleanup (not applicable to Red Hat)
+
+-
+  name: "Cleaning up udev rules"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /dev/.udev/
+    - /lib/udev/rules.d/75-persistent-net-generator.rules
+
+-
+  name: "Cleaning leftover DHCP Leases"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /var/lib/dhclient/*
+
+-
+  name: "Truncating Machine ID"
+  ansible.builtin.file:
+    path: /etc/machine-id
+    state: absent
+
+-
+  name: "Creating empty Machine ID file"
+  ansible.builtin.copy:
+    content: ""
+    dest: /etc/machine-id
+    force: false
+    mode: "0644"
+
+-
+  name: "Unsetting the Machine ID"
+  ansible.builtin.file:
+    path: /var/lib/dbus/machine-id
+    state: absent
+
+-
+  name: "Linking Machine ID file"
+  ansible.builtin.file:
+    src: /etc/machine-id
+    dest: /var/lib/dbus/machine-id
+    state: link
+
+-
+  name: "Removing DNF Caches"
+  ansible.builtin.file:
+    path: /var/cache/dnf
+    state: absent
+
+-
+  name: "Finding and removing log files"
+  ansible.builtin.find:
+    paths: /var/log
+    patterns: "*.log,*.old,*.gz"
+    recurse: true
+  register: log_files_to_delete
+
+-
+  name: "Removing log files"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ log_files_to_delete.files }}"
+
+-
+  name: "Truncating audit logs"
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ item }}"
+    force: false
+    mode: "0644"
+  with_items:
+    - /var/log/lastlog
+    - /var/log/wtmp
+    - /var/log/btmp
+
+
+-
+  name: "Clearing the History File"
+  ansible.builtin.command: "unset HISTFILE"
+  changed_when: false
+  failed_when: false
+
+
+-
+  name: "Finding all log files to truncate"
+  ansible.builtin.find:
+    paths: /var/log
+    file_type: file
+    recurse: true
+  register: all_log_files
+
+-
+  name: "Truncating all log files"
+  ansible.builtin.copy:
+    content: ""
+    dest: "{{ item.path }}"
+    backup: false
+    force: true
+    mode: preserve
+  loop: "{{ all_log_files.files }}"
+  failed_when: false
+
+-
+  name: "Removing caches, logs, docs, man pages, and history"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /root/.bash_history
+    - "/home/{{ ansible_user }}/.bash_history"
+    - /usr/share/doc/*
+    - /usr/share/man/*
+    - /tmp/*
+
+-
+  name: "Recreating Doc and Man directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  with_items:
+    - /usr/share/doc/
+    - /usr/share/man/
+
+-
+  name: "Removing useless packages from the cache"
+  ansible.builtin.dnf:
+    autoremove: true
+
+-
+  name: "Register Stale Netplan Configs"
+  ansible.builtin.find:
+    paths: /etc/netplan
+    patterns: "*.yaml"
+  register: files_to_delete
+
+-
+  name: "Remove old YAML configs"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ files_to_delete.files }}"
+
+-
+  name: "Add enp0s6 for DHCP for BHYVE Zones"
+  ansible.builtin.template:
+    dest: /etc/netplan/50-cloud-init.yaml
+    mode: a+x
+    src: dhcp-all.redhat.yaml.j2
+
+-
+  name: "Purging and autoremoving packages"
+  ansible.builtin.dnf:
+    autoremove: true
+
+-
+  name: "Enabling systemd-networkd"
+  ansible.builtin.service:
+    name: "systemd-networkd"
+    state: stopped
+    enabled: true
+
+-
+  name: "Disabling NetworkManager"
+  ansible.builtin.service:
+    name: "NetworkManager"
+    state: stopped
+    enabled: false
+
+-
+  name: "Removing old directories and files"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "/var/cache/"
+    - "/var/tmp"
+    - "/etc/udev/rules.d/70-persistent-net.rules"
+    - "/tmp"
+    - "/etc/ssh/ssh_host_*"

@@ -1,0 +1,13 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Installing and Configuring UDS Actor"
+
+uds_actor_version: 3.6.0
+uds_actor_managed: false
+uds_actor_installer: "UDSActorSetup-{{ uds_actor_version }}.exe"
+uds_site: S2
+installer_url_app_path: "SHI/UDS_Actor/{{ uds_site }}"
+installer_base_url: "{{ secrets.installer_base_url | default('https://downloads.prominic.net') }}"
+uds_installer_url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ uds_actor_installer }}"

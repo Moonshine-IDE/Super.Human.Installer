@@ -1,0 +1,83 @@
+- name: Check if localzip exists
+  stat:
+    path: "{{ failover_localzip }}"
+  register: zip_file
+  ignore_errors: yes
+
+- name: Ensure the local zip directory exists
+  file:
+    path: "{{ failover_localzip | dirname }}"
+    state: directory
+    mode: '0755'
+
+- name: Download the zip file if it does not exist
+  get_url:
+    url: "{{ failover_url }}"
+    dest: "{{ failover_localzip }}"
+  when: not zip_file.stat.exists
+  ignore_errors: no
+      
+
+- name: Ensure the destination directory exists
+  file:
+    path: "{{ failover_destdir }}"
+    state: directory
+    mode: '0755'
+  ignore_errors: yes
+
+- name: Extract the zip file to the destination directory (strip top-level directory)
+  unarchive:
+    src: "{{ failover_localzip }}"
+    dest: "{{ failover_destdir }}"
+    remote_src: yes
+
+  ignore_errors: yes
+
+- name: Check if the target directory exists after extraction
+  stat:
+    path: "{{ failover_destdir }}/{{ failover_app_name }}"
+  register: destdir_stat
+  ignore_errors: yes
+
+- name: Copy source directory to target directory if it doesn't exist
+  copy:
+    src: "{{ failover_localdir }}"
+    dest: "{{ failover_destdir }}"
+  when: not destdir_stat.stat.exists
+
+- name: Verify the files were copied
+  stat:
+    path: "{{ failover_destdir }}/{{ failover_app_name }}"
+  register: destdir_stat
+  ignore_errors: no
+
+
+
+
+- name: Fail if the path does not exist
+  fail:
+    msg: "The path '{{ failover_destdir }}/{{ failover_app_name }}' does not exist."
+  when: not destdir_stat.stat.exists
+
+
+
+- name: Verify the files were copied
+  stat:
+    path: "{{ failover_destdir }}/{{ failover_app_name }}"
+  register: destdir_stat
+  ignore_errors: no
+
+- name: Check content of the target directory
+  find:
+    paths: "{{ failover_destdir }}/{{ failover_app_name }}"
+    recurse: yes
+  register: target_files
+
+- name: Fail if the target directory is empty
+  fail:
+    msg: "The target directory '{{ failover_destdir }}' is empty."
+  when: target_files.matched == 0
+
+- name: Print files in the target directory
+  debug:
+    msg: "Files in '{{ failover_destdir }}/{{ failover_app_name  }}': {{ target_files.files | map(attribute='path') | list }}"

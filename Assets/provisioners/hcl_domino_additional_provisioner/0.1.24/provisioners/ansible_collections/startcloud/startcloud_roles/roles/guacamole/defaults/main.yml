@@ -1,0 +1,36 @@
+---
+run_tasks: true
+## Gucamole Variables
+guacamole_version: 1.5.0
+
+guacamole_admin_user: guacadmin
+guacamole_admin_pass: guacadmin
+guacamole_guacd_port: 4822
+guacamole_branding: true
+guacamole_branding_jar: branding.jar
+
+## Extensions
+guacamole_httpcomponents_archive: httpcomponents-client-4.5.6-bin.zip
+guacamole_httpcomponents_version: 4.5.6
+guacamole_log4j_version: 1.2.17
+guacamole_auth_domino_version: 1.0.0
+
+## Gucamole MySQL Database Settings
+mysql_db_name: guacdb
+mysql_database_user: guacadmin
+mysql_database_pass: guacadmin
+mysql_java_connector_jar: mariadb-java-client-3.4.0.jar
+mysql_java_connector_version: 8.4.0
+mysql_java_connector_jar_url: "https://dlm.mariadb.com/3824147/Connectors/java/connector-java-3.4.0/{{ mysql_java_connector_jar }}"
+#mysql_java_connector_jar:  mysql-connector-j-8.4.0.tar.gz
+#mysql_java_connector_jar_url: "https://cdn.mysql.com//Downloads/Connector-J/{{ mysql_java_connector_jar }}"
+
+## Gucamole Port Forwarding Settings
+startcloud_guacamole_port_forwards:
+  -
+    guest: "{{ startcloud_tomcat_port_forwards[1].guest }}"
+    url: "guacamole"
+  -
+    guest: 4822
+    url: "guacd"
+startcloud_guacamole_proxy_url: "{{ startcloud_guacamole_port_forwards[0].url }}.{{ settings.hostname }}.{{ settings.domain }}"

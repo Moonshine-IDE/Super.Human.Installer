@@ -1,0 +1,191 @@
+---
+# We restrict access permissions on libdir because it usually hosts the
+# database directory that is usually controlled by a DB container, and cannot
+# be sufficiently protected on the host itself (see below)
+- name: Create protected greenlight libdir
+  ansible.builtin.file:
+    path: "{{ bbb_greenlight_libdir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  tags:
+    - greenlight-config
+
+# The DB directory is usually mounted inside the DB container, and therefore
+# receives modes and ownership as the DB image sees fit. In particular, numeric
+# user and group ids may overlap with existing ids on the host. (In a typical
+# installation, the PostgreSQL image is set up for uid 999, that is also
+# assigend to the first dynamic system account on the host. The correspondig
+# service should obviously not be able to gain access to the DB file store.)
+# We cannot do much about it at this point, so we rely on strict permissions
+# on the enclosing libdir (see above) that block rogue access on the host
+# itself, but are irrelevant for the bind mount of the subdir into the
+# container. As such, here we just ensure the dbdir is actually present,
+# but leave the eventual modes and ownership up to the container.
+- name: Create greenlight database directory
+  ansible.builtin.file:
+    path: "{{ bbb_greenlight_dbdir }}"
+    state: directory
+    mode: "0755"
+  tags:
+    - greenlight-config
+
+- name: Create additional greenlight directories
+  ansible.builtin.file:
+    path: "{{ __bbb_greenlight_directories }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop_control:
+    loop_var: __bbb_greenlight_directories
+  loop:
+    - "{{ bbb_greenlight_etcdir }}"
+    - "{{ bbb_greenlight_logdir }}"
+    - "{{ bbb_greenlight_storagedir }}"
+  tags:
+    - greenlight-config
+
+- name: Create greenlight logrotate configuration
+  ansible.builtin.template:
+    src: templates/greenlight.logrotate.j2
+    dest: /etc/logrotate.d/greenlight
+    mode: "0644"
+    owner: root
+    group: root
+  tags:
+    - greenlight-config
+
+- name: Examine BBB configuration
+  ansible.builtin.command: /usr/bin/bbb-conf --secret
+  changed_when: false
+  register: bbb_conf_secret
+  tags:
+    - greenlight-config
+
+- name: Extract BBB endpoint and secret
+  ansible.builtin.set_fact:
+    bbb_greenlight_extracted_endpoint: "{{ bbb_conf_secret.stdout | regex_search('URL: (.*)', '\\1') | first }}"
+    bbb_greenlight_extracted_secret: "{{ bbb_conf_secret.stdout | regex_search('Secret: (.*)', '\\1') | first }}"
+  tags:
+    - greenlight-config
+
+- name: Setup greenlight secret
+  block:
+    - name: Check if greenlight secret file exists
+      ansible.builtin.stat:
+        path: "{{ bbb_greenlight_etcdir }}/.rails.secret"
+      register: bbb_greenlight_rails_secret_file
+      failed_when: not bbb_greenlight_rails_secret_file.stat.exists
+      tags:
+        - greenlight-config
+
+  rescue:
+    - name: Create new greenlight secret
+      ansible.builtin.command: docker run --rm --entrypoint /bin/sh {{ bbb_greenlight_image }} -c "bundle exec rails secret"
+      register: bbb_greenlight_rails_secret
+      tags:
+        - greenlight-config
+
+    - name: Persist new secret to file
+      ansible.builtin.copy:
+        content: "{{ bbb_greenlight_rails_secret.stdout }}"
+        dest: "{{ bbb_greenlight_etcdir }}/.rails.secret"
+        mode: "0600"
+        owner: root
+        group: root
+      tags:
+        - greenlight-config
+
+  always:
+    - name: Read greenlight secret from file
+      ansible.builtin.command: cat "{{ bbb_greenlight_etcdir }}/.rails.secret"
+      changed_when: false
+      register: bbb_greenlight_rails_secret_content
+      tags:
+        - greenlight-config
+
+    - name: Transfer greenlight secret into proper variable
+      ansible.builtin.set_fact:
+        bbb_greenlight_rails_secret: "{{ bbb_greenlight_rails_secret_content.stdout }}"
+      tags:
+        - greenlight-config
+
+- name: Setup database secret for greenlight
+  block:
+    - name: Check if greenlight database secret file exists
+      ansible.builtin.stat:
+        path: "{{ bbb_greenlight_etcdir }}/.db.secret"
+      register: bbb_greenlight_db_secret_file
+      failed_when: not bbb_greenlight_db_secret_file.stat.exists
+      tags:
+        - greenlight-config
+  rescue:
+    - name: Persist new database secret to file
+      ansible.builtin.copy:
+        content: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
+        dest: "{{ bbb_greenlight_etcdir }}/.db.secret"
+        mode: "0600"
+        owner: root
+        group: root
+      tags:
+        - greenlight-config
+
+  always:
+    - name: Read greenlight database secret from file
+      ansible.builtin.command: cat "{{ bbb_greenlight_etcdir }}/.db.secret"
+      changed_when: false
+      register: bbb_greenlight_db_secret_content
+      tags:
+        - greenlight-config
+
+    - name: Transfer greenlight database secret into proper variable
+      ansible.builtin.set_fact:
+        bbb_greenlight_db_password: "{{ bbb_greenlight_db_secret_content.stdout }}"
+      tags:
+        - greenlight-config
+
+- name: Create greenlight docker-compose config
+  ansible.builtin.template:
+    src: templates/greenlight-docker-compose.yml.j2
+    dest: "{{ bbb_greenlight_etcdir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0600"
+    validate: /usr/local/bin/docker-compose -f %s config -q
+  register: greenlight_config
+  notify:
+    - Restart greenlight
+  tags:
+    - greenlight-config
+
+- name: Create greenlight NGINX config stub
+  ansible.builtin.template:
+    src: templates/greenlight.nginx.j2
+    dest: "/etc/bigbluebutton/nginx/greenlight.nginx"
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Restart NGINX
+  tags:
+    - greenlight-config
+
+- name: Create greenlight systemd unit file
+  ansible.builtin.template:
+    src: templates/greenlight.service.j2
+    dest: /etc/systemd/system/greenlight.service
+    owner: root
+    group: root
+    mode: "0644"
+  tags:
+    - greenlight-service
+
+- name: Enable and start greenlight systemd service
+  ansible.builtin.systemd:
+    name: greenlight
+    enabled: true
+    state: started
+  tags:
+    - greenlight-service

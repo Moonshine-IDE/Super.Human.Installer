@@ -1,0 +1,89 @@
+---
+-
+  name: "Configuring VirtualBox network adapter priorities"
+  block:
+    -
+      name: "Ensuring primary interface has priority routing"
+      ansible.windows.win_powershell:
+        script: |
+          # Get default routes for the primary interface
+          $primaryRoutes = Get-NetRoute -InterfaceAlias "{{ first_adapter_details.name }}" -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue
+          $changed = $false
+          
+          foreach ($route in $primaryRoutes) {
+            if ($route.RouteMetric -ne 1) {
+              Set-NetRoute -DestinationPrefix $route.DestinationPrefix -InterfaceAlias "{{ first_adapter_details.name }}" -NextHop $route.NextHop -RouteMetric 1 -Confirm:$false
+              Write-Output "Updated primary interface route metric to 1"
+              $changed = $true
+            }
+          }
+          
+          if (-not $changed) {
+            Write-Output "Primary interface already has correct metric"
+          }
+          
+          return @{ changed = $changed }
+      register: primary_route_config
+      changed_when: primary_route_config.result.changed | default(false)
+
+    -
+      name: "Ensuring Vagrant NAT interface has lower priority"
+      ansible.windows.win_powershell:
+        script: |
+          # Get default routes for the Vagrant NAT interface
+          $vagrantRoutes = Get-NetRoute -InterfaceAlias "{{ second_adapter_details.name }}" -DestinationPrefix "0.0.0.0/0" -ErrorAction SilentlyContinue
+          $changed = $false
+          
+          foreach ($route in $vagrantRoutes) {
+            if ($route.RouteMetric -ne 100) {
+              Set-NetRoute -DestinationPrefix $route.DestinationPrefix -InterfaceAlias "{{ second_adapter_details.name }}" -NextHop $route.NextHop -RouteMetric 100 -Confirm:$false
+              Write-Output "Updated Vagrant NAT interface route metric to 100"
+              $changed = $true
+            }
+          }
+          
+          if (-not $changed) {
+            Write-Output "Vagrant NAT interface already has correct metric"
+          }
+          
+          return @{ changed = $changed }
+      register: vagrant_route_config
+      changed_when: vagrant_route_config.result.changed | default(false)
+
+-
+  name: "Configuring VirtualBox-specific network settings"
+  when: convert_nat_dhcp_to_static
+  block:
+    -
+      name: "Converting Vagrant NAT from DHCP to static"
+      ansible.windows.win_powershell:
+        script: |
+          # Remove existing IP configuration for Vagrant interface
+          Remove-NetIPAddress -InterfaceAlias "{{ second_adapter_details.name }}" -Confirm:$false -ErrorAction SilentlyContinue
+          
+          # Set static IP for Vagrant interface  
+          New-NetIPAddress -InterfaceAlias "{{ second_adapter_details.name }}" -IPAddress "{{ second_adapter_details.ip }}" -PrefixLength 24 -ErrorAction SilentlyContinue
+          
+          Write-Output "Configured static IP for Vagrant NAT interface"
+        when: second_adapter_details.ip != ""
+
+    -
+      name: "Flushing DNS cache after network changes"
+      ansible.windows.win_powershell:
+        script: |
+          Clear-DnsClientCache
+          Write-Output "DNS cache cleared"
+
+    -
+      name: "Testing external connectivity"
+      ansible.windows.win_uri:
+        url: "https://www.google.com"
+        method: HEAD
+        timeout: 10
+      register: connectivity_test
+      ignore_errors: true
+
+    -
+      name: "Displaying connectivity test result"
+      ansible.builtin.debug:
+        msg: "External connectivity test: {{ 'PASSED' if connectivity_test.status_code == 200 else 'FAILED' }}"

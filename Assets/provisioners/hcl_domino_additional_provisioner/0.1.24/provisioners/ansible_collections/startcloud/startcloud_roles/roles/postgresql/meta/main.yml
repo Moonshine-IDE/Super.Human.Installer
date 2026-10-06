@@ -1,0 +1,29 @@
+---
+galaxy_info:
+  role_name: postgresql
+  author: MarkProminic
+  description: PostgreSQL server for Linux
+  company: STARTCloud
+  issue_tracker_url: https://github.com/PhoneSwitchboard/switchboard_roles/issues
+  license: license (Apache)
+  min_ansible_version: '2.9'
+  platforms:
+    - name: Debian
+      versions:
+        - buster
+        - bullseye
+        - bookworm
+
+  galaxy_tags:
+    - database
+    - postgresql
+    - postgres
+    - rdbms
+
+
+dependencies: []
+
+collections:
+  - startcloud.startcloud_roles
+
+allow_duplicates: false

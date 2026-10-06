@@ -1,0 +1,18 @@
+---
+run_tasks: true
+count_progress: true
+progress_units: 1
+progress_role_description: "Configuring Remote Access"
+
+# defaults file for remote_access
+
+# RDP Configuration
+enable_rdp: true
+
+# OpenSSH Configuration
+enable_openssh: true
+openssh_install_script_path: "C:\\Windows\\Temp\\packer\\InstallOpenSSHServer.ps1"
+
+# Whether this is a server or desktop installation
+is_server: false
+

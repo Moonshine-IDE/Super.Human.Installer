@@ -1,0 +1,59 @@
+-
+  name: Enabling HAProxy Statitics Port
+  firewalld:
+    port: 444/tcp
+    permanent: true
+    state: enabled
+-
+  name: "Enabling HAProxy DB2 Backend on Port {{ db2_hadr_backend_ports }}"
+  firewalld:
+    port: "{{ db2_hadr_backend_ports }}/tcp"
+    permanent: true
+    state: enabled
+-
+  name: "Enabling HAProxy DB2 Front on Port {{ db2_haproxy_frontend_ports }}"
+  firewalld:
+    port: "{{  db2_haproxy_frontend_ports }}/tcp"
+    permanent: true
+    state: enabled
+- 
+  name: "Forcing DB2 Server Off"
+  raw: "su - {{ db2usr }} -c 'db2stop force'"
+- 
+  name: "Starting DB2 Server"
+  raw: "su - {{ db2usr }} -c 'db2start'"
+- 
+  name: "Creating Dummy Backup"
+  raw: "su - {{ db2usr }} -c 'db2 backup db {{ db2dbname }} to /dev/null'"
+- 
+  name: "Setting HADR_LOCAL_HOST to {{ db2_a_hadr_host }}"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_LOCAL_HOST {{ db2_a_hadr_host }}'"
+- 
+  name: "Setting HADR_LOCAL_SVC to {{ db2_hadr_backend_ports }}"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_LOCAL_SVC {{ db2_hadr_backend_ports }}'"
+- 
+  name: "Setting HADR_REMOTE_HOST to {{ db2_b_hadr_host }}"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_REMOTE_HOST {{ db2_b_hadr_host }}'"
+- 
+  name: "Setting HADR_REMOTE_SVC to {{ db2_b_hadr_port }}"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_REMOTE_SVC {{ db2_hadr_backend_ports  }}'"
+- 
+  name: "Setting HADR_REMOTE_INST to {{ db2usr }}"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_REMOTE_INST {{ db2usr }}'"
+- 
+  name: "Setting LOGINDEXBUILD ON"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using LOGINDEXBUILD on'"
+- 
+  name: "Setting HADR_PEER_WINDOW to {{ peer_window }}"
+  raw: "su - {{ db2usr }} -c 'db2 update db cfg for {{ db2dbname }} using HADR_PEER_WINDOW {{ peer_window }}'"
+- 
+  name: "Creating Backup"
+  raw: "su - {{ db2usr }} -c 'db2 backup db {{ db2dbname }} online to /local/backup'"
+- 
+  file: 
+    group:  "{{ db2grp }}"
+    mode: "0777"
+    owner: "{{ db2usr }}"
+    path: "/local/backup" 
+    state: directory
+  name: "Creating the backup Directory"

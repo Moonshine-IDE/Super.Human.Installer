@@ -1,0 +1,18 @@
+---
+-
+  name: "Ensure that Proxy is Set for APT"
+  ansible.builtin.lineinfile:
+    path: /etc/apt/apt.conf.d/proxy.conf
+    line: Acquire::http::Proxy "socks5h://{{ proxy[0].user }}:{{ proxy[0].pass }}@{{ proxy[0].host }}:{{ proxy[0].port }}";
+
+-
+  name: "Setting system-wide Squid proxy environment variables"
+  ansible.builtin.lineinfile:
+    path: /etc/environment
+    line: "{{ item }}"
+  loop:
+    - "http_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
+    - "https_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
+    - "ftp_proxy=http://{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.user }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.pass }}@{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.host }}:{{ (proxy | selectattr(proxy_systemwide_proxy, 'defined') | first).squid.port }}"
+    - "no_proxy=localhost,127.0.0.1,localaddress,.localdomain.com"
+  when: proxy_systemwide | bool

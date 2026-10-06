@@ -1,0 +1,40 @@
+---
+-
+  name: "Installing Sophos Antivirus on Linux"
+  when: install_sophos | default(false) | bool
+  block:
+    -
+      name: "Updating package cache and installing curl"
+      ansible.builtin.package:
+        name: curl
+        state: present
+        update_cache: true
+
+    -
+      name: "Downloading Sophos Setup script"
+      ansible.builtin.get_url:
+        url: "{{ sophos_linux_url | default('https://api-cloudstation-us-east-2.prod.hydra.sophos.com/api/download/78ff181bd7fad952ec96c6260c462886/SophosSetup.sh') }}"
+        dest: "/tmp/SophosSetup.sh"
+        mode: '0755'
+        timeout: 300
+      register: sophos_download_result
+
+    -
+      name: "Installing Sophos Antivirus"
+      ansible.builtin.command:
+        cmd: /tmp/SophosSetup.sh
+        chdir: /tmp
+      register: sophos_install_result
+      become: true
+
+    -
+      name: "Cleaning up Sophos installer"
+      ansible.builtin.file:
+        path: /tmp/SophosSetup.sh
+        state: absent
+      ignore_errors: true
+
+    -
+      name: "Displaying Sophos installation result"
+      ansible.builtin.debug:
+        var: sophos_install_result

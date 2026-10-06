@@ -1,0 +1,67 @@
+--- 
+-
+  name: "Gathering Disks"
+  become: true
+  ansible.builtin.shell: "pfexec ls /dev/dsk/"
+  args:
+    executable: /usr/bin/ksh
+  register: dir_out
+
+-
+  name: "Setting rpool to autoexpand"
+  become: true
+  ansible.builtin.command: pfexec zpool set autoexpand=on rpool
+
+-
+  name: "Setting rpool to autoexpand"
+  become: true
+  register: result_rpool_disk_list
+  ansible.builtin.shell: pfexec zpool status rpool | grep ONLINE | egrep -v "rpool|state" | awk '{print $1}'
+  args:
+    executable: /usr/bin/ksh
+
+#-
+#  name: "Getting rpool disks"
+#  become: true
+#  ansible.builtin.command: "zpool list -Ho name {{ zfs_pool_name }}"
+#  register: result_rpool_disk_list
+#  ignore_errors: true
+#  changed_when: false
+
+- 
+  name: "Checking if the zpool exists"
+  become: true
+  ansible.builtin.command: "zpool list -Ho name {{ zfs_pool_name }}"
+  register: result_pool_list
+  ignore_errors: true
+  changed_when: false
+
+- 
+  name: "Creating ZFS pool"
+  become: true
+  ansible.builtin.command: >-
+    pfexec zpool create
+    {{ '-o' if zpool_options else '' }} {{ zpool_options | join(' -o ') }}
+    {{ '-O' if zfs_pool_options else '' }} {{ zfs_pool_options | join(' -O ') }}
+    {{ '-m ' + zfs_pool_mountpoint if zfs_pool_mountpoint else '' }}
+    {{ zfs_pool_name }}
+    {{ zfs_pool_mode if zfs_pool_mode else '' }}
+    {{ zfs_pool_devices | join(' ') }}
+  when:
+    - zfs_pool_state | default('present') == 'present'
+    - result_pool_list.rc == 1
+
+- 
+  name: "Destroying ZFS pool"
+  ansible.builtin.command: zpool destroy {{ zfs_pool_name }}
+  when:
+    - zfs_pool_state | default('present') == 'absent'
+    - result_pool_list.rc == 0
+
+-
+  name: "Expanding rpool"
+  become: true
+#  ansible.builtin.shell: "pfexec zpool online -e rpool c2t0d0"
+  args:
+    executable: /usr/bin/ksh
+  ansible.builtin.shell: "pfexec zpool online -e rpool {{ result_rpool_disk_list.stdout }}"

@@ -1,0 +1,183 @@
+---
+-
+  name: "Managing progress for {{ ansible_role_name }} (Step 1 of 1)"
+  when: count_progress | default(false)
+  run_once: true
+  block:
+    -
+      name: "Incrementing global progress step counter for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.set_fact:
+        global_current_progress_step: "{{ global_current_progress_step | default(0) | int + 1 }}"
+
+    -
+      name: "Including progress reporting task for {{ ansible_role_name }} (Step 1)"
+      ansible.builtin.include_role:
+        name: startcloud.startcloud_roles.progress
+      vars:
+        _progress_role_is_setup_run: false
+        current_progress_step: "{{ global_current_progress_step | default(0) }}"
+        progress_description: "{{ progress_role_description | default('Processing ' + ansible_role_name + ' - Step 1') }}"
+
+-
+  name: "Block to Allow Loading of Variables without running task"
+  when: run_tasks
+  block:
+
+    -
+      name: "Checking if the VoltMX Installer archive is at /vagrant/installers/voltmx/archives/{{ voltmx_go_installer_archive }}"
+      register: voltmx_go_server_installer_check
+      ansible.builtin.stat:
+        path: "{{ installer_dir }}/voltmx/archives/{{ voltmx_go_installer_archive }}"
+        checksum_algorithm: sha256
+    
+    -
+      name: "Checking if VoltMX has been installed"
+      register: voltmx_go_server_installed
+      ansible.builtin.stat:
+        path: "{{ completed_dir }}/voltmx_go_plugin_installer_setup"
+        checksum_algorithm: sha256
+    
+    -
+      name: "Checking if the VoltMX Go was extracted and its installer is in voltmx/core at {{ installer_dir }}"
+      register: voltmx_go_extracted
+      ansible.builtin.stat:
+        path: "{{ voltmx_go_install_dir }}"
+        checksum_algorithm: sha256
+    
+    -
+      name: "Downloading VoltMX Go Plugin Installer from {{ installer_base_url }} using Bearer token"
+      register: voltmxgoresult_bearer
+      ansible.builtin.get_url:
+        validate_certs: false
+        mode: '0755'
+        url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ voltmx_go_installer_archive }}"
+        dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_go_installer_archive }}"
+        headers:
+          Authorization: "Bearer {{ secrets.installer_url_bearer }}"
+      when: 
+        - not voltmx_go_server_installer_check.stat.exists 
+        - not voltmx_go_server_installed.stat.exists 
+        - not voltmx_go_extracted.stat.exists
+        - secrets.installer_url_bearer is defined
+        - secrets.installer_url_bearer != ''
+      failed_when: false
+
+    -
+      name: "Downloading VoltMX Go Plugin Installer from {{ installer_base_url }} using basic auth"
+      register: voltmxgoresult
+      until: "voltmxgoresult is not failed"
+      retries: 3
+      ansible.builtin.get_url:
+        validate_certs: false
+        mode: '0755'
+        url: "{{ installer_base_url }}/{{ installer_url_app_path }}/{{ voltmx_go_installer_archive }}"
+        dest: "{{ installer_dir }}/voltmx/archives/{{ voltmx_go_installer_archive }}"
+        username: "{{ installer_url_user }}"
+        password: "{{ secrets.installer_url_pass }}"
+      when: 
+        - not voltmx_go_server_installer_check.stat.exists 
+        - not voltmx_go_server_installed.stat.exists 
+        - not voltmx_go_extracted.stat.exists
+        - (secrets.installer_url_bearer is not defined or secrets.installer_url_bearer == '' or voltmxgoresult_bearer is failed)
+    
+    -
+      name: "Extracting VoltMX Go plugin from {{ voltmx_go_installer_archive }}"
+      when: not voltmx_go_server_installed.stat.exists or not voltmx_go_extracted.stat.exists
+      ansible.builtin.unarchive:
+        src: "{{ installer_dir }}/voltmx/archives/{{ voltmx_go_installer_archive }}"
+        dest: "{{ installer_dir }}/voltmx/core"
+        creates: "{{ installer_dir }}/voltmx/core/{{ voltmx_go_plugin_installer_bin }}" #VoltMXGoInstallationTool-9.5.18.3.bin
+        remote_src: true
+
+    -
+      name: "Adding VoltMX Go silent install response file for installer"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.template:
+        dest: "{{ installer_dir }}/voltmx/voltmx_go_installer.properties"
+        mode: a+x
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+        src: "voltmx_go_installer.properties.j2"
+    
+    -
+      name: "Setting Plugin Installer to be Executable"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.file:
+        mode: a+x
+        path: "{{ item }}"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+      with_items:
+        - "{{ installer_dir }}/voltmx/core/{{ voltmx_go_plugin_installer_bin }}"
+    
+    -
+      name: "Installing Plugin Installer for VoltMX Go via Silent Installer"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.shell: "{{ item }}"
+      become: true
+      become_user: "{{ service_user }}"
+      args:
+        chdir: "{{ installer_dir }}/voltmx/core/"
+        executable: /bin/bash
+        creates: "{{ voltmx_go_install_dir }}/{{ voltmx_go_installer_bin }}"
+      with_items:
+        - "./{{ voltmx_go_plugin_installer_bin }} -f {{ installer_dir }}/voltmx/voltmx_go_installer.properties -i silent"
+    
+    -
+      name: "Stopping VoltMX via systemd Service"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.service:
+        name: voltmx
+        state: stopped
+        enabled: true
+
+    -
+      name: "Setting VoltMX Go Installed Plugin Installer to be Executable"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.file:
+        mode: a+x
+        path: "{{ item }}"
+        owner: "{{ service_user }}"
+        group: "{{ service_group }}"
+      with_items:
+        - "{{ voltmx_go_install_dir }}/{{ voltmx_go_installer_bin }}"
+
+    -
+      name: "Installing VoltMX go via Installed Plugin Installer"
+      when: not voltmx_go_server_installed.stat.exists and install_voltmx_go_plugin
+      become: true
+      become_user: "{{ service_user }}"
+      ansible.builtin.expect:
+        command: "./{{ voltmx_go_installer_bin }}"
+        chdir: "{{ voltmx_go_install_dir }}"
+        responses:
+          'Please enter the number of the option you would like to perform \(1-7\)': '1'
+          'Tomcat WebApps directory': "{{ voltmx_installation_dir }}/tomcat/webapps"
+        timeout: 300
+      register: voltmx_go_install_result
+      failed_when: "'Plugins have been installed' not in voltmx_go_install_result.stdout"
+
+    -
+      name: "Starting VoltMX via systemd Service"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.service:
+        name: voltmx
+        state: started
+        enabled: true
+    
+    -
+      name: "Marking VoltMX Go as Installed"
+      when: not voltmx_go_server_installed.stat.exists
+      ansible.builtin.file:
+        path: "{{ completed_dir }}/voltmx_go_plugin_installer_setup"
+        mode: "0644"
+        state: touch
+    
+    -
+      name: "Checking VoltMX is listening on port {{ voltmx_port_forwards[0].guest }}"
+      ansible.builtin.wait_for:
+        port: "{{ voltmx_port_forwards[0].guest }}"
+        delay: 5
+        timeout: 60
+        msg: "Timeout waiting for {{ voltmx_port_forwards[0].guest }} to respond"
+      register: port_check

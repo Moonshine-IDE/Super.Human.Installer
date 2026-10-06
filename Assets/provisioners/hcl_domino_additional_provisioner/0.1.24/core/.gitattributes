@@ -1,0 +1,20 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+* text eol=lf
+
+# Enforce to use Linux-style newlines
+*.hx text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.sh text eol=lf
+*.sh.j2 text eol=lf
+*.j2 text eol=lf
+*.html text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.dxl text eol=lf
+*.xml text eol=lf
+*.mxhx text eol=lf
+
+#Private Key should be Linux-style newlines
+id_rsa text eol=lf

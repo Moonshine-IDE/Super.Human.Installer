@@ -1,0 +1,284 @@
+---
+-
+  name: "Creating Notes installation directories"
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - "{{ notes_temp_dir }}"
+    - "{{ notes_unpack_dir }}"
+    - "{{ notes_install_dir }}"
+
+-
+  name: "Installing softperfect-ramdisk"
+  when: notes_use_ramdisk
+  chocolatey.chocolatey.win_chocolatey:
+    name: "softperfect-ramdisk"
+    state: present
+
+-
+  name: "Checking if Notes is already installed"
+  register: notes_installed
+  ansible.windows.win_stat:
+    path: "{{ notes_exe_path }}"
+
+#-
+#  name: "Removing existing Notes installation (always replace)"
+#  ansible.windows.win_command:
+#    cmd: "{{ notes_install_dir }}\\uninstall.exe /S"
+#  when: notes_installed.stat.exists
+#  ignore_errors: true
+#
+# Phase C: Installer Download Management
+-
+  name: "Checking if Notes installer exists"
+  register: notes_installer_check
+  ansible.windows.win_stat:
+    path: "{{ notes_temp_dir }}\\{{ notes_installer_exe }}"
+
+-
+  name: "Downloading Notes installer from {{ installer_base_url }}"
+  ansible.windows.win_get_url:
+    url: "{{ installer_base_url }}/{{ installer_url_app_path }}/Notes/{{ notes_installer_exe }}"
+    dest: "{{ notes_temp_dir }}\\{{ notes_installer_exe }}"
+    url_username: "{{ installer_url_user }}"
+    url_password: "{{ installer_url_pass }}"
+    validate_certs: false
+  when: not notes_installer_check.stat.exists
+
+-
+  name: "Checking if Notes fixpack installer exists"
+  register: notes_fixpack_check
+  ansible.windows.win_stat:
+    path: "{{ notes_temp_dir }}\\{{ notes_fixpack_exe }}"
+  when: notes_installer_fixpack_install and notes_fixpack_exe != ""
+
+-
+  name: "Downloading Notes fixpack from {{ installer_base_url }}"
+  ansible.windows.win_get_url:
+    url: "{{ installer_base_url }}/{{ installer_url_app_path }}/Notes/{{ notes_fixpack_exe }}"
+    dest: "{{ notes_temp_dir }}\\{{ notes_fixpack_exe }}"
+    url_username: "{{ installer_url_user }}"
+    url_password: "{{ installer_url_pass }}"
+    validate_certs: false
+  when: notes_installer_fixpack_install and notes_fixpack_exe != "" and not notes_fixpack_check.stat.exists
+
+-
+  name: "Checking if Notes hotfix installer exists"
+  register: notes_hotfix_check
+  ansible.windows.win_stat:
+    path: "{{ notes_temp_dir }}\\{{ notes_hotfix_exe }}"
+  when: notes_installer_hotfix_install and notes_hotfix_exe != ""
+
+-
+  name: "Downloading Notes hotfix from {{ installer_base_url }}"
+  ansible.windows.win_get_url:
+    url: "{{ installer_base_url }}/{{ installer_url_app_path }}/Notes/{{ notes_hotfix_exe }}"
+    dest: "{{ notes_temp_dir }}\\{{ notes_hotfix_exe }}"
+    url_username: "{{ installer_url_user }}"
+    url_password: "{{ installer_url_pass }}"
+    validate_certs: false
+  when: notes_installer_hotfix_install and notes_hotfix_exe != "" and not notes_hotfix_check.stat.exists
+
+-
+  name: "Unpacking Notes installer using 7zip"
+  ansible.windows.win_command:
+    cmd: "7z x {{ notes_installer_exe }} -o{{ notes_unpack_dir }} -y"
+    chdir: "{{ notes_temp_dir }}"
+  register: notes_unpack_result
+
+-
+  name: "Copying MST transform file to unpacked directory"
+  ansible.windows.win_copy:
+    src: "{{ notes_mst_file }}"
+    dest: "{{ notes_unpack_dir }}\\{{ notes_mst_file }}"
+
+-
+  name: "Creating temporary Multi User Data Dir drive"
+  when: notes_multiuser_enabled
+  ansible.windows.win_command:
+    cmd: "\"C:\\Program Files\\SoftPerfect RAM Disk\\ramdiskc.exe\" /add:{{ notes_multiuser_base_dir }} /fs:{{ notes_ramdisk_filesystem }} /size:{{ notes_ramdisk_size }} /label:{{ notes_ramdisk_label }}"
+  register: tempdisk_create_result
+
+-
+  name: "Installing Notes with multi-user configuration and MST transform"
+  when: notes_include_transform
+  ansible.windows.win_command:
+    cmd: "setup.exe /s /v\"SETMULTIUSER=1 CITRIX=1 MULTIUSERBASEDIR={{ notes_multiuser_base_dir }}:\\ /L*v C:\\temp\\verbose.log MULTIUSERCOMMONDIR={{ notes_multiuser_common_dir }}\\ /qb+\""
+    chdir: "{{ notes_unpack_dir }}"
+  register: notes_install_result
+
+-
+  name: "Installing Notes with multi-user configuration"
+  when: not notes_include_transform
+  ansible.windows.win_command:
+    cmd: "setup.exe /s /v\"SETMULTIUSER=1 CITRIX=1 MULTIUSERBASEDIR={{ notes_multiuser_base_dir }}:\\ /L*v C:\\temp\\verbose.log MULTIUSERCOMMONDIR={{ notes_multiuser_common_dir }}\\ /qb+\""
+    chdir: "{{ notes_unpack_dir }}"
+  register: notes_install_result
+
+-
+  name: "Installing Notes fixpack"
+  ansible.windows.win_command:
+    cmd: "{{ notes_fixpack_exe }} /s /v\"/qb+\""
+    chdir: "{{ notes_temp_dir }}"
+  when: notes_installer_fixpack_install and notes_fixpack_exe != ""
+  register: notes_fixpack_result
+
+-
+  name: "Installing Notes hotfix"
+  ansible.windows.win_command:
+    cmd: "{{ notes_hotfix_exe }} /s /v\"/qb+\""
+    chdir: "{{ notes_temp_dir }}"
+  when: notes_installer_hotfix_install and notes_hotfix_exe != ""
+  register: notes_hotfix_result
+
+-
+  name: "Waiting for softperfect Ram Disk to be configured"
+  ansible.windows.win_wait_for:
+    path: C:\temp\softperfect_uninstalled
+    timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+#-
+#  name: "Removing softperfect-ramdisk"
+#  when: notes_use_ramdisk
+#  chocolatey.chocolatey.win_chocolatey:
+#    name: "softperfect-ramdisk"
+#    state: absent
+
+-
+  name: "Rebooting to Softperfect Drivers are removed"
+  ansible.windows.win_reboot:
+    reboot_timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+-
+  name: "Waiting for softperfect Ram Disk to be configured"
+  ansible.windows.win_wait_for:
+    path: C:\temp\softperfect_installed
+    timeout: "{{ windows_update_reboot_timeout | default(7200) }}"
+
+#-
+#  name: "Deleting temporary RAM disk"
+#  when: notes_multiuser_enabled
+#  ansible.windows.win_command:
+#    cmd: "\"C:\\Program Files\\SoftPerfect RAM Disk\\ramdiskc.exe\" /del:{{ notes_multiuser_base_dir }} /force"
+#  register: ramdisk_delete_result
+
+#-
+#  name: "Creating Persistant Ram Disk"
+#  when: notes_use_ramdisk
+#  ansible.windows.win_command:
+#    cmd: '"C:\Program Files\SoftPerfect RAM Disk\ramdisk.exe" /add:"letter={{ notes_ramdisk_path }}, fs={{ notes_ramdisk_filesystem }}, size={{ notes_ramdisk_size }}, label={{ notes_ramdisk_label }}"'
+#  register: ramdisk_create_result
+#  ignore_errors: true
+
+-
+  name: "Verifying Notes installation"
+  ansible.windows.win_stat:
+    path: "{{ notes_exe_path }}"
+  register: notes_verification
+
+-
+  name: "Notes installation verification failed"
+  ansible.builtin.fail:
+    msg: "Notes installation failed - notes.exe not found at {{ notes_exe_path }}"
+  when: not notes_verification.stat.exists
+
+-
+  name: "Cleaning up unpacked installer files"
+  ansible.windows.win_file:
+    path: "{{ notes_unpack_dir }}"
+    state: absent
+  when: notes_cleanup_temp_files
+
+-
+  name: "Cleaning up downloaded installer files"
+  ansible.windows.win_file:
+    path: "{{ notes_temp_dir }}"
+    state: absent
+  when: notes_cleanup_temp_files and not notes_keep_installers
+
+-
+  name: "Notes installation completed successfully"
+  ansible.builtin.debug:
+    msg: "HCL Notes {{ notes_major_version }}.{{ notes_minor_version }}.{{ notes_patch_version }} {{ notes_fixpack_version }} installed successfully"
+
+-
+  name: "Checking if Marvel Client DLL exists"
+  when: notes_enable_marvel_client
+  register: notes_marvel_client_dll
+  ansible.windows.win_stat:
+    path: "{{ notes_install_dir }}\\{{ marvel_client_dll }}"
+
+-
+  name: "Downloading Marvel Client from {{ installer_base_url }}"
+  when: notes_enable_marvel_client
+  ansible.windows.win_get_url:
+    url: "{{ installer_base_url }}/{{ installer_url_app_path }}/MarvelClient/{{ marvel_client_dll_artifact }}"
+    dest: "{{ notes_install_dir }}\\{{ marvel_client_dll }}"
+    url_username: "{{ installer_url_user }}"
+    url_password: "{{ installer_url_pass }}"
+    validate_certs: false
+
+-
+  name: "Creating shared data directory for Marvel Client"
+  when: notes_enable_marvel_client
+  ansible.windows.win_file:
+    path: "{{ notes_multiuser_common_dir }}\\HCL\\Notes\\Data\\Shared"
+    state: directory
+
+-
+  name: "Configuring shared notes.ini for Marvel Client"
+  when: notes_enable_marvel_client
+  ansible.windows.win_copy:
+    dest: "{{ notes_multiuser_common_dir }}\\HCL\\Notes\\Data\\notes.ini"
+    content: |
+      [Notes]
+      KitType=1
+      SharedDataDirectory={{ notes_multiuser_common_dir }}\HCL\Notes\Data\Shared
+      InstallType=6
+      InstallMode=1
+      FailoverSilent=1
+      HidePromptFailoverInc=1
+      OS_DisableMMapFileCopy=1
+      Ports=TCPIP
+      TCPIP=TCP,0,15,0,,12320,
+      NotesProgram={{ notes_install_dir }}\
+      EXTMGR_ADDINS={{ marvel_client_dll }}
+      MC_NetworkDirectory={{ notes_marvel_client_network_directory }}
+      MC_AllowSyncDuringSetup={{ notes_marvel_client_allow_sync_during_setup }}
+      MC_AllowSyncDuringSetup_FixPrompt={{ notes_marvel_client_allow_sync_during_setup_fixprompt }}
+      MC_DB={{ notes_marvel_client_db }}
+      MC_DB_Notresolvable={{ notes_marvel_client_db_notresolvable }}
+      MC_DB_Unavailable={{ notes_marvel_client_db_unavailable }}
+      MC_SupportIDVault={{ notes_marvel_client_support_idvault }}
+
+-
+  name: "Implementing Justins Hacks, which are not proper"
+  when: notes_14_admin_hack_for_multiuser_single_client
+  block:
+    -
+      name: "Downloading DomAdmin.ntf {{ notes_14_admin_hack_for_multiuser_single_client_url_app_path }}"
+      ansible.windows.win_get_url:
+        url: "{{ installer_base_url }}/{{ notes_14_admin_hack_for_multiuser_single_client_url_app_path }}/domadmin.ntf"
+        dest: "{{ notes_multiuser_common_dir }}\\HCL\\Notes\\Data\\Shared\\domadmin.ntf"
+        url_username: "{{ installer_url_user }}"
+        url_password: "{{ installer_url_pass }}"
+        validate_certs: false
+
+    -
+      name: "Downloading events4.ntf {{ notes_14_admin_hack_for_multiuser_single_client_url_app_path }}"
+      ansible.windows.win_get_url:
+        url: "{{ installer_base_url }}/{{ notes_14_admin_hack_for_multiuser_single_client_url_app_path }}/events4.ntf"
+        dest: "{{ notes_multiuser_common_dir }}\\HCL\\Notes\\Data\\Shared\\events4.ntf"
+        url_username: "{{ installer_url_user }}"
+        url_password: "{{ installer_url_pass }}"
+        validate_certs: false
+
+    -
+      name: "Downloading Admin.exe {{ notes_14_admin_hack_for_multiuser_single_client_url_app_path }}"
+      ansible.windows.win_get_url:
+        url: "{{ installer_base_url }}/{{ notes_14_admin_hack_for_multiuser_single_client_url_app_path }}/admin.exe"
+        dest: "{{ notes_install_dir }}\\admin.exe"
+        url_username: "{{ installer_url_user }}"
+        url_password: "{{ installer_url_pass }}"
+        validate_certs: false

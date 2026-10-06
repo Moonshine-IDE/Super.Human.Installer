@@ -1,0 +1,13 @@
+[Unit]
+Description=LCD Display
+DefaultDependencies=no
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/local/bin/display.py
+StandardError=journal
+StandardOutput=journal
+Restart=on-abort
+
+[Install]
+WantedBy=sysinit.target

@@ -1,0 +1,28 @@
+# GitHub Actions Runner Environment Variables
+# This file is sourced by the systemd service to set environment variables
+# for the runner process, enabling Java tools and other dependencies
+
+{% if service_home_dir is defined %}
+JAVA_HOME={{ service_home_dir }}/.sdkman/candidates/java/current
+
+GRADLE_HOME={{ service_home_dir }}/.sdkman/candidates/gradle/current
+MAVEN_HOME={{ service_home_dir }}/.sdkman/candidates/maven/current
+
+SDKMAN_CANDIDATES_DIR={{ service_home_dir }}/.sdkman/candidates
+SDKMAN_VERSION=5.16.0
+SDKMAN_DIR={{ service_home_dir }}/.sdkman
+SDKMAN_CANDIDATES_API=https://api.sdkman.io/2
+SDKMAN_PLATFORM=linuxx64
+{% endif %}
+
+{% if domino_install_dir is defined %}
+LD_LIBRARY_PATH={{ domino_install_dir }}/
+{% endif %}
+
+HOME={{ git_runner_home }}
+
+{% if service_home_dir is defined %}
+PATH={{ service_home_dir }}/.sdkman/candidates/maven/current/bin:{{ service_home_dir }}/.sdkman/candidates/java/current/bin:{{ service_home_dir }}/.sdkman/candidates/gradle/current/bin:/usr/local/bin:/usr/bin:/bin
+{% else %}
+PATH=/usr/local/bin:/usr/bin:/bin
+{% endif %}

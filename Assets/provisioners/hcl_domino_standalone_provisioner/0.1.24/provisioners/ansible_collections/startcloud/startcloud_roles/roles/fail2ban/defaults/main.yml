@@ -1,0 +1,13 @@
+---
+run_tasks: true
+count_progress: true
+progress_role_description: "Configuring Fail2ban"
+
+# Add any other role-specific defaults for fail2ban here if needed in the future.
+# For now, these are the essentials for progress reporting.
+fail2ban_loglevel: INFO
+fail2ban_logtarget: /var/log/fail2ban.log
+fail2ban_socket: /var/run/fail2ban/fail2ban.sock
+fail2ban_pidfile: /var/run/fail2ban/fail2ban.pid
+fail2ban_dbfile: /var/lib/fail2ban/fail2ban.sqlite3
+fail2ban_dbpurgeage: 1d
