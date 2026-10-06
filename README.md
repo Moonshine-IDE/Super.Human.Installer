@@ -48,7 +48,7 @@ Windows-specific libraries:
 
 C++ Compilers
 
-- In order to successfully compile the app for native targets, a C++ compiler is required to be installed and configured. Please read the [relevant part of the Haxe manual](https://haxe.org/manual/target-cpp-getting-started.html) regarding the recommmended and supported C++ compilers.
+- In order to successfully compile the app for native targets, a C++ compiler is required to be installed and configured. Please read the [relevant part of the Haxe manual](https://haxe.org/manual/target-cpp-getting-started.html) regarding the recommended and supported C++ compilers.
 
 Additional software required to run the app
 
