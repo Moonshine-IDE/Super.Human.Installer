@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.7.1](https://github.com/Moonshine-IDE/Super.Human.Installer/compare/v1.7.0...v1.7.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* minor release to get past the 1.7.0 bump ([b7db4a3](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/b7db4a30db1e7d905c2dc4b7b7b8472e69eb690f))
+* sdkman java version parsing when build carries a plus sign ([a785479](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/a78547996ef2a043a0f56c6b2fb0a8e2c020061d))
+
 ## [1.7.0](https://github.com/Moonshine-IDE/Super.Human.Installer/compare/v1.6.4...v1.7.0) (2026-10-06)
 
 
