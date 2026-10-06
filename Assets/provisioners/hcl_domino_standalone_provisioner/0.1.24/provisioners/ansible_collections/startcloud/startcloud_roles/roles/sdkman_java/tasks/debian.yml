@@ -15,7 +15,7 @@
   ansible.builtin.shell: |
     set -o pipefail
     source {{ service_home_dir }}/.sdkman/bin/sdkman-init.sh
-    sdk list java | grep " 8.0.*-zulu" | grep -v "fx-" | sed 's/^.*\(8.0.[0-9]\+-zulu\)[ ]*$/\1/' | head -n 1
+    sdk list java | grep " 8.0.*-zulu" | grep -v "fx-" | sed 's/^.*\(8\.0\.[0-9+]\+-zulu\)[ ]*$/\1/' | head -n 1
   become: true
   become_user: "{{ sdk_service_user }}"
   args:
