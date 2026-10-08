@@ -1,3 +1,6 @@
+# core_provisioner_version: 0.2.8
+# provisioner_name: hcl_domino_additional_provisioner
+# provisioner_version: 0.1.24
 ---
 hosts:
   -
@@ -25,11 +28,11 @@ hosts:
       # Box information
       box: 'STARTcloud/debian12-server'
       box_url: ::BOX_URL:: # Should default to 'https://boxvault.startcloud.com' but can be set to 'https://vagrantcloud.com'
-      box_version: 2025.2.9
+      box_version: 2025.5.24
       box_arch: amd64
 
       # Provider Specific Settings
-      provider_type: ::VAGRANT_PROVIDER::
+      provider_type: virtualbox
       os_type: 'Debian_64'
       firmware_type: UEFI
 
@@ -217,6 +220,9 @@ hosts:
       letsencrypt_enabled: false
       letsencrypt_staging_enabled: false
 
+      ## Lockdown Variables
+      lockdown_cleanup_debug_files: ::LOCKDOWN_CLEANUP_DEBUG_FILES::
+
       ## Use Proxy for downloads and updates
       use_proxy: ::USE_HTTP_PROXY::
       proxy_server: ::HTTP_PROXY_HOST::
@@ -309,11 +315,15 @@ hosts:
       nomadweb_hash: ::NOMADWEB_HASH::
       nomadweb_archive: ::NOMADWEB_INSTALLER::
       nomadweb_version: ::NOMADWEB_VERSION::
+      nomad_hotfix_archive: ::NOMADWEB_HOTFIX_INSTALLER::
+      nomad_hotfix_version: ::NOMADWEB_VERSION_HOTFIX_INSTALL::
+      nomad_hotfix_install: ::NOMADWEB_HOTFIX_INSTALL::
 
       ## Traveler Variables
       #traveler_hash: ::TRAVELER_HASH::
       traveler_archive: ::TRAVELER_INSTALLER::
       traveler_base_version: ::TRAVELER_INSTALLER_VERSION::
+      traveler_fixpack_install: ::TRAVELER_FP_INSTALL::
       traveler_fixpack_archive: ::TRAVELER_FP_INSTALLER::
       traveler_fixpack_version: ::TRAVELER_FP_INSTALLER_VERSION::
 
@@ -321,11 +331,6 @@ hosts:
       #verse_hash: ::VERSE_HASH::
       verse_archive: ::VERSE_INSTALLER::
       verse_base_version: ::VERSE_INSTALLER_VERSION::
-
-      ## AppDev Web Pack Variables
-      #appdevpack_hash: ::APPDEVPACK_HASH::
-      appdevpack_archive: ::APPDEVPACK_INSTALLER::
-      appdevpack_version: ::APPDEVPACK_INSTALLER_VERSION::
 
       ## Domino Rest API Variables
       #domino_rest_api_hash: ::DOMINO_REST_API_HASH::
@@ -350,12 +355,16 @@ hosts:
       - name: startcloud.startcloud_roles.service_user
       - name: startcloud.startcloud_roles.sdkman_install
       - name: startcloud.startcloud_roles.sdkman_java
+        vars:
+          java_version: 17.0.16-zulu
+      - name: startcloud.startcloud_roles.sdkman_java
+        vars:
+          java_version: LATEST
       - name: startcloud.startcloud_roles.sdkman_maven
       - name: startcloud.startcloud_roles.sdkman_gradle
       - name: startcloud.startcloud_roles.ssl
       - name: startcloud.hcl_roles.domino_reset
-        vars:
-          run_tasks: ::ROLE_DOMINO_RESET::
+        when: ::ROLE_DOMINO_RESET::
       - name: startcloud.hcl_roles.domino_install
       - name: startcloud.hcl_roles.domino_vagrant_rest_api
       - name: startcloud.hcl_roles.domino_service_nash
@@ -366,44 +375,31 @@ hosts:
       - name: startcloud.hcl_roles.domino_genesis
       - name: startcloud.hcl_roles.domino_genesis_applications
       - name: startcloud.hcl_roles.domino_cross_certify
-        vars:
-          run_tasks: false
+        when: false
       - name: startcloud.hcl_roles.domino_java_app_example
-        vars:
-          run_tasks: true
+        when: true
       - name: startcloud.hcl_roles.domino_leap
-        vars:
-          run_tasks: ::ROLE_LEAP::
+        when: ::ROLE_LEAP::
       - name: startcloud.hcl_roles.domino_traveler
-        vars:
-          run_tasks: ::ROLE_TRAVELER::
+        when: ::ROLE_TRAVELER::
       - name: startcloud.hcl_roles.domino_traveler_htmo
-        vars:
-          run_tasks: ::ROLE_TRAVELER_HTMO::
+        when: ::ROLE_TRAVELER_HTMO::
       - name: startcloud.hcl_roles.domino_verse
-        vars:
-          run_tasks: ::ROLE_VERSE::
-      - name: startcloud.hcl_roles.domino_appdevpack
-        vars:
-          run_tasks: ::ROLE_APPDEVPACK::
+        when: ::ROLE_VERSE::
       - name: startcloud.hcl_roles.domino_rest_api
-        vars:
-          run_tasks: ::ROLE_DOMINO_RESTAPI::
+        when: ::ROLE_DOMINO_RESTAPI::
       - name: startcloud.hcl_roles.domino_nomadweb
-        vars:
-          run_tasks: ::ROLE_NOMADWEB::
+        when: ::ROLE_NOMADWEB::
       - name: startcloud.hcl_roles.domino_jedi
-        vars:
-          run_tasks: ::ROLE_JEDI::
+        when: ::ROLE_JEDI::
       - name: startcloud.hcl_roles.domino_vagrant_readme
+        when: true
       - name: startcloud.startcloud_roles.quick_start
         tags: always
-        vars:
-          run_tasks: ::ROLE_STARTCLOUD_QUICK_START::
+        when: ::ROLE_STARTCLOUD_QUICK_START::
       - name: startcloud.startcloud_roles.haproxy
-        vars:
-          run_tasks: ::ROLE_STARTCLOUD_HAPROXY::
+        when: ::ROLE_STARTCLOUD_HAPROXY::
       - name: startcloud.startcloud_roles.vagrant_readme
-        vars:
-          run_tasks: ::ROLE_STARTCLOUD_VAGRANT_README::
+        when: ::ROLE_STARTCLOUD_VAGRANT_README::
       - name: startcloud.startcloud_roles.lockdown
+        when: ::ROLE_LOCKDOWN::

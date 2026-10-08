@@ -13,7 +13,7 @@
 -
   name: "Extracting Java SDK version from SDKMAN"
   ansible.windows.win_shell: |
-    C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk list java | grep ' 8.0.*-zulu' | grep -v 'fx-' | sed 's/^.*\(8.0.[0-9]\+-zulu\)[ ]*$/\1/' | head -n 1"
+    C:\tools\msys64\usr\bin\bash.exe -c "source {{ sdkman_dir }}/bin/sdkman-init.sh && sdk list java | grep ' 8.0.*-zulu' | grep -v 'fx-' | sed 's/^.*\(8\.0\.[0-9+]\+-zulu\)[ ]*$/\1/' | head -n 1"
   register: computed_java_version
   changed_when: false
   when: java_version == "LATEST"
