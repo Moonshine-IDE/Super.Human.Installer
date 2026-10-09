@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.8.0](https://github.com/Moonshine-IDE/Super.Human.Installer/compare/v1.7.1...v1.8.0) (2026-10-09)
+
+
+### Bug Fixes
+
+* additional server 0.1.24 template left provider_type as null, so Vagrant failed with "undefined method `to_sym'" ([#188](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/188)) ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+* additional server 0.1.24 template now installs Java 17, which Vagrant REST API 1.8.0 needs ([#188](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/188)) ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+* additional server 0.1.24 template now passes the Nomad Web hotfix and Traveler fixpack settings, and its role conditions now match the standalone template ([#188](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/188)) ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+* additional server 0.1.24 template now runs lockdown only when the Lockdown role is enabled ([#188](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/188)) ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+* additional server 0.1.24 template referenced a domino_appdevpack role that is not included ([#188](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/188)) ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+* Java version lookup failed when the Zulu 8 build number contains a "+" (e.g. 8.0.504+1); fixed in 0.1.23 (Linux) and 0.1.24 (Windows) for standalone and additional servers ([#185](https://github.com/Moonshine-IDE/Super.Human.Installer/issues/185)) ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+* provisioner fixes for 0.1.23 and 0.1.24 ([c28939e](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/c28939ed4271ef6ce357bc82696d4232343d5805))
+
+
+### Miscellaneous Chores
+
+* release 1.8.0 ([93f8cac](https://github.com/Moonshine-IDE/Super.Human.Installer/commit/93f8cac11c56feb8d593861f180c6cb22651169c))
+
 ## [1.7.1](https://github.com/Moonshine-IDE/Super.Human.Installer/compare/v1.7.0...v1.7.1) (2026-10-06)
 
 
