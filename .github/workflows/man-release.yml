@@ -32,6 +32,11 @@ jobs:
 
   build-windows:
     name: Build on Windows
+    # A called workflow can't elevate the caller's token, so id-token: write
+    # for the signing OIDC login has to be granted here as well.
+    permissions:
+      contents: read
+      id-token: write
     uses: Moonshine-IDE/Super.Human.Installer/.github/workflows/sub-build-windows.yml@master
     secrets: inherit
     with:

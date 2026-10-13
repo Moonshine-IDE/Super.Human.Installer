@@ -37,6 +37,13 @@ jobs:
   build:
     runs-on: [self-hosted, windows]
 
+    # id-token is required for the OIDC login used by Windows signing.
+    # Declaring this block narrows the job from the repo default, so every
+    # scope the job needs must be listed here.
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
       - name: Show Current Path
         run: |
@@ -246,15 +253,18 @@ jobs:
 
       - name: Sign installer
         if: ${{ inputs.env == 'Production' }}
-        uses: moonshine-ide/digicert-sign-action@v1.1
+        uses: STARTcloud/sign-artifacts@1db69f951af2698193dbd2f54df6c9e03b4c7480 # v1.0.0
         with:
-          bin-path: "Templates/installer/${{ env.app_name }}-Setup.exe"
-          sm-host: ${{ secrets.SM_HOST }}
-          sm-api-key: ${{ secrets.SM_API_KEY }}
-          sm-client-cert-file-b64: ${{ secrets.SM_CLIENT_CERT_FILE_B64 }}
-          sm-client-cert-password: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-          sm-thumbprint: ${{ secrets.SM_THUMBPRINT }}
-          sm-keypair-alias: ${{ secrets.SM_KEYPAIR_ALIAS }}
+          # Must be absolute - the signing action rejects relative paths.
+          files: ${{ github.workspace }}\Templates\installer\${{ env.app_name }}-Setup.exe
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          account: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          profile: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          description: Super.Human.Installer
+          description-url: https://superhumaninstaller.com/
 
       - name: Upload installer
         uses: actions/upload-artifact@v6
