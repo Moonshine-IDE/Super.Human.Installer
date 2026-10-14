@@ -45,6 +45,19 @@ jobs:
       id-token: write
 
     steps:
+      # The runner has the .NET 8 runtime but no SDK, and the signing action installs
+      # the sign CLI with `dotnet tool install`, which needs one. Installed under the
+      # tool cache so the machine-wide C:\Program Files\dotnet is left alone;
+      # check-latest: false reuses that install on later runs instead of downloading.
+      - name: Set up .NET SDK for signing
+        if: ${{ inputs.env == 'Production' }}
+        uses: actions/setup-dotnet@v6
+        env:
+          DOTNET_INSTALL_DIR: ${{ runner.tool_cache }}\dotnet
+        with:
+          dotnet-version: 8.0.x
+          check-latest: false
+
       # TEMPORARY: the signing action installs the sign CLI with `dotnet tool install`
       # and hides its output on failure. Shows what that install sees on this runner.
       # Remove once signing works.
