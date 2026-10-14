@@ -45,6 +45,31 @@ jobs:
       id-token: write
 
     steps:
+      # TEMPORARY: the signing action installs the sign CLI with `dotnet tool install`
+      # and hides its output on failure. Shows what that install sees on this runner.
+      # Remove once signing works.
+      - name: Diagnose dotnet (temporary)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          whoami
+          $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
+          if (-not $dotnet) {
+            Write-Host "dotnet is not on PATH"
+            exit 0
+          }
+          Write-Host "dotnet: $($dotnet.Source)"
+          dotnet --list-sdks
+          dotnet --list-runtimes
+          dotnet nuget list source
+
+          # Same install the signing action runs, but with its output visible
+          $toolPath = Join-Path $env:RUNNER_TEMP "signcli-diagnose"
+          dotnet tool install sign --version 0.9.1-beta.26227.3 --tool-path $toolPath --add-source https://www.nuget.org/api/v2/
+          Write-Host "dotnet tool install exit code: $LASTEXITCODE"
+          Remove-Item -Recurse -Force $toolPath -ErrorAction SilentlyContinue
+          exit 0
+
       - name: Show Current Path
         run: |
           pwd
